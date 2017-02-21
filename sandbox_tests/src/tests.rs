@@ -9,7 +9,7 @@ use anchoring_service::AnchoringTx;
 use anchoring_service::HexValue;
 
 use super::{RpcError, anchoring_sandbox, gen_sandbox_anchoring_config, gen_service_tx_lect,
-            anchor_genesis_block, anchor_update_lect_normal};
+            anchor_genesis_block, anchor_update_lect_normal, TransactionBuilder};
 
 #[test]
 fn test_rpc_getnewaddress() {
@@ -181,7 +181,10 @@ fn test_anchoring_second_block_normal() {
         }]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
-    let tx = AnchoringTx::from_hex("010000000120989cc8d83d75b870dbea4a8565e571996b4ec0a197bb7c6d1dc6f7e09f3fed0000000000ffffffff02d00700000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280a00000000000000bfb76e7f104ed7a5af8fea94d87bd6f573332682f1628268d48dd1a796ddc95600000000").unwrap();
+    let tx = TransactionBuilder::with_prev_tx(&anchoring_state.latest_anchoring_tx(), 0)
+        .payload(10, sandbox.last_hash())
+        .send_to("2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu", 2000)
+        .into_transaction();
     let signatures = anchoring_state.gen_anchoring_signatures(&sandbox, &tx);
 
     sandbox.broadcast(signatures[0].clone());

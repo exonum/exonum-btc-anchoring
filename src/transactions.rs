@@ -1,5 +1,6 @@
 use std::fmt;
 use std::collections::HashMap;
+use std::ops::Deref;
 
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -15,6 +16,8 @@ use exonum::node::Height;
 use exonum::storage::StorageValue;
 
 use super::{AnchoringRpc, RpcClient, HexValue, BitcoinSignature, Result};
+
+use {create_anchoring_transaction, sign_anchoring_transaction, finalize_anchoring_transaction};
 
 pub type BitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
@@ -95,7 +98,7 @@ impl AnchoringTx {
                 input: u64,
                 priv_key: &str)
                 -> Result<BitcoinSignature> {
-        client.sign_anchoring_transaction(&self.0, &multisig.redeem_script, input, priv_key)
+        Ok(sign_anchoring_transaction(&self.0, &multisig.redeem_script, input, priv_key))
     }
 
     pub fn proposal(self,
@@ -124,11 +127,11 @@ impl AnchoringTx {
         }
         out_funds -= fee;
 
-        let tx = client.create_anchoring_transaction(&to.address,
-                                          block_height,
-                                          block_hash,
-                                          inputs.iter(),
-                                          out_funds)?;
+        let tx = create_anchoring_transaction(&to.address,
+                                              block_height,
+                                              block_hash,
+                                              inputs.iter(),
+                                              out_funds);
         Ok(tx)
     }
 
@@ -137,7 +140,7 @@ impl AnchoringTx {
                     mutlisig: &bitcoinrpc::MultiSig,
                     signatures: HashMap<u64, Vec<BitcoinSignature>>)
                     -> Result<AnchoringTx> {
-        let tx = client.finalize_anchoring_transaction(self, &mutlisig.redeem_script, signatures)?;
+        let tx = finalize_anchoring_transaction(self, &mutlisig.redeem_script, signatures);
         Ok(tx)
     }
 
@@ -190,6 +193,14 @@ impl StorageValue for AnchoringTx {
         let mut v = vec![];
         v.extend(serialize(&self.0).unwrap());
         hash(&v)
+    }
+}
+
+impl Deref for AnchoringTx {
+    type Target = BitcoinTx;
+
+    fn deref(&self) -> &BitcoinTx {
+        &self.0
     }
 }
 
@@ -269,11 +280,11 @@ impl FundingTx {
         let utxo_tx = self.0;
 
         let out_funds = utxo_tx.output[utxo_vout as usize].value - fee;
-        let tx = client.create_anchoring_transaction(&multisig.address,
-                                          block_height,
-                                          block_hash,
-                                          [(utxo_tx, utxo_vout)].iter(),
-                                          out_funds)?;
+        let tx = create_anchoring_transaction(&multisig.address,
+                                              block_height,
+                                              block_hash,
+                                              [(utxo_tx, utxo_vout)].iter(),
+                                              out_funds);
         Ok(tx)
     }
 }
@@ -292,10 +303,11 @@ impl From<BitcoinTx> for TxKind {
     }
 }
 
-impl TxKind {
-    pub fn from_txid(client: &RpcClient, txid: Hash) -> Result<TxKind> {
-        let tx = client.get_transaction(txid.to_hex().as_ref())?;
-        Ok(TxKind::from(tx))
+impl Deref for FundingTx {
+    type Target = BitcoinTx;
+
+    fn deref(&self) -> &BitcoinTx {
+        &self.0
     }
 }
 
@@ -338,6 +350,13 @@ impl fmt::Debug for FundingTx {
             .field("txid", &self.txid().to_hex())
             .field("content", &self.0)
             .finish()
+    }
+}
+
+impl TxKind {
+    pub fn from_txid(client: &RpcClient, txid: Hash) -> Result<TxKind> {
+        let tx = client.get_transaction(txid.to_hex().as_ref())?;
+        Ok(TxKind::from(tx))
     }
 }
 

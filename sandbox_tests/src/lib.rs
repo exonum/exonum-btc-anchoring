@@ -18,7 +18,7 @@ use serde_json::value::ToJson;
 use bitcoin::util::base58::FromBase58;
 use bitcoin::util::address::Privkey;
 
-use exonum::crypto::HexValue;
+use exonum::crypto::{HexValue, Hash};
 use exonum::messages::Message;
 use exonum::storage::StorageValue;
 
@@ -29,8 +29,9 @@ use sandbox::sandbox_tests_helper::{SandboxState, VALIDATOR_0, add_one_height_wi
 
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, AnchoringNodeConfig};
-use anchoring_service::{AnchoringService, BitcoinSignature, TxAnchoringSignature,
-                        TxAnchoringUpdateLatest, AnchoringTx, HexValue as HexValueEx};
+use anchoring_service::{BitcoinTx, AnchoringService, BitcoinSignature, TxAnchoringSignature,
+                        TxAnchoringUpdateLatest, AnchoringTx, HexValue as HexValueEx,
+                        create_anchoring_transaction};
 use anchoring_service::multisig::sign_input;
 
 #[macro_use]
@@ -46,9 +47,14 @@ pub const CHECK_LECT_FREQUENCY: u64 = 6;
 pub struct AnchoringSandboxState {
     pub genesis: AnchoringConfig,
     pub nodes: Vec<AnchoringNodeConfig>,
+    pub latest_anchoring_tx: Option<AnchoringTx>,
 }
 
 impl AnchoringSandboxState {
+    pub fn latest_anchoring_tx(&self) -> &AnchoringTx {
+        self.latest_anchoring_tx.as_ref().unwrap()
+    }
+
     pub fn gen_anchoring_signatures(&self,
                                     sandbox: &Sandbox,
                                     tx: &AnchoringTx)
@@ -98,6 +104,7 @@ pub fn anchoring_sandbox() -> (Sandbox, SandboxClient, AnchoringSandboxState) {
     let info = AnchoringSandboxState {
         genesis: genesis,
         nodes: nodes,
+        latest_anchoring_tx: None,
     };
     (sandbox, client, info)
 }
@@ -125,9 +132,12 @@ pub fn anchor_genesis_block(sandbox: &Sandbox,
             ]
         }]);
 
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    let tx = TransactionBuilder::with_prev_tx(&anchoring_state.genesis.funding_tx, 0)
+        .payload(0, sandbox.last_hash())
+        .send_to("2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu", 3000)
+        .into_transaction();
 
-    let tx = AnchoringTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba00000000000ffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000").unwrap();
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
     let signatures = anchoring_state.gen_anchoring_signatures(sandbox, &tx);
 
     sandbox.broadcast(signatures[0].clone());
@@ -168,6 +178,7 @@ pub fn anchor_genesis_block(sandbox: &Sandbox,
         .cloned()
         .collect::<Vec<_>>();
     add_one_height_with_transactions(sandbox, sandbox_state, txs.as_ref());
+    anchoring_state.latest_anchoring_tx = Some(AnchoringTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000").unwrap());
 }
 
 pub fn anchor_update_lect_normal(sandbox: &Sandbox,
@@ -349,4 +360,41 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                                  validator,
                                  txhex.as_ref(),
                                  sandbox.s(validator as usize))
+}
+
+pub struct TransactionBuilder {
+    inputs: Vec<(BitcoinTx, u64)>,
+    output: Option<(String, u64)>,
+    payload: Option<(u64, Hash)>,
+}
+
+impl TransactionBuilder {
+    pub fn with_prev_tx(prev_tx: &BitcoinTx, out: u32) -> TransactionBuilder {
+        TransactionBuilder {
+            inputs: vec![(prev_tx.clone(), out as u64)],
+            output: None,
+            payload: None,
+        }
+    }
+
+    pub fn add_funds(mut self, tx: &BitcoinTx, out: u32) -> TransactionBuilder {
+        self.inputs.push((tx.clone(), out as u64));
+        self
+    }
+
+    pub fn payload(mut self, height: u64, hash: Hash) -> TransactionBuilder {
+        self.payload = Some((height, hash));
+        self
+    }
+
+    pub fn send_to<S: AsRef<str>>(mut self, addr: S, out_funds: u64) -> TransactionBuilder {
+        self.output = Some((addr.as_ref().to_string(), out_funds));
+        self
+    }
+
+    pub fn into_transaction(mut self) -> AnchoringTx {
+        let (addr, funds) = self.output.take().unwrap();
+        let (height, block_hash) = self.payload.take().unwrap();
+        create_anchoring_transaction(&addr, height, block_hash, self.inputs.iter(), funds)
+    }
 }
