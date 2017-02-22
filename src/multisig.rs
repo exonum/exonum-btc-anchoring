@@ -8,7 +8,7 @@ use bitcoin::util::base58::{FromBase58, ToBase58};
 use bitcoin::util::address::Address;
 use bitcoin::network::constants::Network;
 use secp256k1::key::{PublicKey, SecretKey};
-use secp256k1::{Secp256k1, Message};
+use secp256k1::{Secp256k1, Message, Signature};
 
 use exonum::crypto::{Hash, hash, FromHex, FromHexError};
 use exonum::storage::StorageValue;
@@ -135,17 +135,22 @@ pub fn sign_input(tx: &BitcoinTx,
     sign_data
 }
 
-// pub fn pod(sig: &Signature, tx: &BitcoinTx, input: &usize, subscript: &Script, pub_key: &PublicKey) -> Bool
-// {
-//     let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
-//     let context = Secp256k1::new();
-//     if context.verify(&Message::from_slice(&sighash[..].unwrap()), sig, pub_key) {
-//         true
-//     } else {
-//     false
-//     }
-// }
+pub fn verify_input(tx: &BitcoinTx,
+                    input: usize,
+                    subscript: &Script,
+                    pub_key: &PublicKey,
+                    signature: &[u8])
+                    -> bool {
+    let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
+    let msg = Message::from_slice(&sighash[..]).unwrap();
 
+    let context = Secp256k1::new();
+    if let Ok(sign) = Signature::from_der_lax(&context, signature) {
+        context.verify(&msg, &sign, pub_key).is_ok()
+    } else {
+        false
+    }
+}
 
 #[cfg(test)]
 mod tests {
@@ -155,13 +160,14 @@ mod tests {
     use bitcoin::network::constants::Network;
     use bitcoin::util::address::Privkey;
     use bitcoin::blockdata::script::Script;
-    use secp256k1::key::SecretKey;
+    use secp256k1::key::PublicKey;
+    use secp256k1::Secp256k1;
 
-    use exonum::crypto::ToHex;
+    use exonum::crypto::{ToHex};
 
     use {BitcoinPublicKey, HexValue};
     use transactions::BitcoinTx;
-    use super::{RedeemScript, sign_input};
+    use super::{RedeemScript, sign_input, verify_input};
 
     #[test]
     fn test_redeem_script_from_pubkeys() {
@@ -191,16 +197,25 @@ mod tests {
     #[test]
     fn test_sign_raw_transaction() {
         let unsigned_tx = BitcoinTx::from_hex("01000000015d1b8ba33a162d8f6e7c5707fbb557e726c32f30f77f2ba348a48c3c5d71ee0b0000000000ffffffff02b80b00000000000017a914889fc9c82819c7a728974ffa78cc884e3e9e68838700000000000000002c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000").unwrap();
-        let priv_key =
-            Privkey::from_base58check("cTJ2Y74DYMoSTHngDQnrwjHnZi8TNUU8MZL2ZbhGixtzEcNinvrm")
-                .unwrap();
 
-        let script_pubkey = &unsigned_tx.output[0].script_pubkey;
+        let priv_key =
+            Privkey::from_base58check("cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE")
+                .unwrap();
+        let pub_key = {
+            let context = Secp256k1::new();
+            PublicKey::from_secret_key(&context, priv_key.secret_key()).unwrap()
+        };
+
         let redeem_script = Script::from_hex("5321027db7837e51888e94c094703030d162c682c8dba312210f44ff440fbd5e5c24732102bdd272891c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a52103280883dc31ccaee34218819aaa245480c35a33acd91283586ff6d1284ed681e52103e2bc790a6e32bf5a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb054ae").unwrap();
         let actual_signature = sign_input(&unsigned_tx, 0, &redeem_script, priv_key.secret_key());
 
         assert_eq!(actual_signature.to_hex(),
-                   "304402204e7f2635da5bfde8c16586f58e3c4252c3098c689d4db6517352091f7b1cf620022052dee456116d7dede1515ddc0b736d1e0fdad4427300bb7d995c5014ac938c1b01");
+                   "304502210092f1fd6367677ef63dfddfb69cb3644ab10a7c497e5cd391e1d36284dca6a570022021dc2132349afafb9273600698d806f6d5f55756fcc058fba4e49c066116124e01");
+        assert!(verify_input(&unsigned_tx,
+                             0,
+                             &redeem_script,
+                             &pub_key,
+                             actual_signature.as_ref()));
     }
 
     #[test]

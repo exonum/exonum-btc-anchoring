@@ -18,9 +18,7 @@ use serde_json::value::ToJson;
 use bitcoin::util::base58::FromBase58;
 use bitcoin::util::address::Privkey;
 
-use exonum::crypto::{HexValue, Hash};
 use exonum::messages::Message;
-use exonum::storage::StorageValue;
 
 use sandbox::sandbox_with_services;
 use sandbox::sandbox::Sandbox;
@@ -29,9 +27,9 @@ use sandbox::sandbox_tests_helper::{SandboxState, VALIDATOR_0, add_one_height_wi
 
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, AnchoringNodeConfig};
-use anchoring_service::{BitcoinTx, AnchoringService, BitcoinSignature, TxAnchoringSignature,
-                        TxAnchoringUpdateLatest, AnchoringTx, HexValue as HexValueEx,
-                        create_anchoring_transaction};
+use anchoring_service::{AnchoringService, TxAnchoringSignature,
+                        TxAnchoringUpdateLatest, AnchoringTx, FundingTx, HexValue as HexValueEx};
+use anchoring_service::transactions::TransactionBuilder;
 use anchoring_service::multisig::sign_input;
 
 #[macro_use]
@@ -55,28 +53,55 @@ impl AnchoringSandboxState {
         self.latest_anchoring_tx.as_ref().unwrap()
     }
 
+    // pub fn gen_anchoring_tx_with_signatures(&self,
+    //                                         sandbox: &Sandbox,
+    //                                         height: u64,
+    //                                         hash: Hash,
+    //                                         funds: &[FundingTx],
+    //                                         addr: &str,
+    //                                         amount: u64)
+    //                                         -> (AnchoringTx, Vec<TxAnchoringSignature>) {
+    //     let prev_tx = &self.latest_anchoring_tx
+    //         .as_ref()
+    //         .unwrap_or(&anchoring_state.genesis.funding_tx);
+
+    //     let mut builder = TransactionBuilder::with_prev_tx(prev_tx, 0)
+    //         .payload(height, hash)
+    //         .send_to(addr, amount);
+    //     for fund in funds {
+    //         let out = fund.find_out(addr).unwrap();
+    //         builder = builder.add_funds()
+    //     }
+
+    //     let tx = TransactionBuilder::with_prev_tx(prev_tx, 0)
+    //         .payload(height, hash)
+    //         .send_to("2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu", 3000)
+    //         .into_transaction();
+    // }
+
     pub fn gen_anchoring_signatures(&self,
                                     sandbox: &Sandbox,
                                     tx: &AnchoringTx)
                                     -> Vec<TxAnchoringSignature> {
         let multisig = self.genesis.multisig();
         let redeem_script = self.genesis.redeem_script();
-        let out = tx.out(&multisig) as usize;
         let priv_keys = self.nodes
             .iter()
             .map(|cfg| cfg.private_keys[&multisig.address].clone())
             .collect::<Vec<_>>();
-        let txhex = tx.clone().serialize();
 
         let mut signs = Vec::new();
         for (validator, key) in priv_keys.iter().enumerate() {
             let priv_key = Privkey::from_base58check(key).unwrap();
-            let signature = sign_input(&tx.0, out, &redeem_script, priv_key.secret_key());
-            signs.push(TxAnchoringSignature::new(sandbox.p(validator),
-                                                 validator as u32,
-                                                 &txhex,
-                                                 &signature,
-                                                 sandbox.s(validator)));
+            for input in tx.inputs() {
+                let signature = sign_input(&tx.0, input as usize, &redeem_script, priv_key.secret_key());
+                signs.push(TxAnchoringSignature::new(sandbox.p(validator),
+                                                     validator as u32,
+                                                     tx.clone(),
+                                                     input,                                                     
+                                                     &signature,
+                                                     sandbox.s(validator)));
+            }
         }
         signs
     }
@@ -337,64 +362,13 @@ pub fn gen_sandbox_anchoring_config(client: &mut SandboxClient)
     generate_anchoring_config(client, 4, ANCHORING_FUNDS)
 }
 
-pub fn gen_service_tx_signature(sandbox: &Sandbox,
-                                validator: u32,
-                                txhex: &str,
-                                signature: &str)
-                                -> TxAnchoringSignature {
-    let txhex = Vec::<u8>::from_hex(txhex).unwrap();
-    let signature = BitcoinSignature::from_hex(signature).unwrap();
-    TxAnchoringSignature::new(sandbox.p(validator as usize),
-                              validator,
-                              &txhex,
-                              &signature,
-                              sandbox.s(validator as usize))
-}
-
 pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            validator: u32,
                            txhex: &str)
                            -> TxAnchoringUpdateLatest {
-    let txhex = Vec::<u8>::from_hex(txhex).unwrap();
+    let tx = AnchoringTx::from_hex(txhex).unwrap();
     TxAnchoringUpdateLatest::new(sandbox.p(validator as usize),
                                  validator,
-                                 txhex.as_ref(),
+                                 tx,
                                  sandbox.s(validator as usize))
-}
-
-pub struct TransactionBuilder {
-    inputs: Vec<(BitcoinTx, u64)>,
-    output: Option<(String, u64)>,
-    payload: Option<(u64, Hash)>,
-}
-
-impl TransactionBuilder {
-    pub fn with_prev_tx(prev_tx: &BitcoinTx, out: u32) -> TransactionBuilder {
-        TransactionBuilder {
-            inputs: vec![(prev_tx.clone(), out as u64)],
-            output: None,
-            payload: None,
-        }
-    }
-
-    pub fn add_funds(mut self, tx: &BitcoinTx, out: u32) -> TransactionBuilder {
-        self.inputs.push((tx.clone(), out as u64));
-        self
-    }
-
-    pub fn payload(mut self, height: u64, hash: Hash) -> TransactionBuilder {
-        self.payload = Some((height, hash));
-        self
-    }
-
-    pub fn send_to<S: AsRef<str>>(mut self, addr: S, out_funds: u64) -> TransactionBuilder {
-        self.output = Some((addr.as_ref().to_string(), out_funds));
-        self
-    }
-
-    pub fn into_transaction(mut self) -> AnchoringTx {
-        let (addr, funds) = self.output.take().unwrap();
-        let (height, block_hash) = self.payload.take().unwrap();
-        create_anchoring_transaction(&addr, height, block_hash, self.inputs.iter(), funds)
-    }
 }

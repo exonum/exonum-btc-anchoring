@@ -6,7 +6,7 @@ use serde_json::Value;
 use serde_json::value::{ToJson, from_value};
 
 use exonum::blockchain::{Service, Transaction, Schema, NodeState};
-use exonum::storage::{StorageValue, List, View, Error as StorageError};
+use exonum::storage::{List, View, Error as StorageError};
 use exonum::crypto::{Hash, ToHex};
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::node::Height;
@@ -158,7 +158,7 @@ impl AnchoringService {
                 info!("LECT ====== txid={}", lect.txid().to_hex());
                 let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
                                                             state.id(),
-                                                            &lect.serialize(),
+                                                            lect,
                                                             &state.secret_key());
                 state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
             } else {
@@ -197,13 +197,7 @@ impl AnchoringService {
         let funding_tx = self.avaliable_funding_tx(state)?
             .into_iter()
             .collect::<Vec<_>>();
-        let proposal = lect.proposal(&self.client,
-                      &from,
-                      &to,
-                      genesis.fee,
-                      &funding_tx,
-                      height,
-                      hash)?;
+        let proposal = lect.proposal(&from, &to, genesis.fee, &funding_tx, height, hash)?;
         // Sign proposal
         self.sign_proposal_tx(state, proposal, &from, &priv_key)
     }
@@ -219,10 +213,11 @@ impl AnchoringService {
 
         let (priv_key, genesis) = self.actual_config(state).unwrap();
         let multisig = genesis.multisig();
-        let proposal =
-            funding_tx.make_anchoring_tx(&self.client, &multisig, genesis.fee, height, hash)?;
+        let proposal = funding_tx.make_anchoring_tx(&multisig, genesis.fee, height, hash)?;
 
-        debug!("initial_proposal={:#?}, txhex={}", proposal, proposal.0.to_hex());
+        debug!("initial_proposal={:#?}, txhex={}",
+               proposal,
+               proposal.0.to_hex());
 
         // Sign proposal
         self.sign_proposal_tx(state, proposal, &multisig, &priv_key)
@@ -235,25 +230,22 @@ impl AnchoringService {
                             private_key: &BitcoinPrivateKey)
                             -> Result<(), RpcError> {
         debug!("sign proposal tx");
-        let signature = proposal.sign(&self.client, &multisig, 0, &private_key)?;
+        for input in proposal.inputs() {
+            let signature = proposal.sign(&multisig.redeem_script, input, &private_key);
 
-        debug!("Anchoring propose_tx={:#?}, txhex={}, signature={:?}",
-               proposal,
-               proposal.0.to_hex(),
-               signature.to_hex());
+            let sign_msg = TxAnchoringSignature::new(state.public_key(),
+                                                     state.id(),
+                                                     proposal.clone(),
+                                                     input,
+                                                     &signature,
+                                                     state.secret_key());
 
-        let sign_msg = TxAnchoringSignature::new(state.public_key(),
-                                                 state.id(),
-                                                 &proposal.clone().serialize(),
-                                                 &signature,
-                                                 state.secret_key());
-        debug!("Signed txhex={}, txid={}, signature={}",
-               proposal.0.to_hex(),
-               proposal.txid().to_hex(),
-               signature.to_hex());
-
+            debug!("Sign_msg={:#?}, sighex={}",
+                   sign_msg,
+                   signature.to_hex());
+            state.add_transaction(AnchoringTransaction::Signature(sign_msg));
+        }
         self.service_state().proposal_tx = Some(proposal);
-        state.add_transaction(AnchoringTransaction::Signature(sign_msg));
         Ok(())
     }
 
@@ -279,40 +271,56 @@ impl AnchoringService {
             .values()
             .unwrap();
 
-        let majority_count = genesis.majority_count() as usize;
-        if msgs.len() >= majority_count {
-            let mut signatures = vec![None; genesis.validators.len()];
+        let signatures = {
+            let mut signatures = HashMap::new();
+            for input in proposal.inputs() {
+                signatures.insert(input, vec![None; genesis.validators.len()]);
+            }
+
             for msg in msgs {
-                signatures[msg.validator() as usize] = Some(msg.signature().to_vec());
+                let input = msg.input();
+                let validator = msg.validator() as usize;
+
+                let mut signatures_by_input = signatures.get_mut(&input).unwrap();
+                signatures_by_input[validator] = Some(msg.signature().to_vec());
             }
 
-            let signatures = signatures.into_iter()
-                .filter_map(|x| x)
-                .take(majority_count)
-                .collect::<Vec<_>>();
-
-            // FIXME Rewrite me!!!!!!
-            let signatures = Some((0, signatures))
-                .into_iter()
-                .collect::<HashMap<_, _>>();
-
-            let new_lect = proposal.finalize(self.client(), &genesis.multisig(), signatures)?;
-            if new_lect.get_info(self.client())?.is_none() {
-                self.client.send_transaction(new_lect.0.clone())?;
+            let majority_count = genesis.majority_count() as usize;
+            
+            // remove holes from signatures preserve order
+            let mut actual_signatures = HashMap::new();
+            for (input, signatures) in signatures.into_iter() {
+                let signatures = signatures.into_iter()
+                    .filter_map(|x| x)
+                    .take(majority_count)
+                    .collect::<Vec<_>>();
+                
+                if signatures.len() < majority_count {
+                    return Ok(());
+                }
+                actual_signatures.insert(input, signatures);
             }
+            actual_signatures
+        };
 
-            info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
-                  new_lect.payload().0,
-                  new_lect.txid().to_hex(),
-                  new_lect.funds(new_lect.out(&genesis.multisig())));
-
-            self.service_state().proposal_tx = None;
-            let lect_msg = TxAnchoringUpdateLatest::new(state.public_key(),
-                                                        state.id(),
-                                                        &new_lect.serialize(),
-                                                        state.secret_key());
-            state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+        let new_lect = proposal.finalize(&genesis.multisig().redeem_script, signatures)?;
+        if new_lect.get_info(self.client())?.is_none() {
+            self.client.send_transaction(new_lect.0.clone())?;
         }
+
+        debug!("sended signed_tx={:#?}", new_lect);
+
+        info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
+                new_lect.payload().0,
+                new_lect.txid().to_hex(),
+                new_lect.funds(new_lect.out(&genesis.multisig())));
+
+        self.service_state().proposal_tx = None;
+        let lect_msg = TxAnchoringUpdateLatest::new(state.public_key(),
+                                                    state.id(),
+                                                    new_lect,
+                                                    state.secret_key());
+        state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
         Ok(())
     }
 }
@@ -323,18 +331,9 @@ impl Transaction for AnchoringTransaction {
     }
 
     fn execute(&self, view: &View) -> Result<(), StorageError> {
-        let schema = AnchoringSchema::new(view);
-
-        // TODO verify that from validators??
         match *self {
-            AnchoringTransaction::Signature(ref sign) => {
-                let tx = AnchoringTx::deserialize(sign.tx().to_vec());
-                schema.signatures(&tx.txid()).append(sign.clone())
-            }
-            AnchoringTransaction::UpdateLatest(ref lect) => {
-                let tx = AnchoringTx::deserialize(lect.tx().to_vec());
-                schema.lects(lect.validator()).append(tx)
-            }
+            AnchoringTransaction::Signature(ref msg) => msg.execute(view),
+            AnchoringTransaction::UpdateLatest(ref msg) => msg.execute(view),
         }
     }
 }

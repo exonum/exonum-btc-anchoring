@@ -3,13 +3,13 @@ use std::collections::BTreeMap;
 use serde_json;
 use serde::{Serialize, Serializer, Deserialize};
 use serde::de::{Deserializer, Visitor, Error};
+use bitcoinrpc::MultiSig;
 
 use exonum::storage::StorageValue;
 use exonum::crypto::{hash, Hash};
-use bitcoinrpc::MultiSig;
 
-use {BITCOIN_NETWORK, AnchoringTx, FundingTx, BitcoinPublicKey, BitcoinPrivateKey, BitcoinTx,
-     HexValue, RpcClient, RedeemScript, AnchoringRpc};
+use {BITCOIN_NETWORK, AnchoringTx, FundingTx, BitcoinPublicKey, BitcoinPrivateKey, HexValue,
+     RpcClient, RedeemScript, AnchoringRpc};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AnchoringRpcConfig {
@@ -123,8 +123,7 @@ impl StorageValue for AnchoringConfig {
 }
 
 impl AnchoringNodeConfig {
-    pub fn new(rpc: AnchoringRpcConfig)
-               -> AnchoringNodeConfig {
+    pub fn new(rpc: AnchoringRpcConfig) -> AnchoringNodeConfig {
         AnchoringNodeConfig {
             rpc: rpc,
             private_keys: BTreeMap::new(),
@@ -133,67 +132,45 @@ impl AnchoringNodeConfig {
     }
 }
 
-impl Serialize for AnchoringTx {
-    fn serialize<S>(&self, ser: &mut S) -> ::std::result::Result<(), S::Error>
-        where S: Serializer
-    {
-        ser.serialize_str(&self.0.to_hex())
+macro_rules! implement_serde_hex {
+($name:ident) => (
+    impl Serialize for $name {
+        fn serialize<S>(&self, ser: &mut S) -> ::std::result::Result<(), S::Error>
+            where S: Serializer
+        {
+            ser.serialize_str(&self.to_hex())
+        }
     }
-}
 
-impl Deserialize for AnchoringTx {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
-        where D: Deserializer
-    {
-        struct TxVisitor;
+    impl Deserialize for $name {
+        fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+            where D: Deserializer
+        {
+            struct HexVisitor;
 
-        impl Visitor for TxVisitor {
-            type Value = AnchoringTx;
+            impl Visitor for HexVisitor {
+                type Value = $name;
 
-            fn visit_str<E>(&mut self, hex: &str) -> Result<AnchoringTx, E>
-                where E: Error
-            {
-                match BitcoinTx::from_hex(hex) {
-                    Ok(tx) => Ok(AnchoringTx::from(tx)),
-                    Err(_) => Err(Error::invalid_value("Wrong hex")),
+                fn visit_str<E>(&mut self, hex: &str) -> Result<$name, E>
+                    where E: Error
+                {
+                    match $name::from_hex(hex) {
+                        Ok(value) => Ok(value),
+                        Err(_) => Err(Error::invalid_value("Wrong hex")),
+                    }
                 }
             }
+
+            deserializer.deserialize_str(HexVisitor)
         }
-
-        deserializer.deserialize_str(TxVisitor)
     }
+)
 }
 
-impl Serialize for FundingTx {
-    fn serialize<S>(&self, ser: &mut S) -> ::std::result::Result<(), S::Error>
-        where S: Serializer
-    {
-        ser.serialize_str(&self.0.to_hex())
-    }
-}
-
-impl Deserialize for FundingTx {
-    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
-        where D: Deserializer
-    {
-        struct TxVisitor;
-
-        impl Visitor for TxVisitor {
-            type Value = FundingTx;
-
-            fn visit_str<E>(&mut self, hex: &str) -> Result<FundingTx, E>
-                where E: Error
-            {
-                match BitcoinTx::from_hex(hex) {
-                    Ok(tx) => Ok(FundingTx::from(tx)),
-                    Err(_) => Err(Error::invalid_value("Wrong hex")),
-                }
-            }
-        }
-
-        deserializer.deserialize_str(TxVisitor)
-    }
-}
+implement_serde_hex! {AnchoringTx}
+implement_serde_hex! {FundingTx}
+implement_serde_hex! {RedeemScript}
+// TODO add methods for BitcoinPublicKey and BitcoinPrivateKey
 
 #[cfg(test)]
 mod tests {

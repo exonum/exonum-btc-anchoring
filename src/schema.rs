@@ -4,13 +4,14 @@ use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
 use exonum::blockchain::Schema;
-use exonum::storage::{ListTable, MerkleTable, List, MapTable, View, Error as StorageError};
+use exonum::storage::{StorageValue, ListTable, MerkleTable, List, MapTable, View,
+                      Error as StorageError};
 use exonum::crypto::{PublicKey, Hash};
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::node::Height;
 
 use config::AnchoringConfig;
-use {AnchoringTx};
+use AnchoringTx;
 
 pub const ANCHORING_SERVICE: u16 = 3;
 const ANCHORING_TRANSACTION_SIGNATURE: u16 = 0;
@@ -21,12 +22,13 @@ message! {
     TxAnchoringSignature {
         const TYPE = ANCHORING_SERVICE;
         const ID = ANCHORING_TRANSACTION_SIGNATURE;
-        const SIZE = 52;
+        const SIZE = 56;
 
-        from:           &PublicKey  [00 => 32]
-        validator:      u32         [32 => 36]
-        tx:             &[u8]       [36 => 44]
-        signature:      &[u8]       [44 => 52]
+        from:           &PublicKey   [00 => 32]
+        validator:      u32          [32 => 36]
+        tx:             AnchoringTx  [36 => 44]
+        input:          u32          [44 => 48]
+        signature:      &[u8]        [48 => 56]
     }
 }
 
@@ -37,9 +39,9 @@ message! {
         const ID = ANCHORING_TRANSACTION_LATEST;
         const SIZE = 44;
 
-        from:           &PublicKey  [00 => 32]
-        validator:      u32         [32 => 36]
-        tx:             &[u8]       [36 => 44] // TODO store AnchoringTx
+        from:           &PublicKey   [00 => 32]
+        validator:      u32          [32 => 36]
+        tx:             AnchoringTx  [36 => 44]
     }
 }
 
@@ -161,5 +163,31 @@ impl<'a> AnchoringSchema<'a> {
     fn config_height(&self) -> ListTable<MapTable<View, [u8], Vec<u8>>, u64, Height> {
         let prefix = vec![ANCHORING_SERVICE as u8, 04];
         ListTable::new(MapTable::new(prefix, self.view))
+    }
+}
+
+impl TxAnchoringSignature {
+    pub fn execute(&self, view: &View) -> Result<(), StorageError> {
+        let schema = AnchoringSchema::new(view);
+        let tx = self.tx();
+        // Verify signature
+        let cfg = schema.current_anchoring_config()?;
+        let redeem_script = cfg.redeem_script();
+        let ref pub_key = cfg.validators[self.validator() as usize];
+        if !tx.verify(&redeem_script, self.input(), &pub_key, self.signature()) {
+            error!("Received tx with incorrect signature content={:#?}", self);
+            return Ok(());
+        }
+        schema.signatures(&tx.txid()).append(self.clone())
+    }
+}
+
+impl TxAnchoringUpdateLatest {
+    pub fn execute(&self, view: &View) -> Result<(), StorageError> {
+        let schema = AnchoringSchema::new(view);
+        let tx = self.tx();
+        // Verify lect
+        // TODO
+        schema.lects(self.validator()).append(tx)
     }
 }

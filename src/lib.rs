@@ -17,30 +17,21 @@ extern crate env_logger;
 
 mod service;
 mod schema;
+mod key;
 pub mod config;
 pub mod transactions;
 pub mod multisig;
 #[cfg(feature="sandbox_tests")]
 pub mod sandbox;
 
-use std::collections::HashMap;
-
-use byteorder::{ByteOrder, LittleEndian};
-
 use bitcoin::blockdata::script::{Script, Builder};
-use bitcoin::blockdata::opcodes::All;
 use bitcoin::util::hash::Sha256dHash;
 use bitcoin::network::serialize::deserialize;
 use bitcoin::network::constants::Network;
-use bitcoin::util::base58::FromBase58;
-use bitcoin::util::address::{Address, Privkey};
-use bitcoin::blockdata::transaction::{TxIn, TxOut};
-use bitcoin::network::serialize::BitcoinHash;
 
-use exonum::crypto::{Hash, FromHexError, ToHex, FromHex};
-use exonum::node::Height;
+use exonum::crypto::{FromHexError, ToHex, FromHex};
 
-use multisig::{RedeemScript, sign_input};
+use multisig::RedeemScript;
 
 pub use service::AnchoringService;
 pub use schema::{AnchoringSchema, ANCHORING_SERVICE, TxAnchoringSignature, TxAnchoringUpdateLatest};
@@ -200,90 +191,6 @@ impl AnchoringRpc for RpcClient {
     }
 }
 
-pub fn create_anchoring_transaction<'a, I>(output_addr: &str,
-                                           block_height: Height,
-                                           block_hash: Hash,
-                                           inputs: I,
-                                           out_funds: u64)
-                                           -> AnchoringTx
-    where I: Iterator<Item = &'a (BitcoinTx, u64)>
-{
-    let inputs = inputs.map(|&(ref unspent_tx, utxo_vout)| {
-            TxIn {
-                prev_hash: unspent_tx.bitcoin_hash(),
-                prev_index: utxo_vout as u32,
-                script_sig: Script::new(),
-                sequence: 0xFFFFFFFF,
-            }
-        })
-        .collect::<Vec<_>>();
-
-    let metadata_script = {
-        let data = {
-            let mut data = [0u8; 42];
-            data[0] = 1; // version
-            data[1] = 40; // data len
-            LittleEndian::write_u64(&mut data[2..10], block_height);
-            data[10..42].copy_from_slice(block_hash.as_ref());
-            data
-        };
-        Builder::new()
-            .push_opcode(All::OP_RETURN)
-            .push_slice(data.as_ref())
-            .into_script()
-    };
-    let addr = Address::from_base58check(output_addr).unwrap();
-    let outputs = vec![TxOut {
-                           value: out_funds,
-                           script_pubkey: addr.script_pubkey(),
-                       },
-                       TxOut {
-                           value: 0,
-                           script_pubkey: metadata_script,
-                       }];
-
-    let tx = BitcoinTx {
-        version: 1,
-        lock_time: 0,
-        input: inputs,
-        output: outputs,
-        witness: vec![],
-    };
-    AnchoringTx::from(tx)
-}
-
-pub fn sign_anchoring_transaction(tx: &BitcoinTx,
-                                  redeem_script: &str,
-                                  vin: u64,
-                                  priv_key: &str)
-                                  -> BitcoinSignature {
-    let priv_key = Privkey::from_base58check(priv_key).unwrap();
-    let redeem_script = RedeemScript::from_hex(redeem_script).unwrap().compressed(BITCOIN_NETWORK);
-    let signature = sign_input(tx, vin as usize, &redeem_script, priv_key.secret_key());
-    signature
-}
-
-pub fn finalize_anchoring_transaction(mut anchoring_tx: AnchoringTx,
-                                      redeem_script: &str,
-                                      signatures: HashMap<u64, Vec<BitcoinSignature>>)
-                                      -> AnchoringTx {
-    // build scriptSig
-    for (out, signatures) in signatures.into_iter() {
-        anchoring_tx.0.input[out as usize].script_sig = {
-            let redeem_script = Vec::<u8>::from_hex(&redeem_script).unwrap();
-
-            let mut builder = Builder::new();
-            builder = builder.push_opcode(All::OP_PUSHBYTES_0);
-            for sign in &signatures {
-                builder = builder.push_slice(sign.as_ref());
-            }
-            builder.push_slice(&redeem_script)
-                .into_script()
-        };
-    }
-    anchoring_tx
-}
-
 #[cfg(test)]
 mod tests {
     extern crate bitcoin;
@@ -329,12 +236,11 @@ mod tests {
         (validators, priv_keys)
     }
 
-    fn make_signatures(client: &RpcClient,
-                       multisig: &bitcoinrpc::MultiSig,
+    fn make_signatures(redeem_script: &str,
                        proposal: &AnchoringTx,
-                       inputs: &[u64],
+                       inputs: &[u32],
                        priv_keys: &[BitcoinPrivateKey])
-                       -> HashMap<u64, Vec<BitcoinSignature>> {
+                       -> HashMap<u32, Vec<BitcoinSignature>> {
         let majority_count = RpcClient::majority_count(priv_keys.len() as u8);
 
         let mut signatures = inputs.iter()
@@ -348,8 +254,7 @@ mod tests {
         for (input_idx, input) in inputs.iter().enumerate() {
             let priv_keys_iter = priv_keys.iter().take(majority_count as usize);
             for &(id, priv_key) in priv_keys_iter {
-                let sign = proposal.sign(&client, &multisig, *input, &priv_key)
-                    .unwrap();
+                let sign = proposal.sign(redeem_script, *input, &priv_key);
                 signatures[input_idx].1[id] = Some(sign);
             }
         }
@@ -377,8 +282,7 @@ mod tests {
                          additional_funds: &[FundingTx],
                          fee: u64)
                          -> AnchoringTx {
-        let tx = anchoring_tx.proposal(&client,
-                      &from,
+        let tx = anchoring_tx.proposal(&from,
                       &to,
                       fee,
                       additional_funds,
@@ -390,8 +294,8 @@ mod tests {
                tx.txid().to_hex());
 
 
-        let inputs = (0..additional_funds.len() as u64 + 1).collect::<Vec<_>>();
-        let signatures = make_signatures(&client, &from, &tx, inputs.as_slice(), &priv_keys);
+        let inputs = (0..additional_funds.len() as u32 + 1).collect::<Vec<_>>();
+        let signatures = make_signatures(&from.redeem_script, &tx, inputs.as_slice(), &priv_keys);
         let tx = tx.send(&client, &from, signatures).unwrap();
         assert_eq!(tx.payload(), (block_height, block_hash));
 
@@ -500,13 +404,13 @@ mod tests {
         let mut utxo_tx = {
             let funding_tx = FundingTx::create(&client, &multisig, total_funds).unwrap();
             let tx = funding_tx.clone()
-                .make_anchoring_tx(&client, &multisig, fee, block_height, block_hash)
+                .make_anchoring_tx(&multisig, fee, block_height, block_hash)
                 .unwrap();
             debug!("Proposal anchoring_tx={:#?}, txid={}",
                    tx,
                    tx.txid().to_hex());
 
-            let signatures = make_signatures(&client, &multisig, &tx, &[0], &priv_keys);
+            let signatures = make_signatures(&multisig.redeem_script, &tx, &[0], &priv_keys);
             let tx = tx.send(&client, &multisig, signatures).unwrap();
             debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid().to_hex());
 
@@ -598,11 +502,11 @@ mod tests {
         let block_hash = hash(&[1, 3, 5]);
 
         let proposal =
-            tx.make_anchoring_tx(&client, &multisig, fee, block_height, block_hash.clone())
+            tx.make_anchoring_tx(&multisig, fee, block_height, block_hash.clone())
                 .unwrap();
 
-        let signs1 = make_signatures(&client, &multisig, &proposal, &[0], &priv_keys);
-        let signs2 = make_signatures(&client, &multisig, &proposal, &[0], &priv_keys);
+        let signs1 = make_signatures(&multisig.redeem_script, &proposal, &[0], &priv_keys);
+        let signs2 = make_signatures(&multisig.redeem_script, &proposal, &[0], &priv_keys);
 
         let tx1 = proposal.clone().send(&client, &multisig, signs1).unwrap();
         debug!("tx1={:#?}", tx1);
