@@ -71,9 +71,12 @@ impl HexValue for BitcoinTx {
 macro_rules! implement_tx {
 ($name:ident) => (
     impl $name {
-        // FIXME implement common type 
-        pub fn txid(&self) -> TxId {
+        pub fn id(&self) -> TxId {
             TxId::from(self.0.bitcoin_hash())
+        }
+
+        pub fn txid(&self) -> String {
+            self.0.bitcoin_hash().be_hex_string()
         }
     }
 
@@ -181,8 +184,7 @@ impl FundingTx {
                       client: &RpcClient,
                       multisig: &bitcoinrpc::MultiSig)
                       -> Result<Option<bitcoinrpc::UnspentTransactionInfo>> {
-        let txid = self.txid().to_hex();
-        debug!("searching for txid={}", txid);
+        let txid = self.txid();
         let txs = client.listunspent(0, 999999, [multisig.address.as_str()])?;
         Ok(txs.into_iter()
             .find(|txinfo| txinfo.txid == txid))
@@ -246,7 +248,7 @@ impl AnchoringTx {
     }
 
     pub fn get_info(&self, client: &RpcClient) -> Result<Option<bitcoinrpc::RawTransactionInfo>> {
-        let r = client.getrawtransaction(&self.txid().to_hex());
+        let r = client.getrawtransaction(&self.txid());
         match r {
             Ok(tx) => Ok(Some(tx)),
             Err(bitcoinrpc::Error::NoInformation(_)) => Ok(None),

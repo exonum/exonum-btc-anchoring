@@ -12,7 +12,8 @@ use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::node::Height;
 
 use config::{AnchoringNodeConfig, AnchoringConfig};
-use {BITCOIN_NETWORK, AnchoringTx, FundingTx, AnchoringRpc, RpcClient, BitcoinPrivateKey, HexValue};
+use {BITCOIN_NETWORK, AnchoringTx, FundingTx, AnchoringRpc, RpcClient, BitcoinPrivateKey,
+     HexValue, BitcoinSignature};
 use schema::{ANCHORING_SERVICE, AnchoringTransaction, AnchoringSchema, TxAnchoringUpdateLatest,
              TxAnchoringSignature};
 
@@ -30,6 +31,7 @@ pub struct AnchoringService {
 pub enum LectKind {
     Some(AnchoringTx),
     Different,
+//    Funding(FundingTx),
     None,
 }
 
@@ -139,44 +141,57 @@ impl AnchoringService {
     }
 
     // Перебираем все анкорящие транзакции среди listunspent и ищем среди них
-    // ту единственную, у которой prev_hash содержится в нашем массиве lectов
-    pub fn find_lect(&self, state: &NodeState, addr: &str) -> Result<Option<AnchoringTx>, RpcError> {
-        let lects: Vec<_> = self.client().find_lect(addr)?;
+    // ту единственную, у которой prev_hash содержится в нашем массиве lectов 
+    // или является первой funding транзакцией
+    pub fn find_lect(&self,
+                     state: &NodeState,
+                     addr: &str)
+                     -> Result<Option<AnchoringTx>, RpcError> {
+        let lects: Vec<_> = self.client().unspent_anchoring_txs(addr)?;
         let schema = AnchoringSchema::new(state.view());
-        Ok(lects.into_iter().find(|tx| {
-            schema.find_lect_position(state.id(), &tx.prev_hash()).unwrap().is_some()
-        }))
+        let funding_tx = self.actual_config(state).unwrap().1.funding_tx;
+
+        let lect = lects.into_iter()
+            .find(|tx| {
+                if schema.find_lect_position(state.id(), &tx.prev_hash()).unwrap().is_none() {
+                    tx.prev_hash() == funding_tx.id()
+                } else {
+                    true
+                }
+            });
+        Ok(lect)
     }
 
     // Пытаемся обновить нашу последнюю известную анкорящую транзакцию
     // Помимо этого, если мы обнаруживаем, что она набрала достаточно подтверждений
     // для перехода на новый адрес, то переходим на него
     pub fn update_our_lect(&self, state: &mut NodeState) -> Result<(), RpcError> {
-        unimplemented!();
-        // if state.height() % self.cfg.check_lect_frequency == 0 {
-        //     debug!("Update our lect");
-        //     let (_, genesis) = self.actual_config(state).unwrap();
-        //     let multisig = genesis.multisig();
+        if state.height() % self.cfg.check_lect_frequency == 0 {
+            debug!("Update our lect");
+            let (_, genesis) = self.actual_config(state).unwrap();
+            let multisig = genesis.multisig();
 
-        //     let lects = self.client().find_lect(&multisig.address)?;
-        //     let our_lect = AnchoringSchema::new(state.view()).lects(state.id()).last().unwrap();
-        //     // We needs to update our lect
-        //     if lect != our_lect && lect.is_some() {
-        //         // TODO проверить, что у транзакции есть известный нам prev_hash
-        //         let lect = lect.unwrap();
-        //         debug!("Found new lect={:#?}", lect);
+            let lect = self.find_lect(state, &multisig.address)?;
+            let our_lect = AnchoringSchema::new(state.view()).lects(state.id()).last().unwrap();
+            debug!("lect={:#?}", lect);
+            debug!("our_lect={:#?}", our_lect);
+            // We needs to update our lect
+            if lect != our_lect && lect.is_some() {
+                // TODO проверить, что у транзакции есть известный нам prev_hash
+                let lect = lect.unwrap();
+                debug!("Found new lect={:#?}", lect);
 
-        //         info!("LECT ====== txid={}", lect.txid().to_hex());
-        //         let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
-        //                                                     state.id(),
-        //                                                     lect,
-        //                                                     &state.secret_key());
-        //         state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
-        //     } else {
-        //         // TODO проверяем ситуацию с пересылкой на новый адрес
-        //     }
-        // }
-        // Ok(())
+                info!("LECT ====== txid={}", lect.txid().to_hex());
+                let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
+                                                            state.id(),
+                                                            lect,
+                                                            &state.secret_key());
+                state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+            } else {
+                // TODO проверяем ситуацию с пересылкой на новый адрес
+            }
+        }
+        Ok(())
     }
 
     pub fn try_create_proposal_tx(&self, state: &mut NodeState) -> Result<(), RpcError> {
@@ -251,9 +266,7 @@ impl AnchoringService {
                                                      &signature,
                                                      state.secret_key());
 
-            debug!("Sign_msg={:#?}, sighex={}",
-                   sign_msg,
-                   signature.to_hex());
+            debug!("Sign_msg={:#?}, sighex={}", sign_msg, signature.to_hex());
             state.add_transaction(AnchoringTransaction::Signature(sign_msg));
         }
         self.service_state().proposal_tx = Some(proposal);
@@ -265,7 +278,7 @@ impl AnchoringService {
                                     proposal: AnchoringTx)
                                     -> Result<(), RpcError> {
         debug!("try finalize proposal tx");
-        let txid = proposal.txid();
+        let txid = proposal.id();
         let (_, genesis) = self.actual_config(state).unwrap();
 
         let proposal_height = proposal.payload().0;
@@ -282,56 +295,26 @@ impl AnchoringService {
             .values()
             .unwrap();
 
-        let signatures = {
-            let mut signatures = HashMap::new();
-            for input in proposal.inputs() {
-                signatures.insert(input, vec![None; genesis.validators.len()]);
+        if let Some(signatures) = collect_signatures(&proposal, &genesis, msgs.iter()) {
+            let new_lect = proposal.finalize(&genesis.multisig().redeem_script, signatures)?;
+            if new_lect.get_info(self.client())?.is_none() {
+                self.client.send_transaction(new_lect.0.clone())?;
             }
 
-            for msg in msgs {
-                let input = msg.input();
-                let validator = msg.validator() as usize;
+            debug!("sended signed_tx={:#?}", new_lect);
 
-                let mut signatures_by_input = signatures.get_mut(&input).unwrap();
-                signatures_by_input[validator] = Some(msg.signature().to_vec());
-            }
+            info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
+                  new_lect.payload().0,
+                  new_lect.txid().to_hex(),
+                  new_lect.amount());
 
-            let majority_count = genesis.majority_count() as usize;
-            
-            // remove holes from signatures preserve order
-            let mut actual_signatures = HashMap::new();
-            for (input, signatures) in signatures.into_iter() {
-                let signatures = signatures.into_iter()
-                    .filter_map(|x| x)
-                    .take(majority_count)
-                    .collect::<Vec<_>>();
-                
-                if signatures.len() < majority_count {
-                    return Ok(());
-                }
-                actual_signatures.insert(input, signatures);
-            }
-            actual_signatures
-        };
-
-        let new_lect = proposal.finalize(&genesis.multisig().redeem_script, signatures)?;
-        if new_lect.get_info(self.client())?.is_none() {
-            self.client.send_transaction(new_lect.0.clone())?;
+            self.service_state().proposal_tx = None;
+            let lect_msg = TxAnchoringUpdateLatest::new(state.public_key(),
+                                                        state.id(),
+                                                        new_lect,
+                                                        state.secret_key());
+            state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
         }
-
-        debug!("sended signed_tx={:#?}", new_lect);
-
-        info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
-                new_lect.payload().0,
-                new_lect.txid().to_hex(),
-                new_lect.amount());
-
-        self.service_state().proposal_tx = None;
-        let lect_msg = TxAnchoringUpdateLatest::new(state.public_key(),
-                                                    state.id(),
-                                                    new_lect,
-                                                    state.secret_key());
-        state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
         Ok(())
     }
 }
@@ -396,6 +379,43 @@ impl Service for AnchoringService {
         }
         Ok(())
     }
+}
+
+pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
+                                 genesis: &AnchoringConfig,
+                                 msgs: I)
+                                 -> Option<HashMap<u32, Vec<BitcoinSignature>>>
+    where I: Iterator<Item = &'a TxAnchoringSignature>
+{
+    let mut signatures = HashMap::new();
+    for input in proposal.inputs() {
+        signatures.insert(input, vec![None; genesis.validators.len()]);
+    }
+
+    for msg in msgs {
+        let input = msg.input();
+        let validator = msg.validator() as usize;
+
+        let mut signatures_by_input = signatures.get_mut(&input).unwrap();
+        signatures_by_input[validator] = Some(msg.signature().to_vec());
+    }
+
+    let majority_count = genesis.majority_count() as usize;
+
+    // remove holes from signatures preserve order
+    let mut actual_signatures = HashMap::new();
+    for (input, signatures) in signatures.into_iter() {
+        let signatures = signatures.into_iter()
+            .filter_map(|x| x)
+            .take(majority_count)
+            .collect::<Vec<_>>();
+
+        if signatures.len() < majority_count {
+            return None;
+        }
+        actual_signatures.insert(input, signatures);
+    }
+    Some(actual_signatures)
 }
 
 trait LogError: Sized {

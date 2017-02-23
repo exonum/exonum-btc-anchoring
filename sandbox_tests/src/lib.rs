@@ -10,6 +10,8 @@ extern crate blockchain_explorer;
 #[macro_use]
 extern crate log;
 
+use std::ops::Deref;
+
 pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
@@ -19,6 +21,7 @@ use bitcoin::util::base58::FromBase58;
 use bitcoin::util::address::Privkey;
 
 use exonum::messages::Message;
+use exonum::crypto::Hash;
 
 use sandbox::sandbox_with_services;
 use sandbox::sandbox::Sandbox;
@@ -27,8 +30,8 @@ use sandbox::sandbox_tests_helper::{SandboxState, VALIDATOR_0, add_one_height_wi
 
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, AnchoringNodeConfig};
-use anchoring_service::{AnchoringService, TxAnchoringSignature,
-                        TxAnchoringUpdateLatest, AnchoringTx, FundingTx, HexValue as HexValueEx};
+use anchoring_service::{AnchoringService, TxAnchoringSignature, TxAnchoringUpdateLatest,
+                        AnchoringTx, FundingTx, HexValue as HexValueEx, collect_signatures};
 use anchoring_service::transactions::TransactionBuilder;
 use anchoring_service::multisig::sign_input;
 
@@ -45,39 +48,54 @@ pub const CHECK_LECT_FREQUENCY: u64 = 6;
 pub struct AnchoringSandboxState {
     pub genesis: AnchoringConfig,
     pub nodes: Vec<AnchoringNodeConfig>,
-    pub latest_anchoring_tx: Option<AnchoringTx>,
+    pub latest_anchored_tx: Option<(AnchoringTx, Vec<TxAnchoringSignature>)>,
 }
 
 impl AnchoringSandboxState {
-    pub fn latest_anchoring_tx(&self) -> &AnchoringTx {
-        self.latest_anchoring_tx.as_ref().unwrap()
+    pub fn latest_anchored_tx(&self) -> &AnchoringTx {
+        &self.latest_anchored_tx.as_ref().unwrap().0
     }
 
-    // pub fn gen_anchoring_tx_with_signatures(&self,
-    //                                         sandbox: &Sandbox,
-    //                                         height: u64,
-    //                                         hash: Hash,
-    //                                         funds: &[FundingTx],
-    //                                         addr: &str,
-    //                                         amount: u64)
-    //                                         -> (AnchoringTx, Vec<TxAnchoringSignature>) {
-    //     let prev_tx = &self.latest_anchoring_tx
-    //         .as_ref()
-    //         .unwrap_or(&anchoring_state.genesis.funding_tx);
+    pub fn latest_anchored_tx_signatures(&self) -> &[TxAnchoringSignature] {
+        self.latest_anchored_tx.as_ref().unwrap().1.as_ref()
+    }
 
-    //     let mut builder = TransactionBuilder::with_prev_tx(prev_tx, 0)
-    //         .payload(height, hash)
-    //         .send_to(addr, amount);
-    //     for fund in funds {
-    //         let out = fund.find_out(addr).unwrap();
-    //         builder = builder.add_funds()
-    //     }
+    pub fn gen_anchoring_tx_with_signatures(&mut self,
+                                            sandbox: &Sandbox,
+                                            height: u64,
+                                            block_hash: Hash,
+                                            funds: &[FundingTx],
+                                            addr: &str,
+                                            amount: u64)
+                                            -> (AnchoringTx, Vec<TxAnchoringSignature>) {
+        let (propose_tx, signed_tx, signs) = {
+            let prev_tx = self.latest_anchored_tx
+                .as_ref()
+                .map(|x| x.0.deref())
+                .unwrap_or(self.genesis.funding_tx.deref());
 
-    //     let tx = TransactionBuilder::with_prev_tx(prev_tx, 0)
-    //         .payload(height, hash)
-    //         .send_to("2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu", 3000)
-    //         .into_transaction();
-    // }
+            let mut builder = TransactionBuilder::with_prev_tx(prev_tx, 0)
+                .payload(height, block_hash)
+                .send_to(addr, amount);
+            for fund in funds {
+                let out = fund.find_out(addr).unwrap();
+                builder = builder.add_funds(fund, out);
+            }
+
+            let tx = builder.into_transaction();
+            let signs = self.gen_anchoring_signatures(sandbox, &tx);
+            let signed_tx = self.finalize_tx(tx.clone(), signs.as_ref());
+            (tx, signed_tx, signs)
+        };
+        self.latest_anchored_tx = Some((signed_tx, signs.clone()));
+        (propose_tx, signs)
+    }
+
+    pub fn finalize_tx(&self, tx: AnchoringTx, signs: &[TxAnchoringSignature]) -> AnchoringTx {
+        let collected_signs = collect_signatures(&tx, &self.genesis, signs.iter()).unwrap();
+        tx.finalize(&self.genesis.multisig().redeem_script, collected_signs)
+            .unwrap()
+    }
 
     pub fn gen_anchoring_signatures(&self,
                                     sandbox: &Sandbox,
@@ -94,11 +112,12 @@ impl AnchoringSandboxState {
         for (validator, key) in priv_keys.iter().enumerate() {
             let priv_key = Privkey::from_base58check(key).unwrap();
             for input in tx.inputs() {
-                let signature = sign_input(&tx.0, input as usize, &redeem_script, priv_key.secret_key());
+                let signature =
+                    sign_input(&tx.0, input as usize, &redeem_script, priv_key.secret_key());
                 signs.push(TxAnchoringSignature::new(sandbox.p(validator),
                                                      validator as u32,
                                                      tx.clone(),
-                                                     input,                                                     
+                                                     input,
                                                      &signature,
                                                      sandbox.s(validator)));
             }
@@ -129,7 +148,7 @@ pub fn anchoring_sandbox() -> (Sandbox, SandboxClient, AnchoringSandboxState) {
     let info = AnchoringSandboxState {
         genesis: genesis,
         nodes: nodes,
-        latest_anchoring_tx: None,
+        latest_anchored_tx: None,
     };
     (sandbox, client, info)
 }
@@ -157,45 +176,37 @@ pub fn anchor_genesis_block(sandbox: &Sandbox,
             ]
         }]);
 
-    let tx = TransactionBuilder::with_prev_tx(&anchoring_state.genesis.funding_tx, 0)
-        .payload(0, sandbox.last_hash())
-        .send_to("2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu", 3000)
-        .into_transaction();
-
+    let (_, signatures) =
+        anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
+                                                         0,
+                                                         sandbox.last_hash(),
+                                                         &[],
+                                                         "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                                                         3000);
+    let anchored_tx = anchoring_state.latest_anchored_tx();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-    let signatures = anchoring_state.gen_anchoring_signatures(sandbox, &tx);
 
     sandbox.broadcast(signatures[0].clone());
-    client.expect(vec![
-        // TODO add support for error response
-        Request {
-            method: "getrawtransaction",
-            params: vec!["ed3f9fe0f7c61d6d7cbb97a1c04e6b9971e565854aeadb70b8753dd8c89c9820".to_json(), 1.to_json()],
-            response: Err(RpcError::NoInformation("Unable to find tx".to_string()))
-        },
-        request! {
+    client.expect(vec![// TODO add support for error response
+                       Request {
+                           method: "getrawtransaction",
+                           params: vec![anchored_tx.txid().to_json(), 1.to_json()],
+                           response: Err(RpcError::NoInformation("Unable to find tx".to_string())),
+                       },
+                       request! {
             method: "sendrawtransaction",
-            params: ["01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000"]
-        }
-    ]);
+            params: [anchored_tx.to_hex()]
+        }]);
 
     let signatures = signatures.into_iter()
         .map(|tx| tx.raw().clone())
         .collect::<Vec<_>>();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
 
-    let txs = [gen_service_tx_lect(sandbox,
-                                   0,
-                                   "01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000"),
-               gen_service_tx_lect(sandbox,
-                                   1,
-                                   "01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000"),
-               gen_service_tx_lect(sandbox,
-                                   2,
-                                   "01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000"),
-               gen_service_tx_lect(sandbox,
-                                   3,
-                                   "01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000")];
+    let txs = [gen_service_tx_lect(sandbox, 0, &anchored_tx.to_hex()),
+               gen_service_tx_lect(sandbox, 1, &anchored_tx.to_hex()),
+               gen_service_tx_lect(sandbox, 2, &anchored_tx.to_hex()),
+               gen_service_tx_lect(sandbox, 3, &anchored_tx.to_hex())];
 
     sandbox.broadcast(txs[0].raw().clone());
     let txs = txs.into_iter()
@@ -203,7 +214,6 @@ pub fn anchor_genesis_block(sandbox: &Sandbox,
         .cloned()
         .collect::<Vec<_>>();
     add_one_height_with_transactions(sandbox, sandbox_state, txs.as_ref());
-    anchoring_state.latest_anchoring_tx = Some(AnchoringTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000").unwrap());
 }
 
 pub fn anchor_update_lect_normal(sandbox: &Sandbox,

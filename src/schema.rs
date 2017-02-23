@@ -170,7 +170,7 @@ impl<'a> AnchoringSchema<'a> {
     pub fn add_lect(&self, validator: u32, tx: AnchoringTx) -> Result<(), StorageError> {
         let lects = self.lects(validator);
         let idx = lects.len()?;
-        let txid = tx.txid();
+        let txid = tx.id();
         lects.append(tx)?;
         self.lect_indexes(validator).put(&txid, idx)
     }
@@ -198,7 +198,7 @@ impl TxAnchoringSignature {
             error!("Received tx with incorrect signature content={:#?}", self);
             return Ok(());
         }
-        schema.signatures(&tx.txid()).append(self.clone())
+        schema.signatures(&tx.id()).append(self.clone())
     }
 }
 
@@ -207,7 +207,6 @@ impl TxAnchoringUpdateLatest {
         let schema = AnchoringSchema::new(view);
         let tx = self.tx();
         // Verify lect
-        // TODO
-        schema.lects(self.validator()).append(tx)
+        schema.add_lect(self.validator(), tx)
     }
 }

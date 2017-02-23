@@ -19,6 +19,12 @@ impl From<Sha256dHash> for TxId {
     }
 }
 
+impl From<TxId> for Sha256dHash {
+    fn from(hash: TxId) -> Sha256dHash {
+        hash.0
+    }
+}
+
 impl Deref for TxId {
     type Target = Sha256dHash;
 
@@ -33,17 +39,15 @@ impl AsRef<[u8]> for TxId {
     }
 }
 
+// TODO replace by more clear solution
 impl HexValue for TxId {
     fn to_hex(&self) -> String {
-        let mut bytes = self.0[..].to_vec();
-        bytes.reverse(); // FIXME what about big endianless architectures?
-        bytes.to_hex()
+        self.be_hex_string()
     }
     fn from_hex<T: AsRef<str>>(v: T) -> Result<Self, FromHexError> {
         match Sha256dHash::from_hex(v.as_ref()) {
             Ok(hash) => Ok(TxId::from(hash)),
             Err(_) => Err(FromHexError::InvalidHexLength)
         }
-        
     }
 }

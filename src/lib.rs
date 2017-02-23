@@ -33,7 +33,7 @@ use exonum::crypto::{FromHexError, ToHex, FromHex};
 
 use multisig::RedeemScript;
 
-pub use service::AnchoringService;
+pub use service::{AnchoringService, collect_signatures};
 pub use schema::{AnchoringSchema, ANCHORING_SERVICE, TxAnchoringSignature, TxAnchoringUpdateLatest};
 pub use transactions::{BitcoinTx, AnchoringTx, FundingTx, TxKind};
 
@@ -119,7 +119,7 @@ pub trait AnchoringRpc {
         }
     }
 
-    fn find_lect(&self, addr: &str) -> Result<Vec<AnchoringTx>> {
+    fn unspent_anchoring_txs(&self, addr: &str) -> Result<Vec<AnchoringTx>> {
         let txs = self.get_unspent_transactions(0, 9999999, &addr)?;
         // FIXME Develop searching algorhytm
         let mut anchoring_txs = Vec::new();
@@ -290,7 +290,7 @@ mod tests {
             .unwrap();
         debug!("Proposal anchoring_tx={:#?}, txid={}",
                tx,
-               tx.txid().to_hex());
+               tx.txid());
 
 
         let inputs = (0..additional_funds.len() as u32 + 1).collect::<Vec<_>>();
@@ -298,8 +298,8 @@ mod tests {
         let tx = tx.send(&client, &from, signatures).unwrap();
         assert_eq!(tx.payload(), (block_height, block_hash));
 
-        debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid().to_hex());
-        let lect_tx = client.find_lect(&to.address).unwrap().first().unwrap().clone();
+        debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
+        let lect_tx = client.unspent_anchoring_txs(&to.address).unwrap().first().unwrap().clone();
         assert_eq!(lect_tx, tx);
         lect_tx
     }
@@ -310,7 +310,7 @@ mod tests {
 
         let txid_hex = "0e4167aeb4769de5ad8d64d1b2342330c2b6aadc0ed9ad0d26ae8eafb18d9c87";
         let txid = TxId::from_hex(txid_hex).unwrap();
-        let txid2 = tx.txid();
+        let txid2 = tx.id();
 
         assert_eq!(txid2.to_hex(), txid_hex);
         assert_eq!(txid2, txid);
@@ -401,14 +401,14 @@ mod tests {
                 .unwrap();
             debug!("Proposal anchoring_tx={:#?}, txid={}",
                    tx,
-                   tx.txid().to_hex());
+                   tx.txid());
 
             let signatures = make_signatures(&multisig.redeem_script, &tx, &[0], &priv_keys);
             let tx = tx.send(&client, &multisig, signatures).unwrap();
-            debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid().to_hex());
+            debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
             assert!(funding_tx.is_unspent(&client, &multisig).unwrap().is_none());
-            let lect_tx = client.find_lect(&multisig.address).unwrap().first().unwrap().clone();
+            let lect_tx = client.unspent_anchoring_txs(&multisig.address).unwrap().first().unwrap().clone();
             assert_eq!(lect_tx, tx);
             tx
         };
