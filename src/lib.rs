@@ -17,7 +17,7 @@ extern crate env_logger;
 
 mod service;
 mod schema;
-mod key;
+mod crypto;
 pub mod config;
 pub mod transactions;
 pub mod multisig;
@@ -119,17 +119,17 @@ pub trait AnchoringRpc {
         }
     }
 
-    fn find_lect(&self, multisig: &bitcoinrpc::MultiSig) -> Result<Option<AnchoringTx>> {
-        let txs = self.get_unspent_transactions(0, 9999999, &multisig.address)?;
+    fn find_lect(&self, addr: &str) -> Result<Vec<AnchoringTx>> {
+        let txs = self.get_unspent_transactions(0, 9999999, &addr)?;
         // FIXME Develop searching algorhytm
-        // Now we assume that first payload transaction is lect
+        let mut anchoring_txs = Vec::new();
         for info in txs {
             let raw_tx = self.get_transaction(&info.txid)?;
             if let TxKind::Anchoring(tx) = TxKind::from(raw_tx) {
-                return Ok(Some(tx));
+                anchoring_txs.push(tx);
             }
         }
-        Ok(None)
+        Ok(anchoring_txs)
     }
 }
 
@@ -204,14 +204,13 @@ mod tests {
     use env_logger;
     use rand::Rng;
 
-    use bitcoin::network::serialize::BitcoinHash;
-
-    use exonum::crypto::{Hash, hash, FromHex, ToHex};
+    use exonum::crypto::{Hash, hash, HexValue};
     use exonum::storage::StorageValue;
 
     use super::{AnchoringRpc, AnchoringTx, BitcoinTx, FundingTx, BitcoinPublicKey,
-                BitcoinPrivateKey, BitcoinSignature, HexValue, RpcClient};
+                BitcoinPrivateKey, BitcoinSignature, HexValue as HexValueEx, RpcClient};
     use super::config::AnchoringRpcConfig;
+    use super::crypto::TxId;
 
     fn anchoring_client() -> RpcClient {
         let rpc = AnchoringRpcConfig {
@@ -300,26 +299,20 @@ mod tests {
         assert_eq!(tx.payload(), (block_height, block_hash));
 
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid().to_hex());
-        let lect_tx = client.find_lect(&to).unwrap().unwrap();
+        let lect_tx = client.find_lect(&to.address).unwrap().first().unwrap().clone();
         assert_eq!(lect_tx, tx);
         lect_tx
     }
 
     #[test]
     fn test_anchoring_txid() {
-        let hex = "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c0990100000000ffffffff0240899500000000001976a914b85133a96a5cadf6cddcfb1d17c79f42c3bbc9dd88ac00000000000000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000";
-        let bitcoin_tx = BitcoinTx::from_hex(hex).unwrap();
-        let txid = {
-            let hash = bitcoin_tx.bitcoin_hash();
-            let hex = hash.be_hex_string();
-            let hex_bytes: Vec<u8> = FromHex::from_hex(hex).unwrap();
-            let mut bytes = [0; 32];
-            bytes.copy_from_slice(&hex_bytes);
-            Hash::new(bytes)
-        };
+        let tx = AnchoringTx::from_hex("010000000195a4472606ae658f1b9cbebd43f440def00c94341a3515024855a1da8d80932800000000fd3d020047304402204e11d63db849f253095e1e0a400f2f0c01894083e97bfaef644b1407b9fe5c4102207cc99ca986dfd99230e6641564d1f70009c5ec9a37da815c4e024c3ba837c01301483045022100d32536daa6e13989ebc7c908c27a0608517d5d967c8b6069dc047faa01e2a096022030f9c46738d9b701dd944ce3e31af9898b9266460b2de6ff3319f2a8c51f7b430147304402206b8e4491e3b98861ba06cf64e78f425cc553110535310f56f71dcd37de590b7f022051f0fa53cb74a1c73247224180cf026b61b7959d587ab6365dd19a279d14cf45014830450221009fa024c767d8004eef882c6cffe9602f781c60d1a7c629d58576e3de41833a5b02206d3b8dc86d052e112305e1fb32f61de77236f057523e22d58d82cbe37222e8fa01483045022100f1784c5e321fb2753fe725381d6f922d3f0edb94ff2eef52063f9c812489f61802202bec2903af6a5405db484ac73ab844707382f39a0b286a0453f2ed41d217c89e014ccf5521027b3e1c603ead09953bd0a8bd13a7a4830a1446289969220b96515dd1745e06f521026b64f403914e43b7ebe9aa23017eb75eef1bc74469f8b1fa342e622565ab28db2103503745e14331dac53528e666f1abab2c6b6e28767539a2827fe080bb475ec25021030a2ff505279a0e58cc3951ada56bcf323955550d1b993c4cb1b7e94a672b31252102ebb5a22d5ec3c2bc36ab7e104553a89c69684a4dfb3c8ea8fe2cb785c63425872102d9fea63c62d7cafcd4a3d20d77e06cf80cb25f3277ffce27d99c98f439323cee56aeffffffff02000000000000000017a914ab6db56dbd716114594a0d3f072ec447f6d8fc698700000000000000002c6a2a0128020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000").unwrap();
 
-        let tx = AnchoringTx::from(bitcoin_tx);
+        let txid_hex = "0e4167aeb4769de5ad8d64d1b2342330c2b6aadc0ed9ad0d26ae8eafb18d9c87";
+        let txid = TxId::from_hex(txid_hex).unwrap();
         let txid2 = tx.txid();
+
+        assert_eq!(txid2.to_hex(), txid_hex);
         assert_eq!(txid2, txid);
     }
 
@@ -415,7 +408,7 @@ mod tests {
             debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid().to_hex());
 
             assert!(funding_tx.is_unspent(&client, &multisig).unwrap().is_none());
-            let lect_tx = client.find_lect(&multisig).unwrap().unwrap();
+            let lect_tx = client.find_lect(&multisig.address).unwrap().first().unwrap().clone();
             assert_eq!(lect_tx, tx);
             tx
         };
@@ -424,7 +417,7 @@ mod tests {
         debug!("utxos={:#?}", utxos);
 
         // Send anchoring txs
-        let mut out_funds = utxo_tx.funds(utxo_tx.out(&multisig));
+        let mut out_funds = utxo_tx.amount();
         debug!("out_funds={}", out_funds);
         while out_funds >= fee {
             utxo_tx = send_anchoring_tx(&client,
@@ -501,9 +494,8 @@ mod tests {
         let block_height = 2;
         let block_hash = hash(&[1, 3, 5]);
 
-        let proposal =
-            tx.make_anchoring_tx(&multisig, fee, block_height, block_hash.clone())
-                .unwrap();
+        let proposal = tx.make_anchoring_tx(&multisig, fee, block_height, block_hash.clone())
+            .unwrap();
 
         let signs1 = make_signatures(&multisig.redeem_script, &proposal, &[0], &priv_keys);
         let signs2 = make_signatures(&multisig.redeem_script, &proposal, &[0], &priv_keys);

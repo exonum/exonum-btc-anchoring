@@ -4,13 +4,14 @@ use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
 use exonum::blockchain::Schema;
-use exonum::storage::{StorageValue, ListTable, MerkleTable, List, MapTable, View,
+use exonum::storage::{ListTable, MerkleTable, List, MapTable, View, Map,
                       Error as StorageError};
 use exonum::crypto::{PublicKey, Hash};
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::node::Height;
 
 use config::AnchoringConfig;
+use crypto::TxId;
 use AnchoringTx;
 
 pub const ANCHORING_SERVICE: u16 = 3;
@@ -123,6 +124,7 @@ impl fmt::Debug for AnchoringTransaction {
     }
 }
 
+//FIXME use Sha256dHash instead exonum::Hash
 impl<'a> AnchoringSchema<'a> {
     pub fn new(view: &'a View) -> AnchoringSchema {
         AnchoringSchema { view: view }
@@ -130,7 +132,7 @@ impl<'a> AnchoringSchema<'a> {
 
     // хэш это txid
     pub fn signatures(&self,
-                      txid: &Hash)
+                      txid: &TxId)
                       -> ListTable<MapTable<View, [u8], Vec<u8>>, u64, TxAnchoringSignature> {
         let prefix = [&[ANCHORING_SERVICE as u8, 02], txid.as_ref()].concat();
         ListTable::new(MapTable::new(prefix, self.view))
@@ -142,6 +144,12 @@ impl<'a> AnchoringSchema<'a> {
         let mut prefix = vec![ANCHORING_SERVICE as u8, 03, 0, 0, 0, 0, 0, 0, 0, 0];
         BigEndian::write_u32(&mut prefix[2..], validator);
         MerkleTable::new(MapTable::new(prefix, self.view))
+    }
+
+    pub fn lect_indexes(&self, validator: u32) -> MapTable<View, TxId, u64> {
+        let mut prefix = vec![ANCHORING_SERVICE as u8, 04, 0, 0, 0, 0, 0, 0, 0, 0];
+        BigEndian::write_u32(&mut prefix[2..], validator);
+        MapTable::new(prefix, self.view)
     }
 
     pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
@@ -157,6 +165,18 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn create_genesis_config(&self) -> Result<(), StorageError> {
         self.config_height().append(0)
+    }
+
+    pub fn add_lect(&self, validator: u32, tx: AnchoringTx) -> Result<(), StorageError> {
+        let lects = self.lects(validator);
+        let idx = lects.len()?;
+        let txid = tx.txid();
+        lects.append(tx)?;
+        self.lect_indexes(validator).put(&txid, idx)
+    }
+
+    pub fn find_lect_position(&self, validator: u32, txid: &TxId) -> Result<Option<u64>, StorageError> {
+        self.lect_indexes(validator).get(txid)
     }
 
     // TODO rewrite with value table

@@ -138,34 +138,45 @@ impl AnchoringService {
         Ok(None)
     }
 
+    // Перебираем все анкорящие транзакции среди listunspent и ищем среди них
+    // ту единственную, у которой prev_hash содержится в нашем массиве lectов
+    pub fn find_lect(&self, state: &NodeState, addr: &str) -> Result<Option<AnchoringTx>, RpcError> {
+        let lects: Vec<_> = self.client().find_lect(addr)?;
+        let schema = AnchoringSchema::new(state.view());
+        Ok(lects.into_iter().find(|tx| {
+            schema.find_lect_position(state.id(), &tx.prev_hash()).unwrap().is_some()
+        }))
+    }
+
     // Пытаемся обновить нашу последнюю известную анкорящую транзакцию
     // Помимо этого, если мы обнаруживаем, что она набрала достаточно подтверждений
     // для перехода на новый адрес, то переходим на него
     pub fn update_our_lect(&self, state: &mut NodeState) -> Result<(), RpcError> {
-        if state.height() % self.cfg.check_lect_frequency == 0 {
-            debug!("Update our lect");
-            let (_, genesis) = self.actual_config(state).unwrap();
-            let multisig = genesis.multisig();
+        unimplemented!();
+        // if state.height() % self.cfg.check_lect_frequency == 0 {
+        //     debug!("Update our lect");
+        //     let (_, genesis) = self.actual_config(state).unwrap();
+        //     let multisig = genesis.multisig();
 
-            let lect = self.client().find_lect(&multisig)?;
-            let our_lect = AnchoringSchema::new(state.view()).lects(state.id()).last().unwrap();
-            // We needs to update our lect
-            if lect != our_lect && lect.is_some() {
-                // TODO проверить, что у транзакции есть известный нам prev_hash
-                let lect = lect.unwrap();
-                debug!("Found new lect={:#?}", lect);
+        //     let lects = self.client().find_lect(&multisig.address)?;
+        //     let our_lect = AnchoringSchema::new(state.view()).lects(state.id()).last().unwrap();
+        //     // We needs to update our lect
+        //     if lect != our_lect && lect.is_some() {
+        //         // TODO проверить, что у транзакции есть известный нам prev_hash
+        //         let lect = lect.unwrap();
+        //         debug!("Found new lect={:#?}", lect);
 
-                info!("LECT ====== txid={}", lect.txid().to_hex());
-                let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
-                                                            state.id(),
-                                                            lect,
-                                                            &state.secret_key());
-                state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
-            } else {
-                // TODO проверяем ситуацию с пересылкой на новый адрес
-            }
-        }
-        Ok(())
+        //         info!("LECT ====== txid={}", lect.txid().to_hex());
+        //         let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
+        //                                                     state.id(),
+        //                                                     lect,
+        //                                                     &state.secret_key());
+        //         state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+        //     } else {
+        //         // TODO проверяем ситуацию с пересылкой на новый адрес
+        //     }
+        // }
+        // Ok(())
     }
 
     pub fn try_create_proposal_tx(&self, state: &mut NodeState) -> Result<(), RpcError> {
@@ -313,7 +324,7 @@ impl AnchoringService {
         info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
                 new_lect.payload().0,
                 new_lect.txid().to_hex(),
-                new_lect.funds(new_lect.out(&genesis.multisig())));
+                new_lect.amount());
 
         self.service_state().proposal_tx = None;
         let lect_msg = TxAnchoringUpdateLatest::new(state.public_key(),

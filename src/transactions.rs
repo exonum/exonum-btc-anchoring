@@ -11,6 +11,7 @@ use bitcoin::blockdata::transaction::{TxIn, TxOut};
 use bitcoin::blockdata::script::{Script, Builder};
 use bitcoin::util::base58::FromBase58;
 use bitcoin::util::address::{Address, Privkey};
+use bitcoin::network::constants::Network;
 use secp256k1::Secp256k1;
 use secp256k1::key::PublicKey;
 use bitcoinrpc;
@@ -22,9 +23,12 @@ use exonum::storage::StorageValue;
 
 use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, HexValue, BitcoinSignature, Result};
 use multisig::{sign_input, verify_input, RedeemScript};
+use crypto::TxId;
 
 pub type BitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
+const ANCHORING_TX_FUNDS_OUTPUT: u32 = 0;
+const ANCHORING_TX_DATA_OUTPUT: u32 = 1;
 // Структура у анкорящей транзакции строгая:
 // - нулевой вход это прошлая анкорящая транзакция или фундирующая, если транзакция исходная
 // - нулевой выход это всегда следующая анкорящая транзакция
@@ -67,18 +71,9 @@ impl HexValue for BitcoinTx {
 macro_rules! implement_tx {
 ($name:ident) => (
     impl $name {
-        // TODO Use BitcoinTxId trait
-        pub fn txid(&self) -> Hash {
-            let hash = self.0.bitcoin_hash();
-            let bytes = unsafe {
-                let ptr = hash.as_ptr();
-                let slice = ::std::slice::from_raw_parts(ptr, 32);
-                let mut bytes = [0; 32];
-                bytes.copy_from_slice(slice);
-                bytes.reverse(); // FIXME what about big endianless architectures?
-                bytes
-            };
-            Hash::new(bytes)
+        // FIXME implement common type 
+        pub fn txid(&self) -> TxId {
+            TxId::from(self.0.bitcoin_hash())
         }
     }
 
@@ -187,6 +182,7 @@ impl FundingTx {
                       multisig: &bitcoinrpc::MultiSig)
                       -> Result<Option<bitcoinrpc::UnspentTransactionInfo>> {
         let txid = self.txid().to_hex();
+        debug!("searching for txid={}", txid);
         let txs = client.listunspent(0, 999999, [multisig.address.as_str()])?;
         Ok(txs.into_iter()
             .find(|txinfo| txinfo.txid == txid))
@@ -212,8 +208,13 @@ impl FundingTx {
 }
 
 impl AnchoringTx {
-    pub fn funds(&self, out: u32) -> u64 {
-        self.0.output[out as usize].value
+    pub fn amount(&self) -> u64 {
+        self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].value
+    }
+
+    pub fn output_address(&self, network: Network) -> Address {
+        let ref script = self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].script_pubkey;
+        Address::from_script(network, script)
     }
 
     pub fn inputs(&self) -> ::std::ops::Range<u32> {
@@ -222,6 +223,10 @@ impl AnchoringTx {
 
     pub fn payload(&self) -> (Height, Hash) {
         find_payload(&self.0).expect("Unable to find payload")
+    }
+
+    pub fn prev_hash(&self) -> TxId {
+        TxId::from(self.0.input[0].prev_hash)
     }
 
     pub fn out(&self, multisig: &bitcoinrpc::MultiSig) -> u32 {
@@ -466,10 +471,7 @@ fn finalize_anchoring_transaction(mut anchoring_tx: AnchoringTx,
 
 fn find_payload(tx: &BitcoinTx) -> Option<(Height, Hash)> {
     tx.output
-        .iter()
-        .find(|output| {
-            output.script_pubkey.into_iter().next() == Some(Instruction::Op(All::OP_RETURN))
-        })
+        .get(ANCHORING_TX_DATA_OUTPUT as usize)
         .and_then(|output| {
             output.script_pubkey
                 .into_iter()
