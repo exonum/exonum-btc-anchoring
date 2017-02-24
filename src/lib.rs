@@ -35,7 +35,7 @@ use multisig::RedeemScript;
 
 pub use service::{AnchoringService, collect_signatures};
 pub use schema::{AnchoringSchema, ANCHORING_SERVICE, TxAnchoringSignature, TxAnchoringUpdateLatest};
-pub use transactions::{BitcoinTx, AnchoringTx, FundingTx, TxKind};
+pub use transactions::{BitcoinTx, AnchoringTx, FundingTx, RawBitcoinTx, TxKind};
 
 #[cfg(not(feature="sandbox_tests"))]
 pub use bitcoinrpc::Client as RpcClient;

@@ -165,6 +165,21 @@ macro_rules! implement_tx_from_raw {
             $name(tx.0)
         }
     }
+
+    impl Into<RawBitcoinTx> for $name {
+        fn into(self) -> RawBitcoinTx {
+            RawBitcoinTx(self.0)
+        }
+    }
+
+    impl PartialEq<RawBitcoinTx> for $name {
+        fn eq(&self, other: &RawBitcoinTx) -> bool {
+            self.0.eq(other)
+        }
+        fn ne(&self, other: &RawBitcoinTx) -> bool {
+            self.0.ne(other)
+        }
+    }
 )
 }
 

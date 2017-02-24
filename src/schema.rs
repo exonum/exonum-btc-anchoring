@@ -12,7 +12,7 @@ use exonum::node::Height;
 
 use config::AnchoringConfig;
 use crypto::TxId;
-use AnchoringTx;
+use {AnchoringTx, RawBitcoinTx};
 
 pub const ANCHORING_SERVICE: u16 = 3;
 const ANCHORING_TRANSACTION_SIGNATURE: u16 = 0;
@@ -124,7 +124,6 @@ impl fmt::Debug for AnchoringTransaction {
     }
 }
 
-//FIXME use Sha256dHash instead exonum::Hash
 impl<'a> AnchoringSchema<'a> {
     pub fn new(view: &'a View) -> AnchoringSchema {
         AnchoringSchema { view: view }
@@ -140,7 +139,7 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn lects(&self,
                  validator: u32)
-                 -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, AnchoringTx> {
+                 -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, RawBitcoinTx> {
         let mut prefix = vec![ANCHORING_SERVICE as u8, 03, 0, 0, 0, 0, 0, 0, 0, 0];
         BigEndian::write_u32(&mut prefix[2..], validator);
         MerkleTable::new(MapTable::new(prefix, self.view))
@@ -163,11 +162,18 @@ impl<'a> AnchoringSchema<'a> {
         self.config_height().set(0, height)
     }
 
-    pub fn create_genesis_config(&self) -> Result<(), StorageError> {
-        self.config_height().append(0)
+    pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
+        self.config_height().append(0)?;
+        for idx in 0..cfg.validators.len() {
+            self.add_lect(idx as u32, cfg.funding_tx.clone())?;
+        }
+        Ok(())
     }
 
-    pub fn add_lect(&self, validator: u32, tx: AnchoringTx) -> Result<(), StorageError> {
+    pub fn add_lect<Tx>(&self, validator: u32, tx: Tx) -> Result<(), StorageError> 
+        where Tx: Into<RawBitcoinTx>
+    {
+        let tx = tx.into();
         let lects = self.lects(validator);
         let idx = lects.len()?;
         let txid = tx.id();
@@ -177,6 +183,10 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn find_lect_position(&self, validator: u32, txid: &TxId) -> Result<Option<u64>, StorageError> {
         self.lect_indexes(validator).get(txid)
+    }
+
+    pub fn lect(&self, validator: u32) -> Result<RawBitcoinTx, StorageError> {
+        self.lects(validator).last().map(|x| x.unwrap())
     }
 
     // TODO rewrite with value table

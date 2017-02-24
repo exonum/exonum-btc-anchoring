@@ -12,10 +12,10 @@ use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::node::Height;
 
 use config::{AnchoringNodeConfig, AnchoringConfig};
-use {BITCOIN_NETWORK, AnchoringTx, FundingTx, AnchoringRpc, RpcClient, BitcoinPrivateKey,
-     HexValue, BitcoinSignature};
+use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, BitcoinPrivateKey, HexValue, BitcoinSignature};
 use schema::{ANCHORING_SERVICE, AnchoringTransaction, AnchoringSchema, TxAnchoringUpdateLatest,
              TxAnchoringSignature};
+use transactions::{TxKind, FundingTx, AnchoringTx};
 
 pub struct AnchoringState {
     proposal_tx: Option<AnchoringTx>,
@@ -29,9 +29,8 @@ pub struct AnchoringService {
 }
 
 pub enum LectKind {
-    Some(AnchoringTx),
-    Different,
-    //    Funding(FundingTx),
+    Anchoring(AnchoringTx),
+    Funding(FundingTx),
     None,
 }
 
@@ -78,20 +77,6 @@ impl AnchoringService {
         genesis.multisig()
     }
 
-    //     pub fn update_config(&self, updated: AnchoringConfig) {
-    //         let mut state = self.service_state();
-    //         if state.genesis != updated {
-    //             debug!("Update anchoring service config");
-    //             state.genesis = updated;
-
-    //             let redeem_script = updated.redeem_script();
-    //             self.client.importaddress(&redeem_script.to_address(BITCOIN_NETWORK),
-    //                                       "multisig",
-    //                                       false,
-    //                                       false);
-    //         }
-    //     }
-
     pub fn actual_payload(&self, state: &NodeState) -> Result<(Height, Hash), StorageError> {
         let schema = Schema::new(state.view());
         let (_, genesis) = self.actual_config(state)?;
@@ -108,20 +93,20 @@ impl AnchoringService {
     pub fn check_lect(&self, state: &NodeState) -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
-        let our_lects = anchoring_schema.lects(state.id());
-        if let Some(our_lect) = our_lects.last()? {
-            let mut count = 1;
-            for id in 0..state.validators().len() as u32 {
-                let lects = anchoring_schema.lects(id);
-                if Some(&our_lect) == lects.last()?.as_ref() {
-                    count += 1;
-                }
+        let our_lect = anchoring_schema.lect(state.id())?;
+        let mut count = 1;
+        for id in 0..state.validators().len() as u32 {
+            let lects = anchoring_schema.lects(id);
+            if Some(&our_lect) == lects.last()?.as_ref() {
+                count += 1;
             }
+        }
 
-            if count >= self.majority_count(state)? {
-                Ok(LectKind::Some(our_lect))
-            } else {
-                Ok(LectKind::Different)
+        if count >= self.majority_count(state)? {
+            match TxKind::from(our_lect) {
+                TxKind::Anchoring(tx) => Ok(LectKind::Anchoring(tx)),
+                TxKind::FundingTx(tx) => Ok(LectKind::Funding(tx)),
+                TxKind::Other(_) => panic!("We are fucked up..."),
             }
         } else {
             Ok(LectKind::None)
@@ -142,24 +127,18 @@ impl AnchoringService {
 
     // Перебираем все анкорящие транзакции среди listunspent и ищем среди них
     // ту единственную, у которой prev_hash содержится в нашем массиве lectов
-    // или является первой funding транзакцией
     pub fn find_lect(&self,
                      state: &NodeState,
                      addr: &str)
                      -> Result<Option<AnchoringTx>, RpcError> {
         let lects: Vec<_> = self.client().unspent_anchoring_txs(addr)?;
         let schema = AnchoringSchema::new(state.view());
-        let funding_tx = self.actual_config(state).unwrap().1.funding_tx;
-
-        let lect = lects.into_iter()
-            .find(|tx| if schema.find_lect_position(state.id(), &tx.prev_hash())
-                .unwrap()
-                .is_none() {
-                tx.prev_hash() == funding_tx.id()
-            } else {
-                true
-            });
-        Ok(lect)
+        for lect in lects.into_iter() {
+            if schema.find_lect_position(state.id(), &lect.prev_hash()).unwrap().is_some() {
+                return Ok(Some(lect));
+            }
+        }
+        Ok(None)
     }
 
     // Пытаемся обновить нашу последнюю известную анкорящую транзакцию
@@ -170,25 +149,26 @@ impl AnchoringService {
             debug!("Update our lect");
             let (_, genesis) = self.actual_config(state).unwrap();
             let multisig = genesis.multisig();
-
-            let lect = self.find_lect(state, &multisig.address)?;
-            let our_lect = AnchoringSchema::new(state.view()).lects(state.id()).last().unwrap();
-            debug!("lect={:#?}", lect);
-            debug!("our_lect={:#?}", our_lect);
             // We needs to update our lect
-            if lect != our_lect && lect.is_some() {
-                // TODO проверить, что у транзакции есть известный нам prev_hash
-                let lect = lect.unwrap();
-                debug!("Found new lect={:#?}", lect);
+            if let Some(lect) = self.find_lect(state, &multisig.address)? {
+                let our_lect = AnchoringSchema::new(state.view())
+                    .lect(state.id())
+                    .unwrap();
 
-                info!("LECT ====== txid={}", lect.txid().to_hex());
-                let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
-                                                            state.id(),
-                                                            lect,
-                                                            &state.secret_key());
-                state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+                debug!("lect={:#?}", lect);
+                debug!("our_lect={:#?}", our_lect);
+
+                if lect != our_lect {
+                    info!("LECT ====== txid={}", lect.txid().to_hex());
+                    let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
+                                                                state.id(),
+                                                                lect,
+                                                                &state.secret_key());
+                    state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+                }
             } else {
                 // TODO проверяем ситуацию с пересылкой на новый адрес
+                if multisig.address != self.output_address(state).address {}
             }
         }
         Ok(())
@@ -196,9 +176,8 @@ impl AnchoringService {
 
     pub fn try_create_proposal_tx(&self, state: &mut NodeState) -> Result<(), RpcError> {
         match self.check_lect(state).unwrap() {
-            LectKind::Different => Ok(()),
-            LectKind::None => self.create_first_proposal_tx(state),
-            LectKind::Some(tx) => {
+            LectKind::Funding(_) => self.create_first_proposal_tx(state),
+            LectKind::Anchoring(tx) => {
                 let (_, genesis) = self.actual_config(state).unwrap();
                 let anchored_height = tx.payload().0;
                 if genesis.nearest_anchoring_height(state.height()) > anchored_height {
@@ -206,6 +185,7 @@ impl AnchoringService {
                 }
                 Ok(())
             }
+            LectKind::None => Ok(()),
         }
     }
 
@@ -244,7 +224,7 @@ impl AnchoringService {
                    proposal.0.to_hex());
 
             // Sign proposal
-            self.sign_proposal_tx(state, proposal, &multisig, &priv_key);
+            self.sign_proposal_tx(state, proposal, &multisig, &priv_key)?;
         } else {
             warn!("Funding transaction is not suitable.");
         }
@@ -357,7 +337,7 @@ impl Service for AnchoringService {
                            false)
             .unwrap();
 
-        AnchoringSchema::new(view).create_genesis_config()?;
+        AnchoringSchema::new(view).create_genesis_config(&cfg)?;
         Ok(cfg.to_json())
     }
 
