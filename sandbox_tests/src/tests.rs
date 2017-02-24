@@ -264,6 +264,25 @@ fn test_anchoring_second_block_lect_lost() {
         })
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
+
+    // Trying to resend lost lect tx
+    client.expect(vec![request! {
+            method: "listunspent",
+            params: [0, 999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            response: [
+                {
+                    "txid": &prev_anchored_tx.txid(),
+                    "vout": 0,
+                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 0,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        }]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &txs);
     
     anchoring_state.latest_anchored_tx = Some((prev_anchored_tx, prev_tx_signatures));
