@@ -31,7 +31,7 @@ pub struct AnchoringService {
 pub enum LectKind {
     Some(AnchoringTx),
     Different,
-//    Funding(FundingTx),
+    //    Funding(FundingTx),
     None,
 }
 
@@ -141,7 +141,7 @@ impl AnchoringService {
     }
 
     // Перебираем все анкорящие транзакции среди listunspent и ищем среди них
-    // ту единственную, у которой prev_hash содержится в нашем массиве lectов 
+    // ту единственную, у которой prev_hash содержится в нашем массиве lectов
     // или является первой funding транзакцией
     pub fn find_lect(&self,
                      state: &NodeState,
@@ -152,12 +152,12 @@ impl AnchoringService {
         let funding_tx = self.actual_config(state).unwrap().1.funding_tx;
 
         let lect = lects.into_iter()
-            .find(|tx| {
-                if schema.find_lect_position(state.id(), &tx.prev_hash()).unwrap().is_none() {
-                    tx.prev_hash() == funding_tx.id()
-                } else {
-                    true
-                }
+            .find(|tx| if schema.find_lect_position(state.id(), &tx.prev_hash())
+                .unwrap()
+                .is_none() {
+                tx.prev_hash() == funding_tx.id()
+            } else {
+                true
             });
         Ok(lect)
     }
@@ -231,22 +231,24 @@ impl AnchoringService {
     // Create first anchoring tx proposal from funding tx in AnchoringNodeConfig
     pub fn create_first_proposal_tx(&self, state: &mut NodeState) -> Result<(), RpcError> {
         debug!("Create first proposal tx");
+        if let Some(funding_tx) = self.avaliable_funding_tx(state)? {
+            // Create anchoring proposal
+            let (height, hash) = self.actual_payload(state).unwrap();
 
-        let funding_tx = self.avaliable_funding_tx(state)?
-            .expect("Funding transaction is not suitable.");
-        // Create anchoring proposal
-        let (height, hash) = self.actual_payload(state).unwrap();
+            let (priv_key, genesis) = self.actual_config(state).unwrap();
+            let multisig = genesis.multisig();
+            let proposal = funding_tx.make_anchoring_tx(&multisig, genesis.fee, height, hash)?;
 
-        let (priv_key, genesis) = self.actual_config(state).unwrap();
-        let multisig = genesis.multisig();
-        let proposal = funding_tx.make_anchoring_tx(&multisig, genesis.fee, height, hash)?;
+            debug!("initial_proposal={:#?}, txhex={}",
+                   proposal,
+                   proposal.0.to_hex());
 
-        debug!("initial_proposal={:#?}, txhex={}",
-               proposal,
-               proposal.0.to_hex());
-
-        // Sign proposal
-        self.sign_proposal_tx(state, proposal, &multisig, &priv_key)
+            // Sign proposal
+            self.sign_proposal_tx(state, proposal, &multisig, &priv_key);
+        } else {
+            warn!("Funding transaction is not suitable.");
+        }
+        Ok(())
     }
 
     pub fn sign_proposal_tx(&self,

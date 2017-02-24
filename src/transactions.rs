@@ -29,6 +29,7 @@ pub type BitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
 const ANCHORING_TX_FUNDS_OUTPUT: u32 = 0;
 const ANCHORING_TX_DATA_OUTPUT: u32 = 1;
+const ANCHORING_TX_INPUT: u32 = 0;
 // Структура у анкорящей транзакции строгая:
 // - нулевой вход это прошлая анкорящая транзакция или фундирующая, если транзакция исходная
 // - нулевой выход это всегда следующая анкорящая транзакция
@@ -41,11 +42,14 @@ pub struct AnchoringTx(pub BitcoinTx);
 // Входов и выходов может быть несколько, но главное правило, чтобы нулевой вход переводил деньги на мультисиг кошелек
 #[derive(Clone, PartialEq)]
 pub struct FundingTx(pub BitcoinTx);
+// Обертка над обычной биткоин транзакцией
+#[derive(Clone, PartialEq)]
+pub struct RawBitcoinTx(pub BitcoinTx);
 
 pub enum TxKind {
     Anchoring(AnchoringTx),
     FundingTx(FundingTx),
-    Other(BitcoinTx),
+    Other(RawBitcoinTx),
 }
 
 pub struct TransactionBuilder {
@@ -68,7 +72,7 @@ impl HexValue for BitcoinTx {
     }
 }
 
-macro_rules! implement_tx {
+macro_rules! implement_tx_wrapper {
 ($name:ident) => (
     impl $name {
         pub fn id(&self) -> TxId {
@@ -154,8 +158,22 @@ macro_rules! implement_tx {
 )
 }
 
-implement_tx! {AnchoringTx}
-implement_tx! {FundingTx}
+macro_rules! implement_tx_from_raw {
+($name:ident) => (
+    impl From<RawBitcoinTx> for $name {
+        fn from(tx: RawBitcoinTx) -> $name {
+            $name(tx.0)
+        }
+    }
+)
+}
+
+implement_tx_wrapper! {AnchoringTx}
+implement_tx_wrapper! {FundingTx}
+implement_tx_wrapper! {RawBitcoinTx}
+
+implement_tx_from_raw! {AnchoringTx}
+implement_tx_from_raw! {FundingTx}
 
 impl FundingTx {
     pub fn create(client: &RpcClient,
@@ -333,12 +351,21 @@ impl From<BitcoinTx> for TxKind {
         if find_payload(&tx).is_some() {
             TxKind::Anchoring(AnchoringTx::from(tx))
         } else {
-            if tx.output.len() == 1 {
-                TxKind::FundingTx(FundingTx::from(tx))
-            } else {
-                TxKind::Other(tx)
+            // TODO make sure that only first output[0] is p2sh
+            // Find output with funds and p2sh script_pubkey
+            for out in tx.output.iter() {
+                if out.value > 0 && out.script_pubkey.is_p2sh() {
+                    return TxKind::FundingTx(FundingTx::from(tx.clone()));
+                }
             }
+            TxKind::Other(RawBitcoinTx::from(tx))
         }
+    }
+}
+
+impl From<RawBitcoinTx> for TxKind {
+    fn from(tx: RawBitcoinTx) -> TxKind {
+        TxKind::from(tx.0)
     }
 }
 
@@ -506,7 +533,7 @@ mod tests {
 
     use multisig::RedeemScript;
     use HexValue as HexValueEx;
-    use transactions::{AnchoringTx, FundingTx, TransactionBuilder};
+    use transactions::{RawBitcoinTx, AnchoringTx, FundingTx, TransactionBuilder, TxKind};
 
     #[test]
     fn test_anchoring_tx_sign() {
@@ -548,6 +575,33 @@ mod tests {
             for (id, signature) in signs.iter().enumerate() {
                 assert!(tx.verify(&redeem_script, *input, &pub_keys[id], signature.as_ref()));
             }
+        }
+    }
+
+    #[test]
+    fn test_tx_kind_funding() {
+        let tx = RawBitcoinTx::from_hex("01000000019532a4022a22226a6f694c3f21216b2c9f5c1c79007eb7d3be06bc2f1f9e52fb000000006a47304402203661efd05ca422fad958b534dbad2e1c7db42bbd1e73e9b91f43a2f7be2f92040220740cf883273978358f25ca5dd5700cce5e65f4f0a0be2e1a1e19a8f168095400012102ae1b03b0f596be41a247080437a50f4d8e825b170770dcb4e5443a2eb2ecab2afeffffff02a00f00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678716e1ff05000000001976a91402f5d7475a10a9c24cea32575bd8993d3fabbfd388ac089e1000").unwrap();
+        match TxKind::from(tx) {
+            TxKind::FundingTx(_) => {}
+            _ => panic!("Wrong tx kind!"),
+        }
+    }
+
+    #[test]
+    fn test_tx_kind_anchoring() {
+        let tx = RawBitcoinTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000").unwrap();
+        match TxKind::from(tx) {
+            TxKind::Anchoring(_) => {}
+            _ => panic!("Wrong tx kind!"),
+        }
+    }
+
+    #[test]
+    fn test_tx_kind_other() {
+        let tx = RawBitcoinTx::from_hex("0100000001cea827387bc0bb1b5e6afa6e6d557123e4432e47bad8c2d94214a9cd1e2e074b010000006a473044022034d463312dd75445ad078b1159a75c0b148388b36686b69da8aecca863e63dc3022071ef86a064bd15f11ec89059072bbd3e3d3bb6c5e9b10712e0e2dc6710520bb00121035e63a48d34250dbbcc58fdc0ab63b901769e71035e19e0eee1a87d433a96723afeffffff0296a6f80b000000001976a914b5d7055cfdacc803e5547b981faa693c5aaa813b88aca0860100000000001976a914f5548cb02bb197f071934a0ea3eeb5878cb59dff88ac03a21000").unwrap();
+        match TxKind::from(tx) {
+            TxKind::Other(_) => {}
+            _ => panic!("Wrong tx kind!"),
         }
     }
 }
