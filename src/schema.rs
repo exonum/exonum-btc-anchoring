@@ -38,11 +38,12 @@ message! {
     TxAnchoringUpdateLatest {
         const TYPE = ANCHORING_SERVICE;
         const ID = ANCHORING_TRANSACTION_LATEST;
-        const SIZE = 44;
+        const SIZE = 76;
 
         from:           &PublicKey   [00 => 32]
         validator:      u32          [32 => 36]
         tx:             RawBitcoinTx [36 => 44]
+        prev_txid:      &TxId        [44 => 76]      
     }
 }
 

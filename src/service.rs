@@ -140,9 +140,6 @@ impl AnchoringService {
 
         let first_funding_tx = schema.lects(id).get(0).unwrap().unwrap();
         for lect in lects.into_iter() {
-            debug!("lect={:#?}", lect);
-            debug!("first_funding_tx={:#?}", first_funding_tx);
-            
             let kind = TxKind::from(lect);
             match kind {
                 TxKind::FundingTx(tx) => {
@@ -183,6 +180,7 @@ impl AnchoringService {
                     let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
                                                                 state.id(),
                                                                 lect,
+                                                                &our_lect.id(),
                                                                 &state.secret_key());
                     state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
                 }
@@ -314,9 +312,12 @@ impl AnchoringService {
                   new_lect.amount());
 
             self.service_state().proposal_tx = None;
+
+            let prev_txid = new_lect.prev_hash();
             let lect_msg = TxAnchoringUpdateLatest::new(state.public_key(),
                                                         state.id(),
                                                         new_lect.into(),
+                                                        &prev_txid,
                                                         state.secret_key());
             state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
         }

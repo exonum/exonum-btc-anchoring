@@ -17,7 +17,7 @@ extern crate env_logger;
 
 mod service;
 mod schema;
-mod crypto;
+pub mod crypto;
 pub mod config;
 pub mod transactions;
 pub mod multisig;

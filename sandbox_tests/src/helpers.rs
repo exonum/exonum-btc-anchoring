@@ -11,26 +11,29 @@ use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactio
 
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::{TxAnchoringUpdateLatest, HexValue as HexValueEx};
-use anchoring_service::transactions::RawBitcoinTx;
+use anchoring_service::transactions::{RawBitcoinTx, BitcoinTx};
+use anchoring_service::crypto::TxId;
 
 use AnchoringSandboxState;
 
 pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            validator: u32,
-                           txhex: &str)
+                           tx: &BitcoinTx,
+                           prev_hash: &TxId)
                            -> TxAnchoringUpdateLatest {
-    let tx = RawBitcoinTx::from_hex(txhex).unwrap();
+    let tx = RawBitcoinTx::from(tx.clone());
     TxAnchoringUpdateLatest::new(sandbox.p(validator as usize),
                                  validator,
-                                 tx.into(),
+                                 tx.clone().into(),
+                                 &prev_hash,
                                  sandbox.s(validator as usize))
 }
 
 /// Anchor genesis block using funding tx
-pub fn anchor_genesis_block(sandbox: &Sandbox,
-                            client: &SandboxClient,
-                            sandbox_state: &SandboxState,
-                            anchoring_state: &mut AnchoringSandboxState) {
+pub fn anchor_first_block(sandbox: &Sandbox,
+                          client: &SandboxClient,
+                          sandbox_state: &SandboxState,
+                          anchoring_state: &mut AnchoringSandboxState) {
     client.expect(vec![request! {
             method: "listunspent",
             params: [0, 999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
@@ -76,10 +79,10 @@ pub fn anchor_genesis_block(sandbox: &Sandbox,
         .collect::<Vec<_>>();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
 
-    let txs = [gen_service_tx_lect(sandbox, 0, &anchored_tx.to_hex()),
-               gen_service_tx_lect(sandbox, 1, &anchored_tx.to_hex()),
-               gen_service_tx_lect(sandbox, 2, &anchored_tx.to_hex()),
-               gen_service_tx_lect(sandbox, 3, &anchored_tx.to_hex())];
+    let txs = [gen_service_tx_lect(sandbox, 0, &anchored_tx, &anchored_tx.prev_hash()),
+               gen_service_tx_lect(sandbox, 1, &anchored_tx, &anchored_tx.prev_hash()),
+               gen_service_tx_lect(sandbox, 2, &anchored_tx, &anchored_tx.prev_hash()),
+               gen_service_tx_lect(sandbox, 3, &anchored_tx, &anchored_tx.prev_hash())];
 
     sandbox.broadcast(txs[0].raw().clone());
     let txs = txs.into_iter()
@@ -89,11 +92,10 @@ pub fn anchor_genesis_block(sandbox: &Sandbox,
     add_one_height_with_transactions(sandbox, sandbox_state, txs.as_ref());
 }
 
-pub fn anchor_update_lect_normal(sandbox: &Sandbox,
-                                 client: &SandboxClient,
-                                 sandbox_state: &SandboxState,
-                                 anchorign_state: &mut AnchoringSandboxState) {
-    anchor_genesis_block(sandbox, client, sandbox_state, anchorign_state);
+pub fn anchor_first_block_lect_normal(sandbox: &Sandbox,
+                                      client: &SandboxClient,
+                                      sandbox_state: &SandboxState,
+                                      _: &mut AnchoringSandboxState) {
     // Just add few heights
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
@@ -125,15 +127,16 @@ pub fn anchor_update_lect_normal(sandbox: &Sandbox,
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 }
 
-pub fn anchor_first_lect_lost(sandbox: &Sandbox,
-                              client: &SandboxClient,
-                              sandbox_state: &SandboxState,
-                              anchoring_state: &mut AnchoringSandboxState) {
-    anchor_genesis_block(sandbox, client, sandbox_state, anchoring_state);
+pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
+                                    client: &SandboxClient,
+                                    sandbox_state: &SandboxState,
+                                    anchoring_state: &mut AnchoringSandboxState) {
+    anchor_first_block(sandbox, client, sandbox_state, anchoring_state);
     // Just add few heights
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
+    let lost_lect_id = anchoring_state.latest_anchored_tx().id();
     let other_lect = anchoring_state.genesis.funding_tx.clone();
 
     client.expect(vec![request! {
@@ -160,10 +163,10 @@ pub fn anchor_first_lect_lost(sandbox: &Sandbox,
         }]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
-    let txs = [gen_service_tx_lect(sandbox, 0, &other_lect.to_hex()),
-               gen_service_tx_lect(sandbox, 1, &other_lect.to_hex()),
-               gen_service_tx_lect(sandbox, 2, &other_lect.to_hex()),
-               gen_service_tx_lect(sandbox, 3, &other_lect.to_hex())];
+    let txs = [gen_service_tx_lect(sandbox, 0, &other_lect, &lost_lect_id),
+               gen_service_tx_lect(sandbox, 1, &other_lect, &lost_lect_id),
+               gen_service_tx_lect(sandbox, 2, &other_lect, &lost_lect_id),
+               gen_service_tx_lect(sandbox, 3, &other_lect, &lost_lect_id)];
 
     sandbox.broadcast(txs[0].raw().clone());
     let txs = txs.into_iter()
@@ -176,7 +179,7 @@ pub fn anchor_first_lect_lost(sandbox: &Sandbox,
             params: [0, 999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
             response: [
                 {
-                    "txid": &anchoring_state.genesis.funding_tx.txid(),
+                    "txid": &other_lect.txid(),
                     "vout": 0,
                     "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
                     "account": "multisig",
@@ -209,15 +212,16 @@ pub fn anchor_first_lect_lost(sandbox: &Sandbox,
     anchoring_state.latest_anchored_tx = None;
 }
 
-pub fn anchor_first_lect_different(sandbox: &Sandbox,
-                                   client: &SandboxClient,
-                                   sandbox_state: &SandboxState,
-                                   anchoring_state: &mut AnchoringSandboxState) {
-    anchor_genesis_block(sandbox, client, sandbox_state, anchoring_state);
+pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
+                                         client: &SandboxClient,
+                                         sandbox_state: &SandboxState,
+                                         anchoring_state: &mut AnchoringSandboxState) {
+    anchor_first_block(sandbox, client, sandbox_state, anchoring_state);
     // Just add few heights
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
+    let lost_lect_id = anchoring_state.latest_anchored_tx().id();
     let (other_lect, other_signatures) = {
         let anchored_tx = anchoring_state.latest_anchored_tx();
         let other_signatures = anchoring_state.latest_anchored_tx_signatures()
@@ -254,10 +258,10 @@ pub fn anchor_first_lect_different(sandbox: &Sandbox,
         }]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
-    let txs = [gen_service_tx_lect(sandbox, 0, &other_lect.to_hex()),
-               gen_service_tx_lect(sandbox, 1, &other_lect.to_hex()),
-               gen_service_tx_lect(sandbox, 2, &other_lect.to_hex()),
-               gen_service_tx_lect(sandbox, 3, &other_lect.to_hex())];
+    let txs = [gen_service_tx_lect(sandbox, 0, &other_lect, &lost_lect_id),
+               gen_service_tx_lect(sandbox, 1, &other_lect, &lost_lect_id),
+               gen_service_tx_lect(sandbox, 2, &other_lect, &lost_lect_id),
+               gen_service_tx_lect(sandbox, 3, &other_lect, &lost_lect_id)];
 
     sandbox.broadcast(txs[0].raw().clone());
     let txs = txs.into_iter()
@@ -267,4 +271,93 @@ pub fn anchor_first_lect_different(sandbox: &Sandbox,
 
     add_one_height_with_transactions(sandbox, sandbox_state, txs.as_ref());
     anchoring_state.latest_anchored_tx = Some((other_lect.clone(), other_signatures.clone()));
+}
+
+pub fn anchor_second_block_normal(sandbox: &Sandbox,
+                                  client: &SandboxClient,
+                                  sandbox_state: &SandboxState,
+                                  anchoring_state: &mut AnchoringSandboxState) {
+    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+
+    client.expect(vec![request! {
+            method: "listunspent",
+            params: [0, 999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            response: [
+                {
+                    "txid": "fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491",
+                    "vout": 0,
+                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 1,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        }]);
+    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+
+    let (_, signatures) =
+        anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
+                                                         10,
+                                                         sandbox.last_hash(),
+                                                         &[],
+                                                         "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                                                         2000);
+    let anchored_tx = anchoring_state.latest_anchored_tx();
+
+    sandbox.broadcast(signatures[0].clone());
+
+    client.expect(vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&anchored_tx.txid(), 1],
+            response: {
+                "hash":&anchored_tx.txid(),"hex":&anchored_tx.to_hex(),
+                "locktime":1088682,"size":223,"txid":"4ae2de1782b19ddab252d88d570f60bc821bd745d031029a8b28f7427c8d0e93","version":1,"vin":[{"scriptSig":{"asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876","hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"},"sequence":429496729,"txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645","vout":0}],"vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],"asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL","hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87","reqSigs":1,"type":"scripthash"},"value":0.00004},{"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],"asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac","reqSigs":1,"type":"pubkeyhash"},"value":1.00768693}],"vsize":223
+                }
+        }
+    ]);
+
+    let signatures = signatures.into_iter()
+        .map(|tx| tx.raw().clone())
+        .collect::<Vec<_>>();
+    add_one_height_with_transactions(sandbox, sandbox_state, &signatures);
+
+    let txs = [gen_service_tx_lect(sandbox, 0, &anchored_tx, &anchored_tx.prev_hash()),
+               gen_service_tx_lect(sandbox, 1, &anchored_tx, &anchored_tx.prev_hash()),
+               gen_service_tx_lect(sandbox, 2, &anchored_tx, &anchored_tx.prev_hash()),
+               gen_service_tx_lect(sandbox, 3, &anchored_tx, &anchored_tx.prev_hash())];
+
+    sandbox.broadcast(txs[0].clone());
+    client.expect(vec![request! {
+            method: "listunspent",
+            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            response: [
+                {
+                    "txid": &anchored_tx.txid(),
+                    "vout": 0,
+                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 100,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        },
+                       request! {
+            method: "getrawtransaction",
+            params: [&anchored_tx.txid(), 0],
+            response: &anchored_tx.to_hex()
+        }]);
+
+    let txs = txs.into_iter()
+        .map(|tx| tx.raw().clone())
+        .collect::<Vec<_>>();
+    add_one_height_with_transactions(sandbox, sandbox_state, &txs);
 }

@@ -3,6 +3,7 @@ use std::ops::Deref;
 use bitcoin::util::hash::Sha256dHash;
 
 use exonum::crypto::{HexValue, FromHexError};
+use exonum::messages::Field;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct TxId(Sha256dHash);
@@ -49,5 +50,19 @@ impl HexValue for TxId {
             Ok(hash) => Ok(TxId::from(hash)),
             Err(_) => Err(FromHexError::InvalidHexLength)
         }
+    }
+}
+
+impl<'a> Field<'a> for &'a TxId {
+    fn field_size() -> usize {
+        32
+    }
+
+    fn read(buffer: &'a [u8], from: usize, _: usize) -> &'a TxId {
+        unsafe { ::std::mem::transmute(&buffer[from]) }
+    }
+
+    fn write(&self, buffer: &'a mut Vec<u8>, from: usize, to: usize) {
+        buffer[from..to].copy_from_slice(self.as_ref());
     }
 }
