@@ -96,7 +96,10 @@ impl SandboxClient {
     pub fn sendtoaddress(&self, addr: &str, amount: &str) -> Result<String> {
         self.request("sendtoaddress", vec![addr.to_json(), amount.to_json()])
     }
-    pub fn getrawtransaction(&self, txid: &str) -> Result<RawTransactionInfo> {
+    pub fn getrawtransaction(&self, txid: &str) -> Result<String> {
+        self.request("getrawtransaction", vec![txid.to_json(), 0.to_json()])
+    }
+    pub fn getrawtransaction_verbose(&self, txid: &str) -> Result<RawTransactionInfo> {
         self.request("getrawtransaction", vec![txid.to_json(), 1.to_json()])
     }
     pub fn createrawtransaction<T, O>(&self,

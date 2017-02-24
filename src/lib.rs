@@ -143,7 +143,7 @@ impl AnchoringRpc for RpcClient {
 
     fn get_transaction(&self, txid: &str) -> Result<BitcoinTx> {
         let tx = self.getrawtransaction(txid)?;
-        Ok(BitcoinTx::from_hex(tx.hex.unwrap()).unwrap())
+        Ok(BitcoinTx::from_hex(tx).unwrap())
     }
 
     fn send_transaction(&self, tx: BitcoinTx) -> Result<String> {

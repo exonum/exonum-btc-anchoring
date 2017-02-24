@@ -266,7 +266,7 @@ impl AnchoringTx {
     }
 
     pub fn get_info(&self, client: &RpcClient) -> Result<Option<bitcoinrpc::RawTransactionInfo>> {
-        let r = client.getrawtransaction(&self.txid());
+        let r = client.getrawtransaction_verbose(&self.txid());
         match r {
             Ok(tx) => Ok(Some(tx)),
             Err(bitcoinrpc::Error::NoInformation(_)) => Ok(None),
