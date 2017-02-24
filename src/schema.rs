@@ -42,7 +42,7 @@ message! {
 
         from:           &PublicKey   [00 => 32]
         validator:      u32          [32 => 36]
-        tx:             AnchoringTx  [36 => 44]
+        tx:             RawBitcoinTx [36 => 44]
     }
 }
 

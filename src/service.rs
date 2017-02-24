@@ -15,7 +15,7 @@ use config::{AnchoringNodeConfig, AnchoringConfig};
 use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, BitcoinPrivateKey, HexValue, BitcoinSignature};
 use schema::{ANCHORING_SERVICE, AnchoringTransaction, AnchoringSchema, TxAnchoringUpdateLatest,
              TxAnchoringSignature};
-use transactions::{TxKind, FundingTx, AnchoringTx};
+use transactions::{TxKind, FundingTx, AnchoringTx, RawBitcoinTx};
 
 pub struct AnchoringState {
     proposal_tx: Option<AnchoringTx>,
@@ -127,15 +127,35 @@ impl AnchoringService {
 
     // Перебираем все анкорящие транзакции среди listunspent и ищем среди них
     // ту единственную, у которой prev_hash содержится в нашем массиве lectов
+    // или первую funding транзакцию, если все анкорящие пропали
     pub fn find_lect(&self,
                      state: &NodeState,
                      addr: &str)
-                     -> Result<Option<AnchoringTx>, RpcError> {
-        let lects: Vec<_> = self.client().unspent_anchoring_txs(addr)?;
+                     -> Result<Option<RawBitcoinTx>, RpcError> {
+        let lects: Vec<_> = self.client().unspent_lects(addr)?;
         let schema = AnchoringSchema::new(state.view());
+        let id = state.id();
+
+        debug!("lects={:#?}", lects);
+
+        let first_funding_tx = schema.lects(id).get(0).unwrap().unwrap();
         for lect in lects.into_iter() {
-            if schema.find_lect_position(state.id(), &lect.prev_hash()).unwrap().is_some() {
-                return Ok(Some(lect));
+            debug!("lect={:#?}", lect);
+            debug!("first_funding_tx={:#?}", first_funding_tx);
+            
+            let kind = TxKind::from(lect);
+            match kind {
+                TxKind::FundingTx(tx) => {
+                    if tx == first_funding_tx {
+                        return Ok(Some(tx.into()))
+                    }
+                }
+                TxKind::Anchoring(tx) => {
+                    if schema.find_lect_position(id, &tx.prev_hash()).unwrap().is_some() {
+                        return Ok(Some(tx.into()))
+                    }
+                }
+                TxKind::Other(_) => {}
             }
         }
         Ok(None)
@@ -185,7 +205,10 @@ impl AnchoringService {
                 }
                 Ok(())
             }
-            LectKind::None => Ok(()),
+            LectKind::None => {
+                warn!("Unable to reach consensus in a lect");
+                Ok(())
+            }
         }
     }
 
@@ -293,7 +316,7 @@ impl AnchoringService {
             self.service_state().proposal_tx = None;
             let lect_msg = TxAnchoringUpdateLatest::new(state.public_key(),
                                                         state.id(),
-                                                        new_lect,
+                                                        new_lect.into(),
                                                         state.secret_key());
             state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
         }

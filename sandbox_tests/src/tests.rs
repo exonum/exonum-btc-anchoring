@@ -7,8 +7,8 @@ use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactio
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::HexValue;
 
-use super::{RpcError, anchoring_sandbox, gen_sandbox_anchoring_config, gen_service_tx_lect,
-            anchor_genesis_block, anchor_update_lect_normal};
+use {RpcError, anchoring_sandbox, gen_sandbox_anchoring_config};
+use helpers::*;
 
 #[test]
 fn test_rpc_getnewaddress() {
@@ -91,71 +91,37 @@ fn test_anchoring_sandbox() {
 fn test_anchoring_genesis_block() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchorign_state) = anchoring_sandbox();
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox();
     let sandbox_state = SandboxState::new();
-    anchor_genesis_block(&sandbox, &client, &sandbox_state, &mut anchorign_state);
+    anchor_genesis_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 }
 
 #[test]
 fn test_anchoring_update_lect_normal() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchorign_state) = anchoring_sandbox();
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox();
     let sandbox_state = SandboxState::new();
-    anchor_update_lect_normal(&sandbox, &client, &sandbox_state, &mut anchorign_state);
+    anchor_update_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 }
 
 #[test]
 fn test_anchoring_update_lect_different() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchorign_state) = anchoring_sandbox();
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox();
     let sandbox_state = SandboxState::new();
-    anchor_genesis_block(&sandbox, &client, &sandbox_state, &mut anchorign_state);
-    // Just add few heights
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    anchor_first_lect_different(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+}
 
-    let other_lect = {
-        let anchored_tx = anchorign_state.latest_anchored_tx();
-        let other_signatures = anchorign_state.latest_anchored_tx_signatures()
-            .iter()
-            .filter(|tx| tx.validator() != 0)
-            .cloned()
-            .collect::<Vec<_>>();
-        anchorign_state.finalize_tx(anchored_tx.clone(), other_signatures.as_ref())
-    };
+#[test]
+fn test_anchoring_first_block_lect_lost() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
 
-    client.expect(vec![
-        request! {
-            method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
-            response: [
-                {
-                    "txid": &other_lect.txid(),
-                    "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
-        },
-        request! {
-            method: "getrawtransaction",
-            params: [&other_lect.txid(), 0],
-            response: &other_lect.to_hex()
-        }
-        ]);
-
-    let tx = gen_service_tx_lect(&sandbox, 0, &other_lect.to_hex());
-
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-    sandbox.broadcast(tx.clone());
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[tx.raw().clone()]);
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox();
+    let sandbox_state = SandboxState::new();
+    anchor_first_lect_lost(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    assert_eq!(anchoring_state.latest_anchored_tx, None);
 }
 
 #[test]
@@ -272,17 +238,15 @@ fn test_anchoring_second_block_additional_funds() {
     sandbox.broadcast(signatures[1].clone());
 
     let anchored_tx = anchoring_state.latest_anchored_tx();
-    client.expect(vec![
-        Request {
-            method: "getrawtransaction",
-            params: vec![anchored_tx.txid().to_json(), 1.to_json()],
-            response: Err(RpcError::NoInformation("Unable to find tx".to_string()))
-        },
-        request! {
+    client.expect(vec![Request {
+                           method: "getrawtransaction",
+                           params: vec![anchored_tx.txid().to_json(), 1.to_json()],
+                           response: Err(RpcError::NoInformation("Unable to find tx".to_string())),
+                       },
+                       request! {
             method: "sendrawtransaction",
             params: [&anchored_tx.to_hex()]
-        }
-    ]);
+        }]);
 
     let signatures = signatures.into_iter()
         .map(|tx| tx.raw().clone())

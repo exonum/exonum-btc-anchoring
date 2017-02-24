@@ -15,30 +15,27 @@ use std::ops::Deref;
 pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
-use serde_json::value::ToJson;
-
 use bitcoin::util::base58::FromBase58;
 use bitcoin::util::address::Privkey;
 
-use exonum::messages::Message;
 use exonum::crypto::Hash;
 
 use sandbox::sandbox_with_services;
 use sandbox::sandbox::Sandbox;
 use sandbox::timestamping::TimestampingService;
-use sandbox::sandbox_tests_helper::{SandboxState, VALIDATOR_0, add_one_height_with_transactions};
+use sandbox::sandbox_tests_helper::VALIDATOR_0;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, AnchoringNodeConfig};
-use anchoring_service::{AnchoringService, TxAnchoringSignature, TxAnchoringUpdateLatest,
-                        AnchoringTx, FundingTx, HexValue as HexValueEx, collect_signatures};
-use anchoring_service::transactions::TransactionBuilder;
+use anchoring_service::{AnchoringService, TxAnchoringSignature, collect_signatures};
+use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
 use anchoring_service::multisig::sign_input;
 
 #[macro_use]
 mod macros;
 #[cfg(test)]
 mod tests;
+pub mod helpers;
 
 pub const ANCHORING_VALIDATOR: u32 = VALIDATOR_0;
 pub const ANCHORING_FREQUENCY: u64 = 10;
@@ -124,132 +121,6 @@ impl AnchoringSandboxState {
         }
         signs
     }
-}
-
-pub fn anchoring_sandbox() -> (Sandbox, SandboxClient, AnchoringSandboxState) {
-    let mut client = SandboxClient::default();
-    let (mut genesis, mut nodes) = gen_sandbox_anchoring_config(&mut client);
-
-    // Change default anchoring configs
-    genesis.frequency = ANCHORING_FREQUENCY;
-    for node in &mut nodes {
-        node.check_lect_frequency = CHECK_LECT_FREQUENCY;
-    }
-
-    client.expect(vec![request! {
-            method: "importaddress",
-            params: ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu", "multisig", false, false]
-        }]);
-    let service = AnchoringService::new(client.clone(),
-                                        genesis.clone(),
-                                        nodes[ANCHORING_VALIDATOR as usize].clone());
-    let sandbox = sandbox_with_services(vec![Box::new(service),
-                                             Box::new(TimestampingService::new())]);
-    let info = AnchoringSandboxState {
-        genesis: genesis,
-        nodes: nodes,
-        latest_anchored_tx: None,
-    };
-    (sandbox, client, info)
-}
-
-/// Anchor genesis block using funding tx
-pub fn anchor_genesis_block(sandbox: &Sandbox,
-                            client: &SandboxClient,
-                            sandbox_state: &SandboxState,
-                            anchoring_state: &mut AnchoringSandboxState) {
-    client.expect(vec![request! {
-            method: "listunspent",
-            params: [0, 999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
-            response: [
-                {
-                    "txid": "a03b10b17fc8b86dd0b1b6ebcc3bc3c6dd4b7173302ef68628f5ed768dbd7049",
-                    "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 50,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
-        }]);
-
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
-                                                         0,
-                                                         sandbox.last_hash(),
-                                                         &[],
-                                                         "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
-                                                         3000);
-    let anchored_tx = anchoring_state.latest_anchored_tx();
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-
-    sandbox.broadcast(signatures[0].clone());
-    client.expect(vec![// TODO add support for error response
-                       Request {
-                           method: "getrawtransaction",
-                           params: vec![anchored_tx.txid().to_json(), 1.to_json()],
-                           response: Err(RpcError::NoInformation("Unable to find tx".to_string())),
-                       },
-                       request! {
-            method: "sendrawtransaction",
-            params: [anchored_tx.to_hex()]
-        }]);
-
-    let signatures = signatures.into_iter()
-        .map(|tx| tx.raw().clone())
-        .collect::<Vec<_>>();
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
-
-    let txs = [gen_service_tx_lect(sandbox, 0, &anchored_tx.to_hex()),
-               gen_service_tx_lect(sandbox, 1, &anchored_tx.to_hex()),
-               gen_service_tx_lect(sandbox, 2, &anchored_tx.to_hex()),
-               gen_service_tx_lect(sandbox, 3, &anchored_tx.to_hex())];
-
-    sandbox.broadcast(txs[0].raw().clone());
-    let txs = txs.into_iter()
-        .map(|x| x.raw())
-        .cloned()
-        .collect::<Vec<_>>();
-    add_one_height_with_transactions(sandbox, sandbox_state, txs.as_ref());
-}
-
-pub fn anchor_update_lect_normal(sandbox: &Sandbox,
-                                 client: &SandboxClient,
-                                 sandbox_state: &SandboxState,
-                                 anchorign_state: &mut AnchoringSandboxState) {
-    anchor_genesis_block(sandbox, client, sandbox_state, anchorign_state);
-    // Just add few heights
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-
-    client.expect(vec![
-        request! {
-            method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
-            response: [
-                {
-                    "txid": "fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491",
-                    "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
-        },
-        request! {
-            method: "getrawtransaction",
-            params: ["fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491", 0],
-            response: "01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000"
-        }
-        ]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 }
 
 /// Generates config for 4 validators and 10000 funds
@@ -368,13 +239,29 @@ pub fn gen_sandbox_anchoring_config(client: &mut SandboxClient)
     generate_anchoring_config(client, 4, ANCHORING_FUNDS)
 }
 
-pub fn gen_service_tx_lect(sandbox: &Sandbox,
-                           validator: u32,
-                           txhex: &str)
-                           -> TxAnchoringUpdateLatest {
-    let tx = AnchoringTx::from_hex(txhex).unwrap();
-    TxAnchoringUpdateLatest::new(sandbox.p(validator as usize),
-                                 validator,
-                                 tx,
-                                 sandbox.s(validator as usize))
+pub fn anchoring_sandbox() -> (Sandbox, SandboxClient, AnchoringSandboxState) {
+    let mut client = SandboxClient::default();
+    let (mut genesis, mut nodes) = gen_sandbox_anchoring_config(&mut client);
+
+    // Change default anchoring configs
+    genesis.frequency = ANCHORING_FREQUENCY;
+    for node in &mut nodes {
+        node.check_lect_frequency = CHECK_LECT_FREQUENCY;
+    }
+
+    client.expect(vec![request! {
+            method: "importaddress",
+            params: ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu", "multisig", false, false]
+        }]);
+    let service = AnchoringService::new(client.clone(),
+                                        genesis.clone(),
+                                        nodes[ANCHORING_VALIDATOR as usize].clone());
+    let sandbox = sandbox_with_services(vec![Box::new(service),
+                                             Box::new(TimestampingService::new())]);
+    let info = AnchoringSandboxState {
+        genesis: genesis,
+        nodes: nodes,
+        latest_anchored_tx: None,
+    };
+    (sandbox, client, info)
 }

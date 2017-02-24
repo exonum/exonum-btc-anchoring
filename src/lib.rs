@@ -119,17 +119,19 @@ pub trait AnchoringRpc {
         }
     }
 
-    fn unspent_anchoring_txs(&self, addr: &str) -> Result<Vec<AnchoringTx>> {
-        let txs = self.get_unspent_transactions(0, 9999999, &addr)?;
+    fn unspent_lects(&self, addr: &str) -> Result<Vec<RawBitcoinTx>> {
+        let unspent_txs = self.get_unspent_transactions(0, 9999999, &addr)?;
         // FIXME Develop searching algorhytm
-        let mut anchoring_txs = Vec::new();
-        for info in txs {
+        let mut txs = Vec::new();
+        for info in unspent_txs {
             let raw_tx = self.get_transaction(&info.txid)?;
-            if let TxKind::Anchoring(tx) = TxKind::from(raw_tx) {
-                anchoring_txs.push(tx);
+            match TxKind::from(raw_tx) {
+                TxKind::Anchoring(tx) => txs.push(tx.into()),
+                TxKind::FundingTx(tx) => txs.push(tx.into()),
+                TxKind::Other(_) => {},
             }
         }
-        Ok(anchoring_txs)
+        Ok(txs)
     }
 }
 
@@ -299,9 +301,9 @@ mod tests {
         assert_eq!(tx.payload(), (block_height, block_hash));
 
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
-        let lect_tx = client.unspent_anchoring_txs(&to.address).unwrap().first().unwrap().clone();
-        assert_eq!(lect_tx, tx);
-        lect_tx
+        let lect_tx = client.unspent_lects(&to.address).unwrap().first().unwrap().clone();
+        assert_eq!(lect_tx.0, tx.0);
+        tx
     }
 
     #[test]
@@ -408,8 +410,8 @@ mod tests {
             debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
             assert!(funding_tx.is_unspent(&client, &multisig).unwrap().is_none());
-            let lect_tx = client.unspent_anchoring_txs(&multisig.address).unwrap().first().unwrap().clone();
-            assert_eq!(lect_tx, tx);
+            let lect_tx = client.unspent_lects(&multisig.address).unwrap().first().unwrap().clone();
+            assert_eq!(lect_tx.0, tx.0);
             tx
         };
 

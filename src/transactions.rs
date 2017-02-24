@@ -29,7 +29,6 @@ pub type BitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
 const ANCHORING_TX_FUNDS_OUTPUT: u32 = 0;
 const ANCHORING_TX_DATA_OUTPUT: u32 = 1;
-const ANCHORING_TX_INPUT: u32 = 0;
 // Структура у анкорящей транзакции строгая:
 // - нулевой вход это прошлая анкорящая транзакция или фундирующая, если транзакция исходная
 // - нулевой выход это всегда следующая анкорящая транзакция
@@ -46,6 +45,7 @@ pub struct FundingTx(pub BitcoinTx);
 #[derive(Clone, PartialEq)]
 pub struct RawBitcoinTx(pub BitcoinTx);
 
+#[derive(Debug, Clone, PartialEq)]
 pub enum TxKind {
     Anchoring(AnchoringTx),
     FundingTx(FundingTx),
