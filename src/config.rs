@@ -5,11 +5,14 @@ use serde::{Serialize, Serializer, Deserialize};
 use serde::de::{Deserializer, Visitor, Error};
 use bitcoinrpc::MultiSig;
 
-use exonum::storage::StorageValue;
-use exonum::crypto::{hash, Hash};
+use bitcoin::util::base58::{FromBase58, ToBase58};
 
-use {BITCOIN_NETWORK, AnchoringTx, FundingTx, BitcoinPublicKey, BitcoinPrivateKey, HexValue,
+use exonum::storage::StorageValue;
+use exonum::crypto::{hash, Hash, HexValue};
+
+use {BITCOIN_NETWORK, AnchoringTx, FundingTx, HexValue as HexValueEx,
      RpcClient, RedeemScript, AnchoringRpc};
+use crypto::{BitcoinAddress, BitcoinPrivateKey, BitcoinPublicKey};
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AnchoringRpcConfig {
@@ -21,13 +24,13 @@ pub struct AnchoringRpcConfig {
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct AnchoringNodeConfig {
     pub rpc: AnchoringRpcConfig,
-    pub private_keys: BTreeMap<String, BitcoinPrivateKey>,
+    pub private_keys: BTreeMap<String, String>,
     pub check_lect_frequency: u64,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct AnchoringConfig {
-    pub validators: Vec<BitcoinPublicKey>,
+    pub validators: Vec<String>,
     pub funding_tx: FundingTx,
     pub fee: u64,
     pub frequency: u64,
@@ -75,7 +78,7 @@ impl AnchoringRpcConfig {
 }
 
 impl AnchoringConfig {
-    pub fn new(validators: Vec<BitcoinPublicKey>, tx: FundingTx) -> AnchoringConfig {
+    pub fn new(validators: Vec<String>, tx: FundingTx) -> AnchoringConfig {
         AnchoringConfig {
             validators: validators,
             funding_tx: tx,
@@ -167,18 +170,54 @@ macro_rules! implement_serde_hex {
 )
 }
 
+macro_rules! implement_serde_base58check {
+($name:ident) => (
+    impl Serialize for $name {
+        fn serialize<S>(&self, ser: &mut S) -> ::std::result::Result<(), S::Error>
+            where S: Serializer
+        {
+            ser.serialize_str(&self.to_base58check())
+        }
+    }
+
+    impl Deserialize for $name {
+        fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+            where D: Deserializer
+        {
+            struct Base58Visitor;
+
+            impl Visitor for Base58Visitor {
+                type Value = $name;
+
+                fn visit_str<E>(&mut self, hex: &str) -> Result<$name, E>
+                    where E: Error
+                {
+                    match $name::from_base58check(hex) {
+                        Ok(value) => Ok(value),
+                        Err(_) => Err(Error::invalid_value("Wrong base58")),
+                    }
+                }
+            }
+
+            deserializer.deserialize_str(Base58Visitor)
+        }
+    }
+)
+}
+
 implement_serde_hex! {AnchoringTx}
 implement_serde_hex! {FundingTx}
 implement_serde_hex! {RedeemScript}
-// TODO add methods for BitcoinPublicKey and BitcoinPrivateKey
+implement_serde_hex! {BitcoinPublicKey}
+implement_serde_base58check! {BitcoinAddress}
+implement_serde_base58check! {BitcoinPrivateKey}
 
 #[cfg(test)]
 mod tests {
     use serde_json::value::ToJson;
     use serde_json;
 
-    use {BitcoinTx, AnchoringTx};
-    use config::HexValue;
+    use {BitcoinTx, AnchoringTx, HexValue};
 
     #[test]
     fn anchoring_tx_serde() {

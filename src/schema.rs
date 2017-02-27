@@ -3,12 +3,10 @@ use std::fmt;
 use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
-use exonum::blockchain::Schema;
-use exonum::storage::{ListTable, MerkleTable, List, MapTable, View, Map,
-                      Error as StorageError};
+use exonum::blockchain::{Schema, StoredConfiguration};
+use exonum::storage::{ListTable, MerkleTable, List, MapTable, View, Map, Error as StorageError};
 use exonum::crypto::{PublicKey, Hash};
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
-use exonum::node::Height;
 
 use config::AnchoringConfig;
 use crypto::TxId;
@@ -153,47 +151,47 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
-        let height = self.config_height().get(0)?.unwrap();
-        let cfg = Schema::new(self.view).get_configuration_at_height(height)?.unwrap();
-        Ok(from_value(cfg.services[&ANCHORING_SERVICE].clone()).unwrap())
+        let actual = Schema::new(self.view).get_actual_configuration()?;
+        Ok(self.parse_config(actual))
     }
 
-    pub fn update_anchoring_config(&self) -> Result<(), StorageError> {
-        let height = Schema::new(self.view).get_actual_configurations_height()?;
-        self.config_height().set(0, height)
+    pub fn following_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
+        let following = Schema::new(self.view).get_following_configuration()?;
+        Ok(following.map(|x| self.parse_config(x)))
     }
 
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
-        self.config_height().append(0)?;
         for idx in 0..cfg.validators.len() {
             self.add_lect(idx as u32, cfg.funding_tx.clone())?;
         }
         Ok(())
     }
 
-    pub fn add_lect<Tx>(&self, validator: u32, tx: Tx) -> Result<(), StorageError> 
+    pub fn add_lect<Tx>(&self, validator: u32, tx: Tx) -> Result<(), StorageError>
         where Tx: Into<RawBitcoinTx>
     {
-        let tx = tx.into();
         let lects = self.lects(validator);
+
+        let tx = tx.into();
         let idx = lects.len()?;
         let txid = tx.id();
         lects.append(tx)?;
         self.lect_indexes(validator).put(&txid, idx)
     }
 
-    pub fn find_lect_position(&self, validator: u32, txid: &TxId) -> Result<Option<u64>, StorageError> {
-        self.lect_indexes(validator).get(txid)
-    }
-
     pub fn lect(&self, validator: u32) -> Result<RawBitcoinTx, StorageError> {
         self.lects(validator).last().map(|x| x.unwrap())
     }
 
-    // TODO rewrite with value table
-    fn config_height(&self) -> ListTable<MapTable<View, [u8], Vec<u8>>, u64, Height> {
-        let prefix = vec![ANCHORING_SERVICE as u8, 04];
-        ListTable::new(MapTable::new(prefix, self.view))
+    pub fn find_lect_position(&self,
+                              validator: u32,
+                              txid: &TxId)
+                              -> Result<Option<u64>, StorageError> {
+        self.lect_indexes(validator).get(txid)
+    }
+
+    fn parse_config(&self, cfg: StoredConfiguration) -> AnchoringConfig {
+        from_value(cfg.services[&ANCHORING_SERVICE].clone()).unwrap()
     }
 }
 

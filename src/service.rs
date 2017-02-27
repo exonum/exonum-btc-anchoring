@@ -34,6 +34,8 @@ pub enum LectKind {
     None,
 }
 
+// TODO error chain
+
 impl AnchoringService {
     pub fn new(client: RpcClient,
                genesis: AnchoringConfig,
