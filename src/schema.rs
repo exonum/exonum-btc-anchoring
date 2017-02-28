@@ -55,6 +55,13 @@ pub struct AnchoringSchema<'a> {
     view: &'a View,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct FollowingConfig {
+    pub actual_from: u64,
+    // pub proposal_height: u64,
+    pub config: AnchoringConfig,
+}
+
 impl Into<AnchoringTransaction> for TxAnchoringSignature {
     fn into(self) -> AnchoringTransaction {
         AnchoringTransaction::Signature(self)
@@ -152,12 +159,21 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
         let actual = Schema::new(self.view).get_actual_configuration()?;
-        Ok(self.parse_config(actual))
+        Ok(self.parse_config(&actual))
     }
 
-    pub fn following_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
-        let following = Schema::new(self.view).get_following_configuration()?;
-        Ok(following.map(|x| self.parse_config(x)))
+    pub fn following_anchoring_config(&self) -> Result<Option<FollowingConfig>, StorageError> {
+        let schema = Schema::new(self.view);
+        let idx = schema.get_actual_configuration_index()?;
+        if let Some(height) = schema.configs_heights().get(idx + 1)? {
+            let stored = schema.get_configuration_at_height(height.clone())?.unwrap();
+            Ok(Some(FollowingConfig {
+                actual_from: stored.actual_from,
+                config: self.parse_config(&stored),
+            }))
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
@@ -190,7 +206,7 @@ impl<'a> AnchoringSchema<'a> {
         self.lect_indexes(validator).get(txid)
     }
 
-    fn parse_config(&self, cfg: StoredConfiguration) -> AnchoringConfig {
+    fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {
         from_value(cfg.services[&ANCHORING_SERVICE].clone()).unwrap()
     }
 }

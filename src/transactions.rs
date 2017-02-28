@@ -10,7 +10,7 @@ use bitcoin::network::serialize::{BitcoinHash, serialize_hex, deserialize, seria
 use bitcoin::blockdata::transaction::{TxIn, TxOut};
 use bitcoin::blockdata::script::{Script, Builder};
 use bitcoin::util::base58::FromBase58;
-use bitcoin::util::address::{Address, Privkey};
+use bitcoin::util::address::{Address, Privkey, Type};
 use bitcoin::network::constants::Network;
 use secp256k1::Secp256k1;
 use secp256k1::key::PublicKey;
@@ -218,7 +218,7 @@ impl FundingTx {
                       multisig: &bitcoinrpc::MultiSig)
                       -> Result<Option<bitcoinrpc::UnspentTransactionInfo>> {
         let txid = self.txid();
-        let txs = client.listunspent(0, 999999, [multisig.address.as_str()])?;
+        let txs = client.listunspent(0, 9999999, [multisig.address.as_str()])?;
         Ok(txs.into_iter()
             .find(|txinfo| txinfo.txid == txid))
     }
@@ -249,7 +249,20 @@ impl AnchoringTx {
 
     pub fn output_address(&self, network: Network) -> Address {
         let ref script = self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].script_pubkey;
-        Address::from_script(network, script)
+        let bytes = script
+                .into_iter()
+                .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
+                    Some(bytes)
+                } else {
+                    None
+                })
+                .next().unwrap();
+
+        Address {
+            ty: Type::ScriptHash,
+            network: network,
+            hash: Hash160::from(bytes),
+        }
     }
 
     pub fn inputs(&self) -> ::std::ops::Range<u32> {
@@ -543,6 +556,7 @@ mod tests {
     use std::collections::HashMap;
 
     use bitcoin::network::constants::Network;
+    use bitcoin::util::base58::ToBase58;
 
     use exonum::crypto::{Hash, HexValue};
 
@@ -591,6 +605,22 @@ mod tests {
                 assert!(tx.verify(&redeem_script, *input, &pub_keys[id], signature.as_ref()));
             }
         }
+    }
+
+    #[test]
+    fn test_anchoring_tx_output_address() {
+        let tx = AnchoringTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000").unwrap();
+
+        let pub_keys =
+            ["03475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c".to_string(),
+             "02a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0".to_string(),
+             "0230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb49".to_string(),
+             "036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e".to_string()];
+        let redeem_script = RedeemScript::from_pubkeys(pub_keys.iter(), 3)
+            .compressed(Network::Testnet);
+
+        assert_eq!(tx.output_address(Network::Testnet).to_base58check(),
+                   redeem_script.to_address(Network::Testnet));
     }
 
     #[test]

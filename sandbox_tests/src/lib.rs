@@ -1,3 +1,4 @@
+#[macro_use]
 extern crate exonum;
 extern crate sandbox;
 extern crate anchoring_service;
@@ -24,6 +25,7 @@ use sandbox::sandbox_with_services;
 use sandbox::sandbox::Sandbox;
 use sandbox::timestamping::TimestampingService;
 use sandbox::sandbox_tests_helper::VALIDATOR_0;
+use sandbox::config_updater::ConfigUpdateService;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, AnchoringNodeConfig};
@@ -257,7 +259,9 @@ pub fn anchoring_sandbox() -> (Sandbox, SandboxClient, AnchoringSandboxState) {
                                         genesis.clone(),
                                         nodes[ANCHORING_VALIDATOR as usize].clone());
     let sandbox = sandbox_with_services(vec![Box::new(service),
-                                             Box::new(TimestampingService::new())]);
+                                             Box::new(TimestampingService::new()),
+                                             Box::new(ConfigUpdateService::new()),
+                                             ]);
     let info = AnchoringSandboxState {
         genesis: genesis,
         nodes: nodes,

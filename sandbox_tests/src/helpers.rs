@@ -5,14 +5,17 @@ pub use bitcoinrpc::Error as RpcError;
 use serde_json::value::ToJson;
 
 use exonum::messages::Message;
+use exonum::storage::StorageValue;
 
 use sandbox::sandbox::Sandbox;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
+use sandbox::config_updater::TxConfig;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::{TxAnchoringUpdateLatest, HexValue as HexValueEx};
+use anchoring_service::{ANCHORING_SERVICE, TxAnchoringUpdateLatest, HexValue as HexValueEx};
 use anchoring_service::transactions::{RawBitcoinTx, BitcoinTx};
 use anchoring_service::crypto::TxId;
+use anchoring_service::config::AnchoringConfig;
 
 use AnchoringSandboxState;
 
@@ -29,6 +32,15 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                                  sandbox.s(validator as usize))
 }
 
+pub fn gen_update_config_tx(sandbox: &Sandbox, actual_from: u64, service_cfg: AnchoringConfig) -> TxConfig {
+    let mut cfg = sandbox.cfg();
+    cfg.services.insert(ANCHORING_SERVICE, service_cfg.to_json());
+    TxConfig::new(sandbox.p(0),
+                  &cfg.serialize(),
+                  actual_from,
+                  sandbox.s(0))
+}
+
 /// Anchor genesis block using funding tx
 pub fn anchor_first_block(sandbox: &Sandbox,
                           client: &SandboxClient,
@@ -36,7 +48,7 @@ pub fn anchor_first_block(sandbox: &Sandbox,
                           anchoring_state: &mut AnchoringSandboxState) {
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
             response: [
                 {
                     "txid": "a03b10b17fc8b86dd0b1b6ebcc3bc3c6dd4b7173302ef68628f5ed768dbd7049",
@@ -89,7 +101,7 @@ pub fn anchor_first_block(sandbox: &Sandbox,
         .map(|x| x.raw())
         .cloned()
         .collect::<Vec<_>>();
-    add_one_height_with_transactions(sandbox, sandbox_state, txs.as_ref());
+    add_one_height_with_transactions(sandbox, sandbox_state, &txs);
 }
 
 pub fn anchor_first_block_lect_normal(sandbox: &Sandbox,
@@ -102,8 +114,7 @@ pub fn anchor_first_block_lect_normal(sandbox: &Sandbox,
 
     let anchored_tx = anchoring_state.latest_anchored_tx();
 
-    client.expect(vec![
-        request! {
+    client.expect(vec![request! {
             method: "listunspent",
             params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
             response: [
@@ -120,12 +131,11 @@ pub fn anchor_first_block_lect_normal(sandbox: &Sandbox,
                 }
             ]
         },
-        request! {
+                       request! {
             method: "getrawtransaction",
             params: [&anchored_tx.txid(), 0],
             response: &anchored_tx.to_hex()
-        }
-        ]);
+        }]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 }
 
@@ -178,7 +188,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
 
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
             response: [
                 {
                     "txid": &other_lect.txid(),
@@ -193,7 +203,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
                 }
             ]
         }]);
-    add_one_height_with_transactions(sandbox, sandbox_state, txs.as_ref());
+    add_one_height_with_transactions(sandbox, sandbox_state, &txs);
 
     {
         let anchored_tx = anchoring_state.latest_anchored_tx();
@@ -271,7 +281,7 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
         .cloned()
         .collect::<Vec<_>>();
 
-    add_one_height_with_transactions(sandbox, sandbox_state, txs.as_ref());
+    add_one_height_with_transactions(sandbox, sandbox_state, &txs);
     anchoring_state.latest_anchored_tx = Some((other_lect.clone(), other_signatures.clone()));
 }
 
@@ -285,7 +295,7 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
 
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
             response: [
                 {
                     "txid": "fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491",

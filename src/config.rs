@@ -6,6 +6,7 @@ use serde::de::{Deserializer, Visitor, Error};
 use bitcoinrpc::MultiSig;
 
 use bitcoin::util::base58::{FromBase58, ToBase58};
+use bitcoin::network::constants::Network;
 
 use exonum::storage::StorageValue;
 use exonum::crypto::{hash, Hash, HexValue};
@@ -88,16 +89,20 @@ impl AnchoringConfig {
         }
     }
 
+    pub fn network(&self) -> Network {
+        BITCOIN_NETWORK
+    }
+
     pub fn redeem_script(&self) -> RedeemScript {
         let majority_count = self.majority_count();
         RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
-            .compressed(BITCOIN_NETWORK)
+            .compressed(self.network())
     }
 
     pub fn multisig(&self) -> MultiSig {
         let redeem_script = self.redeem_script();
         MultiSig {
-            address: redeem_script.to_address(BITCOIN_NETWORK),
+            address: redeem_script.to_address(self.network()),
             redeem_script: redeem_script.to_hex(),
         }
     }

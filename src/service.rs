@@ -4,6 +4,7 @@ use std::collections::HashMap;
 use bitcoinrpc::{MultiSig, Error as RpcError};
 use serde_json::Value;
 use serde_json::value::{ToJson, from_value};
+use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::{Service, Transaction, Schema, NodeState};
 use exonum::storage::{List, View, Error as StorageError};
@@ -14,7 +15,7 @@ use exonum::node::Height;
 use config::{AnchoringNodeConfig, AnchoringConfig};
 use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, BitcoinPrivateKey, HexValue, BitcoinSignature};
 use schema::{ANCHORING_SERVICE, AnchoringTransaction, AnchoringSchema, TxAnchoringUpdateLatest,
-             TxAnchoringSignature};
+             TxAnchoringSignature, FollowingConfig};
 use transactions::{TxKind, FundingTx, AnchoringTx, RawBitcoinTx};
 
 pub struct AnchoringState {
@@ -36,6 +37,9 @@ pub enum LectKind {
 
 // TODO error chain
 
+// алгоритм разбивается на две ситуации: когда есть переход на новый адрес и когда такого перехода нет
+
+// Код общий для обеих ситуаций
 impl AnchoringService {
     pub fn new(client: RpcClient,
                genesis: AnchoringConfig,
@@ -74,25 +78,60 @@ impl AnchoringService {
         Ok((key, genesis))
     }
 
-    pub fn output_address(&self, state: &NodeState) -> MultiSig {
-        let genesis: AnchoringConfig = from_value(state.service_config(self).clone()).unwrap();
-        genesis.multisig()
+    pub fn following_config(&self,
+                            state: &NodeState)
+                            -> Result<Option<FollowingConfig>, StorageError> {
+        AnchoringSchema::new(state.view()).following_anchoring_config()
     }
 
-    pub fn actual_payload(&self, state: &NodeState) -> Result<(Height, Hash), StorageError> {
-        let schema = Schema::new(state.view());
+    pub fn nearest_anchoring_height(&self, state: &NodeState) -> Result<Height, StorageError> {
         let (_, genesis) = self.actual_config(state)?;
-
         let height = genesis.nearest_anchoring_height(state.height());
-        let block_hash = schema.heights().get(height)?.unwrap();
-        Ok((height, block_hash))
+        Ok(height)
     }
 
-    pub fn proposal_tx(&self) -> Option<AnchoringTx> {
-        self.service_state().proposal_tx.clone()
+    pub fn address_transfer_state(&self, state: &NodeState) -> Result<bool, StorageError> {
+        if let Some(_) = self.following_config(state)? {
+            Ok(true)
+        } else {
+            let schema = AnchoringSchema::new(state.view());
+            let lects = schema.lects(state.id());
+            let last_idx = lects.len()? - 1;
+            if last_idx == 0 {
+                return Ok(false);
+            }
+
+            let current_lect = lects.get(last_idx)?.unwrap();
+            if let Some(prev_lect) = lects.get(last_idx - 1)? {
+                let current_lect = if let TxKind::Anchoring(tx) = TxKind::from(current_lect) {
+                    tx
+                } else {
+                    return Ok(false);
+                };
+                let prev_lect = if let TxKind::Anchoring(tx) = TxKind::from(prev_lect) {
+                    tx
+                } else {
+                    return Ok(false);
+                };
+                debug!("current_lect={:#?}", current_lect);
+                debug!("prev_lect={:#?}", prev_lect);
+
+                if current_lect.output_address(BITCOIN_NETWORK) !=
+                   prev_lect.output_address(BITCOIN_NETWORK) {
+                    let info = current_lect.get_info(&self.client).unwrap().unwrap();
+                    let (_, cfg) = self.actual_config(state)?;
+                    let confirmations = info.confirmations.unwrap() as u64;
+                    Ok(confirmations < cfg.utxo_confirmations)
+                } else {
+                    Ok(false)
+                }
+            } else {
+                Ok(false)
+            }
+        }
     }
 
-    pub fn check_lect(&self, state: &NodeState) -> Result<LectKind, StorageError> {
+    pub fn collect_lects(&self, state: &NodeState) -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
         let our_lect = anchoring_schema.lect(state.id())?;
@@ -113,145 +152,6 @@ impl AnchoringService {
         } else {
             Ok(LectKind::None)
         }
-    }
-
-    pub fn avaliable_funding_tx(&self, state: &NodeState) -> Result<Option<FundingTx>, RpcError> {
-        let (_, genesis) = self.actual_config(state).unwrap();
-
-        let multisig = genesis.multisig();
-        if let Some(info) = genesis.funding_tx.is_unspent(&self.client, &multisig)? {
-            if info.confirmations >= genesis.utxo_confirmations {
-                return Ok(Some(genesis.funding_tx));
-            }
-        }
-        Ok(None)
-    }
-
-    // Перебираем все анкорящие транзакции среди listunspent и ищем среди них
-    // ту единственную, у которой prev_hash содержится в нашем массиве lectов
-    // или первую funding транзакцию, если все анкорящие пропали
-    pub fn find_lect(&self,
-                     state: &NodeState,
-                     addr: &str)
-                     -> Result<Option<RawBitcoinTx>, RpcError> {
-        let lects: Vec<_> = self.client().unspent_lects(addr)?;
-        let schema = AnchoringSchema::new(state.view());
-        let id = state.id();
-
-        debug!("lects={:#?}", lects);
-
-        let first_funding_tx = schema.lects(id).get(0).unwrap().unwrap();
-        for lect in lects.into_iter() {
-            let kind = TxKind::from(lect);
-            match kind {
-                TxKind::FundingTx(tx) => {
-                    if tx == first_funding_tx {
-                        return Ok(Some(tx.into()))
-                    }
-                }
-                TxKind::Anchoring(tx) => {
-                    if schema.find_lect_position(id, &tx.prev_hash()).unwrap().is_some() {
-                        return Ok(Some(tx.into()))
-                    }
-                }
-                TxKind::Other(_) => {}
-            }
-        }
-        Ok(None)
-    }
-
-    // Пытаемся обновить нашу последнюю известную анкорящую транзакцию
-    // Помимо этого, если мы обнаруживаем, что она набрала достаточно подтверждений
-    // для перехода на новый адрес, то переходим на него
-    pub fn update_our_lect(&self, state: &mut NodeState) -> Result<(), RpcError> {
-        if state.height() % self.cfg.check_lect_frequency == 0 {
-            debug!("Update our lect");
-            let (_, genesis) = self.actual_config(state).unwrap();
-            let multisig = genesis.multisig();
-            // We needs to update our lect
-            if let Some(lect) = self.find_lect(state, &multisig.address)? {
-                let our_lect = AnchoringSchema::new(state.view())
-                    .lect(state.id())
-                    .unwrap();
-
-                debug!("lect={:#?}", lect);
-                debug!("our_lect={:#?}", our_lect);
-
-                if lect != our_lect {
-                    info!("LECT ====== txid={}", lect.txid().to_hex());
-                    let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
-                                                                state.id(),
-                                                                lect,
-                                                                &our_lect.id(),
-                                                                &state.secret_key());
-                    state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
-                }
-            } else {
-                // TODO проверяем ситуацию с пересылкой на новый адрес
-                if multisig.address != self.output_address(state).address {}
-            }
-        }
-        Ok(())
-    }
-
-    pub fn try_create_proposal_tx(&self, state: &mut NodeState) -> Result<(), RpcError> {
-        match self.check_lect(state).unwrap() {
-            LectKind::Funding(_) => self.create_first_proposal_tx(state),
-            LectKind::Anchoring(tx) => {
-                let (_, genesis) = self.actual_config(state).unwrap();
-                let anchored_height = tx.payload().0;
-                if genesis.nearest_anchoring_height(state.height()) > anchored_height {
-                    return self.create_proposal_tx(state, tx);
-                }
-                Ok(())
-            }
-            LectKind::None => {
-                warn!("Unable to reach consensus in a lect");
-                Ok(())
-            }
-        }
-    }
-
-    pub fn create_proposal_tx(&self,
-                              state: &mut NodeState,
-                              lect: AnchoringTx)
-                              -> Result<(), RpcError> {
-        let (priv_key, genesis) = self.actual_config(state).unwrap();
-        let genesis: AnchoringConfig = genesis;
-
-        // Create proposal tx
-        let from = genesis.multisig();
-        let to = self.output_address(state);
-        let (height, hash) = self.actual_payload(state).unwrap();
-        let funding_tx = self.avaliable_funding_tx(state)?
-            .into_iter()
-            .collect::<Vec<_>>();
-        let proposal = lect.proposal(&from, &to, genesis.fee, &funding_tx, height, hash)?;
-        // Sign proposal
-        self.sign_proposal_tx(state, proposal, &from, &priv_key)
-    }
-
-    // Create first anchoring tx proposal from funding tx in AnchoringNodeConfig
-    pub fn create_first_proposal_tx(&self, state: &mut NodeState) -> Result<(), RpcError> {
-        debug!("Create first proposal tx");
-        if let Some(funding_tx) = self.avaliable_funding_tx(state)? {
-            // Create anchoring proposal
-            let (height, hash) = self.actual_payload(state).unwrap();
-
-            let (priv_key, genesis) = self.actual_config(state).unwrap();
-            let multisig = genesis.multisig();
-            let proposal = funding_tx.make_anchoring_tx(&multisig, genesis.fee, height, hash)?;
-
-            debug!("initial_proposal={:#?}, txhex={}",
-                   proposal,
-                   proposal.0.to_hex());
-
-            // Sign proposal
-            self.sign_proposal_tx(state, proposal, &multisig, &priv_key)?;
-        } else {
-            warn!("Funding transaction is not suitable.");
-        }
-        Ok(())
     }
 
     pub fn sign_proposal_tx(&self,
@@ -306,7 +206,9 @@ impl AnchoringService {
                 self.client.send_transaction(new_lect.0.clone())?;
             }
 
-            debug!("sended signed_tx={:#?}", new_lect);
+            debug!("sended signed_tx={:#?}, to={}",
+                   new_lect,
+                   new_lect.output_address(BITCOIN_NETWORK).to_base58check());
 
             info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
                   new_lect.payload().0,
@@ -322,6 +224,233 @@ impl AnchoringService {
                                                         &prev_txid,
                                                         state.secret_key());
             state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+        }
+        Ok(())
+    }
+
+
+    pub fn proposal_tx(&self) -> Option<AnchoringTx> {
+        self.service_state().proposal_tx.clone()
+    }
+
+    pub fn avaliable_funding_tx(&self, state: &NodeState) -> Result<Option<FundingTx>, RpcError> {
+        let (_, genesis) = self.actual_config(state).unwrap();
+
+        let multisig = genesis.multisig();
+        if let Some(info) = genesis.funding_tx.is_unspent(&self.client, &multisig)? {
+            if info.confirmations >= genesis.utxo_confirmations {
+                return Ok(Some(genesis.funding_tx));
+            }
+        }
+        Ok(None)
+    }
+
+    // Перебираем все анкорящие транзакции среди listunspent и ищем среди них
+    // ту единственную, у которой prev_hash содержится в нашем массиве lectов
+    // или первую funding транзакцию, если все анкорящие пропали
+    pub fn find_lect(&self,
+                     state: &NodeState,
+                     addr: &str)
+                     -> Result<Option<RawBitcoinTx>, RpcError> {
+        let lects: Vec<_> = self.client().unspent_lects(addr)?;
+        let schema = AnchoringSchema::new(state.view());
+        let id = state.id();
+
+        debug!("lects={:#?}", lects);
+
+        let first_funding_tx = schema.lects(id).get(0).unwrap().unwrap();
+        for lect in lects.into_iter() {
+            let kind = TxKind::from(lect);
+            match kind {
+                TxKind::FundingTx(tx) => {
+                    if tx == first_funding_tx {
+                        return Ok(Some(tx.into()));
+                    }
+                }
+                TxKind::Anchoring(tx) => {
+                    if schema.find_lect_position(id, &tx.prev_hash()).unwrap().is_some() {
+                        return Ok(Some(tx.into()));
+                    }
+                }
+                TxKind::Other(_) => {}
+            }
+        }
+        Ok(None)
+    }
+
+    // Пытаемся обновить нашу последнюю известную анкорящую транзакцию
+    // Помимо этого, если мы обнаруживаем, что она набрала достаточно подтверждений
+    // для перехода на новый адрес, то переходим на него
+    pub fn update_our_lect(&self, state: &mut NodeState, addr: &str) -> Result<(), RpcError> {
+        debug!("Update our lect");
+        // We needs to update our lect
+        if let Some(lect) = self.find_lect(state, &addr)? {
+            let our_lect = AnchoringSchema::new(state.view())
+                .lect(state.id())
+                .unwrap();
+
+            debug!("lect={:#?}", lect);
+            debug!("our_lect={:#?}", our_lect);
+
+            if lect != our_lect {
+                info!("LECT ====== txid={}", lect.txid().to_hex());
+                let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
+                                                            state.id(),
+                                                            lect,
+                                                            &our_lect.id(),
+                                                            &state.secret_key());
+                state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+            }
+        } else {
+            // TODO
+            // если у последней транзакции в базе выход на addr, то значит она не прошла
+            // и нужно вставлять предпоследнюю
+        }
+        Ok(())
+    }
+
+    pub fn try_create_proposal_tx(&self, state: &mut NodeState) -> Result<(), RpcError> {
+        match self.collect_lects(state).unwrap() {
+            LectKind::Funding(_) => self.create_first_proposal_tx(state),
+            LectKind::Anchoring(tx) => {
+                let (_, genesis) = self.actual_config(state).unwrap();
+                let anchored_height = tx.payload().0;
+                let nearest_anchored_height = genesis.nearest_anchoring_height(state.height());
+                if nearest_anchored_height > anchored_height {
+                    return self.create_proposal_tx(state,
+                                                   tx,
+                                                   &genesis.multisig(),
+                                                   nearest_anchored_height);
+                }
+                Ok(())
+            }
+            LectKind::None => {
+                warn!("Unable to reach consensus in a lect");
+                Ok(())
+            }
+        }
+    }
+
+    pub fn create_proposal_tx(&self,
+                              state: &mut NodeState,
+                              lect: AnchoringTx,
+                              to: &MultiSig,
+                              height: Height)
+                              -> Result<(), RpcError> {
+        let (priv_key, genesis) = self.actual_config(state).unwrap();
+        let genesis: AnchoringConfig = genesis;
+
+        // Create proposal tx
+        let from = genesis.multisig();
+        let hash = Schema::new(state.view())
+            .heights()
+            .get(height)
+            .unwrap()
+            .unwrap();
+        let funding_tx = self.avaliable_funding_tx(state)?
+            .into_iter()
+            .collect::<Vec<_>>();
+        let proposal = lect.proposal(&from, to, genesis.fee, &funding_tx, height, hash)?;
+        debug!("proposal={:#?}, to={}", proposal, to.address);
+        // Sign proposal
+        self.sign_proposal_tx(state, proposal, &from, &priv_key)
+    }
+
+    // Create first anchoring tx proposal from funding tx in AnchoringNodeConfig
+    pub fn create_first_proposal_tx(&self, state: &mut NodeState) -> Result<(), RpcError> {
+        debug!("Create first proposal tx");
+        if let Some(funding_tx) = self.avaliable_funding_tx(state)? {
+            // Create anchoring proposal
+            let height = self.nearest_anchoring_height(state).unwrap();
+            let hash = Schema::new(state.view())
+                .heights()
+                .get(height)
+                .unwrap()
+                .unwrap();
+
+            let (priv_key, genesis) = self.actual_config(state).unwrap();
+            let multisig = genesis.multisig();
+            let proposal = funding_tx.make_anchoring_tx(&multisig, genesis.fee, height, hash)?;
+
+            debug!("initial_proposal={:#?}, txhex={}",
+                   proposal,
+                   proposal.0.to_hex());
+
+            // Sign proposal
+            self.sign_proposal_tx(state, proposal, &multisig, &priv_key)?;
+        } else {
+            warn!("Funding transaction is not suitable.");
+        }
+        Ok(())
+    }
+}
+
+// код для случая обычного процесса анкоринга
+impl AnchoringService {
+    pub fn handle_anchoring(&self, state: &mut NodeState) -> Result<(), RpcError> {
+        let (_, genesis) = self.actual_config(state).unwrap();
+        let multisig = genesis.multisig();
+
+        if state.height() % self.cfg.check_lect_frequency == 0 {
+            // First of all we try to update our lect and actual configuration
+            self.update_our_lect(state, &multisig.address)?;
+        }
+        // Now if we have anchoring tx proposal we must try to finalize it
+        if let Some(proposal) = self.proposal_tx() {
+            self.try_finalize_proposal_tx(state, proposal)?;
+        } else {
+            // Or try to create proposal
+            self.try_create_proposal_tx(state)?;
+        }
+        Ok(())
+    }
+}
+
+// код для случая обновления конфигурации
+impl AnchoringService {
+    pub fn handle_update_address(&self, state: &mut NodeState) -> Result<(), RpcError> {
+        let following = self.following_config(state).unwrap().unwrap();
+        let (_, actual) = self.actual_config(state).unwrap();
+        let multisig = following.config.multisig();
+
+        // Точно так же обновляем lect каждые n блоков
+        if state.height() % self.cfg.check_lect_frequency == 0 {
+            // First of all we try to update our lect and actual configuration
+            self.update_our_lect(state, &multisig.address)?;
+        }
+
+        // Now if we have anchoring tx proposal we must try to finalize it
+        if let Some(proposal) = self.proposal_tx() {
+            self.try_finalize_proposal_tx(state, proposal)?;
+        } else {
+            // Or try to create proposal
+            match self.collect_lects(state).unwrap() {
+                LectKind::Anchoring(lect) => {
+                    debug!("lect={:#?}", lect);
+                    // в этом случае ничего делать не нужно
+                    if lect.output_address(BITCOIN_NETWORK).to_base58check() == multisig.address {
+                        return Ok(());
+                    }
+
+                    debug!("lect_addr={}",
+                           lect.output_address(BITCOIN_NETWORK).to_base58check());
+                    debug!("following_addr={}", multisig.address);
+                    // проверяем, что нам хватает подтверждений
+                    let info = lect.get_info(&self.client)?.unwrap();
+                    debug!("info={:?}", info);
+                    if info.confirmations.unwrap() as u64 >= actual.utxo_confirmations {
+                        // FIXME зафиксировать высоту для анкоринга
+                        let height = self.nearest_anchoring_height(state).unwrap();
+                        self.create_proposal_tx(state, lect, &multisig, height)?;
+                    } else {
+                        warn!("Insufficient confirmations for create transfer transaction")
+                    }
+                }
+                LectKind::Funding(_) => panic!("We must not to change genesis configuration!"),
+                LectKind::None => {
+                    warn!("Unable to reach consensus in a lect");
+                }
+            }
         }
         Ok(())
     }
@@ -369,21 +498,14 @@ impl Service for AnchoringService {
 
     fn handle_commit(&self, state: &mut NodeState) -> Result<(), StorageError> {
         debug!("Handle commit, height={}", state.height());
-        // First of all we try to update our lect and actual configuration
-        self.update_our_lect(state)
-            .log_error("Unable to update lect")
-            .unwrap();
-
-        // Now if we have anchoring tx proposal we must try to finalize it
-        if let Some(proposal) = self.proposal_tx() {
-            self.try_finalize_proposal_tx(state, proposal)
-                .log_error("Unable to finalize proposal tx")
-                .unwrap();
+        if self.address_transfer_state(state)? {
+            debug!("Address transfer state");
+            let _ = self.handle_update_address(state)
+                .log_error("Unable to process config transfer");
         } else {
-            // Or try to create proposal
-            self.try_create_proposal_tx(state)
-                .log_error("Unable to create proposal tx")
-                .unwrap();
+            debug!("Normal anchoring state");
+            let _ = self.handle_anchoring(state)
+                .log_error("Unable to process anchoring");
         }
         Ok(())
     }
