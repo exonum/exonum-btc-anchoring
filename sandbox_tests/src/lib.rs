@@ -20,6 +20,7 @@ use bitcoin::util::base58::FromBase58;
 use bitcoin::util::address::Privkey;
 
 use exonum::crypto::Hash;
+use exonum::messages::{Message, RawTransaction};
 
 use sandbox::sandbox_with_services;
 use sandbox::sandbox::Sandbox;
@@ -66,7 +67,7 @@ impl AnchoringSandboxState {
                                             funds: &[FundingTx],
                                             addr: &str,
                                             amount: u64)
-                                            -> (AnchoringTx, Vec<TxAnchoringSignature>) {
+                                            -> (AnchoringTx, Vec<RawTransaction>) {
         let (propose_tx, signed_tx, signs) = {
             let prev_tx = self.latest_anchored_tx
                 .as_ref()
@@ -87,6 +88,10 @@ impl AnchoringSandboxState {
             (tx, signed_tx, signs)
         };
         self.latest_anchored_tx = Some((signed_tx, signs.clone()));
+
+        let signs = signs.into_iter()
+            .map(|tx| tx.raw().clone())
+            .collect::<Vec<_>>();
         (propose_tx, signs)
     }
 
@@ -241,12 +246,21 @@ pub fn gen_sandbox_anchoring_config(client: &mut SandboxClient)
     generate_anchoring_config(client, 4, ANCHORING_FUNDS)
 }
 
-pub fn anchoring_sandbox() -> (Sandbox, SandboxClient, AnchoringSandboxState) {
+pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, SandboxClient, AnchoringSandboxState)
+    where I: IntoIterator<Item = &'a (&'a str, Vec<&'a str>)>
+{
     let mut client = SandboxClient::default();
     let (mut genesis, mut nodes) = gen_sandbox_anchoring_config(&mut client);
 
+    let priv_keys = priv_keys.into_iter().collect::<Vec<_>>();
     // Change default anchoring configs
     genesis.frequency = ANCHORING_FREQUENCY;
+    for &&(ref addr, ref keys) in &priv_keys {
+        for (id, key) in keys.iter().enumerate() {
+            nodes[id].private_keys.insert(addr.to_string(), key.to_string());            
+        }
+    }
+
     for node in &mut nodes {
         node.check_lect_frequency = CHECK_LECT_FREQUENCY;
     }
@@ -260,8 +274,7 @@ pub fn anchoring_sandbox() -> (Sandbox, SandboxClient, AnchoringSandboxState) {
                                         nodes[ANCHORING_VALIDATOR as usize].clone());
     let sandbox = sandbox_with_services(vec![Box::new(service),
                                              Box::new(TimestampingService::new()),
-                                             Box::new(ConfigUpdateService::new()),
-                                             ]);
+                                             Box::new(ConfigUpdateService::new())]);
     let info = AnchoringSandboxState {
         genesis: genesis,
         nodes: nodes,

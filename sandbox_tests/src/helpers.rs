@@ -4,8 +4,7 @@ pub use bitcoinrpc::Error as RpcError;
 
 use serde_json::value::ToJson;
 
-use exonum::messages::Message;
-use exonum::storage::StorageValue;
+use exonum::messages::{Message, RawTransaction};
 
 use sandbox::sandbox::Sandbox;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
@@ -23,22 +22,23 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            validator: u32,
                            tx: &BitcoinTx,
                            prev_hash: &TxId)
-                           -> TxAnchoringUpdateLatest {
-    let tx = RawBitcoinTx::from(tx.clone());
-    TxAnchoringUpdateLatest::new(sandbox.p(validator as usize),
+                           -> RawTransaction {
+    let tx = TxAnchoringUpdateLatest::new(sandbox.p(validator as usize),
                                  validator,
-                                 tx.clone().into(),
+                                 RawBitcoinTx::from(tx.clone()),
                                  &prev_hash,
-                                 sandbox.s(validator as usize))
+                                 sandbox.s(validator as usize));
+    tx.raw().clone()
 }
 
-pub fn gen_update_config_tx(sandbox: &Sandbox, actual_from: u64, service_cfg: AnchoringConfig) -> TxConfig {
+pub fn gen_update_config_tx(sandbox: &Sandbox,
+                            actual_from: u64,
+                            service_cfg: AnchoringConfig)
+                            -> RawTransaction {
     let mut cfg = sandbox.cfg();
-    cfg.services.insert(ANCHORING_SERVICE, service_cfg.to_json());
-    TxConfig::new(sandbox.p(0),
-                  &cfg.serialize(),
-                  actual_from,
-                  sandbox.s(0))
+    *cfg.services.get_mut(&ANCHORING_SERVICE).unwrap() = service_cfg.to_json();
+    let tx = TxConfig::new(sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
+    tx.raw().clone()
 }
 
 /// Anchor genesis block using funding tx

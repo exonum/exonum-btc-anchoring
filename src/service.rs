@@ -351,7 +351,11 @@ impl AnchoringService {
             .into_iter()
             .collect::<Vec<_>>();
         let proposal = lect.proposal(&from, to, genesis.fee, &funding_tx, height, hash)?;
-        debug!("proposal={:#?}, to={}", proposal, to.address);
+        debug!("proposal={:#?}, to={}, height={}, hash={}",
+               proposal,
+               to.address,
+               height,
+               hash.to_hex());
         // Sign proposal
         self.sign_proposal_tx(state, proposal, &from, &priv_key)
     }
@@ -409,47 +413,55 @@ impl AnchoringService {
 // код для случая обновления конфигурации
 impl AnchoringService {
     pub fn handle_update_address(&self, state: &mut NodeState) -> Result<(), RpcError> {
-        let following = self.following_config(state).unwrap().unwrap();
         let (_, actual) = self.actual_config(state).unwrap();
-        let multisig = following.config.multisig();
+        if let Some(following) = self.following_config(state).unwrap() {
+            let multisig = following.config.multisig();
+            // Точно так же обновляем lect каждые n блоков
+            if state.height() % self.cfg.check_lect_frequency == 0 {
+                // First of all we try to update our lect and actual configuration
+                self.update_our_lect(state, &multisig.address)?;
+            }
 
-        // Точно так же обновляем lect каждые n блоков
-        if state.height() % self.cfg.check_lect_frequency == 0 {
-            // First of all we try to update our lect and actual configuration
-            self.update_our_lect(state, &multisig.address)?;
-        }
+            // Now if we have anchoring tx proposal we must try to finalize it
+            if let Some(proposal) = self.proposal_tx() {
+                self.try_finalize_proposal_tx(state, proposal)?;
+            } else {
+                // Or try to create proposal
+                match self.collect_lects(state).unwrap() {
+                    LectKind::Anchoring(lect) => {
+                        debug!("lect={:#?}", lect);
+                        // в этом случае ничего делать не нужно
+                        if lect.output_address(BITCOIN_NETWORK).to_base58check() ==
+                           multisig.address {
+                            return Ok(());
+                        }
 
-        // Now if we have anchoring tx proposal we must try to finalize it
-        if let Some(proposal) = self.proposal_tx() {
-            self.try_finalize_proposal_tx(state, proposal)?;
+                        debug!("lect_addr={}",
+                               lect.output_address(BITCOIN_NETWORK).to_base58check());
+                        debug!("following_addr={}", multisig.address);
+                        // проверяем, что нам хватает подтверждений
+                        let info = lect.get_info(&self.client)?.unwrap();
+                        debug!("info={:?}", info);
+                        if info.confirmations.unwrap() as u64 >= actual.utxo_confirmations {
+                            // FIXME зафиксировать высоту для анкоринга
+                            let height = self.nearest_anchoring_height(state).unwrap();
+                            self.create_proposal_tx(state, lect, &multisig, height)?;
+                        } else {
+                            warn!("Insufficient confirmations for create transfer transaction")
+                        }
+                    }
+                    LectKind::Funding(_) => panic!("We must not to change genesis configuration!"),
+                    LectKind::None => {
+                        warn!("Unable to reach consensus in a lect");
+                    }
+                }
+            }
         } else {
-            // Or try to create proposal
-            match self.collect_lects(state).unwrap() {
-                LectKind::Anchoring(lect) => {
-                    debug!("lect={:#?}", lect);
-                    // в этом случае ничего делать не нужно
-                    if lect.output_address(BITCOIN_NETWORK).to_base58check() == multisig.address {
-                        return Ok(());
-                    }
-
-                    debug!("lect_addr={}",
-                           lect.output_address(BITCOIN_NETWORK).to_base58check());
-                    debug!("following_addr={}", multisig.address);
-                    // проверяем, что нам хватает подтверждений
-                    let info = lect.get_info(&self.client)?.unwrap();
-                    debug!("info={:?}", info);
-                    if info.confirmations.unwrap() as u64 >= actual.utxo_confirmations {
-                        // FIXME зафиксировать высоту для анкоринга
-                        let height = self.nearest_anchoring_height(state).unwrap();
-                        self.create_proposal_tx(state, lect, &multisig, height)?;
-                    } else {
-                        warn!("Insufficient confirmations for create transfer transaction")
-                    }
-                }
-                LectKind::Funding(_) => panic!("We must not to change genesis configuration!"),
-                LectKind::None => {
-                    warn!("Unable to reach consensus in a lect");
-                }
+            let multisig = actual.multisig();
+            // Точно так же обновляем lect каждые n блоков
+            if state.height() % self.cfg.check_lect_frequency == 0 {
+                // First of all we try to update our lect and actual configuration
+                self.update_our_lect(state, &multisig.address)?;
             }
         }
         Ok(())
