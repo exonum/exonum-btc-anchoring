@@ -14,7 +14,7 @@ use sandbox::config_updater::TxConfig;
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::{ANCHORING_SERVICE, TxAnchoringUpdateLatest};
 use anchoring_service::transactions::{BitcoinTx, RawBitcoinTx};
-use anchoring_service::crypto::TxId;
+use anchoring_service::btc::TxId;
 use anchoring_service::config::AnchoringConfig;
 use anchoring_service::btc;
 

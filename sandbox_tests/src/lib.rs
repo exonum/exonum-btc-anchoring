@@ -17,7 +17,6 @@ pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
 use bitcoin::util::base58::FromBase58;
-use bitcoin::util::address::Privkey;
 
 use exonum::crypto::Hash;
 use exonum::messages::{Message, RawTransaction};
@@ -114,11 +113,12 @@ impl AnchoringSandboxState {
             .collect::<Vec<_>>();
 
         let mut signs = Vec::new();
-        for (validator, key) in priv_keys.iter().enumerate() {
-            let priv_key = Privkey::from_base58check(key).unwrap();
+        for (validator, priv_key) in priv_keys.iter().enumerate() {
             for input in tx.inputs() {
-                let signature =
-                    sign_input(&tx.0, input as usize, &redeem_script.0, priv_key.secret_key());
+                let signature = sign_input(&tx.0,
+                                           input as usize,
+                                           &redeem_script.0,
+                                           priv_key.secret_key());
                 signs.push(TxAnchoringSignature::new(sandbox.p(validator),
                                                      validator as u32,
                                                      tx.clone(),
@@ -258,7 +258,8 @@ pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, SandboxClient, Anchor
     genesis.frequency = ANCHORING_FREQUENCY;
     for &&(ref addr, ref keys) in &priv_keys {
         for (id, key) in keys.iter().enumerate() {
-            nodes[id].private_keys.insert(addr.to_string(), key.to_string());            
+            nodes[id].private_keys.insert(addr.to_string(),
+                                          btc::PrivateKey::from_base58check(key).unwrap());
         }
     }
 

@@ -4,23 +4,23 @@ use bitcoin::blockdata::script::Instruction;
 use bitcoin::util::base58::{FromBase58, ToBase58};
 use bitcoin::util::address::Address;
 use bitcoin::network::constants::Network;
-use secp256k1::key::PublicKey;
+use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
 
-use exonum::crypto::HexValue;
-
-use super::RedeemScript;
+use super::{RedeemScript, PublicKey};
 
 // TODO implement errors
 
 impl RedeemScript {
     pub fn from_pubkeys<'a, I>(pubkeys: I, majority_count: u8) -> RedeemScript
-        where I: Iterator<Item = &'a String>
+        where I: IntoIterator<Item=&'a PublicKey>
     {
         let mut builder = Builder::new().push_int(majority_count as i64);
         let mut total_count = 0;
+
+        let context = Secp256k1::new();
         for pubkey in pubkeys {
-            let bytes = Vec::<u8>::from_hex(pubkey).unwrap();
+            let bytes = pubkey.serialize_vec(&context, true);
             builder = builder.push_slice(bytes.as_slice());
             total_count += 1;
         }
@@ -63,7 +63,7 @@ impl RedeemScript {
                     if bytes.len() == 33 {
                         builder = builder.push_slice(bytes);
                     } else {
-                        let pubkey = PublicKey::from_slice(&context, bytes).unwrap();
+                        let pubkey = RawPublicKey::from_slice(&context, bytes).unwrap();
                         let addr = Address::from_key(network, &pubkey, true);
                         builder = builder.push_slice(addr.hash[..].as_ref());
                     }
@@ -88,16 +88,15 @@ mod tests {
     use bitcoin::util::base58::FromBase58;
     use bitcoin::network::constants::Network;
     use bitcoin::util::address::Privkey;
-    use secp256k1::key::PublicKey;
+    use secp256k1::key::PublicKey as RawPublicKey;
     use secp256k1::Secp256k1;
 
     use exonum::crypto::HexValue;
 
     use HexValueEx;
-    use BitcoinPublicKey;
     use transactions::BitcoinTx;
     use multisig::{sign_input, verify_input};
-    use super::RedeemScript;
+    use super::{RedeemScript, PublicKey};
 
     #[test]
     fn test_redeem_script_from_pubkeys() {
@@ -107,10 +106,10 @@ mod tests {
                     "03280883dc31ccaee34218819aaa245480c35a33acd91283586ff6d1284ed681e5",
                     "03e2bc790a6e32bf5a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb0"]
             .into_iter()
-            .map(|x| BitcoinPublicKey::from(*x))
+            .map(|x| PublicKey::from_hex(x).unwrap())
             .collect::<Vec<_>>();
 
-        let redeem_script = RedeemScript::from_pubkeys(keys.iter(), 3);
+        let redeem_script = RedeemScript::from_pubkeys(&keys, 3);
         assert_eq!(redeem_script.to_hex(), redeem_script_hex);
         assert_eq!(redeem_script.to_address(Network::Testnet),
                    "2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1");
@@ -133,7 +132,7 @@ mod tests {
                 .unwrap();
         let pub_key = {
             let context = Secp256k1::new();
-            PublicKey::from_secret_key(&context, priv_key.secret_key()).unwrap()
+            RawPublicKey::from_secret_key(&context, priv_key.secret_key()).unwrap()
         };
 
         let redeem_script = RedeemScript::from_hex("5321027db7837e51888e94c094703030d162c682c8dba312210f44ff440fbd5e5c24732102bdd272891c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a52103280883dc31ccaee34218819aaa245480c35a33acd91283586ff6d1284ed681e52103e2bc790a6e32bf5a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb054ae").unwrap();

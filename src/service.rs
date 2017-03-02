@@ -13,7 +13,7 @@ use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::node::Height;
 
 use config::{AnchoringNodeConfig, AnchoringConfig};
-use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, BitcoinPrivateKey, HexValueEx, BitcoinSignature};
+use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, HexValueEx, BitcoinSignature};
 use schema::{ANCHORING_SERVICE, AnchoringTransaction, AnchoringSchema, TxAnchoringUpdateLatest,
              TxAnchoringSignature, FollowingConfig};
 use transactions::{TxKind, FundingTx, AnchoringTx, BitcoinTx, TransactionBuilder};
@@ -71,7 +71,7 @@ impl AnchoringService {
 
     pub fn actual_config(&self,
                          state: &NodeState)
-                         -> Result<(BitcoinPrivateKey, AnchoringConfig), StorageError> {
+                         -> Result<(btc::PrivateKey, AnchoringConfig), StorageError> {
         let genesis: AnchoringConfig =
             AnchoringSchema::new(state.view()).current_anchoring_config()?;
         let (redeem_script, _) = genesis.redeem_script();
@@ -159,7 +159,7 @@ impl AnchoringService {
                             state: &mut NodeState,
                             proposal: AnchoringTx,
                             redeem_script: &btc::RedeemScript,
-                            private_key: &BitcoinPrivateKey)
+                            private_key: &btc::PrivateKey)
                             -> Result<(), RpcError> {
         debug!("sign proposal tx");
         for input in proposal.inputs() {

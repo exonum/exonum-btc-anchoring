@@ -1,5 +1,5 @@
 use bitcoinrpc;
-use bitcoin::util::base58::ToBase58;
+use bitcoin::util::base58::{FromBase58, ToBase58};
 use bitcoin::network::constants::Network;
 
 use exonum::crypto::HexValue;
@@ -18,7 +18,7 @@ pub type Result<T> = bitcoinrpc::Result<T>;
 pub type Error = bitcoinrpc::Error;
 
 pub trait AnchoringRpc {
-    fn gen_keypair(&self, account: &str) -> Result<(String, String, String)>;
+    fn gen_keypair(&self, account: &str) -> Result<(btc::PublicKey, btc::PrivateKey)>;
     fn get_transaction(&self, txid: &str) -> Result<BitcoinTx>;
     fn send_transaction(&self, tx: BitcoinTx) -> Result<String>;
     fn send_to_address(&self, address: &str, funds: u64) -> Result<BitcoinTx>;
@@ -27,7 +27,7 @@ pub trait AnchoringRpc {
                                       count: u8,
                                       pub_keys: I)
                                       -> Result<(RedeemScript, btc::Address)>
-        where I: Iterator<Item = &'a String>;
+        where I: IntoIterator<Item = &'a btc::PublicKey>;
 
     fn get_last_anchoring_transactions(&self,
                                        addr: &str,
@@ -71,11 +71,14 @@ pub trait AnchoringRpc {
 }
 
 impl AnchoringRpc for RpcClient {
-    fn gen_keypair(&self, account: &str) -> Result<(String, String, String)> {
+    fn gen_keypair(&self, account: &str) -> Result<(btc::PublicKey, btc::PrivateKey)> {
         let addr = self.getnewaddress(account)?;
         let info = self.validateaddress(&addr)?;
         let privkey = self.dumpprivkey(&addr)?;
-        Ok((addr, info.pubkey, privkey))
+
+        let pubkey = btc::PublicKey::from_hex(info.pubkey).unwrap();
+        let privkey = btc::PrivateKey::from_base58check(&privkey).unwrap();
+        Ok((pubkey, privkey))
     }
 
     fn get_transaction(&self, txid: &str) -> Result<BitcoinTx> {
@@ -99,7 +102,7 @@ impl AnchoringRpc for RpcClient {
                                       count: u8,
                                       pub_keys: I)
                                       -> Result<(RedeemScript, btc::Address)>
-        where I: Iterator<Item = &'a String>
+        where I: IntoIterator<Item = &'a btc::PublicKey>
     {
         let redeem_script = RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
         let addr = btc::Address::from_script(&redeem_script, network);

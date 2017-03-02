@@ -22,13 +22,13 @@ pub struct AnchoringRpcConfig {
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct AnchoringNodeConfig {
     pub rpc: AnchoringRpcConfig,
-    pub private_keys: BTreeMap<String, String>,
+    pub private_keys: BTreeMap<String, btc::PrivateKey>,
     pub check_lect_frequency: u64,
 }
 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct AnchoringConfig {
-    pub validators: Vec<String>,
+    pub validators: Vec<btc::PublicKey>,
     pub funding_tx: FundingTx,
     pub fee: u64,
     pub frequency: u64,
@@ -50,7 +50,7 @@ pub fn generate_anchoring_config(client: &RpcClient,
 
     for idx in 0..count as usize {
         let account = format!("node_{}", idx);
-        let (_, pub_key, priv_key) = client.gen_keypair(&account).unwrap();
+        let (pub_key, priv_key) = client.gen_keypair(&account).unwrap();
 
         pub_keys.push(pub_key.clone());
         node_cfgs.push(AnchoringNodeConfig::new(rpc.clone()));
@@ -78,7 +78,7 @@ impl AnchoringRpcConfig {
 }
 
 impl AnchoringConfig {
-    pub fn new(validators: Vec<String>, tx: FundingTx) -> AnchoringConfig {
+    pub fn new(validators: Vec<btc::PublicKey>, tx: FundingTx) -> AnchoringConfig {
         AnchoringConfig {
             validators: validators,
             funding_tx: tx,

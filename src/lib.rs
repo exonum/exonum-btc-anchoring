@@ -20,7 +20,6 @@ mod macros;
 
 mod service;
 mod schema;
-// pub mod crypto;
 pub mod config;
 pub mod transactions;
 pub mod multisig;

@@ -12,7 +12,7 @@ use bitcoin::util::base58::ToBase58;
 use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
-use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinPublicKey, BitcoinPrivateKey, BitcoinSignature,
+use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinSignature,
      RpcClient};
 use config::AnchoringRpcConfig;
 use btc::TxId;
@@ -30,12 +30,12 @@ fn anchoring_client() -> RpcClient {
 
 fn gen_anchoring_keys(client: &RpcClient,
                       count: usize)
-                      -> (Vec<BitcoinPublicKey>, Vec<BitcoinPrivateKey>) {
+                      -> (Vec<btc::PublicKey>, Vec<btc::PrivateKey>) {
     let mut validators = Vec::new();
     let mut priv_keys = Vec::new();
     for i in 0..count {
         let account = format!("node_{}", i);
-        let (_, pub_key, priv_key) = client.gen_keypair(&account).unwrap();
+        let (pub_key, priv_key) = client.gen_keypair(&account).unwrap();
         validators.push(pub_key);
         priv_keys.push(priv_key);
     }
@@ -45,7 +45,7 @@ fn gen_anchoring_keys(client: &RpcClient,
 fn make_signatures(redeem_script: &btc::RedeemScript,
                    proposal: &AnchoringTx,
                    inputs: &[u32],
-                   priv_keys: &[BitcoinPrivateKey])
+                   priv_keys: &[btc::PrivateKey])
                    -> HashMap<u32, Vec<BitcoinSignature>> {
     let majority_count = RpcClient::majority_count(priv_keys.len() as u8);
 
@@ -83,7 +83,7 @@ fn send_anchoring_tx(client: &RpcClient,
                      to: &btc::Address,
                      block_height: u64,
                      block_hash: Hash,
-                     priv_keys: &[BitcoinPrivateKey],
+                     priv_keys: &[btc::PrivateKey],
                      anchoring_tx: AnchoringTx,
                      additional_funds: &[FundingTx],
                      fee: u64)
