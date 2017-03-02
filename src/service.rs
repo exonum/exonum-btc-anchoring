@@ -16,7 +16,8 @@ use config::{AnchoringNodeConfig, AnchoringConfig};
 use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, BitcoinPrivateKey, HexValueEx, BitcoinSignature};
 use schema::{ANCHORING_SERVICE, AnchoringTransaction, AnchoringSchema, TxAnchoringUpdateLatest,
              TxAnchoringSignature, FollowingConfig};
-use transactions::{TxKind, FundingTx, AnchoringTx, BitcoinTx};
+use transactions::{TxKind, FundingTx, AnchoringTx, BitcoinTx, TransactionBuilder};
+use btc;
 
 pub struct AnchoringState {
     proposal_tx: Option<AnchoringTx>,
@@ -73,7 +74,7 @@ impl AnchoringService {
                          -> Result<(BitcoinPrivateKey, AnchoringConfig), StorageError> {
         let genesis: AnchoringConfig =
             AnchoringSchema::new(state.view()).current_anchoring_config()?;
-        let redeem_script = genesis.redeem_script();
+        let (redeem_script, _) = genesis.redeem_script();
         let key = self.cfg.private_keys[&redeem_script.to_address(BITCOIN_NETWORK)].clone();
         Ok((key, genesis))
     }
@@ -157,12 +158,12 @@ impl AnchoringService {
     pub fn sign_proposal_tx(&self,
                             state: &mut NodeState,
                             proposal: AnchoringTx,
-                            multisig: &MultiSig,
+                            redeem_script: &btc::RedeemScript,
                             private_key: &BitcoinPrivateKey)
                             -> Result<(), RpcError> {
         debug!("sign proposal tx");
         for input in proposal.inputs() {
-            let signature = proposal.sign(&multisig.redeem_script, input, &private_key);
+            let signature = proposal.sign(&redeem_script, input, &private_key);
 
             let sign_msg = TxAnchoringSignature::new(state.public_key(),
                                                      state.id(),
@@ -201,7 +202,8 @@ impl AnchoringService {
             .unwrap();
 
         if let Some(signatures) = collect_signatures(&proposal, &genesis, msgs.iter()) {
-            let new_lect = proposal.finalize(&genesis.multisig().redeem_script, signatures)?;
+            let (redeem_script, _) = genesis.redeem_script();
+            let new_lect = proposal.finalize(&redeem_script, signatures)?;
             if new_lect.get_info(self.client())?.is_none() {
                 self.client.send_transaction(new_lect.clone().into())?;
             }
@@ -236,8 +238,10 @@ impl AnchoringService {
     pub fn avaliable_funding_tx(&self, state: &NodeState) -> Result<Option<FundingTx>, RpcError> {
         let (_, genesis) = self.actual_config(state).unwrap();
 
-        let multisig = genesis.multisig();
-        if let Some(info) = genesis.funding_tx.is_unspent(&self.client, &multisig)? {
+        let (redeem_script, _) = genesis.redeem_script();
+        let addr = btc::Address::from_script(&redeem_script, genesis.network());
+        if let Some(info) = genesis.funding_tx
+            .is_unspent(&self.client, &addr)? {
             if info.confirmations >= genesis.utxo_confirmations {
                 return Ok(Some(genesis.funding_tx));
             }
@@ -250,7 +254,7 @@ impl AnchoringService {
     // или первую funding транзакцию, если все анкорящие пропали
     pub fn find_lect(&self,
                      state: &NodeState,
-                     addr: &str)
+                     addr: &btc::Address)
                      -> Result<Option<BitcoinTx>, RpcError> {
         let lects: Vec<_> = self.client().unspent_lects(addr)?;
         let schema = AnchoringSchema::new(state.view());
@@ -281,7 +285,10 @@ impl AnchoringService {
     // Пытаемся обновить нашу последнюю известную анкорящую транзакцию
     // Помимо этого, если мы обнаруживаем, что она набрала достаточно подтверждений
     // для перехода на новый адрес, то переходим на него
-    pub fn update_our_lect(&self, state: &mut NodeState, addr: &str) -> Result<(), RpcError> {
+    pub fn update_our_lect(&self,
+                           state: &mut NodeState,
+                           addr: &btc::Address)
+                           -> Result<(), RpcError> {
         debug!("Update our lect");
         // We needs to update our lect
         if let Some(lect) = self.find_lect(state, &addr)? {
@@ -319,7 +326,7 @@ impl AnchoringService {
                 if nearest_anchored_height > anchored_height {
                     return self.create_proposal_tx(state,
                                                    tx,
-                                                   &genesis.multisig(),
+                                                   genesis.redeem_script().1,
                                                    nearest_anchored_height);
                 }
                 Ok(())
@@ -334,14 +341,14 @@ impl AnchoringService {
     pub fn create_proposal_tx(&self,
                               state: &mut NodeState,
                               lect: AnchoringTx,
-                              to: &MultiSig,
+                              to: btc::Address,
                               height: Height)
                               -> Result<(), RpcError> {
         let (priv_key, genesis) = self.actual_config(state).unwrap();
         let genesis: AnchoringConfig = genesis;
 
         // Create proposal tx
-        let from = genesis.multisig();
+        let (redeem_script, from) = genesis.redeem_script();
         let hash = Schema::new(state.view())
             .heights()
             .get(height)
@@ -350,14 +357,14 @@ impl AnchoringService {
         let funding_tx = self.avaliable_funding_tx(state)?
             .into_iter()
             .collect::<Vec<_>>();
-        let proposal = lect.proposal(&from, to, genesis.fee, &funding_tx, height, hash)?;
-        debug!("proposal={:#?}, to={}, height={}, hash={}",
+        let proposal = lect.proposal(from, to.clone(), genesis.fee, &funding_tx, height, hash)?;
+        debug!("proposal={:#?}, to={:?}, height={}, hash={}",
                proposal,
-               to.address,
+               to,
                height,
                hash.to_hex());
         // Sign proposal
-        self.sign_proposal_tx(state, proposal, &from, &priv_key)
+        self.sign_proposal_tx(state, proposal, &redeem_script, &priv_key)
     }
 
     // Create first anchoring tx proposal from funding tx in AnchoringNodeConfig
@@ -373,15 +380,21 @@ impl AnchoringService {
                 .unwrap();
 
             let (priv_key, genesis) = self.actual_config(state).unwrap();
-            let multisig = genesis.multisig();
-            let proposal = funding_tx.make_anchoring_tx(&multisig, genesis.fee, height, hash)?;
+            let (redeem_script, addr) = genesis.redeem_script();
+
+            let out = funding_tx.find_out(&addr).unwrap();
+            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out)
+                .fee(genesis.fee)
+                .payload(height, hash)
+                .send_to(addr)
+                .into_transaction();
 
             debug!("initial_proposal={:#?}, txhex={}",
                    proposal,
                    proposal.0.to_hex());
 
             // Sign proposal
-            self.sign_proposal_tx(state, proposal, &multisig, &priv_key)?;
+            self.sign_proposal_tx(state, proposal, &redeem_script, &priv_key)?;
         } else {
             warn!("Funding transaction is not suitable.");
         }
@@ -393,11 +406,11 @@ impl AnchoringService {
 impl AnchoringService {
     pub fn handle_anchoring(&self, state: &mut NodeState) -> Result<(), RpcError> {
         let (_, genesis) = self.actual_config(state).unwrap();
-        let multisig = genesis.multisig();
+        let (_, addr) = genesis.redeem_script();
 
         if state.height() % self.cfg.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
-            self.update_our_lect(state, &multisig.address)?;
+            self.update_our_lect(state, &addr)?;
         }
         // Now if we have anchoring tx proposal we must try to finalize it
         if let Some(proposal) = self.proposal_tx() {
@@ -415,11 +428,11 @@ impl AnchoringService {
     pub fn handle_update_address(&self, state: &mut NodeState) -> Result<(), RpcError> {
         let (_, actual) = self.actual_config(state).unwrap();
         if let Some(following) = self.following_config(state).unwrap() {
-            let multisig = following.config.multisig();
+            let (redeem_script, addr) = following.config.redeem_script();
             // Точно так же обновляем lect каждые n блоков
             if state.height() % self.cfg.check_lect_frequency == 0 {
                 // First of all we try to update our lect and actual configuration
-                self.update_our_lect(state, &multisig.address)?;
+                self.update_our_lect(state, &addr)?;
             }
 
             // Now if we have anchoring tx proposal we must try to finalize it
@@ -431,21 +444,20 @@ impl AnchoringService {
                     LectKind::Anchoring(lect) => {
                         debug!("lect={:#?}", lect);
                         // в этом случае ничего делать не нужно
-                        if lect.output_address(BITCOIN_NETWORK).to_base58check() ==
-                           multisig.address {
+                        if lect.output_address(actual.network()) == addr {
                             return Ok(());
                         }
 
                         debug!("lect_addr={}",
                                lect.output_address(BITCOIN_NETWORK).to_base58check());
-                        debug!("following_addr={}", multisig.address);
+                        debug!("following_addr={:?}", addr);
                         // проверяем, что нам хватает подтверждений
                         let info = lect.get_info(&self.client)?.unwrap();
                         debug!("info={:?}", info);
                         if info.confirmations.unwrap() as u64 >= actual.utxo_confirmations {
                             // FIXME зафиксировать высоту для анкоринга
                             let height = self.nearest_anchoring_height(state).unwrap();
-                            self.create_proposal_tx(state, lect, &multisig, height)?;
+                            self.create_proposal_tx(state, lect, addr, height)?;
                         } else {
                             warn!("Insufficient confirmations for create transfer transaction")
                         }
@@ -457,11 +469,11 @@ impl AnchoringService {
                 }
             }
         } else {
-            let multisig = actual.multisig();
+            let (_, addr) = actual.redeem_script();
             // Точно так же обновляем lect каждые n блоков
             if state.height() % self.cfg.check_lect_frequency == 0 {
                 // First of all we try to update our lect and actual configuration
-                self.update_our_lect(state, &multisig.address)?;
+                self.update_our_lect(state, &addr)?;
             }
         }
         Ok(())
@@ -496,12 +508,9 @@ impl Service for AnchoringService {
 
     fn handle_genesis_block(&self, view: &View) -> Result<Value, StorageError> {
         let cfg = self.genesis.clone();
-        let redeem_script = cfg.redeem_script();
+        let (_, addr) = cfg.redeem_script();
         self.client
-            .importaddress(&redeem_script.to_address(BITCOIN_NETWORK),
-                           "multisig",
-                           false,
-                           false)
+            .importaddress(&addr.to_base58check(), "multisig", false, false)
             .unwrap();
 
         AnchoringSchema::new(view).create_genesis_config(&cfg)?;

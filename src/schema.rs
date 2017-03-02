@@ -217,7 +217,7 @@ impl TxAnchoringSignature {
         let tx = self.tx();
         // Verify signature
         let cfg = schema.current_anchoring_config()?;
-        let redeem_script = cfg.redeem_script();
+        let (redeem_script, _) = cfg.redeem_script();
         let ref pub_key = cfg.validators[self.validator() as usize];
         if !tx.verify(&redeem_script, self.input(), &pub_key, self.signature()) {
             error!("Received tx with incorrect signature content={:#?}", self);

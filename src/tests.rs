@@ -7,14 +7,18 @@ use std::collections::HashMap;
 use env_logger;
 use rand::Rng;
 use bitcoinrpc;
+use bitcoin::network::constants::Network;
+use bitcoin::util::base58::ToBase58;
 
 use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
-use super::{AnchoringRpc, AnchoringTx, FundingTx, BitcoinPublicKey,
-            BitcoinPrivateKey, BitcoinSignature, RpcClient};
-use super::config::AnchoringRpcConfig;
-use super::crypto::TxId;
+use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinPublicKey, BitcoinPrivateKey, BitcoinSignature,
+     RpcClient};
+use config::AnchoringRpcConfig;
+use crypto::TxId;
+use transactions::TransactionBuilder;
+use btc;
 
 fn anchoring_client() -> RpcClient {
     let rpc = AnchoringRpcConfig {
@@ -26,8 +30,8 @@ fn anchoring_client() -> RpcClient {
 }
 
 fn gen_anchoring_keys(client: &RpcClient,
-                        count: usize)
-                        -> (Vec<BitcoinPublicKey>, Vec<BitcoinPrivateKey>) {
+                      count: usize)
+                      -> (Vec<BitcoinPublicKey>, Vec<BitcoinPrivateKey>) {
     let mut validators = Vec::new();
     let mut priv_keys = Vec::new();
     for i in 0..count {
@@ -39,11 +43,11 @@ fn gen_anchoring_keys(client: &RpcClient,
     (validators, priv_keys)
 }
 
-fn make_signatures(redeem_script: &str,
-                    proposal: &AnchoringTx,
-                    inputs: &[u32],
-                    priv_keys: &[BitcoinPrivateKey])
-                    -> HashMap<u32, Vec<BitcoinSignature>> {
+fn make_signatures(redeem_script: &btc::RedeemScript,
+                   proposal: &AnchoringTx,
+                   inputs: &[u32],
+                   priv_keys: &[BitcoinPrivateKey])
+                   -> HashMap<u32, Vec<BitcoinSignature>> {
     let majority_count = RpcClient::majority_count(priv_keys.len() as u8);
 
     let mut signatures = inputs.iter()
@@ -76,34 +80,36 @@ fn make_signatures(redeem_script: &str,
 }
 
 fn send_anchoring_tx(client: &RpcClient,
-                        from: &bitcoinrpc::MultiSig,
-                        to: &bitcoinrpc::MultiSig,
-                        block_height: u64,
-                        block_hash: Hash,
-                        priv_keys: &[BitcoinPrivateKey],
-                        anchoring_tx: AnchoringTx,
-                        additional_funds: &[FundingTx],
-                        fee: u64)
-                        -> AnchoringTx {
-    let tx = anchoring_tx.proposal(&from,
-                    &to,
-                    fee,
-                    additional_funds,
-                    block_height,
-                    block_hash.clone())
-        .unwrap();
-    debug!("Proposal anchoring_tx={:#?}, txid={}",
-            tx,
-            tx.txid());
+                     redeem_script: &btc::RedeemScript,
+                     from: &btc::Address,
+                     to: &btc::Address,
+                     block_height: u64,
+                     block_hash: Hash,
+                     priv_keys: &[BitcoinPrivateKey],
+                     anchoring_tx: AnchoringTx,
+                     additional_funds: &[FundingTx],
+                     fee: u64)
+                     -> AnchoringTx {
+    let tx = {
+        let mut builder = TransactionBuilder::with_prev_tx(&anchoring_tx, 0)
+            .fee(fee)
+            .payload(block_height, block_hash)
+            .send_to(to.clone());
+        for funding_tx in additional_funds {
+            let out = funding_tx.find_out(to).unwrap();
+            builder = builder.add_funds(&funding_tx, out);
+        }
+        builder.into_transaction()
+    };
+    debug!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
-
-    let inputs = (0..additional_funds.len() as u32 + 1).collect::<Vec<_>>();
-    let signatures = make_signatures(&from.redeem_script, &tx, inputs.as_slice(), &priv_keys);
-    let tx = tx.send(&client, &from, signatures).unwrap();
+    let inputs = tx.inputs().collect::<Vec<_>>();
+    let signatures = make_signatures(redeem_script, &tx, inputs.as_slice(), &priv_keys);
+    let tx = tx.send(&client, &redeem_script, signatures).unwrap();
     assert_eq!(tx.payload(), (block_height, block_hash));
 
     debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
-    let lect_tx = client.unspent_lects(&to.address).unwrap().first().unwrap().clone();
+    let lect_tx = client.unspent_lects(&to).unwrap().first().unwrap().clone();
     assert_eq!(lect_tx.0, tx.0);
     tx
 }
@@ -164,18 +170,12 @@ fn test_unspent_funding_tx() {
     let (validators, _) = gen_anchoring_keys(&client, 4);
 
     let majority_count = RpcClient::majority_count(4);
-    let multisig = client.create_multisig_address(majority_count, validators.iter())
-        .unwrap();
+    let (_, address) =
+        client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
+            .unwrap();
 
-    {
-        use bitcoin::blockdata::script::Script;
-        let redeem_script = Vec::<u8>::from_hex(multisig.redeem_script.clone()).unwrap();
-        let script = Script::from(redeem_script);
-        debug!("{:#?}", script);
-    }
-
-    let funding_tx = FundingTx::create(&client, &multisig, 1000).unwrap();
-    let info = funding_tx.is_unspent(&client, &multisig).unwrap();
+    let funding_tx = FundingTx::create(&client, &address, 1000).unwrap();
+    let info = funding_tx.is_unspent(&client, &address).unwrap();
     assert!(info.is_some());
     debug!("{:#?}", info);
 }
@@ -188,9 +188,10 @@ fn test_anchoring_3_4() {
 
     let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
     let majority_count = RpcClient::majority_count(4);
-    let multisig = client.create_multisig_address(majority_count, validators.iter())
-        .unwrap();
-    debug!("multisig_address={:#?}", multisig);
+    let (redeem_script, addr) =
+        client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
+            .unwrap();
+    debug!("multisig_address={:#?}", redeem_script);
 
     let fee = 1000;
     let block_height = 2;
@@ -199,25 +200,28 @@ fn test_anchoring_3_4() {
     // Make anchoring txs chain
     let total_funds = 4000;
     let mut utxo_tx = {
-        let funding_tx = FundingTx::create(&client, &multisig, total_funds).unwrap();
-        let tx = funding_tx.clone()
-            .make_anchoring_tx(&multisig, fee, block_height, block_hash)
-            .unwrap();
-        debug!("Proposal anchoring_tx={:#?}, txid={}",
-                tx,
-                tx.txid());
+        let funding_tx = FundingTx::create(&client, &addr, total_funds).unwrap();
+        let out = funding_tx.find_out(&addr).unwrap();
+        debug!("funding_tx={:#?}", funding_tx);
 
-        let signatures = make_signatures(&multisig.redeem_script, &tx, &[0], &priv_keys);
-        let tx = tx.send(&client, &multisig, signatures).unwrap();
+        let tx = TransactionBuilder::with_prev_tx(&funding_tx, out)
+            .payload(block_height, block_hash)
+            .send_to(addr.clone())
+            .fee(fee)
+            .into_transaction();
+        debug!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
+
+        let signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
+        let tx = tx.send(&client, &redeem_script, signatures).unwrap();
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
-        assert!(funding_tx.is_unspent(&client, &multisig).unwrap().is_none());
-        let lect_tx = client.unspent_lects(&multisig.address).unwrap().first().unwrap().clone();
+        assert!(funding_tx.is_unspent(&client, &addr).unwrap().is_none());
+        let lect_tx = client.unspent_lects(&addr).unwrap().first().unwrap().clone();
         assert_eq!(lect_tx.0, tx.0);
         tx
     };
 
-    let utxos = client.listunspent(0, 9999999, &[multisig.address.as_str()]).unwrap();
+    let utxos = client.listunspent(0, 9999999, &[addr.to_base58check().as_ref()]).unwrap();
     debug!("utxos={:#?}", utxos);
 
     // Send anchoring txs
@@ -225,8 +229,9 @@ fn test_anchoring_3_4() {
     debug!("out_funds={}", out_funds);
     while out_funds >= fee {
         utxo_tx = send_anchoring_tx(&client,
-                                    &multisig,
-                                    &multisig,
+                                    &redeem_script,
+                                    &addr,
+                                    &addr,
                                     block_height,
                                     block_hash.clone(),
                                     &priv_keys,
@@ -238,10 +243,11 @@ fn test_anchoring_3_4() {
     }
 
     // Try to add funding input
-    let funding_tx = FundingTx::create(&client, &multisig, fee * 3).unwrap();
+    let funding_tx = FundingTx::create(&client, &addr, fee * 3).unwrap();
     utxo_tx = send_anchoring_tx(&client,
-                                &multisig,
-                                &multisig,
+                                &redeem_script,
+                                &addr,
+                                &addr,
                                 block_height,
                                 block_hash.clone(),
                                 &priv_keys,
@@ -252,13 +258,15 @@ fn test_anchoring_3_4() {
     // Send to next addr
     let (validators2, priv_keys2) = gen_anchoring_keys(&client, 6);
     let majority_count2 = RpcClient::majority_count(6);
-    let multisig2 = client.create_multisig_address(majority_count2, validators2.iter())
-        .unwrap();
+    let (redeem_script2, addr2) =
+        client.create_multisig_address(Network::Testnet, majority_count2, validators2.iter())
+            .unwrap();
 
-    debug!("new_multisig_address={:#?}", multisig2);
+    debug!("new_multisig_address={:#?}", redeem_script2);
     utxo_tx = send_anchoring_tx(&client,
-                                &multisig,
-                                &multisig2,
+                                &redeem_script,
+                                &addr,
+                                &addr2,
                                 block_height,
                                 block_hash.clone(),
                                 &priv_keys,
@@ -267,14 +275,15 @@ fn test_anchoring_3_4() {
                                 fee);
 
     send_anchoring_tx(&client,
-                        &multisig2,
-                        &multisig2,
-                        block_height,
-                        block_hash.clone(),
-                        &priv_keys2,
-                        utxo_tx,
-                        &[],
-                        fee);
+                      &redeem_script2,
+                      &addr2,
+                      &addr2,
+                      block_height,
+                      block_hash.clone(),
+                      &priv_keys2,
+                      utxo_tx,
+                      &[],
+                      fee);
 }
 
 #[test]
@@ -285,31 +294,36 @@ fn test_anchoring_different_txs() {
     let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
 
     let majority_count = RpcClient::majority_count(4);
-    let multisig = client.create_multisig_address(majority_count, validators.iter())
-        .unwrap();
+    let (redeem_script, addr) =
+        client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
+            .unwrap();
 
     let total_funds = 10000;
     let fee = total_funds;
-    let tx = FundingTx::create(&client, &multisig, total_funds).unwrap();
+    let tx = FundingTx::create(&client, &addr, total_funds).unwrap();
+    let out = tx.find_out(&addr).unwrap();
 
-    debug!("multisig_address={:#?}", multisig);
+    debug!("multisig_address={:#?}", redeem_script);
     debug!("utxo_tx={:#?}", tx);
 
     let block_height = 2;
     let block_hash = hash(&[1, 3, 5]);
 
-    let proposal = tx.make_anchoring_tx(&multisig, fee, block_height, block_hash.clone())
-        .unwrap();
+    let proposal = TransactionBuilder::with_prev_tx(&tx, out)
+        .payload(block_height, block_hash)
+        .fee(fee)
+        .send_to(addr.clone())
+        .into_transaction();
 
-    let signs1 = make_signatures(&multisig.redeem_script, &proposal, &[0], &priv_keys);
-    let signs2 = make_signatures(&multisig.redeem_script, &proposal, &[0], &priv_keys);
+    let signs1 = make_signatures(&redeem_script, &proposal, &[0], &priv_keys);
+    let signs2 = make_signatures(&redeem_script, &proposal, &[0], &priv_keys);
 
-    let tx1 = proposal.clone().send(&client, &multisig, signs1).unwrap();
+    let tx1 = proposal.clone().send(&client, &redeem_script, signs1).unwrap();
     debug!("tx1={:#?}", tx1);
-    let tx2 = proposal.clone().send(&client, &multisig, signs2);
+    let tx2 = proposal.clone().send(&client, &redeem_script, signs2);
     debug!("tx2={:#?}", tx2);
 
-    let txs = client.get_last_anchoring_transactions(&multisig.address, 144).unwrap();
+    let txs = client.get_last_anchoring_transactions(&addr.to_base58check(), 144).unwrap();
     debug!("txs={:#?}", txs);
 
     // assert!(tx2.is_err());

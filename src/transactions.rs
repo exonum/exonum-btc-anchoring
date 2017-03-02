@@ -9,7 +9,7 @@ use bitcoin::util::hash::Hash160;
 use bitcoin::network::serialize::{BitcoinHash, serialize_hex, deserialize, serialize};
 use bitcoin::blockdata::transaction::{TxIn, TxOut};
 use bitcoin::blockdata::script::{Script, Builder};
-use bitcoin::util::base58::FromBase58;
+use bitcoin::util::base58::{FromBase58, ToBase58};
 use bitcoin::util::address::{Address, Privkey, Type};
 use bitcoin::network::constants::Network;
 use secp256k1::Secp256k1;
@@ -24,6 +24,7 @@ use exonum::storage::StorageValue;
 use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, HexValueEx, BitcoinSignature, Result};
 use multisig::{sign_input, verify_input, RedeemScript};
 use crypto::TxId;
+use btc;
 
 pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
@@ -54,7 +55,8 @@ pub enum TxKind {
 
 pub struct TransactionBuilder {
     inputs: Vec<(RawBitcoinTx, u32)>,
-    output: Option<(String, u64)>,
+    output: Option<btc::Address>,
+    fee: Option<u64>,
     payload: Option<(u64, Hash)>,
 }
 
@@ -198,15 +200,16 @@ implement_tx_from_raw! {FundingTx}
 
 impl FundingTx {
     pub fn create(client: &RpcClient,
-                  multisig: &bitcoinrpc::MultiSig,
+                  address: &btc::Address,
                   total_funds: u64)
                   -> Result<FundingTx> {
-        let tx = client.send_to_address(&multisig.address, total_funds)?;
+        let addr = address.to_base58check();
+        let tx = client.send_to_address(&addr, total_funds)?;
         Ok(FundingTx::from(tx))
     }
 
-    pub fn find_out(&self, addr: &str) -> Option<u32> {
-        let redeem_script_hash = Address::from_base58check(addr).unwrap().hash;
+    pub fn find_out(&self, addr: &btc::Address) -> Option<u32> {
+        let redeem_script_hash = addr.hash;
         self.0
             .output
             .iter()
@@ -221,31 +224,31 @@ impl FundingTx {
 
     pub fn is_unspent(&self,
                       client: &RpcClient,
-                      multisig: &bitcoinrpc::MultiSig)
+                      addr: &btc::Address)
                       -> Result<Option<bitcoinrpc::UnspentTransactionInfo>> {
         let txid = self.txid();
-        let txs = client.listunspent(0, 9999999, [multisig.address.as_str()])?;
+        let txs = client.listunspent(0, 9999999, [addr.to_base58check().as_ref()])?;
         Ok(txs.into_iter()
             .find(|txinfo| txinfo.txid == txid))
     }
 
-    pub fn make_anchoring_tx(self,
-                             multisig: &bitcoinrpc::MultiSig,
-                             fee: u64,
-                             block_height: Height,
-                             block_hash: Hash)
-                             -> Result<AnchoringTx> {
-        let utxo_vout = self.find_out(&multisig.address).unwrap();
-        let utxo_tx = self.0;
+    // pub fn make_anchoring_tx(self,
+    //                          multisig: &bitcoinrpc::MultiSig,
+    //                          fee: u64,
+    //                          block_height: Height,
+    //                          block_hash: Hash)
+    //                          -> Result<AnchoringTx> {
+    //     let utxo_vout = self.find_out(&multisig.address).unwrap();
+    //     let utxo_tx = self.0;
 
-        let out_funds = utxo_tx.output[utxo_vout as usize].value - fee;
-        let tx = create_anchoring_transaction(&multisig.address,
-                                              block_height,
-                                              block_hash,
-                                              [(utxo_tx, utxo_vout)].iter(),
-                                              out_funds);
-        Ok(tx)
-    }
+    //     let out_funds = utxo_tx.output[utxo_vout as usize].value - fee;
+    //     let tx = create_anchoring_transaction(&multisig.address,
+    //                                           block_height,
+    //                                           block_hash,
+    //                                           [(utxo_tx, utxo_vout)].iter(),
+    //                                           out_funds);
+    //     Ok(tx)
+    // }
 }
 
 impl AnchoringTx {
@@ -253,22 +256,23 @@ impl AnchoringTx {
         self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].value
     }
 
-    pub fn output_address(&self, network: Network) -> Address {
+    pub fn output_address(&self, network: Network) -> btc::Address {
         let ref script = self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].script_pubkey;
-        let bytes = script
-                .into_iter()
-                .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
-                    Some(bytes)
-                } else {
-                    None
-                })
-                .next().unwrap();
+        let bytes = script.into_iter()
+            .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
+                Some(bytes)
+            } else {
+                None
+            })
+            .next()
+            .unwrap();
 
         Address {
-            ty: Type::ScriptHash,
-            network: network,
-            hash: Hash160::from(bytes),
-        }
+                ty: Type::ScriptHash,
+                network: network,
+                hash: Hash160::from(bytes),
+            }
+            .into()
     }
 
     pub fn inputs(&self) -> ::std::ops::Range<u32> {
@@ -283,22 +287,6 @@ impl AnchoringTx {
         TxId::from(self.0.input[0].prev_hash)
     }
 
-    pub fn out(&self, multisig: &bitcoinrpc::MultiSig) -> u32 {
-        let redeem_script = Vec::<u8>::from_hex(multisig.redeem_script.clone()).unwrap();
-        let redeem_script_hash = Hash160::from_data(&redeem_script);
-
-        self.0
-            .output
-            .iter()
-            .position(|output| if let Some(Instruction::PushBytes(bytes)) =
-                output.script_pubkey.into_iter().nth(1) {
-                Hash160::from(bytes) == redeem_script_hash
-            } else {
-                false
-            })
-            .unwrap() as u32
-    }
-
     pub fn get_info(&self, client: &RpcClient) -> Result<Option<bitcoinrpc::RawTransactionInfo>> {
         let r = client.getrawtransaction_verbose(&self.txid());
         match r {
@@ -308,7 +296,11 @@ impl AnchoringTx {
         }
     }
 
-    pub fn sign(&self, redeem_script: &str, input: u32, priv_key: &str) -> BitcoinSignature {
+    pub fn sign(&self,
+                redeem_script: &btc::RedeemScript,
+                input: u32,
+                priv_key: &str)
+                -> BitcoinSignature {
         sign_anchoring_transaction(self, redeem_script, input, priv_key)
     }
 
@@ -322,20 +314,20 @@ impl AnchoringTx {
     }
 
     pub fn proposal(self,
-                    from: &bitcoinrpc::MultiSig,
-                    to: &bitcoinrpc::MultiSig,
+                    from: btc::Address,
+                    to: btc::Address,
                     fee: u64,
                     funding_txs: &[FundingTx],
                     block_height: Height,
                     block_hash: Hash)
                     -> Result<AnchoringTx> {
         let inputs = {
-            let utxo_vout = self.out(from);
+            let utxo_vout = ANCHORING_TX_DATA_OUTPUT;
             let utxo_tx = self.0;
 
             let mut inputs = vec![(utxo_tx, utxo_vout)];
             for funding_tx in funding_txs {
-                inputs.push((funding_tx.0.clone(), funding_tx.find_out(&from.address).unwrap()));
+                inputs.push((funding_tx.0.clone(), funding_tx.find_out(&from).unwrap()));
             }
             inputs
         };
@@ -346,16 +338,13 @@ impl AnchoringTx {
         }
         out_funds -= fee;
 
-        let tx = create_anchoring_transaction(&to.address,
-                                              block_height,
-                                              block_hash,
-                                              inputs.iter(),
-                                              out_funds);
+        let tx =
+            create_anchoring_transaction(to, block_height, block_hash, inputs.iter(), out_funds);
         Ok(tx)
     }
 
     pub fn finalize(self,
-                    redeem_script: &str,
+                    redeem_script: &btc::RedeemScript,
                     signatures: HashMap<u32, Vec<BitcoinSignature>>)
                     -> Result<AnchoringTx> {
         let tx = finalize_anchoring_transaction(self, redeem_script, signatures);
@@ -364,10 +353,10 @@ impl AnchoringTx {
 
     pub fn send(self,
                 client: &RpcClient,
-                mutlisig: &bitcoinrpc::MultiSig,
+                redeem_script: &btc::RedeemScript,
                 signatures: HashMap<u32, Vec<BitcoinSignature>>)
                 -> Result<AnchoringTx> {
-        let tx = self.finalize(&mutlisig.redeem_script, signatures)?;
+        let tx = self.finalize(redeem_script, signatures)?;
         client.send_transaction(tx.clone().into())?;
         Ok(tx)
     }
@@ -409,7 +398,13 @@ impl TransactionBuilder {
             inputs: vec![(prev_tx.clone(), out)],
             output: None,
             payload: None,
+            fee: None,
         }
+    }
+
+    pub fn fee(mut self, fee: u64) -> TransactionBuilder {
+        self.fee = Some(fee);
+        self
     }
 
     pub fn add_funds(mut self, tx: &RawBitcoinTx, out: u32) -> TransactionBuilder {
@@ -422,19 +417,29 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn send_to<S: AsRef<str>>(mut self, addr: S, out_funds: u64) -> TransactionBuilder {
-        self.output = Some((addr.as_ref().to_string(), out_funds));
+    pub fn send_to(mut self, addr: btc::Address) -> TransactionBuilder {
+        self.output = Some(addr);
         self
     }
 
     pub fn into_transaction(mut self) -> AnchoringTx {
-        let (addr, funds) = self.output.take().unwrap();
+        let total_funds: u64 = self.inputs
+            .iter()
+            .map(|&(ref tx, out)| tx.output[out as usize].value)
+            .sum();
+
+        let addr = self.output.take().expect("Output address is not set");
+        let fee = self.fee.expect("Fee is not set");
         let (height, block_hash) = self.payload.take().unwrap();
-        create_anchoring_transaction(&addr, height, block_hash, self.inputs.iter(), funds)
+        create_anchoring_transaction(addr,
+                                     height,
+                                     block_hash,
+                                     self.inputs.iter(),
+                                     total_funds - fee)
     }
 }
 
-fn create_anchoring_transaction<'a, I>(output_addr: &str,
+fn create_anchoring_transaction<'a, I>(addr: btc::Address,
                                        block_height: Height,
                                        block_hash: Hash,
                                        inputs: I,
@@ -466,7 +471,6 @@ fn create_anchoring_transaction<'a, I>(output_addr: &str,
             .push_slice(data.as_ref())
             .into_script()
     };
-    let addr = Address::from_base58check(output_addr).unwrap();
     let outputs = vec![TxOut {
                            value: out_funds,
                            script_pubkey: addr.script_pubkey(),
@@ -487,12 +491,11 @@ fn create_anchoring_transaction<'a, I>(output_addr: &str,
 }
 
 fn sign_anchoring_transaction(tx: &RawBitcoinTx,
-                              redeem_script: &str,
+                              redeem_script: &btc::RedeemScript,
                               vin: u32,
                               priv_key: &str)
                               -> BitcoinSignature {
     let priv_key = Privkey::from_base58check(priv_key).unwrap();
-    let redeem_script = RedeemScript::from_hex(redeem_script).unwrap().compressed(BITCOIN_NETWORK);
     let signature = sign_input(tx, vin as usize, &redeem_script, priv_key.secret_key());
     signature
 }
@@ -512,20 +515,19 @@ fn verify_anchoring_transaction(tx: &RawBitcoinTx,
 }
 
 fn finalize_anchoring_transaction(mut anchoring_tx: AnchoringTx,
-                                  redeem_script: &str,
+                                  redeem_script: &btc::RedeemScript,
                                   signatures: HashMap<u32, Vec<BitcoinSignature>>)
                                   -> AnchoringTx {
+    let redeem_script_bytes = redeem_script.0.clone().into_vec();
     // build scriptSig
     for (out, signatures) in signatures.into_iter() {
         anchoring_tx.0.input[out as usize].script_sig = {
-            let redeem_script = Vec::<u8>::from_hex(&redeem_script).unwrap();
-
             let mut builder = Builder::new();
             builder = builder.push_opcode(All::OP_PUSHBYTES_0);
             for sign in &signatures {
                 builder = builder.push_slice(sign.as_ref());
             }
-            builder.push_slice(&redeem_script)
+            builder.push_slice(redeem_script_bytes.as_ref())
                 .into_script()
         };
     }
@@ -568,6 +570,7 @@ mod tests {
 
     use multisig::RedeemScript;
     use transactions::{BitcoinTx, AnchoringTx, FundingTx, TransactionBuilder, TxKind};
+    use btc;
 
     #[test]
     fn test_anchoring_tx_sign() {
@@ -592,14 +595,15 @@ mod tests {
         let tx = TransactionBuilder::with_prev_tx(&prev_tx, 0)
             .add_funds(&funding_tx, 0)
             .payload(10, Hash::from_hex("164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9").unwrap())
-            .send_to(&redeem_script.to_address(Network::Testnet), 6000)
+            .fee(1000)
+            .send_to(btc::Address::from_script(&redeem_script, Network::Testnet))
             .into_transaction();
 
         let mut signatures = HashMap::new();
         for input in tx.inputs() {
             let mut input_signs = Vec::new();
             for priv_key in priv_keys.iter() {
-                let sign = tx.sign(&redeem_script_hex, input, priv_key);
+                let sign = tx.sign(&redeem_script, input, priv_key);
                 input_signs.push(sign);
             }
             signatures.insert(input, input_signs);

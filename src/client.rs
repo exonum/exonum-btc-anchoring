@@ -1,10 +1,13 @@
 use bitcoinrpc;
+use bitcoin::util::base58::ToBase58;
+use bitcoin::network::constants::Network;
 
 use exonum::crypto::HexValue;
 
 use transactions::{AnchoringTx, BitcoinTx, TxKind};
 use {SATOSHI_DIVISOR, BITCOIN_NETWORK};
 use multisig::RedeemScript;
+use btc;
 
 #[cfg(not(feature="sandbox_tests"))]
 pub use bitcoinrpc::Client as RpcClient;
@@ -20,9 +23,10 @@ pub trait AnchoringRpc {
     fn send_transaction(&self, tx: BitcoinTx) -> Result<String>;
     fn send_to_address(&self, address: &str, funds: u64) -> Result<BitcoinTx>;
     fn create_multisig_address<'a, I>(&self,
+                                      network: Network,
                                       count: u8,
                                       pub_keys: I)
-                                      -> Result<bitcoinrpc::MultiSig>
+                                      -> Result<(RedeemScript, btc::Address)>
         where I: Iterator<Item = &'a String>;
 
     fn get_last_anchoring_transactions(&self,
@@ -50,8 +54,8 @@ pub trait AnchoringRpc {
         }
     }
 
-    fn unspent_lects(&self, addr: &str) -> Result<Vec<BitcoinTx>> {
-        let unspent_txs = self.get_unspent_transactions(0, 9999999, &addr)?;
+    fn unspent_lects(&self, addr: &btc::Address) -> Result<Vec<BitcoinTx>> {
+        let unspent_txs = self.get_unspent_transactions(0, 9999999, &addr.to_base58check())?;
         // FIXME Develop searching algorhytm
         let mut txs = Vec::new();
         for info in unspent_txs {
@@ -59,7 +63,7 @@ pub trait AnchoringRpc {
             match TxKind::from(raw_tx) {
                 TxKind::Anchoring(tx) => txs.push(tx.into()),
                 TxKind::FundingTx(tx) => txs.push(tx.into()),
-                TxKind::Other(_) => {},
+                TxKind::Other(_) => {}
             }
         }
         Ok(txs)
@@ -90,16 +94,18 @@ impl AnchoringRpc for RpcClient {
         Ok(self.get_transaction(&utxo_txid)?)
     }
 
-    fn create_multisig_address<'a, I>(&self, count: u8, pub_keys: I) -> Result<bitcoinrpc::MultiSig>
+    fn create_multisig_address<'a, I>(&self,
+                                      network: Network,
+                                      count: u8,
+                                      pub_keys: I)
+                                      -> Result<(RedeemScript, btc::Address)>
         where I: Iterator<Item = &'a String>
     {
-        let redeem_script = RedeemScript::from_pubkeys(pub_keys, count).compressed(BITCOIN_NETWORK);
-        let multisig = bitcoinrpc::MultiSig {
-            address: redeem_script.to_address(BITCOIN_NETWORK),
-            redeem_script: redeem_script.to_hex(),
-        };
-        self.importaddress(&multisig.address, "multisig", false, false)?;
-        Ok(multisig)
+        let redeem_script = RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
+        let addr = btc::Address::from_script(&redeem_script, network);
+
+        self.importaddress(&addr.to_base58check(), "multisig", false, false)?;
+        Ok((redeem_script, addr))
     }
 
     fn get_last_anchoring_transactions(&self,

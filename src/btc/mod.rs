@@ -1,5 +1,6 @@
 mod types;
 mod redeem_script;
+mod address;
 
 use exonum::crypto::FromHexError;
 

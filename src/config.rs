@@ -13,6 +13,7 @@ use exonum::crypto::{hash, Hash, HexValue};
 
 use {BITCOIN_NETWORK, AnchoringTx, FundingTx, RpcClient, RedeemScript, AnchoringRpc};
 use crypto::{BitcoinAddress, BitcoinPrivateKey, BitcoinPublicKey};
+use btc;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AnchoringRpcConfig {
@@ -60,12 +61,14 @@ pub fn generate_anchoring_config(client: &RpcClient,
     }
 
     let majority_count = 2 * count / 3 + 1;
-    let multisig = client.create_multisig_address(majority_count, pub_keys.iter()).unwrap();
-    let tx = FundingTx::create(&client, &multisig, total_funds).unwrap();
-    let genesis_cfg = AnchoringConfig::new(pub_keys, tx);
+    let (_, address) =
+        client.create_multisig_address(BITCOIN_NETWORK, majority_count, pub_keys.iter())
+            .unwrap();
+    let tx = FundingTx::create(&client, &address, total_funds).unwrap();
 
+    let genesis_cfg = AnchoringConfig::new(pub_keys, tx);
     for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
-        node_cfg.private_keys.insert(multisig.address.clone(), priv_keys[idx].clone());
+        node_cfg.private_keys.insert(address.to_base58check(), priv_keys[idx].clone());
     }
 
     (genesis_cfg, node_cfgs)
@@ -92,16 +95,18 @@ impl AnchoringConfig {
         BITCOIN_NETWORK
     }
 
-    pub fn redeem_script(&self) -> RedeemScript {
+    pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
-        RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
-            .compressed(self.network())
+        let redeem_script = RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
+            .compressed(self.network());
+        let addr = btc::Address::from_script(&redeem_script, self.network());
+        (redeem_script, addr)
     }
 
     pub fn multisig(&self) -> MultiSig {
-        let redeem_script = self.redeem_script();
+        let (redeem_script, addr) = self.redeem_script();
         MultiSig {
-            address: redeem_script.to_address(self.network()),
+            address: addr.to_base58check(),
             redeem_script: redeem_script.to_hex(),
         }
     }
