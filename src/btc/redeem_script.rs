@@ -1,41 +1,83 @@
-use bitcoin::blockdata::script::{Script};
-use bitcoin::blockdata::transaction::SigHashType;
-use secp256k1::key::{PublicKey, SecretKey};
-use secp256k1::{Secp256k1, Message, Signature};
+use bitcoin::blockdata::script::{Script, Builder};
+use bitcoin::blockdata::opcodes::All;
+use bitcoin::blockdata::script::Instruction;
+use bitcoin::util::base58::{FromBase58, ToBase58};
+use bitcoin::util::address::Address;
+use bitcoin::network::constants::Network;
+use secp256k1::key::PublicKey;
+use secp256k1::Secp256k1;
 
-use transactions::RawBitcoinTx;
-pub use btc::RedeemScript;
+use exonum::crypto::HexValue;
 
-pub fn sign_input(tx: &RawBitcoinTx,
-                  input: usize,
-                  subscript: &Script,
-                  sec_key: &SecretKey)
-                  -> Vec<u8> {
-    let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
-    // Make signature
-    let context = Secp256k1::new();
-    let msg = Message::from_slice(&sighash[..]).unwrap();
-    let sign = context.sign(&msg, sec_key).unwrap();
-    // Serialize signature
-    let mut sign_data = sign.serialize_der(&context);
-    sign_data.push(SigHashType::All.as_u32() as u8);
-    sign_data
-}
+use super::RedeemScript;
 
-pub fn verify_input(tx: &RawBitcoinTx,
-                    input: usize,
-                    subscript: &Script,
-                    pub_key: &PublicKey,
-                    signature: &[u8])
-                    -> bool {
-    let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
-    let msg = Message::from_slice(&sighash[..]).unwrap();
+// TODO implement errors
 
-    let context = Secp256k1::new();
-    if let Ok(sign) = Signature::from_der_lax(&context, signature) {
-        context.verify(&msg, &sign, pub_key).is_ok()
-    } else {
-        false
+impl RedeemScript {
+    pub fn from_pubkeys<'a, I>(pubkeys: I, majority_count: u8) -> RedeemScript
+        where I: Iterator<Item = &'a String>
+    {
+        let mut builder = Builder::new().push_int(majority_count as i64);
+        let mut total_count = 0;
+        for pubkey in pubkeys {
+            let bytes = Vec::<u8>::from_hex(pubkey).unwrap();
+            builder = builder.push_slice(bytes.as_slice());
+            total_count += 1;
+        }
+
+        let script = builder.push_int(total_count)
+            .push_opcode(All::OP_CHECKMULTISIG)
+            .into_script();
+        RedeemScript(script)
+    }
+
+    pub fn from_addresses<'a, I>(addrs: I, majority_count: u8) -> RedeemScript
+        where I: Iterator<Item = &'a String>
+    {
+        let mut builder = Builder::new().push_int(majority_count as i64);
+        let mut total_count = 0;
+        for addr in addrs {
+            let bytes = Vec::<u8>::from_base58check(addr).unwrap();
+            builder = builder.push_slice(bytes.as_slice());
+            total_count += 1;
+        }
+
+        let script = builder.push_int(total_count)
+            .push_opcode(All::OP_CHECKMULTISIG)
+            .into_script();
+        RedeemScript(script)
+    }
+
+    pub fn to_address(&self, network: Network) -> String {
+        let addr = Address::from_script(network, self);
+        addr.to_base58check()
+    }
+
+    pub fn compressed(&self, network: Network) -> RedeemScript {
+        let mut builder = Builder::new();
+        let context = Secp256k1::without_caps();
+
+        for instruction in self.0.clone().into_iter() {
+            match instruction {
+                Instruction::PushBytes(bytes) => {
+                    if bytes.len() == 33 {
+                        builder = builder.push_slice(bytes);
+                    } else {
+                        let pubkey = PublicKey::from_slice(&context, bytes).unwrap();
+                        let addr = Address::from_key(network, &pubkey, true);
+                        builder = builder.push_slice(addr.hash[..].as_ref());
+                    }
+                }
+                Instruction::Op(opcode) => builder = builder.push_opcode(opcode),
+                Instruction::Error(_) => unimplemented!(),
+            }
+        }
+        RedeemScript(builder.into_script())
+    }
+
+    pub fn script_pubkey(&self, network: Network) -> Script {
+        let addr = Address::from_script(network, self);
+        addr.script_pubkey()
     }
 }
 
@@ -54,7 +96,8 @@ mod tests {
     use HexValueEx;
     use BitcoinPublicKey;
     use transactions::BitcoinTx;
-    use super::{RedeemScript, sign_input, verify_input};
+    use multisig::{sign_input, verify_input};
+    use super::RedeemScript;
 
     #[test]
     fn test_redeem_script_from_pubkeys() {

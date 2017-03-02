@@ -17,15 +17,15 @@ use secp256k1::key::PublicKey;
 use bitcoinrpc;
 
 // FIXME do not use Hash from crypto, use Sha256Hash explicit
-use exonum::crypto::{hash, Hash, FromHexError, ToHex, FromHex};
+use exonum::crypto::{hash, Hash, FromHexError, HexValue};
 use exonum::node::Height;
 use exonum::storage::StorageValue;
 
-use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, HexValue, BitcoinSignature, Result};
+use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, HexValueEx, BitcoinSignature, Result};
 use multisig::{sign_input, verify_input, RedeemScript};
 use crypto::TxId;
 
-pub type BitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
+pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
 const ANCHORING_TX_FUNDS_OUTPUT: u32 = 0;
 const ANCHORING_TX_DATA_OUTPUT: u32 = 1;
@@ -36,34 +36,34 @@ const ANCHORING_TX_DATA_OUTPUT: u32 = 1;
 // Итого транзакции у которых нулевой вход нам не известен, а выходов не два или они содержат другую информацию,
 // считаются априори не валидными.
 #[derive(Clone, PartialEq)]
-pub struct AnchoringTx(pub BitcoinTx);
+pub struct AnchoringTx(pub RawBitcoinTx);
 // Структура валидной фундирующей транзакции тоже строгая:
 // Входов и выходов может быть несколько, но главное правило, чтобы нулевой вход переводил деньги на мультисиг кошелек
 #[derive(Clone, PartialEq)]
-pub struct FundingTx(pub BitcoinTx);
+pub struct FundingTx(pub RawBitcoinTx);
 // Обертка над обычной биткоин транзакцией
 #[derive(Clone, PartialEq)]
-pub struct RawBitcoinTx(pub BitcoinTx);
+pub struct BitcoinTx(pub RawBitcoinTx);
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum TxKind {
     Anchoring(AnchoringTx),
     FundingTx(FundingTx),
-    Other(RawBitcoinTx),
+    Other(BitcoinTx),
 }
 
 pub struct TransactionBuilder {
-    inputs: Vec<(BitcoinTx, u32)>,
+    inputs: Vec<(RawBitcoinTx, u32)>,
     output: Option<(String, u64)>,
     payload: Option<(u64, Hash)>,
 }
 
-impl HexValue for BitcoinTx {
+impl HexValueEx for RawBitcoinTx {
     fn to_hex(&self) -> String {
         serialize_hex(self).unwrap()
     }
     fn from_hex<T: AsRef<str>>(v: T) -> ::std::result::Result<Self, FromHexError> {
-        let bytes: Vec<u8> = FromHex::from_hex(v.as_ref())?;
+        let bytes = Vec::<u8>::from_hex(v.as_ref())?;
         if let Ok(tx) = deserialize(bytes.as_ref()) {
             Ok(tx)
         } else {
@@ -84,8 +84,8 @@ macro_rules! implement_tx_wrapper {
         }
     }
 
-    impl From<BitcoinTx> for $name {
-        fn from(tx: BitcoinTx) -> $name {
+    impl From<RawBitcoinTx> for $name {
+        fn from(tx: RawBitcoinTx) -> $name {
             $name(tx)
         }
     }
@@ -95,8 +95,8 @@ macro_rules! implement_tx_wrapper {
             serialize_hex(&self.0).unwrap()
         }
         fn from_hex<T: AsRef<str>>(v: T) -> ::std::result::Result<Self, FromHexError> {
-            let bytes: Vec<u8> = FromHex::from_hex(v.as_ref())?;
-            if let Ok(tx) = deserialize::<BitcoinTx>(bytes.as_ref()) {
+            let bytes = Vec::<u8>::from_hex(v.as_ref())?;
+            if let Ok(tx) = deserialize::<RawBitcoinTx>(bytes.as_ref()) {
                 Ok($name::from(tx))
             } else {
                 Err(FromHexError::InvalidHexLength)
@@ -112,7 +112,7 @@ macro_rules! implement_tx_wrapper {
         }
 
         fn deserialize(v: Vec<u8>) -> Self {
-            let tx = deserialize::<BitcoinTx>(v.as_ref()).unwrap();
+            let tx = deserialize::<RawBitcoinTx>(v.as_ref()).unwrap();
             $name::from(tx)
         }
 
@@ -139,9 +139,9 @@ macro_rules! implement_tx_wrapper {
     }
 
     impl Deref for $name {
-        type Target = BitcoinTx;
+        type Target = RawBitcoinTx;
 
-        fn deref(&self) -> &BitcoinTx {
+        fn deref(&self) -> &RawBitcoinTx {
             &self.0
         }
     }
@@ -149,7 +149,7 @@ macro_rules! implement_tx_wrapper {
     impl fmt::Debug for $name {
         fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
             f.debug_struct(stringify!($name))
-                .field("txid", &self.txid().to_hex())
+                .field("txid", &self.txid())
                 .field("txhex", &self.to_hex())
                 .field("content", &self.0)
                 .finish()
@@ -160,24 +160,30 @@ macro_rules! implement_tx_wrapper {
 
 macro_rules! implement_tx_from_raw {
 ($name:ident) => (
-    impl From<RawBitcoinTx> for $name {
-        fn from(tx: RawBitcoinTx) -> $name {
+    impl From<BitcoinTx> for $name {
+        fn from(tx: BitcoinTx) -> $name {
             $name(tx.0)
         }
     }
 
-    impl Into<RawBitcoinTx> for $name {
-        fn into(self) -> RawBitcoinTx {
-            RawBitcoinTx(self.0)
+    impl Into<BitcoinTx> for $name {
+        fn into(self) -> BitcoinTx {
+            BitcoinTx(self.0)
         }
     }
 
-    impl PartialEq<RawBitcoinTx> for $name {
-        fn eq(&self, other: &RawBitcoinTx) -> bool {
+    impl PartialEq<BitcoinTx> for $name {
+        fn eq(&self, other: &BitcoinTx) -> bool {
             self.0.eq(other)
         }
-        fn ne(&self, other: &RawBitcoinTx) -> bool {
+        fn ne(&self, other: &BitcoinTx) -> bool {
             self.0.ne(other)
+        }
+    }
+
+    impl AsRef<RawBitcoinTx> for $name {
+        fn as_ref(&self) -> &RawBitcoinTx {
+            &self.0
         }
     }
 )
@@ -185,7 +191,7 @@ macro_rules! implement_tx_from_raw {
 
 implement_tx_wrapper! {AnchoringTx}
 implement_tx_wrapper! {FundingTx}
-implement_tx_wrapper! {RawBitcoinTx}
+implement_tx_wrapper! {BitcoinTx}
 
 implement_tx_from_raw! {AnchoringTx}
 implement_tx_from_raw! {FundingTx}
@@ -196,7 +202,7 @@ impl FundingTx {
                   total_funds: u64)
                   -> Result<FundingTx> {
         let tx = client.send_to_address(&multisig.address, total_funds)?;
-        Ok(FundingTx(tx))
+        Ok(FundingTx::from(tx))
     }
 
     pub fn find_out(&self, addr: &str) -> Option<u32> {
@@ -362,7 +368,7 @@ impl AnchoringTx {
                 signatures: HashMap<u32, Vec<BitcoinSignature>>)
                 -> Result<AnchoringTx> {
         let tx = self.finalize(&mutlisig.redeem_script, signatures)?;
-        client.send_transaction(tx.0.clone())?;
+        client.send_transaction(tx.clone().into())?;
         Ok(tx)
     }
 }
@@ -374,8 +380,8 @@ impl TxKind {
     }
 }
 
-impl From<BitcoinTx> for TxKind {
-    fn from(tx: BitcoinTx) -> TxKind {
+impl From<RawBitcoinTx> for TxKind {
+    fn from(tx: RawBitcoinTx) -> TxKind {
         if find_payload(&tx).is_some() {
             TxKind::Anchoring(AnchoringTx::from(tx))
         } else {
@@ -386,19 +392,19 @@ impl From<BitcoinTx> for TxKind {
                     return TxKind::FundingTx(FundingTx::from(tx.clone()));
                 }
             }
-            TxKind::Other(RawBitcoinTx::from(tx))
+            TxKind::Other(BitcoinTx::from(tx))
         }
     }
 }
 
-impl From<RawBitcoinTx> for TxKind {
-    fn from(tx: RawBitcoinTx) -> TxKind {
+impl From<BitcoinTx> for TxKind {
+    fn from(tx: BitcoinTx) -> TxKind {
         TxKind::from(tx.0)
     }
 }
 
 impl TransactionBuilder {
-    pub fn with_prev_tx(prev_tx: &BitcoinTx, out: u32) -> TransactionBuilder {
+    pub fn with_prev_tx(prev_tx: &RawBitcoinTx, out: u32) -> TransactionBuilder {
         TransactionBuilder {
             inputs: vec![(prev_tx.clone(), out)],
             output: None,
@@ -406,7 +412,7 @@ impl TransactionBuilder {
         }
     }
 
-    pub fn add_funds(mut self, tx: &BitcoinTx, out: u32) -> TransactionBuilder {
+    pub fn add_funds(mut self, tx: &RawBitcoinTx, out: u32) -> TransactionBuilder {
         self.inputs.push((tx.clone(), out));
         self
     }
@@ -434,7 +440,7 @@ fn create_anchoring_transaction<'a, I>(output_addr: &str,
                                        inputs: I,
                                        out_funds: u64)
                                        -> AnchoringTx
-    where I: Iterator<Item = &'a (BitcoinTx, u32)>
+    where I: Iterator<Item = &'a (RawBitcoinTx, u32)>
 {
     let inputs = inputs.map(|&(ref unspent_tx, utxo_vout)| {
             TxIn {
@@ -470,7 +476,7 @@ fn create_anchoring_transaction<'a, I>(output_addr: &str,
                            script_pubkey: metadata_script,
                        }];
 
-    let tx = BitcoinTx {
+    let tx = RawBitcoinTx {
         version: 1,
         lock_time: 0,
         input: inputs,
@@ -480,7 +486,7 @@ fn create_anchoring_transaction<'a, I>(output_addr: &str,
     AnchoringTx::from(tx)
 }
 
-fn sign_anchoring_transaction(tx: &BitcoinTx,
+fn sign_anchoring_transaction(tx: &RawBitcoinTx,
                               redeem_script: &str,
                               vin: u32,
                               priv_key: &str)
@@ -491,7 +497,7 @@ fn sign_anchoring_transaction(tx: &BitcoinTx,
     signature
 }
 
-fn verify_anchoring_transaction(tx: &BitcoinTx,
+fn verify_anchoring_transaction(tx: &RawBitcoinTx,
                                 redeem_script: &RedeemScript,
                                 vin: u32,
                                 pub_key: &str,
@@ -526,7 +532,7 @@ fn finalize_anchoring_transaction(mut anchoring_tx: AnchoringTx,
     anchoring_tx
 }
 
-fn find_payload(tx: &BitcoinTx) -> Option<(Height, Hash)> {
+fn find_payload(tx: &RawBitcoinTx) -> Option<(Height, Hash)> {
     tx.output
         .get(ANCHORING_TX_DATA_OUTPUT as usize)
         .and_then(|output| {
@@ -561,8 +567,7 @@ mod tests {
     use exonum::crypto::{Hash, HexValue};
 
     use multisig::RedeemScript;
-    use HexValue as HexValueEx;
-    use transactions::{RawBitcoinTx, AnchoringTx, FundingTx, TransactionBuilder, TxKind};
+    use transactions::{BitcoinTx, AnchoringTx, FundingTx, TransactionBuilder, TxKind};
 
     #[test]
     fn test_anchoring_tx_sign() {
@@ -625,7 +630,7 @@ mod tests {
 
     #[test]
     fn test_tx_kind_funding() {
-        let tx = RawBitcoinTx::from_hex("01000000019532a4022a22226a6f694c3f21216b2c9f5c1c79007eb7d3be06bc2f1f9e52fb000000006a47304402203661efd05ca422fad958b534dbad2e1c7db42bbd1e73e9b91f43a2f7be2f92040220740cf883273978358f25ca5dd5700cce5e65f4f0a0be2e1a1e19a8f168095400012102ae1b03b0f596be41a247080437a50f4d8e825b170770dcb4e5443a2eb2ecab2afeffffff02a00f00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678716e1ff05000000001976a91402f5d7475a10a9c24cea32575bd8993d3fabbfd388ac089e1000").unwrap();
+        let tx = BitcoinTx::from_hex("01000000019532a4022a22226a6f694c3f21216b2c9f5c1c79007eb7d3be06bc2f1f9e52fb000000006a47304402203661efd05ca422fad958b534dbad2e1c7db42bbd1e73e9b91f43a2f7be2f92040220740cf883273978358f25ca5dd5700cce5e65f4f0a0be2e1a1e19a8f168095400012102ae1b03b0f596be41a247080437a50f4d8e825b170770dcb4e5443a2eb2ecab2afeffffff02a00f00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678716e1ff05000000001976a91402f5d7475a10a9c24cea32575bd8993d3fabbfd388ac089e1000").unwrap();
         match TxKind::from(tx) {
             TxKind::FundingTx(_) => {}
             _ => panic!("Wrong tx kind!"),
@@ -634,7 +639,7 @@ mod tests {
 
     #[test]
     fn test_tx_kind_anchoring() {
-        let tx = RawBitcoinTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000").unwrap();
+        let tx = BitcoinTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000").unwrap();
         match TxKind::from(tx) {
             TxKind::Anchoring(_) => {}
             _ => panic!("Wrong tx kind!"),
@@ -643,7 +648,7 @@ mod tests {
 
     #[test]
     fn test_tx_kind_other() {
-        let tx = RawBitcoinTx::from_hex("0100000001cea827387bc0bb1b5e6afa6e6d557123e4432e47bad8c2d94214a9cd1e2e074b010000006a473044022034d463312dd75445ad078b1159a75c0b148388b36686b69da8aecca863e63dc3022071ef86a064bd15f11ec89059072bbd3e3d3bb6c5e9b10712e0e2dc6710520bb00121035e63a48d34250dbbcc58fdc0ab63b901769e71035e19e0eee1a87d433a96723afeffffff0296a6f80b000000001976a914b5d7055cfdacc803e5547b981faa693c5aaa813b88aca0860100000000001976a914f5548cb02bb197f071934a0ea3eeb5878cb59dff88ac03a21000").unwrap();
+        let tx = BitcoinTx::from_hex("0100000001cea827387bc0bb1b5e6afa6e6d557123e4432e47bad8c2d94214a9cd1e2e074b010000006a473044022034d463312dd75445ad078b1159a75c0b148388b36686b69da8aecca863e63dc3022071ef86a064bd15f11ec89059072bbd3e3d3bb6c5e9b10712e0e2dc6710520bb00121035e63a48d34250dbbcc58fdc0ab63b901769e71035e19e0eee1a87d433a96723afeffffff0296a6f80b000000001976a914b5d7055cfdacc803e5547b981faa693c5aaa813b88aca0860100000000001976a914f5548cb02bb197f071934a0ea3eeb5878cb59dff88ac03a21000").unwrap();
         match TxKind::from(tx) {
             TxKind::Other(_) => {}
             _ => panic!("Wrong tx kind!"),

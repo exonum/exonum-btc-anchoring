@@ -1,12 +1,11 @@
 use serde_json::value::ToJson;
-use bitcoin::util::base58::ToBase58;
 
 use exonum::messages::Message;
+use exonum::crypto::HexValue;
 
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
 use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::HexValue;
 
 use {RpcError, anchoring_sandbox, gen_sandbox_anchoring_config};
 use helpers::*;

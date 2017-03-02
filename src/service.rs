@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use bitcoinrpc::{MultiSig, Error as RpcError};
 use serde_json::Value;
-use serde_json::value::{ToJson, from_value};
+use serde_json::value::ToJson;
 use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::{Service, Transaction, Schema, NodeState};
@@ -13,10 +13,10 @@ use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::node::Height;
 
 use config::{AnchoringNodeConfig, AnchoringConfig};
-use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, BitcoinPrivateKey, HexValue, BitcoinSignature};
+use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, BitcoinPrivateKey, HexValueEx, BitcoinSignature};
 use schema::{ANCHORING_SERVICE, AnchoringTransaction, AnchoringSchema, TxAnchoringUpdateLatest,
              TxAnchoringSignature, FollowingConfig};
-use transactions::{TxKind, FundingTx, AnchoringTx, RawBitcoinTx};
+use transactions::{TxKind, FundingTx, AnchoringTx, BitcoinTx};
 
 pub struct AnchoringState {
     proposal_tx: Option<AnchoringTx>,
@@ -203,7 +203,7 @@ impl AnchoringService {
         if let Some(signatures) = collect_signatures(&proposal, &genesis, msgs.iter()) {
             let new_lect = proposal.finalize(&genesis.multisig().redeem_script, signatures)?;
             if new_lect.get_info(self.client())?.is_none() {
-                self.client.send_transaction(new_lect.0.clone())?;
+                self.client.send_transaction(new_lect.clone().into())?;
             }
 
             debug!("sended signed_tx={:#?}, to={}",
@@ -251,7 +251,7 @@ impl AnchoringService {
     pub fn find_lect(&self,
                      state: &NodeState,
                      addr: &str)
-                     -> Result<Option<RawBitcoinTx>, RpcError> {
+                     -> Result<Option<BitcoinTx>, RpcError> {
         let lects: Vec<_> = self.client().unspent_lects(addr)?;
         let schema = AnchoringSchema::new(state.view());
         let id = state.id();

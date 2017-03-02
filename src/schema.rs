@@ -10,7 +10,7 @@ use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 
 use config::AnchoringConfig;
 use crypto::TxId;
-use {AnchoringTx, RawBitcoinTx};
+use {AnchoringTx, BitcoinTx};
 
 pub const ANCHORING_SERVICE: u16 = 3;
 const ANCHORING_TRANSACTION_SIGNATURE: u16 = 0;
@@ -40,7 +40,7 @@ message! {
 
         from:           &PublicKey   [00 => 32]
         validator:      u32          [32 => 36]
-        tx:             RawBitcoinTx [36 => 44]
+        tx:             BitcoinTx [36 => 44]
         prev_txid:      &TxId        [44 => 76]      
     }
 }
@@ -145,7 +145,7 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn lects(&self,
                  validator: u32)
-                 -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, RawBitcoinTx> {
+                 -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, BitcoinTx> {
         let mut prefix = vec![ANCHORING_SERVICE as u8, 03, 0, 0, 0, 0, 0, 0, 0, 0];
         BigEndian::write_u32(&mut prefix[2..], validator);
         MerkleTable::new(MapTable::new(prefix, self.view))
@@ -184,7 +184,7 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn add_lect<Tx>(&self, validator: u32, tx: Tx) -> Result<(), StorageError>
-        where Tx: Into<RawBitcoinTx>
+        where Tx: Into<BitcoinTx>
     {
         let lects = self.lects(validator);
 
@@ -195,7 +195,7 @@ impl<'a> AnchoringSchema<'a> {
         self.lect_indexes(validator).put(&txid, idx)
     }
 
-    pub fn lect(&self, validator: u32) -> Result<RawBitcoinTx, StorageError> {
+    pub fn lect(&self, validator: u32) -> Result<BitcoinTx, StorageError> {
         self.lects(validator).last().map(|x| x.unwrap())
     }
 

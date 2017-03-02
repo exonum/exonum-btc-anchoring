@@ -5,14 +5,15 @@ pub use bitcoinrpc::Error as RpcError;
 use serde_json::value::ToJson;
 
 use exonum::messages::{Message, RawTransaction};
+use exonum::crypto::HexValue;
 
 use sandbox::sandbox::Sandbox;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 use sandbox::config_updater::TxConfig;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::{ANCHORING_SERVICE, TxAnchoringUpdateLatest, HexValue as HexValueEx};
-use anchoring_service::transactions::{RawBitcoinTx, BitcoinTx};
+use anchoring_service::{ANCHORING_SERVICE, TxAnchoringUpdateLatest};
+use anchoring_service::transactions::{BitcoinTx, RawBitcoinTx};
 use anchoring_service::crypto::TxId;
 use anchoring_service::config::AnchoringConfig;
 
@@ -20,12 +21,12 @@ use AnchoringSandboxState;
 
 pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            validator: u32,
-                           tx: &BitcoinTx,
+                           tx: &RawBitcoinTx,
                            prev_hash: &TxId)
                            -> RawTransaction {
     let tx = TxAnchoringUpdateLatest::new(sandbox.p(validator as usize),
                                  validator,
-                                 RawBitcoinTx::from(tx.clone()),
+                                 BitcoinTx::from(tx.clone()),
                                  &prev_hash,
                                  sandbox.s(validator as usize));
     tx.raw().clone()
