@@ -65,13 +65,13 @@ impl HexValue for TxId {
 
 impl HexValue for PublicKey {
     fn to_hex(&self) -> String {
-        let context = Secp256k1::new();
+        let context = Secp256k1::without_caps();
         let array = self.0.serialize_vec(&context, true);
         ::exonum::crypto::ToHex::to_hex(&array.as_slice())
     }
 
     fn from_hex<T: AsRef<str>>(v: T) -> Result<Self, FromHexError> {
-        let context = Secp256k1::new();
+        let context = Secp256k1::without_caps();
         let bytes = Vec::<u8>::from_hex(v.as_ref())?;
         match RawPublicKey::from_slice(&context, bytes.as_ref()) {
             Ok(key) => Ok(PublicKey(key)),

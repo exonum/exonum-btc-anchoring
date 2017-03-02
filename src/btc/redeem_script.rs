@@ -18,7 +18,7 @@ impl RedeemScript {
         let mut builder = Builder::new().push_int(majority_count as i64);
         let mut total_count = 0;
 
-        let context = Secp256k1::new();
+        let context = Secp256k1::without_caps();
         for pubkey in pubkeys {
             let bytes = pubkey.serialize_vec(&context, true);
             builder = builder.push_slice(bytes.as_slice());
