@@ -21,10 +21,10 @@ use exonum::crypto::{hash, Hash, FromHexError, HexValue};
 use exonum::node::Height;
 use exonum::storage::StorageValue;
 
-use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, HexValueEx, BitcoinSignature, Result};
+use {AnchoringRpc, RpcClient, HexValueEx, BitcoinSignature, Result};
 use multisig::{sign_input, verify_input, RedeemScript};
-use crypto::TxId;
 use btc;
+use btc::TxId;
 
 pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
@@ -72,123 +72,6 @@ impl HexValueEx for RawBitcoinTx {
             Err(FromHexError::InvalidHexLength)
         }
     }
-}
-
-macro_rules! implement_tx_wrapper {
-($name:ident) => (
-    impl $name {
-        pub fn id(&self) -> TxId {
-            TxId::from(self.0.bitcoin_hash())
-        }
-
-        pub fn txid(&self) -> String {
-            self.0.bitcoin_hash().be_hex_string()
-        }
-    }
-
-    impl From<RawBitcoinTx> for $name {
-        fn from(tx: RawBitcoinTx) -> $name {
-            $name(tx)
-        }
-    }
-
-    impl HexValue for $name  {
-        fn to_hex(&self) -> String {
-            serialize_hex(&self.0).unwrap()
-        }
-        fn from_hex<T: AsRef<str>>(v: T) -> ::std::result::Result<Self, FromHexError> {
-            let bytes = Vec::<u8>::from_hex(v.as_ref())?;
-            if let Ok(tx) = deserialize::<RawBitcoinTx>(bytes.as_ref()) {
-                Ok($name::from(tx))
-            } else {
-                Err(FromHexError::InvalidHexLength)
-            }
-        }
-    }
-
-    impl StorageValue for $name {
-        fn serialize(self) -> Vec<u8> {
-            let mut v = vec![];
-            v.extend(serialize(&self.0).unwrap());
-            v
-        }
-
-        fn deserialize(v: Vec<u8>) -> Self {
-            let tx = deserialize::<RawBitcoinTx>(v.as_ref()).unwrap();
-            $name::from(tx)
-        }
-
-        fn hash(&self) -> Hash {
-            let mut v = vec![];
-            v.extend(serialize(&self.0).unwrap());
-            hash(&v)
-        }
-    }
-
-    impl<'a> ::exonum::messages::Field<'a> for $name {
-        fn field_size() -> usize {
-            8
-        }
-
-        fn read(buffer: &'a [u8], from: usize, to: usize) -> $name {
-            let data = <&[u8] as ::exonum::messages::Field>::read(buffer, from, to);
-            <$name as StorageValue>::deserialize(data.to_vec())
-        }
-
-        fn write(&self, buffer: &'a mut Vec<u8>, from: usize, to: usize) {
-            <&[u8] as ::exonum::messages::Field>::write(&self.clone().serialize().as_slice(), buffer, from, to);
-        }
-    }
-
-    impl Deref for $name {
-        type Target = RawBitcoinTx;
-
-        fn deref(&self) -> &RawBitcoinTx {
-            &self.0
-        }
-    }
-
-    impl fmt::Debug for $name {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            f.debug_struct(stringify!($name))
-                .field("txid", &self.txid())
-                .field("txhex", &self.to_hex())
-                .field("content", &self.0)
-                .finish()
-        }
-    }
-)
-}
-
-macro_rules! implement_tx_from_raw {
-($name:ident) => (
-    impl From<BitcoinTx> for $name {
-        fn from(tx: BitcoinTx) -> $name {
-            $name(tx.0)
-        }
-    }
-
-    impl Into<BitcoinTx> for $name {
-        fn into(self) -> BitcoinTx {
-            BitcoinTx(self.0)
-        }
-    }
-
-    impl PartialEq<BitcoinTx> for $name {
-        fn eq(&self, other: &BitcoinTx) -> bool {
-            self.0.eq(other)
-        }
-        fn ne(&self, other: &BitcoinTx) -> bool {
-            self.0.ne(other)
-        }
-    }
-
-    impl AsRef<RawBitcoinTx> for $name {
-        fn as_ref(&self) -> &RawBitcoinTx {
-            &self.0
-        }
-    }
-)
 }
 
 implement_tx_wrapper! {AnchoringTx}
@@ -539,7 +422,6 @@ mod tests {
              "036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e".to_string()];
         let redeem_script = RedeemScript::from_pubkeys(pub_keys.iter(), 3)
             .compressed(Network::Testnet);
-        let redeem_script_hex = redeem_script.to_hex();
 
         let prev_tx = AnchoringTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000").unwrap();
         let funding_tx = FundingTx::from_hex("01000000019532a4022a22226a6f694c3f21216b2c9f5c1c79007eb7d3be06bc2f1f9e52fb000000006a47304402203661efd05ca422fad958b534dbad2e1c7db42bbd1e73e9b91f43a2f7be2f92040220740cf883273978358f25ca5dd5700cce5e65f4f0a0be2e1a1e19a8f168095400012102ae1b03b0f596be41a247080437a50f4d8e825b170770dcb4e5443a2eb2ecab2afeffffff02a00f00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678716e1ff05000000001976a91402f5d7475a10a9c24cea32575bd8993d3fabbfd388ac089e1000").unwrap();

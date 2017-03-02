@@ -6,7 +6,6 @@ use std::collections::HashMap;
 
 use env_logger;
 use rand::Rng;
-use bitcoinrpc;
 use bitcoin::network::constants::Network;
 use bitcoin::util::base58::ToBase58;
 
@@ -16,7 +15,7 @@ use exonum::storage::StorageValue;
 use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinPublicKey, BitcoinPrivateKey, BitcoinSignature,
      RpcClient};
 use config::AnchoringRpcConfig;
-use crypto::TxId;
+use btc::TxId;
 use transactions::TransactionBuilder;
 use btc;
 
@@ -81,7 +80,6 @@ fn make_signatures(redeem_script: &btc::RedeemScript,
 
 fn send_anchoring_tx(client: &RpcClient,
                      redeem_script: &btc::RedeemScript,
-                     from: &btc::Address,
                      to: &btc::Address,
                      block_height: u64,
                      block_hash: Hash,
@@ -231,7 +229,6 @@ fn test_anchoring_3_4() {
         utxo_tx = send_anchoring_tx(&client,
                                     &redeem_script,
                                     &addr,
-                                    &addr,
                                     block_height,
                                     block_hash.clone(),
                                     &priv_keys,
@@ -246,7 +243,6 @@ fn test_anchoring_3_4() {
     let funding_tx = FundingTx::create(&client, &addr, fee * 3).unwrap();
     utxo_tx = send_anchoring_tx(&client,
                                 &redeem_script,
-                                &addr,
                                 &addr,
                                 block_height,
                                 block_hash.clone(),
@@ -265,7 +261,6 @@ fn test_anchoring_3_4() {
     debug!("new_multisig_address={:#?}", redeem_script2);
     utxo_tx = send_anchoring_tx(&client,
                                 &redeem_script,
-                                &addr,
                                 &addr2,
                                 block_height,
                                 block_hash.clone(),
@@ -276,7 +271,6 @@ fn test_anchoring_3_4() {
 
     send_anchoring_tx(&client,
                       &redeem_script2,
-                      &addr2,
                       &addr2,
                       block_height,
                       block_hash.clone(),

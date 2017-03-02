@@ -1,18 +1,15 @@
 use std::collections::BTreeMap;
 
 use serde_json;
-use serde::{Serialize, Serializer, Deserialize};
-use serde::de::{Deserializer, Visitor, Error};
 use bitcoinrpc::MultiSig;
 
-use bitcoin::util::base58::{FromBase58, ToBase58};
+use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;
 
 use exonum::storage::StorageValue;
 use exonum::crypto::{hash, Hash, HexValue};
 
 use {BITCOIN_NETWORK, AnchoringTx, FundingTx, RpcClient, RedeemScript, AnchoringRpc};
-use crypto::{BitcoinAddress, BitcoinPrivateKey, BitcoinPublicKey};
 use btc;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -144,82 +141,8 @@ impl AnchoringNodeConfig {
     }
 }
 
-macro_rules! implement_serde_hex {
-($name:ident) => (
-    impl Serialize for $name {
-        fn serialize<S>(&self, ser: &mut S) -> ::std::result::Result<(), S::Error>
-            where S: Serializer
-        {
-            ser.serialize_str(&self.to_hex())
-        }
-    }
-
-    impl Deserialize for $name {
-        fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
-            where D: Deserializer
-        {
-            struct HexVisitor;
-
-            impl Visitor for HexVisitor {
-                type Value = $name;
-
-                fn visit_str<E>(&mut self, hex: &str) -> Result<$name, E>
-                    where E: Error
-                {
-                    match $name::from_hex(hex) {
-                        Ok(value) => Ok(value),
-                        Err(_) => Err(Error::invalid_value("Wrong hex")),
-                    }
-                }
-            }
-
-            deserializer.deserialize_str(HexVisitor)
-        }
-    }
-)
-}
-
-macro_rules! implement_serde_base58check {
-($name:ident) => (
-    impl Serialize for $name {
-        fn serialize<S>(&self, ser: &mut S) -> ::std::result::Result<(), S::Error>
-            where S: Serializer
-        {
-            ser.serialize_str(&self.to_base58check())
-        }
-    }
-
-    impl Deserialize for $name {
-        fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
-            where D: Deserializer
-        {
-            struct Base58Visitor;
-
-            impl Visitor for Base58Visitor {
-                type Value = $name;
-
-                fn visit_str<E>(&mut self, hex: &str) -> Result<$name, E>
-                    where E: Error
-                {
-                    match $name::from_base58check(hex) {
-                        Ok(value) => Ok(value),
-                        Err(_) => Err(Error::invalid_value("Wrong base58")),
-                    }
-                }
-            }
-
-            deserializer.deserialize_str(Base58Visitor)
-        }
-    }
-)
-}
-
 implement_serde_hex! {AnchoringTx}
 implement_serde_hex! {FundingTx}
-implement_serde_hex! {RedeemScript}
-implement_serde_hex! {BitcoinPublicKey}
-implement_serde_base58check! {BitcoinAddress}
-implement_serde_base58check! {BitcoinPrivateKey}
 
 #[cfg(test)]
 mod tests {

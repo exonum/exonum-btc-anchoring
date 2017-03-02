@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::collections::HashMap;
 
-use bitcoinrpc::{MultiSig, Error as RpcError};
+use bitcoinrpc::{Error as RpcError};
 use serde_json::Value;
 use serde_json::value::ToJson;
 use bitcoin::util::base58::ToBase58;
@@ -348,7 +348,7 @@ impl AnchoringService {
         let genesis: AnchoringConfig = genesis;
 
         // Create proposal tx
-        let (redeem_script, from) = genesis.redeem_script();
+        let (redeem_script, _) = genesis.redeem_script();
         let hash = Schema::new(state.view())
             .heights()
             .get(height)
@@ -436,7 +436,7 @@ impl AnchoringService {
     pub fn handle_update_address(&self, state: &mut NodeState) -> Result<(), RpcError> {
         let (_, actual) = self.actual_config(state).unwrap();
         if let Some(following) = self.following_config(state).unwrap() {
-            let (redeem_script, addr) = following.config.redeem_script();
+            let (_, addr) = following.config.redeem_script();
             // Точно так же обновляем lect каждые n блоков
             if state.height() % self.cfg.check_lect_frequency == 0 {
                 // First of all we try to update our lect and actual configuration

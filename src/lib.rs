@@ -15,14 +15,18 @@ extern crate rand;
 #[cfg(test)]
 extern crate env_logger;
 
+#[macro_use]
+mod macros;
+
 mod service;
 mod schema;
-pub mod crypto;
+// pub mod crypto;
 pub mod config;
 pub mod transactions;
 pub mod multisig;
 pub mod client;
 pub mod btc;
+
 #[cfg(feature="sandbox_tests")]
 pub mod sandbox;
 #[cfg(test)]

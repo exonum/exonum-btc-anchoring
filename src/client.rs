@@ -5,7 +5,7 @@ use bitcoin::network::constants::Network;
 use exonum::crypto::HexValue;
 
 use transactions::{AnchoringTx, BitcoinTx, TxKind};
-use {SATOSHI_DIVISOR, BITCOIN_NETWORK};
+use SATOSHI_DIVISOR;
 use multisig::RedeemScript;
 use btc;
 

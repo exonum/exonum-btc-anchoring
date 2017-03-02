@@ -9,7 +9,7 @@ use exonum::crypto::{PublicKey, Hash};
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 
 use config::AnchoringConfig;
-use crypto::TxId;
+use btc::TxId;
 use {AnchoringTx, BitcoinTx};
 
 pub const ANCHORING_SERVICE: u16 = 3;

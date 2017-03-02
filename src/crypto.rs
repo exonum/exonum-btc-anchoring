@@ -19,52 +19,6 @@ pub struct BitcoinPublicKey(pub PublicKey);
 #[derive(Clone, PartialEq)]
 pub struct BitcoinAddress(pub Address);
 
-macro_rules! implement_wrapper {
-    ($from:ident, $to:ident) => (
-        impl Deref for $to {
-            type Target = $from;
-
-            fn deref(&self) -> &$from {
-                &self.0
-            }
-        }
-
-        impl From<$from> for $to {
-            fn from(p: $from) -> $to {
-                $to(p)
-            }
-        }
-
-        impl From<$to> for $from {
-            fn from(p: $to) -> $from {
-                p.0
-            }
-        }
-    )
-}
-
-macro_rules! implement_base58_wrapper {
-    ($from:ident, $to:ident) => (
-        impl ToBase58 for $to {
-            fn base58_layout(&self) -> Vec<u8> {
-                self.0.base58_layout()
-            }
-        }
-
-        impl FromBase58 for $to {
-            fn from_base58_layout(data: Vec<u8>) -> Result<$to, FromBase58Error> {
-                $from::from_base58_layout(data).map(|x| $to(x))
-            }
-        }
-
-        impl fmt::Debug for $to {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                write!(f, "\"{}({})\"", stringify!($to), self.to_base58check())
-            }
-        }
-    )
-}
-
 implement_wrapper! {Sha256dHash, TxId}
 implement_wrapper! {PublicKey, BitcoinPublicKey}
 implement_wrapper! {Address, BitcoinAddress}
