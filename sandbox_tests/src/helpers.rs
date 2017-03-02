@@ -3,6 +3,7 @@ pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
 use serde_json::value::ToJson;
+use bitcoin::util::base58::FromBase58;
 
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::HexValue;
@@ -16,6 +17,7 @@ use anchoring_service::{ANCHORING_SERVICE, TxAnchoringUpdateLatest};
 use anchoring_service::transactions::{BitcoinTx, RawBitcoinTx};
 use anchoring_service::crypto::TxId;
 use anchoring_service::config::AnchoringConfig;
+use anchoring_service::btc;
 
 use AnchoringSandboxState;
 
@@ -25,10 +27,10 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            prev_hash: &TxId)
                            -> RawTransaction {
     let tx = TxAnchoringUpdateLatest::new(sandbox.p(validator as usize),
-                                 validator,
-                                 BitcoinTx::from(tx.clone()),
-                                 &prev_hash,
-                                 sandbox.s(validator as usize));
+                                          validator,
+                                          BitcoinTx::from(tx.clone()),
+                                          &prev_hash,
+                                          sandbox.s(validator as usize));
     tx.raw().clone()
 }
 
@@ -65,13 +67,12 @@ pub fn anchor_first_block(sandbox: &Sandbox,
             ]
         }]);
 
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
-                                                         0,
-                                                         sandbox.last_hash(),
-                                                         &[],
-                                                         "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
-                                                         3000);
+    let (_, signatures) = anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
+        0,
+        sandbox.last_hash(),
+        &[],
+        &btc::Address::from_base58check("2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu").unwrap()
+    );
     let anchored_tx = anchoring_state.latest_anchored_tx();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
@@ -313,13 +314,12 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
         }]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
-                                                         10,
-                                                         sandbox.last_hash(),
-                                                         &[],
-                                                         "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
-                                                         2000);
+    let (_, signatures) = anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
+        10,
+        sandbox.last_hash(),
+        &[],
+        &btc::Address::from_base58check("2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu").unwrap()
+    );
     let anchored_tx = anchoring_state.latest_anchored_tx();
 
     sandbox.broadcast(signatures[0].clone());

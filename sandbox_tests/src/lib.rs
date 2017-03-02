@@ -33,6 +33,7 @@ use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, Anch
 use anchoring_service::{AnchoringService, TxAnchoringSignature, collect_signatures};
 use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
 use anchoring_service::multisig::sign_input;
+use anchoring_service::btc;
 
 #[macro_use]
 mod macros;
@@ -65,8 +66,7 @@ impl AnchoringSandboxState {
                                             height: u64,
                                             block_hash: Hash,
                                             funds: &[FundingTx],
-                                            addr: &str,
-                                            amount: u64)
+                                            addr: &btc::Address)
                                             -> (AnchoringTx, Vec<RawTransaction>) {
         let (propose_tx, signed_tx, signs) = {
             let prev_tx = self.latest_anchored_tx
@@ -76,7 +76,8 @@ impl AnchoringSandboxState {
 
             let mut builder = TransactionBuilder::with_prev_tx(prev_tx, 0)
                 .payload(height, block_hash)
-                .send_to(addr, amount);
+                .send_to(addr.clone())
+                .fee(1000);
             for fund in funds {
                 let out = fund.find_out(addr).unwrap();
                 builder = builder.add_funds(fund, out);
@@ -97,7 +98,7 @@ impl AnchoringSandboxState {
 
     pub fn finalize_tx(&self, tx: AnchoringTx, signs: &[TxAnchoringSignature]) -> AnchoringTx {
         let collected_signs = collect_signatures(&tx, &self.genesis, signs.iter()).unwrap();
-        tx.finalize(&self.genesis.multisig().redeem_script, collected_signs)
+        tx.finalize(&self.genesis.redeem_script().0, collected_signs)
             .unwrap()
     }
 
@@ -117,7 +118,7 @@ impl AnchoringSandboxState {
             let priv_key = Privkey::from_base58check(key).unwrap();
             for input in tx.inputs() {
                 let signature =
-                    sign_input(&tx.0, input as usize, &redeem_script, priv_key.secret_key());
+                    sign_input(&tx.0, input as usize, &redeem_script.0, priv_key.secret_key());
                 signs.push(TxAnchoringSignature::new(sandbox.p(validator),
                                                      validator as u32,
                                                      tx.clone(),

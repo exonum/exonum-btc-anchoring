@@ -1,4 +1,5 @@
 use serde_json::value::ToJson;
+use bitcoin::util::base58::{FromBase58, ToBase58};
 
 use exonum::messages::Message;
 use exonum::crypto::HexValue;
@@ -6,6 +7,7 @@ use exonum::crypto::HexValue;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
 use anchoring_service::sandbox::{SandboxClient, Request};
+use anchoring_service::btc;
 
 use {RpcError, anchoring_sandbox, gen_sandbox_anchoring_config};
 use helpers::*;
@@ -181,13 +183,11 @@ fn test_anchoring_second_block_additional_funds() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     let funds = anchoring_state.genesis.funding_tx.clone();
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
+    let (_, signatures) = anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
                                                          10,
                                                          sandbox.last_hash(),
                                                          &[funds],
-                                                         "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
-                                                         6000);
+                                                         &btc::Address::from_base58check("2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu").unwrap());
 
     sandbox.broadcast(signatures[0].clone());
     sandbox.broadcast(signatures[1].clone());
@@ -353,13 +353,12 @@ fn test_anchoring_second_block_transfer_config() {
         }
     ]);
 
-    let following_multisig = following_cfg.multisig();
+    let following_multisig = following_cfg.redeem_script();
     let (_, signatures) = anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
                                           0,
                                           anchored_tx.payload().1,
                                           &[],
-                                          &following_multisig.address,
-                                          2000);
+                                          &following_multisig.1);
     let transfer_tx = anchoring_state.latest_anchored_tx().clone();
 
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
@@ -395,12 +394,12 @@ fn test_anchoring_second_block_transfer_config() {
 
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.address]],
+            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: [
                 {
                     "txid": &transfer_tx.txid(),
                     "vout": 0,
-                    "address": &following_multisig.address,
+                    "address": &following_multisig.1.to_base58check(),
                     "account": "multisig",
                     "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
                     "amount": 0.00010000,
@@ -449,8 +448,7 @@ fn test_anchoring_second_block_transfer_config() {
                                           10,
                                           block_hash,
                                           &[],
-                                          &following_multisig.address,
-                                          1000);
+                                          &following_multisig.1);
     let anchored_tx = anchoring_state.latest_anchored_tx();
 
     client.expect(vec![
@@ -464,12 +462,12 @@ fn test_anchoring_second_block_transfer_config() {
         },
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.address]],
+            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: [
                 {
                     "txid": &transfer_tx.txid(),
                     "vout": 0,
-                    "address": &following_multisig.address,
+                    "address": &following_multisig.1.to_base58check(),
                     "account": "multisig",
                     "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
                     "amount": 0.00010000,
@@ -507,12 +505,12 @@ fn test_anchoring_second_block_transfer_config() {
         },
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.address]],
+            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: [
                 {
                     "txid": &transfer_tx.txid(),
                     "vout": 0,
-                    "address": &following_multisig.address,
+                    "address": &following_multisig.1.to_base58check(),
                     "account": "multisig",
                     "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
                     "amount": 0.00010000,

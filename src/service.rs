@@ -354,10 +354,18 @@ impl AnchoringService {
             .get(height)
             .unwrap()
             .unwrap();
-        let funding_tx = self.avaliable_funding_tx(state)?
-            .into_iter()
-            .collect::<Vec<_>>();
-        let proposal = lect.proposal(from, to.clone(), genesis.fee, &funding_tx, height, hash)?;
+
+        let proposal = {
+            let mut builder = TransactionBuilder::with_prev_tx(&lect, 0)
+                .fee(genesis.fee)
+                .payload(height, hash)
+                .send_to(to.clone());
+            for funds in self.avaliable_funding_tx(state)? {
+                let out = funds.find_out(&to).unwrap();
+                builder = builder.add_funds(&funds, out);
+            }
+            builder.into_transaction()
+        };
         debug!("proposal={:#?}, to={:?}, height={}, hash={}",
                proposal,
                to,

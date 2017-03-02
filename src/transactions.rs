@@ -231,24 +231,6 @@ impl FundingTx {
         Ok(txs.into_iter()
             .find(|txinfo| txinfo.txid == txid))
     }
-
-    // pub fn make_anchoring_tx(self,
-    //                          multisig: &bitcoinrpc::MultiSig,
-    //                          fee: u64,
-    //                          block_height: Height,
-    //                          block_hash: Hash)
-    //                          -> Result<AnchoringTx> {
-    //     let utxo_vout = self.find_out(&multisig.address).unwrap();
-    //     let utxo_tx = self.0;
-
-    //     let out_funds = utxo_tx.output[utxo_vout as usize].value - fee;
-    //     let tx = create_anchoring_transaction(&multisig.address,
-    //                                           block_height,
-    //                                           block_hash,
-    //                                           [(utxo_tx, utxo_vout)].iter(),
-    //                                           out_funds);
-    //     Ok(tx)
-    // }
 }
 
 impl AnchoringTx {
@@ -311,36 +293,6 @@ impl AnchoringTx {
                   signature: &[u8])
                   -> bool {
         verify_anchoring_transaction(self, redeem_script, input, pub_key, signature)
-    }
-
-    pub fn proposal(self,
-                    from: btc::Address,
-                    to: btc::Address,
-                    fee: u64,
-                    funding_txs: &[FundingTx],
-                    block_height: Height,
-                    block_hash: Hash)
-                    -> Result<AnchoringTx> {
-        let inputs = {
-            let utxo_vout = ANCHORING_TX_DATA_OUTPUT;
-            let utxo_tx = self.0;
-
-            let mut inputs = vec![(utxo_tx, utxo_vout)];
-            for funding_tx in funding_txs {
-                inputs.push((funding_tx.0.clone(), funding_tx.find_out(&from).unwrap()));
-            }
-            inputs
-        };
-
-        let mut out_funds = 0;
-        for &(ref utxo_tx, utxo_vout) in &inputs {
-            out_funds += utxo_tx.output[utxo_vout as usize].value;
-        }
-        out_funds -= fee;
-
-        let tx =
-            create_anchoring_transaction(to, block_height, block_hash, inputs.iter(), out_funds);
-        Ok(tx)
     }
 
     pub fn finalize(self,
