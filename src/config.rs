@@ -9,7 +9,7 @@ use bitcoin::network::constants::Network;
 use exonum::storage::StorageValue;
 use exonum::crypto::{hash, Hash, HexValue};
 
-use {BITCOIN_NETWORK, AnchoringTx, FundingTx, RpcClient, RedeemScript, AnchoringRpc};
+use {BITCOIN_NETWORK, AnchoringTx, FundingTx, RedeemScript, AnchoringRpc};
 use btc;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -35,7 +35,7 @@ pub struct AnchoringConfig {
     pub utxo_confirmations: u64,
 }
 
-pub fn generate_anchoring_config(client: &RpcClient,
+pub fn generate_anchoring_config(client: &AnchoringRpc,
                                  count: u8,
                                  total_funds: u64)
                                  -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
@@ -57,7 +57,7 @@ pub fn generate_anchoring_config(client: &RpcClient,
         priv_keys.push(priv_key.clone());
     }
 
-    let majority_count = 2 * count / 3 + 1;
+    let majority_count = ::majority_count(count);
     let (_, address) =
         client.create_multisig_address(BITCOIN_NETWORK, majority_count, pub_keys.iter())
             .unwrap();
@@ -69,12 +69,6 @@ pub fn generate_anchoring_config(client: &RpcClient,
     }
 
     (genesis_cfg, node_cfgs)
-}
-
-impl AnchoringRpcConfig {
-    pub fn into_client(self) -> RpcClient {
-        RpcClient::new(self.host, self.username, self.password)
-    }
 }
 
 impl AnchoringConfig {
@@ -100,20 +94,12 @@ impl AnchoringConfig {
         (redeem_script, addr)
     }
 
-    pub fn multisig(&self) -> MultiSig {
-        let (redeem_script, addr) = self.redeem_script();
-        MultiSig {
-            address: addr.to_base58check(),
-            redeem_script: redeem_script.to_hex(),
-        }
-    }
-
     pub fn nearest_anchoring_height(&self, height: u64) -> u64 {
         height - height % self.frequency as u64
     }
 
     pub fn majority_count(&self) -> u8 {
-        (2 * self.validators.len() / 3 + 1) as u8
+        ::majority_count(self.validators.len() as u8)
     }
 }
 

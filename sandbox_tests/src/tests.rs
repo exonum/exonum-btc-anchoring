@@ -355,10 +355,10 @@ fn test_anchoring_second_block_transfer_config() {
 
     let following_multisig = following_cfg.redeem_script();
     let (_, signatures) = anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
-                                          0,
-                                          anchored_tx.payload().1,
-                                          &[],
-                                          &following_multisig.1);
+                                                                           0,
+                                                                           anchored_tx.payload().1,
+                                                                           &[],
+                                                                           &following_multisig.1);
     let transfer_tx = anchoring_state.latest_anchored_tx().clone();
 
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);

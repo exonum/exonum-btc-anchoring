@@ -12,23 +12,22 @@ use bitcoin::util::base58::ToBase58;
 use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
-use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinSignature,
-     RpcClient};
+use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinSignature, RpcClient};
 use config::AnchoringRpcConfig;
 use btc::TxId;
 use transactions::TransactionBuilder;
 use btc;
 
-fn anchoring_client() -> RpcClient {
+fn anchoring_client() -> AnchoringRpc {
     let rpc = AnchoringRpcConfig {
         host: env::var("ANCHORING_HOST").unwrap().parse().unwrap(),
         username: env::var("ANCHORING_USER").ok(),
         password: env::var("ANCHORING_PASSWORD").ok(),
     };
-    RpcClient::new(rpc.host, rpc.username, rpc.password)
+    AnchoringRpc::new(rpc)
 }
 
-fn gen_anchoring_keys(client: &RpcClient,
+fn gen_anchoring_keys(client: &AnchoringRpc,
                       count: usize)
                       -> (Vec<btc::PublicKey>, Vec<btc::PrivateKey>) {
     let mut validators = Vec::new();
@@ -47,7 +46,7 @@ fn make_signatures(redeem_script: &btc::RedeemScript,
                    inputs: &[u32],
                    priv_keys: &[btc::PrivateKey])
                    -> HashMap<u32, Vec<BitcoinSignature>> {
-    let majority_count = RpcClient::majority_count(priv_keys.len() as u8);
+    let majority_count = (priv_keys.len() as u8) * 2 / 3 + 1;
 
     let mut signatures = inputs.iter()
         .map(|input| (*input, vec![None; priv_keys.len()]))
@@ -78,7 +77,7 @@ fn make_signatures(redeem_script: &btc::RedeemScript,
         .collect::<HashMap<_, _>>()
 }
 
-fn send_anchoring_tx(client: &RpcClient,
+fn send_anchoring_tx(client: &AnchoringRpc,
                      redeem_script: &btc::RedeemScript,
                      to: &btc::Address,
                      block_height: u64,
@@ -167,7 +166,7 @@ fn test_unspent_funding_tx() {
     let client = anchoring_client();
     let (validators, _) = gen_anchoring_keys(&client, 4);
 
-    let majority_count = RpcClient::majority_count(4);
+    let majority_count = ::majority_count(4);
     let (_, address) =
         client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
             .unwrap();
@@ -185,7 +184,7 @@ fn test_anchoring_3_4() {
     let client = anchoring_client();
 
     let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
-    let majority_count = RpcClient::majority_count(4);
+    let majority_count = ::majority_count(4);
     let (redeem_script, addr) =
         client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
             .unwrap();
@@ -253,7 +252,7 @@ fn test_anchoring_3_4() {
 
     // Send to next addr
     let (validators2, priv_keys2) = gen_anchoring_keys(&client, 6);
-    let majority_count2 = RpcClient::majority_count(6);
+    let majority_count2 = ::majority_count(6);
     let (redeem_script2, addr2) =
         client.create_multisig_address(Network::Testnet, majority_count2, validators2.iter())
             .unwrap();
@@ -287,7 +286,7 @@ fn test_anchoring_different_txs() {
     let client = anchoring_client();
     let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
 
-    let majority_count = RpcClient::majority_count(4);
+    let majority_count = ::majority_count(4);
     let (redeem_script, addr) =
         client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
             .unwrap();

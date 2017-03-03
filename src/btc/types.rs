@@ -23,9 +23,9 @@ pub struct PrivateKey(pub RawPrivkey);
 pub struct PublicKey(pub RawPublicKey);
 #[derive(Clone, PartialEq)]
 pub struct Address(pub RawAddress);
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RedeemScript(pub RawScript);
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct Transaction(pub RawTransaction);
 
 implement_wrapper! {Sha256dHash, TxId}
@@ -75,7 +75,7 @@ impl HexValue for PublicKey {
         let bytes = Vec::<u8>::from_hex(v.as_ref())?;
         match RawPublicKey::from_slice(&context, bytes.as_ref()) {
             Ok(key) => Ok(PublicKey(key)),
-            Err(_) => Err(FromHexError::InvalidHexLength)
+            Err(_) => Err(FromHexError::InvalidHexLength),
         }
     }
 }

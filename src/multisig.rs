@@ -1,4 +1,4 @@
-use bitcoin::blockdata::script::{Script};
+use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::SigHashType;
 use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::{Secp256k1, Message, Signature};

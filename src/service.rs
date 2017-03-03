@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::collections::HashMap;
 
-use bitcoinrpc::{Error as RpcError};
+use bitcoinrpc::Error as RpcError;
 use serde_json::Value;
 use serde_json::value::ToJson;
 use bitcoin::util::base58::ToBase58;
@@ -13,7 +13,7 @@ use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::node::Height;
 
 use config::{AnchoringNodeConfig, AnchoringConfig};
-use {BITCOIN_NETWORK, AnchoringRpc, RpcClient, HexValueEx, BitcoinSignature};
+use {AnchoringRpc, HexValueEx, BitcoinSignature};
 use schema::{ANCHORING_SERVICE, AnchoringTransaction, AnchoringSchema, TxAnchoringUpdateLatest,
              TxAnchoringSignature, FollowingConfig};
 use transactions::{TxKind, FundingTx, AnchoringTx, BitcoinTx, TransactionBuilder};
@@ -26,7 +26,7 @@ pub struct AnchoringState {
 pub struct AnchoringService {
     cfg: AnchoringNodeConfig,
     genesis: AnchoringConfig,
-    client: RpcClient,
+    client: AnchoringRpc,
     state: Arc<Mutex<AnchoringState>>,
 }
 
@@ -42,7 +42,7 @@ pub enum LectKind {
 
 // Код общий для обеих ситуаций
 impl AnchoringService {
-    pub fn new(client: RpcClient,
+    pub fn new(client: AnchoringRpc,
                genesis: AnchoringConfig,
                cfg: AnchoringNodeConfig)
                -> AnchoringService {
@@ -61,7 +61,7 @@ impl AnchoringService {
         Ok(cfg.validators.len() * 2 / 3 + 1)
     }
 
-    pub fn client(&self) -> &RpcClient {
+    pub fn client(&self) -> &AnchoringRpc {
         &self.client
     }
 
@@ -74,8 +74,8 @@ impl AnchoringService {
                          -> Result<(btc::PrivateKey, AnchoringConfig), StorageError> {
         let genesis: AnchoringConfig =
             AnchoringSchema::new(state.view()).current_anchoring_config()?;
-        let (redeem_script, _) = genesis.redeem_script();
-        let key = self.cfg.private_keys[&redeem_script.to_address(BITCOIN_NETWORK)].clone();
+        let (_, addr) = genesis.redeem_script();
+        let key = self.cfg.private_keys[&addr.to_base58check()].clone();
         Ok((key, genesis))
     }
 
@@ -117,10 +117,10 @@ impl AnchoringService {
                 debug!("current_lect={:#?}", current_lect);
                 debug!("prev_lect={:#?}", prev_lect);
 
-                if current_lect.output_address(BITCOIN_NETWORK) !=
-                   prev_lect.output_address(BITCOIN_NETWORK) {
+                let (_, cfg) = self.actual_config(state)?;
+                if current_lect.output_address(cfg.network()) !=
+                   prev_lect.output_address(cfg.network()) {
                     let info = current_lect.get_info(&self.client).unwrap().unwrap();
-                    let (_, cfg) = self.actual_config(state)?;
                     let confirmations = info.confirmations.unwrap() as u64;
                     Ok(confirmations < cfg.utxo_confirmations)
                 } else {
@@ -210,7 +210,7 @@ impl AnchoringService {
 
             debug!("sended signed_tx={:#?}, to={}",
                    new_lect,
-                   new_lect.output_address(BITCOIN_NETWORK).to_base58check());
+                   new_lect.output_address(genesis.network()).to_base58check());
 
             info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
                   new_lect.payload().0,
@@ -457,7 +457,7 @@ impl AnchoringService {
                         }
 
                         debug!("lect_addr={}",
-                               lect.output_address(BITCOIN_NETWORK).to_base58check());
+                               lect.output_address(actual.network()).to_base58check());
                         debug!("following_addr={:?}", addr);
                         // проверяем, что нам хватает подтверждений
                         let info = lect.get_info(&self.client)?.unwrap();

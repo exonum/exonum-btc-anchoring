@@ -1,3 +1,5 @@
+use std::ops::Deref;
+
 use bitcoinrpc;
 use bitcoin::util::base58::{FromBase58, ToBase58};
 use bitcoin::network::constants::Network;
@@ -8,6 +10,7 @@ use transactions::{AnchoringTx, BitcoinTx, TxKind};
 use SATOSHI_DIVISOR;
 use multisig::RedeemScript;
 use btc;
+use config::AnchoringRpcConfig;
 
 #[cfg(not(feature="sandbox_tests"))]
 pub use bitcoinrpc::Client as RpcClient;
@@ -17,34 +20,87 @@ pub use sandbox::SandboxClient as RpcClient;
 pub type Result<T> = bitcoinrpc::Result<T>;
 pub type Error = bitcoinrpc::Error;
 
-pub trait AnchoringRpc {
-    fn gen_keypair(&self, account: &str) -> Result<(btc::PublicKey, btc::PrivateKey)>;
-    fn get_transaction(&self, txid: &str) -> Result<BitcoinTx>;
-    fn send_transaction(&self, tx: BitcoinTx) -> Result<String>;
-    fn send_to_address(&self, address: &str, funds: u64) -> Result<BitcoinTx>;
-    fn create_multisig_address<'a, I>(&self,
-                                      network: Network,
-                                      count: u8,
-                                      pub_keys: I)
-                                      -> Result<(RedeemScript, btc::Address)>
-        where I: IntoIterator<Item = &'a btc::PublicKey>;
+pub struct AnchoringRpc {
+    pub inner: RpcClient,
+}
 
-    fn get_last_anchoring_transactions(&self,
-                                       addr: &str,
-                                       limit: u32)
-                                       -> Result<Vec<bitcoinrpc::TransactionInfo>>;
-
-    fn get_unspent_transactions(&self,
-                                min_conf: u32,
-                                max_conf: u32,
-                                addr: &str)
-                                -> Result<Vec<bitcoinrpc::UnspentTransactionInfo>>;
-
-    fn majority_count(total_count: u8) -> u8 {
-        total_count * 2 / 3 + 1
+impl AnchoringRpc {
+    pub fn new(cfg: AnchoringRpcConfig) -> AnchoringRpc {
+        AnchoringRpc { inner: RpcClient::new(cfg.host, cfg.username, cfg.password) }
     }
 
-    fn get_lect(&self, multisig: &bitcoinrpc::MultiSig) -> Result<Option<AnchoringTx>> {
+    pub fn config(&self) -> AnchoringRpcConfig {
+        AnchoringRpcConfig {
+            host: self.inner.url().to_string(),
+            username: self.inner.username().clone(),
+            password: self.inner.password().clone(),
+        }
+    }
+
+    pub fn gen_keypair(&self, account: &str) -> Result<(btc::PublicKey, btc::PrivateKey)> {
+        let addr = self.inner.getnewaddress(account)?;
+        let info = self.inner.validateaddress(&addr)?;
+        let privkey = self.inner.dumpprivkey(&addr)?;
+
+        let pubkey = btc::PublicKey::from_hex(info.pubkey).unwrap();
+        let privkey = btc::PrivateKey::from_base58check(&privkey).unwrap();
+        Ok((pubkey, privkey))
+    }
+
+    pub fn get_transaction(&self, txid: &str) -> Result<BitcoinTx> {
+        let tx = self.inner.getrawtransaction(txid)?;
+        Ok(BitcoinTx::from_hex(tx).unwrap())
+    }
+
+    pub fn send_transaction(&self, tx: BitcoinTx) -> Result<()> {
+        let tx_hex = tx.to_hex();
+        self.inner.sendrawtransaction(&tx_hex)?;
+        Ok(())
+    }
+
+    pub fn send_to_address(&self, address: &str, funds: u64) -> Result<BitcoinTx> {
+        let funds_str = (funds as f64 / SATOSHI_DIVISOR).to_string();
+        let utxo_txid = self.inner.sendtoaddress(address, &funds_str)?;
+        Ok(self.get_transaction(&utxo_txid)?)
+    }
+
+    pub fn create_multisig_address<'a, I>(&self,
+                                          network: Network,
+                                          count: u8,
+                                          pub_keys: I)
+                                          -> Result<(RedeemScript, btc::Address)>
+        where I: IntoIterator<Item = &'a btc::PublicKey>
+    {
+        let redeem_script = RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
+        let addr = btc::Address::from_script(&redeem_script, network);
+
+        self.inner.importaddress(&addr.to_base58check(), "multisig", false, false)?;
+        Ok((redeem_script, addr))
+    }
+
+    pub fn get_last_anchoring_transactions(&self,
+                                           addr: &str,
+                                           limit: u32)
+                                           -> Result<Vec<bitcoinrpc::TransactionInfo>> {
+        self.inner
+            .listtransactions(limit, 0, true)
+            .map(|v| {
+                v.into_iter()
+                    .rev()
+                    .filter(|tx| tx.address == Some(addr.into()))
+                    .collect::<Vec<_>>()
+            })
+    }
+
+    pub fn get_unspent_transactions(&self,
+                                    min_conf: u32,
+                                    max_conf: u32,
+                                    addr: &str)
+                                    -> Result<Vec<bitcoinrpc::UnspentTransactionInfo>> {
+        self.inner.listunspent(min_conf, max_conf, [addr])
+    }
+
+    pub fn get_lect(&self, multisig: &bitcoinrpc::MultiSig) -> Result<Option<AnchoringTx>> {
         let txs = self.get_last_anchoring_transactions(&multisig.address, 30)?;
         if let Some(info) = txs.first() {
             let tx = self.get_transaction(&info.txid)?;
@@ -54,7 +110,7 @@ pub trait AnchoringRpc {
         }
     }
 
-    fn unspent_lects(&self, addr: &btc::Address) -> Result<Vec<BitcoinTx>> {
+    pub fn unspent_lects(&self, addr: &btc::Address) -> Result<Vec<BitcoinTx>> {
         let unspent_txs = self.get_unspent_transactions(0, 9999999, &addr.to_base58check())?;
         // FIXME Develop searching algorhytm
         let mut txs = Vec::new();
@@ -70,65 +126,10 @@ pub trait AnchoringRpc {
     }
 }
 
-impl AnchoringRpc for RpcClient {
-    fn gen_keypair(&self, account: &str) -> Result<(btc::PublicKey, btc::PrivateKey)> {
-        let addr = self.getnewaddress(account)?;
-        let info = self.validateaddress(&addr)?;
-        let privkey = self.dumpprivkey(&addr)?;
+impl Deref for AnchoringRpc {
+    type Target = RpcClient;
 
-        let pubkey = btc::PublicKey::from_hex(info.pubkey).unwrap();
-        let privkey = btc::PrivateKey::from_base58check(&privkey).unwrap();
-        Ok((pubkey, privkey))
-    }
-
-    fn get_transaction(&self, txid: &str) -> Result<BitcoinTx> {
-        let tx = self.getrawtransaction(txid)?;
-        Ok(BitcoinTx::from_hex(tx).unwrap())
-    }
-
-    fn send_transaction(&self, tx: BitcoinTx) -> Result<String> {
-        let tx_hex = tx.to_hex();
-        self.sendrawtransaction(&tx_hex)
-    }
-
-    fn send_to_address(&self, address: &str, funds: u64) -> Result<BitcoinTx> {
-        let funds_str = (funds as f64 / SATOSHI_DIVISOR).to_string();
-        let utxo_txid = self.sendtoaddress(address, &funds_str)?;
-        Ok(self.get_transaction(&utxo_txid)?)
-    }
-
-    fn create_multisig_address<'a, I>(&self,
-                                      network: Network,
-                                      count: u8,
-                                      pub_keys: I)
-                                      -> Result<(RedeemScript, btc::Address)>
-        where I: IntoIterator<Item = &'a btc::PublicKey>
-    {
-        let redeem_script = RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
-        let addr = btc::Address::from_script(&redeem_script, network);
-
-        self.importaddress(&addr.to_base58check(), "multisig", false, false)?;
-        Ok((redeem_script, addr))
-    }
-
-    fn get_last_anchoring_transactions(&self,
-                                       addr: &str,
-                                       limit: u32)
-                                       -> Result<Vec<bitcoinrpc::TransactionInfo>> {
-        self.listtransactions(limit, 0, true)
-            .map(|v| {
-                v.into_iter()
-                    .rev()
-                    .filter(|tx| tx.address == Some(addr.into()))
-                    .collect::<Vec<_>>()
-            })
-    }
-
-    fn get_unspent_transactions(&self,
-                                min_conf: u32,
-                                max_conf: u32,
-                                addr: &str)
-                                -> Result<Vec<bitcoinrpc::UnspentTransactionInfo>> {
-        self.listunspent(min_conf, max_conf, [addr])
+    fn deref(&self) -> &RpcClient {
+        &self.inner
     }
 }

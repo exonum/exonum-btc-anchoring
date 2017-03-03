@@ -13,7 +13,7 @@ use super::{RedeemScript, PublicKey};
 
 impl RedeemScript {
     pub fn from_pubkeys<'a, I>(pubkeys: I, majority_count: u8) -> RedeemScript
-        where I: IntoIterator<Item=&'a PublicKey>
+        where I: IntoIterator<Item = &'a PublicKey>
     {
         let mut builder = Builder::new().push_int(majority_count as i64);
         let mut total_count = 0;

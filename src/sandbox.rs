@@ -75,7 +75,9 @@ impl SandboxClient {
     pub fn expect<I: IntoIterator<Item = Request>>(&self, requests: I) {
         {
             let requests = self.requests.lock().unwrap();
-            assert!(requests.is_empty(), "Send unexpected requests: {:#?}", requests.deref());
+            assert!(requests.is_empty(),
+                    "Send unexpected requests: {:#?}",
+                    requests.deref());
         }
         self.requests.lock().unwrap().extend(requests);
     }

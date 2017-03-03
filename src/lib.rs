@@ -62,3 +62,7 @@ impl HexValueEx for Script {
         Ok(Builder::from(bytes).into_script())
     }
 }
+
+pub fn majority_count(cnt: u8) -> u8 {
+    cnt * 2 / 3 + 1
+}

@@ -17,6 +17,7 @@ use exonum::config::ConfigFile;
 use blockchain_explorer::helpers::{GenerateCommand, RunCommand, generate_testnet_config};
 
 use anchoring_service::AnchoringService;
+use anchoring_service::AnchoringRpc;
 use anchoring_service::config::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
                                 generate_anchoring_config};
 
@@ -78,7 +79,7 @@ fn main() {
                 password: passwd,
             };
             let (anchoring_genesis, anchoring_nodes) =
-                generate_anchoring_config(&rpc.clone().into_client(), count, total_funds);
+                generate_anchoring_config(&AnchoringRpc::new(rpc.clone()), count, total_funds);
 
             let node_cfgs = generate_testnet_config(count, start_port);
             let dir = dir.join("validators");
@@ -103,7 +104,9 @@ fn main() {
 
             let anchoring_cfg = cfg.anchoring_service;
             let services: Vec<Box<Service>> =
-                vec![Box::new(AnchoringService::new(anchoring_cfg.node.rpc.clone().into_client(),
+                vec![Box::new(AnchoringService::new(AnchoringRpc::new(anchoring_cfg.node
+                                                        .rpc
+                                                        .clone()),
                                                     anchoring_cfg.genesis,
                                                     anchoring_cfg.node))];
             let blockchain = Blockchain::new(db, services);
