@@ -12,6 +12,7 @@ extern crate blockchain_explorer;
 extern crate log;
 
 use std::ops::Deref;
+use std::sync::{Arc, Mutex};
 
 pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
@@ -29,7 +30,7 @@ use sandbox::config_updater::ConfigUpdateService;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, AnchoringNodeConfig};
-use anchoring_service::{AnchoringService, TxAnchoringSignature, collect_signatures, AnchoringRpc};
+use anchoring_service::{AnchoringService, AnchoringHandler, TxAnchoringSignature, AnchoringRpc, collect_signatures};
 use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
 use anchoring_service::multisig::sign_input;
 use anchoring_service::btc;
@@ -49,6 +50,7 @@ pub struct AnchoringSandboxState {
     pub genesis: AnchoringConfig,
     pub nodes: Vec<AnchoringNodeConfig>,
     pub latest_anchored_tx: Option<(AnchoringTx, Vec<TxAnchoringSignature>)>,
+    pub handler: Arc<Mutex<AnchoringHandler>>,
 }
 
 impl AnchoringSandboxState {
@@ -277,6 +279,7 @@ pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, Anchori
     let service = AnchoringService::new(AnchoringRpc(client.clone()),
                                         genesis.clone(),
                                         nodes[ANCHORING_VALIDATOR as usize].clone());
+    let service_handler = service.handler();
     let sandbox = sandbox_with_services(vec![Box::new(service),
                                              Box::new(TimestampingService::new()),
                                              Box::new(ConfigUpdateService::new())]);
@@ -284,6 +287,7 @@ pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, Anchori
         genesis: genesis,
         nodes: nodes,
         latest_anchored_tx: None,
+        handler: service_handler,
     };
     (sandbox, client, info)
 }

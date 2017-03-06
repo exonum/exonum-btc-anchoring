@@ -71,20 +71,8 @@ fn test_anchoring_transfer_config_normal() {
         },
         request! {
             method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
-            response: [
-                {
-                    "txid": &anchored_tx.txid(),
-                    "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 100,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
+            params: [0, 9999999, ["2NDp1mLnHacJSVRw6nQMJVLisn7daJ2zzMo"]],
+            response: []
         }
     ]);
 
@@ -307,20 +295,8 @@ fn test_anchoring_transfer_config_lost_lect() {
         },
         request! {
             method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
-            response: [
-                {
-                    "txid": &anchored_tx.txid(),
-                    "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 100,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
+            params: [0, 9999999, ["2NDp1mLnHacJSVRw6nQMJVLisn7daJ2zzMo"]],
+            response: []
         }
     ]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[tx.raw().clone()]);
@@ -378,20 +354,8 @@ fn test_anchoring_transfer_config_lost_lect() {
         },
         request! {
             method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
-            response: [
-                {
-                    "txid": &anchored_tx.txid(),
-                    "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 100,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
+            params: [0, 9999999, ["2NDp1mLnHacJSVRw6nQMJVLisn7daJ2zzMo"]],
+            response: []
         }
     ]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &lects);

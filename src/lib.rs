@@ -19,7 +19,6 @@ extern crate env_logger;
 mod macros;
 
 mod service;
-mod schema;
 pub mod config;
 pub mod transactions;
 pub mod multisig;
@@ -38,8 +37,8 @@ use exonum::crypto::{FromHexError, ToHex, FromHex};
 
 use multisig::RedeemScript;
 
-pub use service::{AnchoringService, collect_signatures};
-pub use schema::{AnchoringSchema, ANCHORING_SERVICE, TxAnchoringSignature, TxAnchoringUpdateLatest};
+pub use service::{AnchoringService, AnchoringHandler, collect_signatures};
+pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, TxAnchoringSignature, TxAnchoringUpdateLatest};
 pub use transactions::{AnchoringTx, FundingTx, BitcoinTx, TxKind};
 pub use client::{AnchoringRpc, RpcClient, Result, Error};
 pub use btc::HexValueEx;
