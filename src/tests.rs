@@ -106,7 +106,7 @@ fn send_anchoring_tx(client: &AnchoringRpc,
     assert_eq!(tx.payload(), (block_height, block_hash));
 
     debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
-    let lect_tx = client.unspent_lects(&to).unwrap().first().unwrap().clone();
+    let lect_tx = client.unspent_transactions(&to).unwrap().first().unwrap().clone();
     assert_eq!(lect_tx.0, tx.0);
     tx
 }
@@ -213,7 +213,7 @@ fn test_anchoring_3_4() {
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
         assert!(funding_tx.is_unspent(&client, &addr).unwrap().is_none());
-        let lect_tx = client.unspent_lects(&addr).unwrap().first().unwrap().clone();
+        let lect_tx = client.unspent_transactions(&addr).unwrap().first().unwrap().clone();
         assert_eq!(lect_tx.0, tx.0);
         tx
     };

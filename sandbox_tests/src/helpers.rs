@@ -5,7 +5,9 @@ use serde_json::value::ToJson;
 use bitcoin::util::base58::FromBase58;
 
 use exonum::messages::{Message, RawTransaction};
-use exonum::crypto::HexValue;
+use exonum::crypto::{Hash, HexValue};
+use exonum::blockchain::Schema;
+use exonum::storage::List;
 
 use sandbox::sandbox::Sandbox;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
@@ -14,21 +16,21 @@ use sandbox::config_updater::TxConfig;
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::{ANCHORING_SERVICE, TxAnchoringUpdateLatest};
 use anchoring_service::transactions::{BitcoinTx, RawBitcoinTx};
-use anchoring_service::btc::TxId;
 use anchoring_service::config::AnchoringConfig;
 use anchoring_service::btc;
+use anchoring_service::AnchoringSchema;
 
 use AnchoringSandboxState;
 
 pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            validator: u32,
                            tx: &RawBitcoinTx,
-                           prev_hash: &TxId)
+                           count: u64)
                            -> RawTransaction {
     let tx = TxAnchoringUpdateLatest::new(sandbox.p(validator as usize),
                                           validator,
                                           BitcoinTx::from(tx.clone()),
-                                          &prev_hash,
+                                          count,
                                           sandbox.s(validator as usize));
     tx.raw().clone()
 }
@@ -41,6 +43,13 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
     *cfg.services.get_mut(&ANCHORING_SERVICE).unwrap() = service_cfg.to_json();
     let tx = TxConfig::new(sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
     tx.raw().clone()
+}
+
+pub fn block_hash_on_height(sandbox: &Sandbox, height: u64) -> Hash {
+    let blockchain = sandbox.blockchain_copy();
+    let view = blockchain.view();
+    let schema = Schema::new(&view);
+    schema.heights().get(height).unwrap().unwrap()
 }
 
 /// Anchor genesis block using funding tx
@@ -92,16 +101,10 @@ pub fn anchor_first_block(sandbox: &Sandbox,
         .collect::<Vec<_>>();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
 
-    let txs = [gen_service_tx_lect(sandbox, 0, &anchored_tx, &anchored_tx.prev_hash()),
-               gen_service_tx_lect(sandbox, 1, &anchored_tx, &anchored_tx.prev_hash()),
-               gen_service_tx_lect(sandbox, 2, &anchored_tx, &anchored_tx.prev_hash()),
-               gen_service_tx_lect(sandbox, 3, &anchored_tx, &anchored_tx.prev_hash())];
-
-    sandbox.broadcast(txs[0].raw().clone());
-    let txs = txs.into_iter()
-        .map(|x| x.raw())
-        .cloned()
+    let txs = (0..4)
+        .map(|idx| gen_service_tx_lect(sandbox, idx, &anchored_tx, 1))
         .collect::<Vec<_>>();
+    sandbox.broadcast(txs[0].clone());
     add_one_height_with_transactions(sandbox, sandbox_state, &txs);
 }
 
@@ -149,7 +152,6 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
-    let lost_lect_id = anchoring_state.latest_anchored_tx().id();
     let other_lect = anchoring_state.genesis.funding_tx.clone();
 
     client.expect(vec![request! {
@@ -176,16 +178,10 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
         }]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
-    let txs = [gen_service_tx_lect(sandbox, 0, &other_lect, &lost_lect_id),
-               gen_service_tx_lect(sandbox, 1, &other_lect, &lost_lect_id),
-               gen_service_tx_lect(sandbox, 2, &other_lect, &lost_lect_id),
-               gen_service_tx_lect(sandbox, 3, &other_lect, &lost_lect_id)];
-
-    sandbox.broadcast(txs[0].raw().clone());
-    let txs = txs.into_iter()
-        .map(|x| x.raw())
-        .cloned()
+    let txs = (0..4)
+        .map(|idx| gen_service_tx_lect(sandbox, idx, &other_lect, 2))
         .collect::<Vec<_>>();
+    sandbox.broadcast(txs[0].clone());
 
     client.expect(vec![request! {
             method: "listunspent",
@@ -221,6 +217,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
                 params: [anchored_tx.to_hex()]
             }]);
         add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+        sandbox.broadcast(gen_service_tx_lect(sandbox, 0, &anchored_tx, 3))
     }
     anchoring_state.latest_anchored_tx = None;
 }
@@ -234,7 +231,6 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
-    let lost_lect_id = anchoring_state.latest_anchored_tx().id();
     let (other_lect, other_signatures) = {
         let anchored_tx = anchoring_state.latest_anchored_tx();
         let other_signatures = anchoring_state.latest_anchored_tx_signatures()
@@ -264,23 +260,17 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
                 }
             ]
         },
-                       request! {
+        request! {
             method: "getrawtransaction",
             params: [&other_lect.txid(), 0],
             response: &other_lect.to_hex()
         }]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
-    let txs = [gen_service_tx_lect(sandbox, 0, &other_lect, &lost_lect_id),
-               gen_service_tx_lect(sandbox, 1, &other_lect, &lost_lect_id),
-               gen_service_tx_lect(sandbox, 2, &other_lect, &lost_lect_id),
-               gen_service_tx_lect(sandbox, 3, &other_lect, &lost_lect_id)];
-
-    sandbox.broadcast(txs[0].raw().clone());
-    let txs = txs.into_iter()
-        .map(|x| x.raw())
-        .cloned()
+    let txs = (0..4)
+        .map(|idx| gen_service_tx_lect(sandbox, idx, &other_lect, 2))
         .collect::<Vec<_>>();
+    sandbox.broadcast(txs[0].clone());
 
     add_one_height_with_transactions(sandbox, sandbox_state, &txs);
     anchoring_state.latest_anchored_tx = Some((other_lect.clone(), other_signatures.clone()));
@@ -334,17 +324,13 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
         }
     ]);
 
-    let signatures = signatures.into_iter()
-        .map(|tx| tx.raw().clone())
-        .collect::<Vec<_>>();
     add_one_height_with_transactions(sandbox, sandbox_state, &signatures);
 
-    let txs = [gen_service_tx_lect(sandbox, 0, &anchored_tx, &anchored_tx.prev_hash()),
-               gen_service_tx_lect(sandbox, 1, &anchored_tx, &anchored_tx.prev_hash()),
-               gen_service_tx_lect(sandbox, 2, &anchored_tx, &anchored_tx.prev_hash()),
-               gen_service_tx_lect(sandbox, 3, &anchored_tx, &anchored_tx.prev_hash())];
-
+    let txs = (0..4)
+        .map(|idx| gen_service_tx_lect(sandbox, idx, &anchored_tx, 2))
+        .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
+
     client.expect(vec![request! {
             method: "listunspent",
             params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
@@ -368,8 +354,5 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
             response: &anchored_tx.to_hex()
         }]);
 
-    let txs = txs.into_iter()
-        .map(|tx| tx.raw().clone())
-        .collect::<Vec<_>>();
     add_one_height_with_transactions(sandbox, sandbox_state, &txs);
 }

@@ -16,7 +16,7 @@ use std::ops::Deref;
 pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
-use bitcoin::util::base58::FromBase58;
+use bitcoin::util::base58::{ToBase58, FromBase58};
 
 use exonum::crypto::Hash;
 use exonum::messages::{Message, RawTransaction};
@@ -29,7 +29,7 @@ use sandbox::config_updater::ConfigUpdateService;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, AnchoringNodeConfig};
-use anchoring_service::{AnchoringService, TxAnchoringSignature, collect_signatures};
+use anchoring_service::{AnchoringService, TxAnchoringSignature, collect_signatures, AnchoringRpc};
 use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
 use anchoring_service::multisig::sign_input;
 use anchoring_service::btc;
@@ -105,13 +105,9 @@ impl AnchoringSandboxState {
                                     sandbox: &Sandbox,
                                     tx: &AnchoringTx)
                                     -> Vec<TxAnchoringSignature> {
-        let multisig = self.genesis.multisig();
-        let redeem_script = self.genesis.redeem_script();
-        let priv_keys = self.nodes
-            .iter()
-            .map(|cfg| cfg.private_keys[&multisig.address].clone())
-            .collect::<Vec<_>>();
+        let (redeem_script, addr) = self.genesis.redeem_script();
 
+        let priv_keys = self.priv_keys(&addr);
         let mut signs = Vec::new();
         for (validator, priv_key) in priv_keys.iter().enumerate() {
             for input in tx.inputs() {
@@ -129,10 +125,17 @@ impl AnchoringSandboxState {
         }
         signs
     }
+
+    pub fn priv_keys(&self, addr: &btc::Address) -> Vec<btc::PrivateKey> {
+        self.nodes
+            .iter()
+            .map(|cfg| cfg.private_keys[&addr.to_base58check()].clone())
+            .collect::<Vec<_>>()
+    }
 }
 
 /// Generates config for 4 validators and 10000 funds
-pub fn gen_sandbox_anchoring_config(client: &mut SandboxClient)
+pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
                                     -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let requests = vec![
         request! {
@@ -247,10 +250,10 @@ pub fn gen_sandbox_anchoring_config(client: &mut SandboxClient)
     generate_anchoring_config(client, 4, ANCHORING_FUNDS)
 }
 
-pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, SandboxClient, AnchoringSandboxState)
+pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, AnchoringSandboxState)
     where I: IntoIterator<Item = &'a (&'a str, Vec<&'a str>)>
 {
-    let mut client = SandboxClient::default();
+    let mut client = AnchoringRpc(SandboxClient::default());
     let (mut genesis, mut nodes) = gen_sandbox_anchoring_config(&mut client);
 
     let priv_keys = priv_keys.into_iter().collect::<Vec<_>>();
@@ -271,7 +274,7 @@ pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, SandboxClient, Anchor
             method: "importaddress",
             params: ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu", "multisig", false, false]
         }]);
-    let service = AnchoringService::new(client.clone(),
+    let service = AnchoringService::new(AnchoringRpc(client.clone()),
                                         genesis.clone(),
                                         nodes[ANCHORING_VALIDATOR as usize].clone());
     let sandbox = sandbox_with_services(vec![Box::new(service),

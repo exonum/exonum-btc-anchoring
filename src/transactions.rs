@@ -42,7 +42,7 @@ pub struct AnchoringTx(pub RawBitcoinTx);
 #[derive(Clone, PartialEq)]
 pub struct FundingTx(pub RawBitcoinTx);
 // Обертка над обычной биткоин транзакцией
-#[derive(Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct BitcoinTx(pub RawBitcoinTx);
 
 #[derive(Debug, Clone, PartialEq)]
@@ -85,8 +85,7 @@ impl FundingTx {
                   address: &btc::Address,
                   total_funds: u64)
                   -> Result<FundingTx> {
-        let addr = address.to_base58check();
-        let tx = client.send_to_address(&addr, total_funds)?;
+        let tx = client.send_to_address(address, total_funds)?;
         Ok(FundingTx::from(tx))
     }
 
@@ -193,6 +192,29 @@ impl AnchoringTx {
         let tx = self.finalize(redeem_script, signatures)?;
         client.send_transaction(tx.clone().into())?;
         Ok(tx)
+    }
+}
+
+impl fmt::Debug for AnchoringTx {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let payload = self.payload();
+        f.debug_struct(stringify!(AnchoringTx))
+            .field("txid", &self.txid())
+            .field("txhex", &self.to_hex())
+            .field("content", &self.0)
+            .field("height", &payload.0)
+            .field("hash", &payload.1.to_hex())
+            .finish()
+    }
+}
+
+impl fmt::Debug for FundingTx {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.debug_struct(stringify!(AnchoringTx))
+            .field("txid", &self.txid())
+            .field("txhex", &self.to_hex())
+            .field("content", &self.0)
+            .finish()
     }
 }
 

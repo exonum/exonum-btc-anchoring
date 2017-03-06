@@ -1,7 +1,6 @@
 use std::collections::BTreeMap;
 
 use serde_json;
-use bitcoinrpc::MultiSig;
 
 use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;

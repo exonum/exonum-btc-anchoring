@@ -36,14 +36,15 @@ message! {
     TxAnchoringUpdateLatest {
         const TYPE = ANCHORING_SERVICE;
         const ID = ANCHORING_TRANSACTION_LATEST;
-        const SIZE = 76;
+        const SIZE = 52;
 
         from:           &PublicKey   [00 => 32]
         validator:      u32          [32 => 36]
-        tx:             BitcoinTx [36 => 44]
-        prev_txid:      &TxId        [44 => 76]      
+        tx:             BitcoinTx    [36 => 44]
+        lect_count:     u64          [44 => 52]
     }
 }
+
 
 #[derive(Clone)]
 pub enum AnchoringTransaction {
@@ -197,6 +198,17 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn lect(&self, validator: u32) -> Result<BitcoinTx, StorageError> {
         self.lects(validator).last().map(|x| x.unwrap())
+    }
+
+    pub fn prev_lect(&self, validator: u32) -> Result<Option<BitcoinTx>, StorageError> {
+        let lects = self.lects(validator);
+
+        let idx = lects.len()?;
+        if idx > 1 {
+            lects.get(idx - 2)
+        } else {
+            Ok(None)
+        }
     }
 
     pub fn find_lect_position(&self,

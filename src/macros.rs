@@ -189,16 +189,6 @@ macro_rules! implement_tx_wrapper {
             <&[u8] as ::exonum::messages::Field>::write(&self.clone().serialize().as_slice(), buffer, from, to);
         }
     }
-
-    impl fmt::Debug for $name {
-        fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-            f.debug_struct(stringify!($name))
-                .field("txid", &self.txid())
-                .field("txhex", &self.to_hex())
-                .field("content", &self.0)
-                .finish()
-        }
-    }
 )
 }
 

@@ -96,14 +96,9 @@ impl AnchoringService {
             Ok(true)
         } else {
             let schema = AnchoringSchema::new(state.view());
-            let lects = schema.lects(state.id());
-            let last_idx = lects.len()? - 1;
-            if last_idx == 0 {
-                return Ok(false);
-            }
 
-            let current_lect = lects.get(last_idx)?.unwrap();
-            if let Some(prev_lect) = lects.get(last_idx - 1)? {
+            let current_lect = schema.lect(state.id())?;
+            if let Some(prev_lect) = schema.prev_lect(state.id())? {
                 let current_lect = if let TxKind::Anchoring(tx) = TxKind::from(current_lect) {
                     tx
                 } else {
@@ -114,6 +109,7 @@ impl AnchoringService {
                 } else {
                     return Ok(false);
                 };
+
                 debug!("current_lect={:#?}", current_lect);
                 debug!("prev_lect={:#?}", prev_lect);
 
@@ -217,13 +213,17 @@ impl AnchoringService {
                   new_lect.txid().to_hex(),
                   new_lect.amount());
 
+            debug!("LECT ====== txid={}, total_count={}",
+                   new_lect.txid().to_hex(),
+                   AnchoringSchema::new(state.view()).lects(state.id()).len().unwrap());
+
             self.service_state().proposal_tx = None;
 
-            let prev_txid = new_lect.prev_hash();
+            let lects_count = AnchoringSchema::new(state.view()).lects(state.id()).len().unwrap();
             let lect_msg = TxAnchoringUpdateLatest::new(state.public_key(),
                                                         state.id(),
                                                         new_lect.into(),
-                                                        &prev_txid,
+                                                        lects_count,
                                                         state.secret_key());
             state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
         }
@@ -256,7 +256,7 @@ impl AnchoringService {
                      state: &NodeState,
                      addr: &btc::Address)
                      -> Result<Option<BitcoinTx>, RpcError> {
-        let lects: Vec<_> = self.client().unspent_lects(addr)?;
+        let lects: Vec<_> = self.client().unspent_transactions(addr)?;
         let schema = AnchoringSchema::new(state.view());
         let id = state.id();
 
@@ -292,26 +292,57 @@ impl AnchoringService {
         debug!("Update our lect");
         // We needs to update our lect
         if let Some(lect) = self.find_lect(state, &addr)? {
-            let our_lect = AnchoringSchema::new(state.view())
-                .lect(state.id())
-                .unwrap();
+            let (our_lect, lects_count) = {
+                let schema = AnchoringSchema::new(state.view());
+                let our_lect = schema.lect(state.id())
+                    .unwrap();
+                let count = schema.lects(state.id()).len().unwrap();
+                (our_lect, count)
+            };
 
             debug!("lect={:#?}", lect);
             debug!("our_lect={:#?}", our_lect);
 
             if lect != our_lect {
-                info!("LECT ====== txid={}", lect.txid().to_hex());
+                info!("LECT ====== txid={}, total_count={}",
+                      lect.txid().to_hex(),
+                      lects_count);
                 let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
                                                             state.id(),
                                                             lect,
-                                                            &our_lect.id(),
+                                                            lects_count,
                                                             &state.secret_key());
                 state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
             }
         } else {
-            // TODO
-            // если у последней транзакции в базе выход на addr, то значит она не прошла
-            // и нужно вставлять предпоследнюю
+            let (lect, our_lect, lects_count) = {
+                let schema = AnchoringSchema::new(state.view());
+                let lect = schema.prev_lect(state.id())
+                    .unwrap()
+                    .expect("Prev lect is always available in transfer state");
+                let our_lect: AnchoringTx = schema.lect(state.id())
+                    .unwrap()
+                    .into();
+                let count = schema.lects(state.id()).len().unwrap();
+                (lect, our_lect, count)
+            };
+
+            let (_, cfg) = self.actual_config(state).unwrap();
+            if &our_lect.output_address(cfg.network()) == addr {
+                debug!("lect={:#?}", lect);
+                debug!("our_lect={:#?}", our_lect);
+
+                info!("PREV_LECT ====== txid={}, total_count={}",
+                      lect.txid().to_hex(),
+                      lects_count);
+
+                let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
+                                                            state.id(),
+                                                            lect,
+                                                            lects_count,
+                                                            &state.secret_key());
+                state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+            }
         }
         Ok(())
     }
