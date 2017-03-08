@@ -120,7 +120,7 @@ impl AnchoringHandler {
                     if current_addr != prev_addr {
                         let confirmations = current_lect.confirmations(&self.client)?
                             .unwrap_or_else(|| 0);
-                            
+
                         if confirmations < actual.utxo_confirmations {
                             AnchoringState::Waiting { cfg: actual }
                         } else {
@@ -186,21 +186,38 @@ impl AnchoringHandler {
 
         debug!("lects={:#?}", lects);
 
+        let find_lect_deep = |first_funding_tx: &BitcoinTx,
+                              mut lect: BitcoinTx|
+                              -> Result<Option<BitcoinTx>, ServiceError> {
+            let mut times = 1000;
+            while times > 0 {
+                let kind = TxKind::from(lect.clone());
+                match kind {
+                    TxKind::FundingTx(tx) => {
+                        if &tx == first_funding_tx {
+                            return Ok(Some(tx.into()));
+                        }
+                    }
+                    TxKind::Anchoring(tx) => {
+                        if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
+                            return Ok(Some(tx.into()));
+                        } else {
+                            times -= 1;
+                            let txid = tx.prev_hash().be_hex_string();
+                            lect = self.client.get_transaction(&txid)?;
+                            debug!("Check prev lect={:#?}", lect);
+                        }
+                    }
+                    TxKind::Other(_) => return Ok(None),
+                }
+            }
+            Ok(None)
+        };
+
         let first_funding_tx = schema.lects(id).get(0)?.unwrap();
         for lect in lects.into_iter() {
-            let kind = TxKind::from(lect);
-            match kind {
-                TxKind::FundingTx(tx) => {
-                    if tx == first_funding_tx {
-                        return Ok(Some(tx.into()));
-                    }
-                }
-                TxKind::Anchoring(tx) => {
-                    if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
-                        return Ok(Some(tx.into()));
-                    }
-                }
-                TxKind::Other(_) => {}
+            if let Some(tx) = find_lect_deep(&first_funding_tx, lect)? {
+                return Ok(Some(tx));
             }
         }
         Ok(None)

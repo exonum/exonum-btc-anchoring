@@ -175,6 +175,16 @@ impl SandboxClient {
             Err(e) => Err(e), 
         }
     }
+
+    pub fn generate(&self, nblocks: u64, maxtries: u64) -> Result<Vec<String>> {
+        let params = vec![nblocks.to_json(), maxtries.to_json()];
+        self.request("generate", params)
+    }
+
+    pub fn generatetoaddress(&self, nblocks: u64, addr: &str, maxtries: u64) -> Result<Vec<String>> {
+        let params = vec![nblocks.to_json(), addr.to_json(), maxtries.to_json()];
+        self.request("generatetoaddress", params)
+    }
 }
 
 impl Default for SandboxClient {
