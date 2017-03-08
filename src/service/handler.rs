@@ -30,7 +30,7 @@ pub struct MultisigAddress<'a> {
 #[derive(Debug)]
 pub enum AnchoringState {
     Anchoring { cfg: AnchoringConfig },
-    Transfering {
+    Transferring {
         from: AnchoringConfig,
         to: AnchoringConfig,
     },
@@ -85,9 +85,13 @@ impl AnchoringHandler {
     pub fn current_state(&self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
         let actual = self.actual_config(state)?;
         let state = if let Some(cfg) = self.following_config(state)? {
-            AnchoringState::Transfering {
-                from: actual,
-                to: cfg.config,
+            if actual.redeem_script().1 != cfg.config.redeem_script().1 {
+                AnchoringState::Transferring {
+                    from: actual,
+                    to: cfg.config,
+                }
+            } else {
+                AnchoringState::Anchoring { cfg: actual }
             }
         } else {
             let schema = AnchoringSchema::new(state.view());
@@ -108,17 +112,23 @@ impl AnchoringHandler {
                 debug!("current_lect={:#?}", current_lect);
                 debug!("prev_lect={:#?}", prev_lect);
 
-                if current_lect.output_address(actual.network()) !=
-                   prev_lect.output_address(actual.network()) {
-                    let info = current_lect.get_info(&self.client).unwrap().unwrap();
-                    let confirmations = info.confirmations.unwrap() as u64;
-                    if confirmations < actual.utxo_confirmations {
-                        AnchoringState::Waiting { cfg: actual }
+                let current_addr = current_lect.output_address(actual.network());
+                if current_addr != actual.redeem_script().1 {
+                    AnchoringState::Waiting { cfg: actual }
+                } else {
+                    let prev_addr = prev_lect.output_address(actual.network());
+                    if current_addr != prev_addr {
+                        let confirmations = current_lect.confirmations(&self.client)?
+                            .unwrap_or_else(|| 0);
+                            
+                        if confirmations < actual.utxo_confirmations {
+                            AnchoringState::Waiting { cfg: actual }
+                        } else {
+                            AnchoringState::Anchoring { cfg: actual }
+                        }
                     } else {
                         AnchoringState::Anchoring { cfg: actual }
                     }
-                } else {
-                    AnchoringState::Anchoring { cfg: actual }
                 }
             } else {
                 AnchoringState::Anchoring { cfg: actual }
@@ -130,8 +140,8 @@ impl AnchoringHandler {
     pub fn handle_commit(&mut self, state: &mut NodeState) -> Result<(), ServiceError> {
         match self.current_state(state)? {
             AnchoringState::Anchoring { cfg } => self.handle_anchoring_state(cfg, state),
-            AnchoringState::Transfering { from, to } => {
-                self.handle_transfering_state(from, to, state)
+            AnchoringState::Transferring { from, to } => {
+                self.handle_transferring_state(from, to, state)
             }
             AnchoringState::Waiting { cfg } => self.handle_waiting_state(cfg, state),
             AnchoringState::Broken => panic!("Broken anchoring state detected!"),
@@ -176,7 +186,7 @@ impl AnchoringHandler {
 
         debug!("lects={:#?}", lects);
 
-        let first_funding_tx = schema.lects(id).get(0).unwrap().unwrap();
+        let first_funding_tx = schema.lects(id).get(0)?.unwrap();
         for lect in lects.into_iter() {
             let kind = TxKind::from(lect);
             match kind {
@@ -186,7 +196,7 @@ impl AnchoringHandler {
                     }
                 }
                 TxKind::Anchoring(tx) => {
-                    if schema.find_lect_position(id, &tx.prev_hash()).unwrap().is_some() {
+                    if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
                         return Ok(Some(tx.into()));
                     }
                 }
@@ -208,9 +218,8 @@ impl AnchoringHandler {
             /// Случай, когда появился новый lect с другим набором подписей
             let (our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
-                let our_lect = schema.lect(state.id())
-                    .unwrap();
-                let count = schema.lects(state.id()).len().unwrap();
+                let our_lect = schema.lect(state.id())?;
+                let count = schema.lects(state.id()).len()?;
                 (our_lect, count)
             };
 
@@ -233,13 +242,17 @@ impl AnchoringHandler {
             let (lect, our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
 
-                let lect = schema.prev_lect(state.id())
-                    .unwrap()
-                    .expect("Prev lect is always available in transfer state");
-                let our_lect: AnchoringTx = schema.lect(state.id())
-                    .unwrap()
+                let lect = {
+                    if let Some(lect) = schema.prev_lect(state.id())? {
+                        lect
+                    } else {
+                        warn!("Unable to find previous lect!");
+                        return Ok(());
+                    }
+                };
+                let our_lect: AnchoringTx = schema.lect(state.id())?
                     .into();
-                let count = schema.lects(state.id()).len().unwrap();
+                let count = schema.lects(state.id()).len()?;
                 (lect, our_lect, count)
             };
 
@@ -267,6 +280,9 @@ impl AnchoringHandler {
                                 -> Result<Option<FundingTx>, ServiceError> {
         let ref funding_tx = multisig.genesis.funding_tx;
         if let Some(info) = funding_tx.is_unspent(&self.client, &multisig.addr)? {
+            debug!("avaliable_funding_tx={:#?}, confirmations={}",
+                   funding_tx,
+                   info.confirmations);
             if info.confirmations >= multisig.genesis.utxo_confirmations {
                 return Ok(Some(funding_tx.clone()));
             }

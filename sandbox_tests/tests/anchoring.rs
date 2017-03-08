@@ -22,8 +22,11 @@ use anchoring_service::sandbox::{Request};
 use anchoring_sandbox::{RpcError, anchoring_sandbox};
 use anchoring_sandbox::helpers::*;
 
+// We anchor first block
+// problems: None
+// result: success
 #[test]
-fn test_anchoring_genesis_block() {
+fn test_anchoring_first_block() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
@@ -31,6 +34,9 @@ fn test_anchoring_genesis_block() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 }
 
+// We anchor first block and receive lect
+// problems: None
+// result: success
 #[test]
 fn test_anchoring_update_lect_normal() {
     let _ = ::blockchain_explorer::helpers::init_logger();
@@ -42,6 +48,9 @@ fn test_anchoring_update_lect_normal() {
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 }
 
+// We anchor first block and receive lect with different but correct signatures
+// problems: lect with a different signature set
+// result: success with a new lect
 #[test]
 fn test_anchoring_update_lect_different() {
     let _ = ::blockchain_explorer::helpers::init_logger();
@@ -51,6 +60,9 @@ fn test_anchoring_update_lect_different() {
     anchor_first_block_lect_different(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 }
 
+// We anchor first block and lose anchoring transaction
+// problems: anchoring transaction is lost
+// result: we have lost anchoring transaction
 #[test]
 fn test_anchoring_first_block_lect_lost() {
     let _ = ::blockchain_explorer::helpers::init_logger();
@@ -61,6 +73,9 @@ fn test_anchoring_first_block_lect_lost() {
     assert_eq!(anchoring_state.latest_anchored_tx, None);
 }
 
+// We anchor second block after successfuly anchored first
+// problems: none
+// result: success
 #[test]
 fn test_anchoring_second_block_normal() {
     let _ = ::blockchain_explorer::helpers::init_logger();
@@ -72,6 +87,9 @@ fn test_anchoring_second_block_normal() {
     anchor_second_block_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 }
 
+// We anchor second block after successfuly anchored first with additional funds
+// problems: none
+// result: success
 #[test]
 fn test_anchoring_second_block_additional_funds() {
     let _ = ::blockchain_explorer::helpers::init_logger();
@@ -141,6 +159,9 @@ fn test_anchoring_second_block_additional_funds() {
     sandbox.broadcast(gen_service_tx_lect(&sandbox, 0, &anchored_tx, 2));
 }
 
+// We anchor second block after successfuly anchored first
+// problems: second anchoring tx is lost
+// result: we have lost anchoring tx 
 #[test]
 fn test_anchoring_second_block_lect_lost() {
     let _ = ::blockchain_explorer::helpers::init_logger();

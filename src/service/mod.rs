@@ -3,7 +3,7 @@ pub mod error;
 
 mod handler;
 mod anchoring;
-mod transfering;
+mod transferring;
 
 use std::sync::{Arc, Mutex};
 use std::collections::HashMap;
@@ -31,8 +31,6 @@ pub struct AnchoringService {
     genesis: AnchoringConfig,
     handler: Arc<Mutex<AnchoringHandler>>,
 }
-
-// TODO error chain
 
 impl AnchoringService {
     pub fn new(client: AnchoringRpc,

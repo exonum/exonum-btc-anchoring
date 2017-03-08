@@ -1,6 +1,8 @@
 use exonum::storage::Error as StorageError;
 use client::Error as RpcError;
 
+// TODO use error chain crate?
+
 #[derive(Debug)]
 pub enum Error {
     Storage(StorageError),

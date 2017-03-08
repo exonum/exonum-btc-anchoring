@@ -30,9 +30,9 @@ use sandbox::config_updater::ConfigUpdateService;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, AnchoringNodeConfig};
-use anchoring_service::{AnchoringService, AnchoringHandler, TxAnchoringSignature, AnchoringRpc, collect_signatures};
-use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
-use anchoring_service::multisig::sign_input;
+use anchoring_service::{AnchoringService, AnchoringHandler, TxAnchoringSignature, AnchoringRpc,
+                        collect_signatures};
+use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};
 use anchoring_service::btc;
 
 #[macro_use]

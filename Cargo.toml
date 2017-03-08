@@ -7,6 +7,7 @@ authors = ["Ivan Ivashchenko <ivan.ivashchenko@xdev.re",
 [dependencies]
 exonum = {version="0.1", path="../../exonum"}
 blockchain_explorer = {version="0.1", path="../../blockchain_explorer"}
+configuration_service = {version="0.1", path="../configuration"}
 
 bitcoinrpc = {version="0.1", path="../../3rdparty/bitcoinrpc"}
 bitcoin="0.9.0"
@@ -17,6 +18,8 @@ serde_json = "0.8.0"
 byteorder = "1.0.0"
 log = "0.3.0"
 clap = "2.20.5"
+iron = "0.5.1"
+router = "0.5.1"
 
 [dev-dependencies]
 rand = "0.3.0"

@@ -8,8 +8,8 @@ use exonum::crypto::HexValue;
 
 use transactions::{BitcoinTx, TxKind};
 use SATOSHI_DIVISOR;
-use multisig::RedeemScript;
 use btc;
+use btc::RedeemScript;
 use config::AnchoringRpcConfig;
 
 #[cfg(not(feature="sandbox_tests"))]
@@ -51,8 +51,13 @@ impl AnchoringRpc {
         Ok(BitcoinTx::from_hex(tx).unwrap())
     }
 
-    pub fn get_transaction_info(&self, txid: &str) -> Result<bitcoinrpc::RawTransactionInfo> {
-        self.0.getrawtransaction_verbose(txid)
+    pub fn get_transaction_info(&self, txid: &str) -> Result<Option<bitcoinrpc::RawTransactionInfo>> {
+        let r = self.0.getrawtransaction_verbose(txid);
+        match r {
+            Ok(tx) => Ok(Some(tx)),
+            Err(bitcoinrpc::Error::NoInformation(_)) => Ok(None),
+            Err(e) => Err(e),
+        }
     }
 
     pub fn send_transaction(&self, tx: BitcoinTx) -> Result<()> {

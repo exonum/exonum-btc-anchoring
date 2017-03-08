@@ -76,7 +76,7 @@ impl AnchoringConfig {
             validators: validators,
             funding_tx: tx,
             fee: 1000,
-            frequency: 50,
+            frequency: 500,
             utxo_confirmations: 24,
         }
     }

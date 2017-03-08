@@ -21,7 +21,6 @@ mod macros;
 mod service;
 pub mod config;
 pub mod transactions;
-pub mod multisig;
 pub mod client;
 pub mod btc;
 
@@ -35,13 +34,11 @@ use bitcoin::network::constants::Network;
 
 use exonum::crypto::{FromHexError, ToHex, FromHex};
 
-use multisig::RedeemScript;
-
 pub use service::{AnchoringService, AnchoringHandler, collect_signatures};
 pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, TxAnchoringSignature, TxAnchoringUpdateLatest};
 pub use transactions::{AnchoringTx, FundingTx, BitcoinTx, TxKind};
 pub use client::{AnchoringRpc, RpcClient, Result, Error};
-pub use btc::HexValueEx;
+pub use btc::{HexValueEx, RedeemScript};
 
 pub const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 // TODO add feature for bitcoin network

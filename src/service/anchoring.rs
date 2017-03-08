@@ -18,6 +18,7 @@ impl AnchoringHandler {
                                   state: &mut NodeState)
                                   -> Result<(), ServiceError> {
         let multisig = self.multisig_address(&cfg);
+        debug!("Anchoring state, addr={}", multisig.addr.to_base58check());
 
         if state.height() % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
@@ -169,7 +170,7 @@ impl AnchoringHandler {
         if let Some(signatures) = collect_signatures(&proposal, &multisig.genesis, msgs.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures)?;
             // Send transaction if it needs
-            if new_lect.get_info(&self.client)?.is_none() {
+            if self.client.get_transaction_info(&new_lect.txid())?.is_none() {
                 self.client.send_transaction(new_lect.clone().into())?;
             }
 

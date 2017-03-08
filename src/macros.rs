@@ -140,6 +140,13 @@ macro_rules! implement_tx_wrapper {
         pub fn txid(&self) -> String {
             self.0.bitcoin_hash().be_hex_string()
         }
+
+        pub fn confirmations(&self, client: &AnchoringRpc)
+             -> ::std::result::Result<Option<u64>, ::bitcoinrpc::Error> {
+            let confirmations = client.get_transaction_info(&self.txid())?
+                .and_then(|info| info.confirmations);
+            Ok(confirmations)
+        }
     }
 
     impl HexValue for $name  {

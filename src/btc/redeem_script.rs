@@ -94,8 +94,7 @@ mod tests {
     use exonum::crypto::HexValue;
 
     use HexValueEx;
-    use transactions::BitcoinTx;
-    use multisig::{sign_input, verify_input};
+    use transactions::{BitcoinTx, sign_input, verify_input};
     use super::{RedeemScript, PublicKey};
 
     #[test]

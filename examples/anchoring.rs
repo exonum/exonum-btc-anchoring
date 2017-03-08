@@ -4,18 +4,29 @@ extern crate clap;
 extern crate log;
 #[macro_use]
 extern crate serde_derive;
+extern crate iron;
+extern crate router;
 
 extern crate exonum;
 extern crate blockchain_explorer;
 extern crate anchoring_service;
+extern crate configuration_service;
+
+use std::net::SocketAddr;
+use std::thread;
 
 use clap::{App, Arg};
+use router::Router;
+
 
 use exonum::blockchain::{Blockchain, Service};
 use exonum::node::{Node, NodeConfig};
 use exonum::config::ConfigFile;
 use blockchain_explorer::helpers::{GenerateCommand, RunCommand, generate_testnet_config};
+use blockchain_explorer::config_api::ConfigApi;
+use blockchain_explorer::api::Api;
 
+use configuration_service::ConfigurationService;
 use anchoring_service::AnchoringService;
 use anchoring_service::AnchoringRpc;
 use anchoring_service::config::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
@@ -31,6 +42,30 @@ pub struct AnchoringServiceConfig {
 pub struct ServicesConfig {
     pub node: NodeConfig,
     pub anchoring_service: AnchoringServiceConfig,
+}
+
+fn run_node(blockchain: Blockchain, node_cfg: NodeConfig, port: Option<u16>) {
+    if let Some(port) = port {
+        let mut node = Node::new(blockchain.clone(), node_cfg.clone());
+        let channel = node.channel();
+        let api_thread = thread::spawn(move || {
+            let config_api = ConfigApi {
+                channel: channel.clone(),
+                blockchain: blockchain.clone(),
+                config: node_cfg.clone(),
+            };
+            let listen_address: SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
+            println!("Anchoring node server started on {}", listen_address);
+            let mut router = Router::new();
+            config_api.wire(&mut router);
+            let chain = iron::Chain::new(router);
+            iron::Iron::new(chain).http(listen_address).unwrap();
+        });
+        node.run().unwrap();
+        api_thread.join().unwrap();
+    } else {
+        Node::new(blockchain, node_cfg).run().unwrap();
+    }
 }
 
 fn main() {
@@ -59,7 +94,12 @@ fn main() {
                 .long("anchoring-funds")
                 .value_name("ANCHORING_FUNDS")
                 .takes_value(true)))
-        .subcommand(RunCommand::new());
+        .subcommand(RunCommand::new().arg(Arg::with_name("HTTP_PORT")
+            .short("p")
+            .long("port")
+            .value_name("HTTP_PORT")
+            .help("Run http server on given port")
+            .takes_value(true)));
     let matches = app.get_matches();
 
     match matches.subcommand() {
@@ -96,8 +136,7 @@ fn main() {
             }
         }
         ("run", Some(matches)) => {
-            // TODO add service with transactions
-
+            let port: Option<u16> = matches.value_of("HTTP_PORT").map(|x| x.parse().unwrap());
             let path = RunCommand::node_config_path(matches);
             let db = RunCommand::db(matches);
             let cfg: ServicesConfig = ConfigFile::load(&path).unwrap();
@@ -108,9 +147,10 @@ fn main() {
                                                         .rpc
                                                         .clone()),
                                                     anchoring_cfg.genesis,
-                                                    anchoring_cfg.node))];
+                                                    anchoring_cfg.node)),
+                     Box::new(ConfigurationService::new())];
             let blockchain = Blockchain::new(db, services);
-            Node::new(blockchain, cfg.node).run().unwrap();
+            run_node(blockchain, cfg.node, port)
         }
         _ => {
             panic!("Wrong subcommand");

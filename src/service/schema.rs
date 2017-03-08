@@ -243,7 +243,10 @@ impl TxAnchoringUpdateLatest {
     pub fn execute(&self, view: &View) -> Result<(), StorageError> {
         let schema = AnchoringSchema::new(view);
         let tx = self.tx();
-        // Verify lect
-        schema.add_lect(self.validator(), tx)
+        // TODO Verify lect
+        if schema.lects(self.validator()).len()? == self.lect_count() {
+            schema.add_lect(self.validator(), tx)?;
+        }
+        Ok(())
     }
 }

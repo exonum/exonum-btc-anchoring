@@ -311,7 +311,6 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
     let anchored_tx = anchoring_state.latest_anchored_tx();
 
     sandbox.broadcast(signatures[0].clone());
-
     client.expect(vec![
         request! {
             method: "getrawtransaction",
@@ -322,14 +321,12 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
                 }
         }
     ]);
-
     add_one_height_with_transactions(sandbox, sandbox_state, &signatures);
 
     let txs = (0..4)
         .map(|idx| gen_service_tx_lect(sandbox, idx, &anchored_tx, 2))
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
-
     client.expect(vec![request! {
             method: "listunspent",
             params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
@@ -352,6 +349,5 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
             params: [&anchored_tx.txid(), 0],
             response: &anchored_tx.to_hex()
         }]);
-
     add_one_height_with_transactions(sandbox, sandbox_state, &txs);
 }
