@@ -1,10 +1,9 @@
 extern crate blockchain_explorer;
 extern crate rand;
 
-use std::env;
 use std::collections::HashMap;
 
-use env_logger;
+use tempdir::TempDir;
 use rand::Rng;
 use bitcoin::network::constants::Network;
 use bitcoin::util::base58::ToBase58;
@@ -12,20 +11,11 @@ use bitcoin::util::base58::ToBase58;
 use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
-use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinSignature, RpcClient};
-use config::AnchoringRpcConfig;
+use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinSignature};
 use btc::TxId;
 use transactions::TransactionBuilder;
 use btc;
-
-fn anchoring_client() -> AnchoringRpc {
-    let rpc = AnchoringRpcConfig {
-        host: env::var("ANCHORING_HOST").unwrap().parse().unwrap(),
-        username: env::var("ANCHORING_USER").ok(),
-        password: env::var("ANCHORING_PASSWORD").ok(),
-    };
-    AnchoringRpc::new(rpc)
-}
+use btc::regtest::RegTestNode;
 
 fn gen_anchoring_keys(client: &AnchoringRpc,
                       count: usize)
@@ -134,36 +124,14 @@ fn test_anchoring_tx_storage_value() {
 }
 
 #[test]
-fn test_transaction_info() {
-    let _ = env_logger::init();
-
-    let rpc = AnchoringRpcConfig {
-        host: env::var("ANCHORING_HOST").unwrap().parse().unwrap(),
-        username: env::var("ANCHORING_USER").ok(),
-        password: env::var("ANCHORING_PASSWORD").ok(),
-    };
-
-    let client = AnchoringRpc::new(rpc);
-
-    let exists_hex = "0100000001467510b9ceafacba7a7ad2fc816622408b20bf514e6b0c9ff828eb2a63591de300000000fd6901004830450221008d590771fcd5dc1f197e686747423e89bf3575b3119191a75108f44da45f5e69022002a87258d7f830f097b44c4c1d5886a3a086d5258b2b4b8d7d287bcaf1b2d84101483045022100c4a5eceaf68f5ac0aa55ecab726bbb111313fda97e4d0ef3431eaf51d44f833a02201aa50734c275d4e77c5c0c33b679922c5009d20dcc4b8ff651dce0daac57f641014830450221009fcc94c63a00ae1d1862ad3f0e15a1e4e65366e7413fd99600b87304bb151fe4022021f6e01c313c9e3f628cc92f3f5710009593c1b1876210fa6c2ed745ecf3edf6014c8b532103ff02badf5feaa9b764a55830d738db909f67ba09be93fee890d735474992d9ac21036cb28f25be8dbc100477b9ef0d104110efe7d1ad5279531fefa0f1b93bab2d6b21029b8c2c2e88ccaa3a5471e84692e69696c6887343ba36e666d5f931050aa384cc210300abc4f927419b6862a13a295c410f2d0f7e317ba101ef3785284260f273222c54aeffffffff02d00101000000000017a914ff1fc6bb4705ac95bcd40dba6c85beeec46effe78700000000000000002c6a2a6a28e40c000000000000a836052f6a326313a17903cec8f9229c193dbedcd72e98118164609c3b6dd2e900000000";
-    let tx = AnchoringTx::from_hex(exists_hex).unwrap();
-
-    let info = client.get_transaction_info(&tx.txid());
-    debug!("tx_info={:#?}", info);
-
-    let some_hex = "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c0990100000000ffffffff0240899500000000001976a914b85133a96a5cadf6cddcfb1d17c79f42c3bbc9dd88ac00000000000000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000";
-    let tx = AnchoringTx::from_hex(some_hex).unwrap();
-    let info = client.get_transaction_info(&tx.txid()).unwrap();
-    debug!("tx_info={:#?}", info);
-
-    assert!(info.is_none());
-}
-
-#[test]
 fn test_unspent_funding_tx() {
     let _ = blockchain_explorer::helpers::init_logger();
 
-    let client = anchoring_client();
+    let tmp_dir = TempDir::new("bitcoind").unwrap();
+    let regtest = RegTestNode::new(&tmp_dir, "127.0.0.1:20100", 16100).unwrap();
+    regtest.generate_blocks(200).unwrap();
+    let client = regtest.client();
+
     let (validators, _) = gen_anchoring_keys(&client, 4);
 
     let majority_count = ::majority_count(4);
@@ -181,7 +149,10 @@ fn test_unspent_funding_tx() {
 fn test_anchoring_3_4() {
     let _ = blockchain_explorer::helpers::init_logger();
 
-    let client = anchoring_client();
+    let tmp_dir = TempDir::new("bitcoind").unwrap();
+    let regtest = RegTestNode::new(&tmp_dir, "127.0.0.1:20101", 16101).unwrap();
+    regtest.generate_blocks(200).unwrap();
+    let client = regtest.client();
 
     let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
     let majority_count = ::majority_count(4);
@@ -283,7 +254,11 @@ fn test_anchoring_3_4() {
 fn test_anchoring_different_txs() {
     let _ = blockchain_explorer::helpers::init_logger();
 
-    let client = anchoring_client();
+    let tmp_dir = TempDir::new("bitcoind").unwrap();
+    let regtest = RegTestNode::new(&tmp_dir, "127.0.0.1:20102", 16102).unwrap();
+    regtest.generate_blocks(200).unwrap();
+    let client = regtest.client();
+
     let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
 
     let majority_count = ::majority_count(4);

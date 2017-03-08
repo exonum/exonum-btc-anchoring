@@ -24,6 +24,7 @@ router = "0.5.1"
 [dev-dependencies]
 rand = "0.3.0"
 env_logger = "0.3.0"
+tempdir = "0.3.0"
 
 [features]
 default = []

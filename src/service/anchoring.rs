@@ -196,6 +196,8 @@ impl AnchoringHandler {
                                                         lects_count,
                                                         state.secret_key());
             state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+        } else {
+            warn!("Insufficient signatures for proposal={:#?}", proposal);
         }
         Ok(())
     }

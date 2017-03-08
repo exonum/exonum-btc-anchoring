@@ -1,6 +1,7 @@
 mod types;
 mod redeem_script;
 mod address;
+pub mod regtest;
 
 use exonum::crypto::FromHexError;
 

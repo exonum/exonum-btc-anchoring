@@ -14,6 +14,9 @@ extern crate log;
 extern crate rand;
 #[cfg(test)]
 extern crate env_logger;
+#[cfg(test)]
+extern crate tempdir;
+
 
 #[macro_use]
 mod macros;
@@ -34,11 +37,13 @@ use bitcoin::network::constants::Network;
 
 use exonum::crypto::{FromHexError, ToHex, FromHex};
 
+use btc::HexValueEx;
+
 pub use service::{AnchoringService, AnchoringHandler, collect_signatures};
 pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, TxAnchoringSignature, TxAnchoringUpdateLatest};
 pub use transactions::{AnchoringTx, FundingTx, BitcoinTx, TxKind};
 pub use client::{AnchoringRpc, RpcClient, Result, Error};
-pub use btc::{HexValueEx, RedeemScript};
+pub use btc::{RedeemScript};
 
 pub const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 // TODO add feature for bitcoin network

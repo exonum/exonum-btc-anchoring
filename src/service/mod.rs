@@ -128,6 +128,10 @@ pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
             .take(majority_count)
             .collect::<Vec<_>>();
 
+        debug!("signatures for input={}, count={}, majority_count={}",
+               input,
+               signatures.len(),
+               majority_count);
         if signatures.len() < majority_count {
             return None;
         }
