@@ -24,12 +24,12 @@ macro_rules! request {
     (
         method: $method:expr,
         params: [$($params:tt)+],
-        error: $err::tt
+        error: $($err:tt)+
     ) => {
         Request {
             method: $method,
-            params: json!([$($params)+]),
-            error: $err,
+            params: json!([$($params)+]).as_array().unwrap().clone(),
+            response: Err($($err)+)
         }
     };
 }

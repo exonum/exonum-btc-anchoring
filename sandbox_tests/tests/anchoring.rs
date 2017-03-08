@@ -13,8 +13,6 @@ extern crate blockchain_explorer;
 #[macro_use]
 extern crate log;
 
-use serde_json::value::ToJson;
-
 use exonum::crypto::HexValue;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
@@ -145,10 +143,10 @@ fn test_anchoring_second_block_additional_funds() {
     sandbox.broadcast(signatures[1].clone());
 
     let anchored_tx = anchoring_state.latest_anchored_tx();
-    client.expect(vec![Request {
+    client.expect(vec![request! {
                            method: "getrawtransaction",
-                           params: vec![anchored_tx.txid().to_json(), 1.to_json()],
-                           response: Err(RpcError::NoInformation("Unable to find tx".to_string())),
+                           params: [&anchored_tx.txid(), 1],
+                           error: RpcError::NoInformation("Unable to find tx".to_string()),
                        },
                        request! {
                            method: "sendrawtransaction",

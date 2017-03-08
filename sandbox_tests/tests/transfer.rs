@@ -13,7 +13,6 @@ extern crate blockchain_explorer;
 #[macro_use]
 extern crate log;
 
-use serde_json::value::ToJson;
 use bitcoin::util::base58::ToBase58;
 
 use exonum::messages::Message;
@@ -264,7 +263,7 @@ fn test_anchoring_transfer_config_normal() {
 }
 
 // We commit a new configuration and take actions to transfer tx chain to the new address
-// problems: 
+// problems:
 //  - we losing transferring tx, but we have time to recovering it
 // result: success
 #[test]
@@ -396,7 +395,7 @@ fn test_anchoring_transfer_config_lost_lect() {
 }
 
 // We commit a new configuration and take actions to transfer tx chain to the new address
-// problems: 
+// problems:
 //  - we losing transferring tx and we have no time to recovering it
 // result: wait until someone push transfer tx manually
 #[test]
@@ -528,23 +527,23 @@ fn test_anchoring_transfer_config_lost_lect_waiting() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[lect]);
 
     // waiting for lect update
-    client.expect(vec![Request {
+    client.expect(vec![request! {
                            method: "getrawtransaction",
-                           params: vec![transfer_tx_2.txid().to_json(), 1.to_json()],
-                           response: Err(RpcError::NoInformation("Unable to find tx".to_string())),
+                           params: [&transfer_tx_2.txid(), 1],
+                           error: RpcError::NoInformation("Unable to find tx".to_string())
                        }]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-    client.expect(vec![Request {
+    client.expect(vec![request! {
                            method: "getrawtransaction",
-                           params: vec![transfer_tx_2.txid().to_json(), 1.to_json()],
-                           response: Err(RpcError::NoInformation("Unable to find tx".to_string())),
+                           params: [&transfer_tx_2.txid(), 1],
+                           error: RpcError::NoInformation("Unable to find tx".to_string())
                        }]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
     // We lost our transfer_tx_2
-    client.expect(vec![Request {
+    client.expect(vec![request! {
                            method: "getrawtransaction",
-                           params: vec![transfer_tx_2.txid().to_json(), 1.to_json()],
-                           response: Err(RpcError::NoInformation("Unable to find tx".to_string())),
+                           params: [transfer_tx_2.txid(), 1],
+                           error: RpcError::NoInformation("Unable to find tx".to_string()),
                        },
                        request! {
                             method: "listunspent",
@@ -559,5 +558,5 @@ fn test_anchoring_transfer_config_lost_lect_waiting() {
     sandbox.broadcast(lects[0].clone());
     add_one_height_with_transactions(&sandbox, &sandbox_state, &lects);
     // Wait until someone push transfer tx manually
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);    
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 }

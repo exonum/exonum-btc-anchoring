@@ -84,16 +84,15 @@ pub fn anchor_first_block(sandbox: &Sandbox,
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     sandbox.broadcast(signatures[0].clone());
-    client.expect(vec![// TODO add support for error response
-                       Request {
+    client.expect(vec![request! {
                            method: "getrawtransaction",
-                           params: vec![anchored_tx.txid().to_json(), 1.to_json()],
-                           response: Err(RpcError::NoInformation("Unable to find tx".to_string())),
+                           params: [&anchored_tx.txid(), 1],
+                           error: RpcError::NoInformation("Unable to find tx".to_string())
                        },
                        request! {
-            method: "sendrawtransaction",
-            params: [anchored_tx.to_hex()]
-        }]);
+                           method: "sendrawtransaction",
+                           params: [anchored_tx.to_hex()]
+                       }]);
 
     let signatures = signatures.into_iter()
         .map(|tx| tx.raw().clone())
@@ -259,7 +258,7 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
                 }
             ]
         },
-        request! {
+                       request! {
             method: "getrawtransaction",
             params: [&other_lect.txid(), 0],
             response: &other_lect.to_hex()
