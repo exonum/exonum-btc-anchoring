@@ -114,6 +114,10 @@ fn test_anchoring_transfer_config_normal() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     client.expect(vec![request! {
+            method: "importaddress",
+            params: [&following_addr, "multisig", false, false]
+        },
+                       request! {
             method: "listunspent",
             params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: [
@@ -367,6 +371,10 @@ fn test_anchoring_transfer_config_with_funding_tx() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     client.expect(vec![request! {
+            method: "importaddress",
+            params: [&following_addr, "multisig", false, false]
+        },
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: [
@@ -593,7 +601,12 @@ fn test_anchoring_transfer_config_lost_lect() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
+            method: "importaddress",
+            params: [&following_addr, "multisig", false, false]
+        },
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: []
@@ -725,7 +738,12 @@ fn test_anchoring_transfer_config_lost_lect_waiting() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
+            method: "importaddress",
+            params: [&following_addr, "multisig", false, false]
+        },
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: []

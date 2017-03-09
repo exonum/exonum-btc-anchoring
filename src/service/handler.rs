@@ -176,46 +176,13 @@ impl AnchoringHandler {
     // ту единственную, у которой prev_hash содержится в нашем массиве lectов
     // или первую funding транзакцию, если все анкорящие пропали
     pub fn find_lect(&self,
-                     state: &NodeState,
-                     addr: &btc::Address)
+                     multisig: &MultisigAddress,
+                     state: &NodeState)
                      -> Result<Option<BitcoinTx>, ServiceError> {
-        let lects: Vec<_> = self.client.unspent_transactions(addr)?;
-        let schema = AnchoringSchema::new(state.view());
-        let id = state.id();
-
+        let lects: Vec<_> = self.client.unspent_transactions(&multisig.addr)?;
         debug!("lects={:#?}", lects);
-
-        let find_lect_deep = |first_funding_tx: &BitcoinTx,
-                              mut lect: BitcoinTx|
-                              -> Result<Option<BitcoinTx>, ServiceError> {
-            let mut times = 1000;
-            while times > 0 {
-                let kind = TxKind::from(lect.clone());
-                match kind {
-                    TxKind::FundingTx(tx) => {
-                        if &tx == first_funding_tx {
-                            return Ok(Some(tx.into()));
-                        }
-                    }
-                    TxKind::Anchoring(tx) => {
-                        if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
-                            return Ok(Some(tx.into()));
-                        } else {
-                            times -= 1;
-                            let txid = tx.prev_hash().be_hex_string();
-                            lect = self.client.get_transaction(&txid)?;
-                            debug!("Check prev lect={:#?}", lect);
-                        }
-                    }
-                    TxKind::Other(_) => return Ok(None),
-                }
-            }
-            Ok(None)
-        };
-
-        let first_funding_tx = schema.lects(id).get(0)?.unwrap();
         for lect in lects.into_iter() {
-            if let Some(tx) = find_lect_deep(&first_funding_tx, lect)? {
+            if let Some(tx) = self.find_lect_deep(lect, multisig, state)? {
                 return Ok(Some(tx));
             }
         }
@@ -230,7 +197,17 @@ impl AnchoringHandler {
                            state: &mut NodeState)
                            -> Result<(), ServiceError> {
         debug!("Update our lect");
-        if let Some(lect) = self.find_lect(state, &multisig.addr)? {
+        // убеждаемся, что нам известен этот адрес
+        {
+            let schema = AnchoringSchema::new(state.view());
+            if !schema.is_address_known(&multisig.addr)? {
+                self.client
+                    .importaddress(&multisig.addr.to_base58check(), "multisig", false, false)?;
+                schema.add_known_address(&multisig.addr)?
+            }
+        }
+
+        if let Some(lect) = self.find_lect(&multisig, state)? {
             /// Случай, когда появился новый lect с другим набором подписей
             let (our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
@@ -247,10 +224,10 @@ impl AnchoringHandler {
                       lect.txid().to_hex(),
                       lects_count);
                 let lect_msg = MsgAnchoringUpdateLatest::new(&state.public_key(),
-                                                            state.id(),
-                                                            lect,
-                                                            lects_count,
-                                                            &state.secret_key());
+                                                             state.id(),
+                                                             lect,
+                                                             lects_count,
+                                                             &state.secret_key());
                 state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
             }
         } else {
@@ -281,10 +258,10 @@ impl AnchoringHandler {
                       lects_count);
 
                 let lect_msg = MsgAnchoringUpdateLatest::new(&state.public_key(),
-                                                            state.id(),
-                                                            lect,
-                                                            lects_count,
-                                                            &state.secret_key());
+                                                             state.id(),
+                                                             lect,
+                                                             lects_count,
+                                                             &state.secret_key());
                 state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
             }
         }
@@ -301,6 +278,47 @@ impl AnchoringHandler {
                    info.confirmations);
             if info.confirmations >= multisig.genesis.utxo_confirmations {
                 return Ok(Some(funding_tx.clone()));
+            }
+        }
+        Ok(None)
+    }
+
+    // Гглубокий поиск, который проверяет всю цепочку предыдущих транзакций до известной нам.
+    // все транзакции из цепочки должны быть анкорящими и нам должен быть знаком их выходной адрес
+    // самым концом цепочки всегда выступает первая фундирующая транзакция
+    fn find_lect_deep(&self,
+                      mut lect: BitcoinTx,
+                      multisig: &MultisigAddress,
+                      state: &NodeState)
+                      -> Result<Option<BitcoinTx>, ServiceError> {
+        let schema = AnchoringSchema::new(state.view());
+        let id = state.id();
+        let first_funding_tx = schema.lects(id).get(0)?.unwrap();
+
+        let mut times = 10000;
+        while times > 0 {
+            let kind = TxKind::from(lect.clone());
+            match kind {
+                TxKind::FundingTx(tx) => {
+                    if tx == first_funding_tx {
+                        return Ok(Some(tx.into()));
+                    }
+                }
+                TxKind::Anchoring(tx) => {
+                    let lect_addr = tx.output_address(multisig.genesis.network());
+                    if !schema.is_address_known(&lect_addr)? {
+                        break;
+                    }
+                    if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
+                        return Ok(Some(tx.into()));
+                    } else {
+                        times -= 1;
+                        let txid = tx.prev_hash().be_hex_string();
+                        lect = self.client.get_transaction(&txid)?;
+                        debug!("Check prev lect={:#?}", lect);
+                    }
+                }
+                TxKind::Other(_) => return Ok(None),
             }
         }
         Ok(None)

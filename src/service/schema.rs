@@ -8,9 +8,12 @@ use exonum::storage::{ListTable, MerkleTable, List, MapTable, View, Map, Error a
 use exonum::crypto::{PublicKey, Hash};
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 
+use bitcoin::util::base58::ToBase58;
+
 use config::AnchoringConfig;
+use btc;
 use btc::TxId;
-use {AnchoringTx, BitcoinTx};
+use transactions::{AnchoringTx, BitcoinTx};
 
 pub const ANCHORING_SERVICE: u16 = 3;
 const ANCHORING_MESSAGE_SIGNATURE: u16 = 0;
@@ -158,6 +161,12 @@ impl<'a> AnchoringSchema<'a> {
         MapTable::new(prefix, self.view)
     }
 
+    // List of known anchoring addresses
+    pub fn known_addresses(&self) -> MapTable<View, str, Vec<u8>> {
+        let prefix = vec![ANCHORING_SERVICE as u8, 05];
+        MapTable::new(prefix, self.view)
+    }
+
     pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
         let actual = Schema::new(self.view).get_actual_configuration()?;
         Ok(self.parse_config(&actual))
@@ -178,6 +187,8 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
+        let (_, addr) = cfg.redeem_script();
+        self.add_known_address(&addr)?;
         for idx in 0..cfg.validators.len() {
             self.add_lect(idx as u32, cfg.funding_tx.clone())?;
         }
@@ -216,6 +227,15 @@ impl<'a> AnchoringSchema<'a> {
                               txid: &TxId)
                               -> Result<Option<u64>, StorageError> {
         self.lect_indexes(validator).get(txid)
+    }
+
+    pub fn add_known_address(&self, addr: &btc::Address) -> Result<(), StorageError> {
+        self.known_addresses().put(&addr.to_base58check(), vec![])
+    }
+
+    pub fn is_address_known(&self, addr: &btc::Address) -> Result<bool, StorageError> {
+        self.known_addresses().get(&addr.to_base58check())
+        .map(|x| x.is_some())
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {

@@ -230,3 +230,21 @@ fn test_anchoring_second_block_lect_lost() {
 
     anchoring_state.latest_anchored_tx = Some((prev_anchored_tx, prev_tx_signatures));
 }
+
+// TODO
+
+// Мы находим lect, у которого prev_hash нам не известен
+// problems: prev_hash is unknown
+// result: мы раскручиваем цепочку до funding_tx и обновляем его
+// #[test]
+// fn test_anchoring_find_lect_chain() {
+//     unimplemented!();
+// }
+
+// Мы находим lect, у которого prev_hash нам не известен
+// problems: prev_hash is unknown
+// result: мы раскручиваем цепочку и находим в ней транзакцию на другой адрес
+// #[test]
+// fn test_anchoring_find_lect_chain_wrong() {
+//     unimplemented!();
+// }

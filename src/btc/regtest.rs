@@ -49,14 +49,16 @@ impl RegTestNode {
             .spawn()?;
         let client = AnchoringRpc::new(rpc);
         // Wait for bitcoind node
-        while let Err(_) = client.getinfo() {
-            thread::sleep(Duration::from_secs(1));
+        for _ in 0..30 {
+            thread::sleep(Duration::from_secs(2));
+            if client.getinfo().is_ok() {
+                return Ok(RegTestNode {
+                    process: process,
+                    client: client,
+                });
+            }
         }
-        
-        Ok(RegTestNode {
-            process: process,
-            client: client,
-        })
+        Err(io::ErrorKind::TimedOut.into())
     }
 
     pub fn generate_blocks(&self, n: u64) -> Result<Vec<String>, bitcoinrpc::Error> {
@@ -76,12 +78,12 @@ impl RegTestNode {
 }
 
 impl Drop for RegTestNode {
-    fn drop(&mut self) { 
+    fn drop(&mut self) {
         trace!("stop regtest={:#?}", self.client.stop());
+        trace!("kill regtest={:#?}", self.process.kill());
         trace!("wait regtest={:#?}", self.process.wait());
         trace!("stderr regtest={:#?}", self.process.stderr);
         trace!("stdout regtest={:#?}", self.process.stdout);
-        trace!("kill regtest={:#?}", self.process.kill());
     }
 }
 
