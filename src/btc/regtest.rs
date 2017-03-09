@@ -81,6 +81,7 @@ impl Drop for RegTestNode {
         trace!("wait regtest={:#?}", self.process.wait());
         trace!("stderr regtest={:#?}", self.process.stderr);
         trace!("stdout regtest={:#?}", self.process.stdout);
+        trace!("kill regtest={:#?}", self.process.kill());
     }
 }
 
