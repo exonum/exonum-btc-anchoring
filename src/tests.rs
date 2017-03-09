@@ -1,9 +1,10 @@
 extern crate blockchain_explorer;
 extern crate rand;
 
+use std::env;
+
 use std::collections::HashMap;
 
-use tempdir::TempDir;
 use rand::Rng;
 use bitcoin::network::constants::Network;
 use bitcoin::util::base58::ToBase58;
@@ -12,10 +13,19 @@ use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
 use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinSignature};
-use btc::TxId;
+use config::AnchoringRpcConfig;
 use transactions::TransactionBuilder;
 use btc;
-use btc::regtest::RegTestNode;
+use btc::TxId;
+
+fn anchoring_client() -> AnchoringRpc {
+    let rpc = AnchoringRpcConfig {
+        host: env::var("ANCHORING_HOST").unwrap().parse().unwrap(),
+        username: env::var("ANCHORING_USER").ok(),
+        password: env::var("ANCHORING_PASSWORD").ok(),
+    };
+    AnchoringRpc::new(rpc)
+}
 
 fn gen_anchoring_keys(client: &AnchoringRpc,
                       count: usize)
@@ -127,10 +137,7 @@ fn test_anchoring_tx_storage_value() {
 fn test_unspent_funding_tx() {
     let _ = blockchain_explorer::helpers::init_logger();
 
-    let tmp_dir = TempDir::new("bitcoind").unwrap();
-    let regtest = RegTestNode::new(&tmp_dir, "127.0.0.1:20100", 16100).unwrap();
-    regtest.generate_blocks(200).unwrap();
-    let client = regtest.client();
+    let client = anchoring_client();
 
     let (validators, _) = gen_anchoring_keys(&client, 4);
 
@@ -149,10 +156,7 @@ fn test_unspent_funding_tx() {
 fn test_anchoring_tx_chain() {
     let _ = blockchain_explorer::helpers::init_logger();
 
-    let tmp_dir = TempDir::new("bitcoind").unwrap();
-    let regtest = RegTestNode::new(&tmp_dir, "127.0.0.1:20101", 16101).unwrap();
-    regtest.generate_blocks(200).unwrap();
-    let client = regtest.client();
+    let client = anchoring_client();
 
     let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
     let majority_count = ::majority_count(4);
@@ -256,10 +260,7 @@ fn test_anchoring_tx_chain() {
 fn test_anchoring_tx_chain_insufficient_funds() {
     let _ = blockchain_explorer::helpers::init_logger();
 
-    let tmp_dir = TempDir::new("bitcoind").unwrap();
-    let regtest = RegTestNode::new(&tmp_dir, "127.0.0.1:20102", 16102).unwrap();
-    regtest.generate_blocks(200).unwrap();
-    let client = regtest.client();
+    let client = anchoring_client();
 
     let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
     let majority_count = ::majority_count(4);
