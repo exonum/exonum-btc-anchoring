@@ -22,9 +22,10 @@ use exonum::crypto::{hash, Hash, FromHexError, HexValue};
 use exonum::node::Height;
 use exonum::storage::StorageValue;
 
-use {AnchoringRpc, RpcClient, HexValueEx, BitcoinSignature, Result};
+use {AnchoringRpc, RpcClient, HexValueEx, BitcoinSignature};
 use btc;
 use btc::{TxId, RedeemScript};
+use error::{RpcError, Error as ServiceError};
 
 pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
@@ -85,7 +86,7 @@ impl FundingTx {
     pub fn create(client: &AnchoringRpc,
                   address: &btc::Address,
                   total_funds: u64)
-                  -> Result<FundingTx> {
+                  -> Result<FundingTx, RpcError> {
         let tx = client.send_to_address(address, total_funds)?;
         Ok(FundingTx::from(tx))
     }
@@ -107,7 +108,7 @@ impl FundingTx {
     pub fn is_unspent(&self,
                       client: &RpcClient,
                       addr: &btc::Address)
-                      -> Result<Option<bitcoinrpc::UnspentTransactionInfo>> {
+                      -> Result<Option<bitcoinrpc::UnspentTransactionInfo>, RpcError> {
         let txid = self.txid();
         let txs = client.listunspent(0, 9999999, [addr.to_base58check().as_ref()])?;
         Ok(txs.into_iter()
@@ -171,17 +172,16 @@ impl AnchoringTx {
     pub fn finalize(self,
                     redeem_script: &btc::RedeemScript,
                     signatures: HashMap<u32, Vec<BitcoinSignature>>)
-                    -> Result<AnchoringTx> {
-        let tx = finalize_anchoring_transaction(self, redeem_script, signatures);
-        Ok(tx)
+                    -> AnchoringTx {
+        finalize_anchoring_transaction(self, redeem_script, signatures)
     }
 
     pub fn send(self,
                 client: &AnchoringRpc,
                 redeem_script: &btc::RedeemScript,
                 signatures: HashMap<u32, Vec<BitcoinSignature>>)
-                -> Result<AnchoringTx> {
-        let tx = self.finalize(redeem_script, signatures)?;
+                -> Result<AnchoringTx, RpcError> {
+        let tx = self.finalize(redeem_script, signatures);
         client.send_transaction(tx.clone().into())?;
         Ok(tx)
     }
@@ -207,13 +207,6 @@ impl fmt::Debug for FundingTx {
             .field("txhex", &self.to_hex())
             .field("content", &self.0)
             .finish()
-    }
-}
-
-impl TxKind {
-    pub fn from_txid(client: &AnchoringRpc, txid: Hash) -> Result<TxKind> {
-        let tx = client.get_transaction(txid.to_hex().as_ref())?;
-        Ok(TxKind::from(tx))
     }
 }
 
@@ -270,20 +263,22 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn into_transaction(mut self) -> AnchoringTx {
-        let total_funds: u64 = self.inputs
+    pub fn into_transaction(mut self) -> Result<AnchoringTx, ServiceError> {
+        let available_funds: u64 = self.inputs
             .iter()
             .map(|&(ref tx, out)| tx.output[out as usize].value)
             .sum();
 
         let addr = self.output.take().expect("Output address is not set");
         let fee = self.fee.expect("Fee is not set");
-        let (height, block_hash) = self.payload.take().unwrap();
-        create_anchoring_transaction(addr,
-                                     height,
-                                     block_hash,
-                                     self.inputs.iter(),
-                                     total_funds - fee)
+        let (height, block_hash) = self.payload.take().expect("Payload is not set");
+        if available_funds < fee {
+            return Err(ServiceError::InsufficientFunds);
+        }
+        let total_funds = available_funds - fee;
+        let tx =
+            create_anchoring_transaction(addr, height, block_hash, self.inputs.iter(), total_funds);
+        Ok(tx)
     }
 }
 
@@ -538,7 +533,8 @@ mod tests {
             .payload(10, Hash::from_hex("164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9").unwrap())
             .fee(1000)
             .send_to(btc::Address::from_script(&redeem_script, Network::Testnet))
-            .into_transaction();
+            .into_transaction()
+            .unwrap();
 
         let mut signatures = HashMap::new();
         for input in tx.inputs() {

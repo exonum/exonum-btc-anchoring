@@ -8,10 +8,9 @@ use btc;
 use client::AnchoringRpc;
 use config::{AnchoringNodeConfig, AnchoringConfig};
 use transactions::{BitcoinTx, AnchoringTx, FundingTx};
-
-use super::{AnchoringSchema, TxKind};
-use super::error::Error as ServiceError;
-use super::schema::{FollowingConfig, TxAnchoringUpdateLatest, AnchoringTransaction};
+use error::Error as ServiceError;
+use service::{AnchoringSchema, TxKind};
+use service::schema::{FollowingConfig, MsgAnchoringUpdateLatest, AnchoringMessage};
 
 pub struct AnchoringHandler {
     pub client: AnchoringRpc,
@@ -247,12 +246,12 @@ impl AnchoringHandler {
                 info!("LECT ====== txid={}, total_count={}",
                       lect.txid().to_hex(),
                       lects_count);
-                let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
+                let lect_msg = MsgAnchoringUpdateLatest::new(&state.public_key(),
                                                             state.id(),
                                                             lect,
                                                             lects_count,
                                                             &state.secret_key());
-                state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+                state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
             }
         } else {
             // случай, когда транзакция пропала из за форка и была единственная на этот адрес
@@ -281,12 +280,12 @@ impl AnchoringHandler {
                       lect.txid().to_hex(),
                       lects_count);
 
-                let lect_msg = TxAnchoringUpdateLatest::new(&state.public_key(),
+                let lect_msg = MsgAnchoringUpdateLatest::new(&state.public_key(),
                                                             state.id(),
                                                             lect,
                                                             lects_count,
                                                             &state.secret_key());
-                state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+                state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
             }
         }
         Ok(())

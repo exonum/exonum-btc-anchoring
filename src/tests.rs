@@ -86,7 +86,7 @@ fn send_anchoring_tx(client: &AnchoringRpc,
             let out = funding_tx.find_out(to).unwrap();
             builder = builder.add_funds(&funding_tx, out);
         }
-        builder.into_transaction()
+        builder.into_transaction().unwrap()
     };
     debug!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
@@ -146,7 +146,7 @@ fn test_unspent_funding_tx() {
 }
 
 #[test]
-fn test_anchoring_3_4() {
+fn test_anchoring_tx_chain() {
     let _ = blockchain_explorer::helpers::init_logger();
 
     let tmp_dir = TempDir::new("bitcoind").unwrap();
@@ -176,7 +176,8 @@ fn test_anchoring_3_4() {
             .payload(block_height, block_hash)
             .send_to(addr.clone())
             .fee(fee)
-            .into_transaction();
+            .into_transaction()
+            .unwrap();
         debug!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
         let signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
@@ -251,7 +252,8 @@ fn test_anchoring_3_4() {
 }
 
 #[test]
-fn test_anchoring_different_txs() {
+#[should_panic(expected = "InsufficientFunds")]
+fn test_anchoring_tx_chain_insufficient_funds() {
     let _ = blockchain_explorer::helpers::init_logger();
 
     let tmp_dir = TempDir::new("bitcoind").unwrap();
@@ -260,39 +262,69 @@ fn test_anchoring_different_txs() {
     let client = regtest.client();
 
     let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
-
     let majority_count = ::majority_count(4);
     let (redeem_script, addr) =
         client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
             .unwrap();
-
-    let total_funds = 10000;
-    let fee = total_funds;
-    let tx = FundingTx::create(&client, &addr, total_funds).unwrap();
-    let out = tx.find_out(&addr).unwrap();
-
     debug!("multisig_address={:#?}", redeem_script);
-    debug!("utxo_tx={:#?}", tx);
 
+    let fee = 1000;
     let block_height = 2;
     let block_hash = hash(&[1, 3, 5]);
 
-    let proposal = TransactionBuilder::with_prev_tx(&tx, out)
-        .payload(block_height, block_hash)
-        .fee(fee)
-        .send_to(addr.clone())
-        .into_transaction();
+    // Make anchoring txs chain
+    let total_funds = 4000;
+    let mut utxo_tx = {
+        let funding_tx = FundingTx::create(&client, &addr, total_funds).unwrap();
+        let out = funding_tx.find_out(&addr).unwrap();
+        debug!("funding_tx={:#?}", funding_tx);
 
-    let signs1 = make_signatures(&redeem_script, &proposal, &[0], &priv_keys);
-    let signs2 = make_signatures(&redeem_script, &proposal, &[0], &priv_keys);
+        let tx = TransactionBuilder::with_prev_tx(&funding_tx, out)
+            .payload(block_height, block_hash)
+            .send_to(addr.clone())
+            .fee(fee)
+            .into_transaction()
+            .unwrap();
+        debug!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
-    let tx1 = proposal.clone().send(&client, &redeem_script, signs1).unwrap();
-    debug!("tx1={:#?}", tx1);
-    let tx2 = proposal.clone().send(&client, &redeem_script, signs2);
-    debug!("tx2={:#?}", tx2);
+        let signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
+        let tx = tx.send(&client, &redeem_script, signatures).unwrap();
+        debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
-    let txs = client.get_last_anchoring_transactions(&addr.to_base58check(), 144).unwrap();
-    debug!("txs={:#?}", txs);
+        assert!(funding_tx.is_unspent(&client, &addr).unwrap().is_none());
+        let lect_tx = client.unspent_transactions(&addr).unwrap().first().unwrap().clone();
+        assert_eq!(lect_tx.0, tx.0);
+        tx
+    };
 
-    // assert!(tx2.is_err());
+    let utxos = client.listunspent(0, 9999999, &[addr.to_base58check().as_ref()]).unwrap();
+    debug!("utxos={:#?}", utxos);
+
+    // Send anchoring txs
+    let mut out_funds = utxo_tx.amount();
+    debug!("out_funds={}", out_funds);
+    while out_funds >= fee {
+        utxo_tx = send_anchoring_tx(&client,
+                                    &redeem_script,
+                                    &addr,
+                                    block_height,
+                                    block_hash.clone(),
+                                    &priv_keys,
+                                    utxo_tx,
+                                    &[],
+                                    fee);
+        assert_eq!(utxo_tx.payload(), (block_height, block_hash));
+        out_funds -= fee;
+    }
+
+    // Try to send tx without funds
+    send_anchoring_tx(&client,
+                      &redeem_script,
+                      &addr,
+                      block_height,
+                      block_hash.clone(),
+                      &priv_keys,
+                      utxo_tx,
+                      &[],
+                      fee);
 }

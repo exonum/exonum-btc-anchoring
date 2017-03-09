@@ -3,9 +3,8 @@ use exonum::blockchain::NodeState;
 use bitcoin::util::base58::ToBase58;
 
 use config::AnchoringConfig;
-
-use super::{AnchoringHandler, MultisigAddress, LectKind};
-use super::error::Error as ServiceError;
+use error::Error as ServiceError;
+use service::{AnchoringHandler, MultisigAddress, LectKind};
 
 impl AnchoringHandler {
     pub fn handle_transferring_state(&mut self,

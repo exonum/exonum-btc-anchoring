@@ -1,5 +1,5 @@
-use exonum::storage::Error as StorageError;
-use client::Error as RpcError;
+pub use exonum::storage::Error as StorageError;
+pub use client::Error as RpcError;
 
 // TODO use error chain crate?
 
@@ -7,6 +7,7 @@ use client::Error as RpcError;
 pub enum Error {
     Storage(StorageError),
     Rpc(RpcError),
+    InsufficientFunds,
 }
 
 impl From<StorageError> for Error {

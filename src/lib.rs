@@ -17,7 +17,6 @@ extern crate env_logger;
 #[cfg(test)]
 extern crate tempdir;
 
-
 #[macro_use]
 mod macros;
 
@@ -26,6 +25,7 @@ pub mod config;
 pub mod transactions;
 pub mod client;
 pub mod btc;
+pub mod error;
 
 #[cfg(feature="sandbox_tests")]
 pub mod sandbox;
@@ -38,20 +38,17 @@ use bitcoin::network::constants::Network;
 use exonum::crypto::{FromHexError, ToHex, FromHex};
 
 use btc::HexValueEx;
-
 pub use service::{AnchoringService, AnchoringHandler, collect_signatures};
-pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, TxAnchoringSignature, TxAnchoringUpdateLatest};
+pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, MsgAnchoringSignature,
+                          MsgAnchoringUpdateLatest};
 pub use transactions::{AnchoringTx, FundingTx, BitcoinTx, TxKind};
-pub use client::{AnchoringRpc, RpcClient, Result, Error};
-pub use btc::{RedeemScript};
+pub use client::{AnchoringRpc, RpcClient};
+pub use btc::RedeemScript;
 
 pub const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 // TODO add feature for bitcoin network
 pub const BITCOIN_NETWORK: Network = Network::Testnet;
 
-pub type BitcoinAddress = String;
-pub type BitcoinPublicKey = String;
-pub type BitcoinPrivateKey = String;
 pub type BitcoinSignature = Vec<u8>;
 
 impl HexValueEx for Script {

@@ -7,10 +7,9 @@ use bitcoin::util::base58::ToBase58;
 use btc::HexValueEx;
 use config::AnchoringConfig;
 use transactions::{AnchoringTx, TransactionBuilder};
-
-use super::{AnchoringHandler, AnchoringSchema, LectKind, MultisigAddress, collect_signatures};
-use super::error::Error as ServiceError;
-use super::schema::{TxAnchoringSignature, TxAnchoringUpdateLatest, AnchoringTransaction};
+use error::Error as ServiceError;
+use service::{AnchoringHandler, AnchoringSchema, LectKind, MultisigAddress, collect_signatures};
+use service::schema::{MsgAnchoringSignature, MsgAnchoringUpdateLatest, AnchoringMessage};
 
 impl AnchoringHandler {
     pub fn handle_anchoring_state(&mut self,
@@ -76,7 +75,7 @@ impl AnchoringHandler {
                 .fee(multisig.genesis.fee)
                 .payload(height, hash)
                 .send_to(multisig.addr.clone())
-                .into_transaction();
+                .into_transaction()?;
 
             debug!("initial_proposal={:#?}, txhex={}",
                    proposal,
@@ -110,7 +109,7 @@ impl AnchoringHandler {
                 let out = funds.find_out(&multisig.addr).unwrap();
                 builder = builder.add_funds(&funds, out);
             }
-            builder.into_transaction()
+            builder.into_transaction()?
         };
 
         debug!("proposal={:#?}, to={:?}, height={}, hash={}",
@@ -131,7 +130,7 @@ impl AnchoringHandler {
         for input in proposal.inputs() {
             let signature = proposal.sign(&multisig.redeem_script, input, &multisig.priv_key);
 
-            let sign_msg = TxAnchoringSignature::new(state.public_key(),
+            let sign_msg = MsgAnchoringSignature::new(state.public_key(),
                                                      state.id(),
                                                      proposal.clone(),
                                                      input,
@@ -139,7 +138,7 @@ impl AnchoringHandler {
                                                      state.secret_key());
 
             debug!("Sign_msg={:#?}, sighex={}", sign_msg, signature.to_hex());
-            state.add_transaction(AnchoringTransaction::Signature(sign_msg));
+            state.add_transaction(AnchoringMessage::Signature(sign_msg));
         }
         self.proposal_tx = Some(proposal);
         Ok(())
@@ -168,7 +167,7 @@ impl AnchoringHandler {
             .unwrap();
 
         if let Some(signatures) = collect_signatures(&proposal, &multisig.genesis, msgs.iter()) {
-            let new_lect = proposal.finalize(&multisig.redeem_script, signatures)?;
+            let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
             if self.client.get_transaction_info(&new_lect.txid())?.is_none() {
                 self.client.send_transaction(new_lect.clone().into())?;
@@ -190,12 +189,12 @@ impl AnchoringHandler {
             self.proposal_tx = None;
 
             let lects_count = AnchoringSchema::new(state.view()).lects(state.id()).len().unwrap();
-            let lect_msg = TxAnchoringUpdateLatest::new(state.public_key(),
+            let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
                                                         state.id(),
                                                         new_lect.into(),
                                                         lects_count,
                                                         state.secret_key());
-            state.add_transaction(AnchoringTransaction::UpdateLatest(lect_msg));
+            state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
         } else {
             warn!("Insufficient signatures for proposal={:#?}", proposal);
         }

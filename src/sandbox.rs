@@ -181,9 +181,17 @@ impl SandboxClient {
         self.request("generate", params)
     }
 
-    pub fn generatetoaddress(&self, nblocks: u64, addr: &str, maxtries: u64) -> Result<Vec<String>> {
+    pub fn generatetoaddress(&self,
+                             nblocks: u64,
+                             addr: &str,
+                             maxtries: u64)
+                             -> Result<Vec<String>> {
         let params = vec![nblocks.to_json(), addr.to_json(), maxtries.to_json()];
         self.request("generatetoaddress", params)
+    }
+
+    pub fn stop(&self) -> Result<String> {
+        self.request("stop", vec![])
     }
 }
 

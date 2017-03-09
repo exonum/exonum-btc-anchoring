@@ -13,14 +13,14 @@ use btc::TxId;
 use {AnchoringTx, BitcoinTx};
 
 pub const ANCHORING_SERVICE: u16 = 3;
-const ANCHORING_TRANSACTION_SIGNATURE: u16 = 0;
-const ANCHORING_TRANSACTION_LATEST: u16 = 1;
+const ANCHORING_MESSAGE_SIGNATURE: u16 = 0;
+const ANCHORING_MESSAGE_LATEST: u16 = 1;
 
 // Подпись за анкорящую транзакцию
 message! {
-    TxAnchoringSignature {
+    MsgAnchoringSignature {
         const TYPE = ANCHORING_SERVICE;
-        const ID = ANCHORING_TRANSACTION_SIGNATURE;
+        const ID = ANCHORING_MESSAGE_SIGNATURE;
         const SIZE = 56;
 
         from:           &PublicKey   [00 => 32]
@@ -33,9 +33,9 @@ message! {
 
 // Сообщение об обновлении последней корректной транзакции
 message! {
-    TxAnchoringUpdateLatest {
+    MsgAnchoringUpdateLatest {
         const TYPE = ANCHORING_SERVICE;
-        const ID = ANCHORING_TRANSACTION_LATEST;
+        const ID = ANCHORING_MESSAGE_LATEST;
         const SIZE = 52;
 
         from:           &PublicKey   [00 => 32]
@@ -47,9 +47,9 @@ message! {
 
 
 #[derive(Clone)]
-pub enum AnchoringTransaction {
-    Signature(TxAnchoringSignature),
-    UpdateLatest(TxAnchoringUpdateLatest),
+pub enum AnchoringMessage {
+    Signature(MsgAnchoringSignature),
+    UpdateLatest(MsgAnchoringUpdateLatest),
 }
 
 pub struct AnchoringSchema<'a> {
@@ -63,70 +63,70 @@ pub struct FollowingConfig {
     pub config: AnchoringConfig,
 }
 
-impl Into<AnchoringTransaction> for TxAnchoringSignature {
-    fn into(self) -> AnchoringTransaction {
-        AnchoringTransaction::Signature(self)
+impl Into<AnchoringMessage> for MsgAnchoringSignature {
+    fn into(self) -> AnchoringMessage {
+        AnchoringMessage::Signature(self)
     }
 }
 
-impl Into<AnchoringTransaction> for TxAnchoringUpdateLatest {
-    fn into(self) -> AnchoringTransaction {
-        AnchoringTransaction::UpdateLatest(self)
+impl Into<AnchoringMessage> for MsgAnchoringUpdateLatest {
+    fn into(self) -> AnchoringMessage {
+        AnchoringMessage::UpdateLatest(self)
     }
 }
 
-impl AnchoringTransaction {
+impl AnchoringMessage {
     pub fn from(&self) -> &PublicKey {
         match *self {
-            AnchoringTransaction::UpdateLatest(ref msg) => msg.from(),
-            AnchoringTransaction::Signature(ref msg) => msg.from(),
+            AnchoringMessage::UpdateLatest(ref msg) => msg.from(),
+            AnchoringMessage::Signature(ref msg) => msg.from(),
         }
     }
 }
 
-impl Message for AnchoringTransaction {
+impl Message for AnchoringMessage {
     fn raw(&self) -> &RawTransaction {
         match *self {
-            AnchoringTransaction::UpdateLatest(ref msg) => msg.raw(),
-            AnchoringTransaction::Signature(ref msg) => msg.raw(),
+            AnchoringMessage::UpdateLatest(ref msg) => msg.raw(),
+            AnchoringMessage::Signature(ref msg) => msg.raw(),
         }
     }
 
     fn verify_signature(&self, public_key: &PublicKey) -> bool {
         match *self {
-            AnchoringTransaction::UpdateLatest(ref msg) => msg.verify_signature(public_key),
+            AnchoringMessage::UpdateLatest(ref msg) => msg.verify_signature(public_key),
             // TODO проверка, что подпись за анкорящую транзакцию верная
-            AnchoringTransaction::Signature(ref msg) => msg.verify_signature(public_key),
+            AnchoringMessage::Signature(ref msg) => msg.verify_signature(public_key),
         }
     }
 
     fn hash(&self) -> Hash {
         match *self {
-            AnchoringTransaction::UpdateLatest(ref msg) => Message::hash(msg),
-            AnchoringTransaction::Signature(ref msg) => Message::hash(msg),
+            AnchoringMessage::UpdateLatest(ref msg) => Message::hash(msg),
+            AnchoringMessage::Signature(ref msg) => Message::hash(msg),
         }
     }
 }
 
-impl FromRaw for AnchoringTransaction {
-    fn from_raw(raw: RawTransaction) -> ::std::result::Result<AnchoringTransaction, MessageError> {
+impl FromRaw for AnchoringMessage {
+    fn from_raw(raw: RawTransaction) -> ::std::result::Result<AnchoringMessage, MessageError> {
         match raw.message_type() {
-            ANCHORING_TRANSACTION_SIGNATURE => {
-                Ok(AnchoringTransaction::Signature(TxAnchoringSignature::from_raw(raw)?))
+            ANCHORING_MESSAGE_SIGNATURE => {
+                Ok(AnchoringMessage::Signature(MsgAnchoringSignature::from_raw(raw)?))
             }
-            ANCHORING_TRANSACTION_LATEST => {
-                Ok(AnchoringTransaction::UpdateLatest(TxAnchoringUpdateLatest::from_raw(raw)?))
+            ANCHORING_MESSAGE_LATEST => {
+                Ok(AnchoringMessage::UpdateLatest(MsgAnchoringUpdateLatest::from_raw(raw)?))
             }
             _ => Err(MessageError::IncorrectMessageType { message_type: raw.message_type() }),
         }
     }
 }
 
-impl fmt::Debug for AnchoringTransaction {
+impl fmt::Debug for AnchoringMessage {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
         match *self {
-            AnchoringTransaction::UpdateLatest(ref msg) => write!(fmt, "{:?}", msg),
-            AnchoringTransaction::Signature(ref msg) => write!(fmt, "{:?}", msg),
+            AnchoringMessage::UpdateLatest(ref msg) => write!(fmt, "{:?}", msg),
+            AnchoringMessage::Signature(ref msg) => write!(fmt, "{:?}", msg),
         }
     }
 }
@@ -139,7 +139,7 @@ impl<'a> AnchoringSchema<'a> {
     // хэш это txid
     pub fn signatures(&self,
                       txid: &TxId)
-                      -> ListTable<MapTable<View, [u8], Vec<u8>>, u64, TxAnchoringSignature> {
+                      -> ListTable<MapTable<View, [u8], Vec<u8>>, u64, MsgAnchoringSignature> {
         let prefix = [&[ANCHORING_SERVICE as u8, 02], txid.as_ref()].concat();
         ListTable::new(MapTable::new(prefix, self.view))
     }
@@ -223,7 +223,7 @@ impl<'a> AnchoringSchema<'a> {
     }
 }
 
-impl TxAnchoringSignature {
+impl MsgAnchoringSignature {
     pub fn execute(&self, view: &View) -> Result<(), StorageError> {
         let schema = AnchoringSchema::new(view);
         let tx = self.tx();
@@ -239,7 +239,7 @@ impl TxAnchoringSignature {
     }
 }
 
-impl TxAnchoringUpdateLatest {
+impl MsgAnchoringUpdateLatest {
     pub fn execute(&self, view: &View) -> Result<(), StorageError> {
         let schema = AnchoringSchema::new(view);
         let tx = self.tx();

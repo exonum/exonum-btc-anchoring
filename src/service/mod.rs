@@ -1,5 +1,4 @@
 pub mod schema;
-pub mod error;
 
 mod handler;
 mod anchoring;
@@ -20,10 +19,9 @@ use exonum::storage::{View, Error as StorageError};
 use config::{AnchoringNodeConfig, AnchoringConfig};
 use {AnchoringRpc, BitcoinSignature};
 use transactions::{TxKind, AnchoringTx};
-
-use self::schema::{ANCHORING_SERVICE, AnchoringTransaction, AnchoringSchema, TxAnchoringSignature};
-use self::error::Error as ServiceError;
-use self::handler::{LectKind, MultisigAddress};
+use error::Error as ServiceError;
+use service::schema::{ANCHORING_SERVICE, AnchoringMessage, AnchoringSchema, MsgAnchoringSignature};
+use service::handler::{LectKind, MultisigAddress};
 
 pub use self::handler::AnchoringHandler;
 
@@ -48,15 +46,15 @@ impl AnchoringService {
     }
 }
 
-impl Transaction for AnchoringTransaction {
+impl Transaction for AnchoringMessage {
     fn verify(&self) -> bool {
         self.verify_signature(self.from())
     }
 
     fn execute(&self, view: &View) -> Result<(), StorageError> {
         match *self {
-            AnchoringTransaction::Signature(ref msg) => msg.execute(view),
-            AnchoringTransaction::UpdateLatest(ref msg) => msg.execute(view),
+            AnchoringMessage::Signature(ref msg) => msg.execute(view),
+            AnchoringMessage::UpdateLatest(ref msg) => msg.execute(view),
         }
     }
 }
@@ -71,7 +69,7 @@ impl Service for AnchoringService {
     }
 
     fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, MessageError> {
-        AnchoringTransaction::from_raw(raw).map(|tx| Box::new(tx) as Box<Transaction>)
+        AnchoringMessage::from_raw(raw).map(|tx| Box::new(tx) as Box<Transaction>)
     }
 
     fn handle_genesis_block(&self, view: &View) -> Result<Value, StorageError> {
@@ -89,11 +87,11 @@ impl Service for AnchoringService {
     fn handle_commit(&self, state: &mut NodeState) -> Result<(), StorageError> {
         debug!("Handle commit, height={}", state.height());
         match self.handler.lock().unwrap().handle_commit(state) {
-            Err(ServiceError::Rpc(e)) => {
-                error!("An error occured: {}", e);
+            Err(ServiceError::Storage(e)) => Err(e),
+            Err(e) => {
+                error!("An error occured: {:?}", e);
                 Ok(())
             }
-            Err(ServiceError::Storage(e)) => Err(e),
             Ok(()) => Ok(()),
         }
     }
@@ -103,7 +101,7 @@ pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
                                  genesis: &AnchoringConfig,
                                  msgs: I)
                                  -> Option<HashMap<u32, Vec<BitcoinSignature>>>
-    where I: Iterator<Item = &'a TxAnchoringSignature>
+    where I: Iterator<Item = &'a MsgAnchoringSignature>
 {
     let mut signatures = HashMap::new();
     for input in proposal.inputs() {

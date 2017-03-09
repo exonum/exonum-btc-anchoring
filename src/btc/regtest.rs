@@ -21,12 +21,6 @@ pub struct RegTestNode {
     client: AnchoringRpc,
 }
 
-impl Drop for RegTestNode {
-    fn drop(&mut self) {
-        self.process.kill().unwrap()
-    }
-}
-
 impl RegTestNode {
     pub fn new<D, S>(dir: D, bind: S, rpc_port: u16) -> io::Result<RegTestNode>
         where D: AsRef<Path>,
@@ -78,6 +72,15 @@ impl RegTestNode {
 
     pub fn client(&self) -> &AnchoringRpc {
         &self.client
+    }
+}
+
+impl Drop for RegTestNode {
+    fn drop(&mut self) { 
+        trace!("stop regtest={:#?}", self.client.stop());
+        trace!("wait regtest={:#?}", self.process.wait());
+        trace!("stderr regtest={:#?}", self.process.stderr);
+        trace!("stdout regtest={:#?}", self.process.stdout);
     }
 }
 

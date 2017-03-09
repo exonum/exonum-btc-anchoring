@@ -14,7 +14,7 @@ use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactio
 use sandbox::config_updater::TxConfig;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::{ANCHORING_SERVICE, TxAnchoringUpdateLatest};
+use anchoring_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest};
 use anchoring_service::transactions::{BitcoinTx, RawBitcoinTx};
 use anchoring_service::config::AnchoringConfig;
 use anchoring_service::btc;
@@ -26,7 +26,7 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            tx: &RawBitcoinTx,
                            count: u64)
                            -> RawTransaction {
-    let tx = TxAnchoringUpdateLatest::new(sandbox.p(validator as usize),
+    let tx = MsgAnchoringUpdateLatest::new(sandbox.p(validator as usize),
                                           validator,
                                           BitcoinTx::from(tx.clone()),
                                           count,

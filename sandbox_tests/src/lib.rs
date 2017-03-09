@@ -30,7 +30,7 @@ use sandbox::config_updater::ConfigUpdateService;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, AnchoringNodeConfig};
-use anchoring_service::{AnchoringService, AnchoringHandler, TxAnchoringSignature, AnchoringRpc,
+use anchoring_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature, AnchoringRpc,
                         collect_signatures};
 use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};
 use anchoring_service::btc;
@@ -49,7 +49,7 @@ pub const CHECK_LECT_FREQUENCY: u64 = 6;
 pub struct AnchoringSandboxState {
     pub genesis: AnchoringConfig,
     pub nodes: Vec<AnchoringNodeConfig>,
-    pub latest_anchored_tx: Option<(AnchoringTx, Vec<TxAnchoringSignature>)>,
+    pub latest_anchored_tx: Option<(AnchoringTx, Vec<MsgAnchoringSignature>)>,
     pub handler: Arc<Mutex<AnchoringHandler>>,
 }
 
@@ -58,7 +58,7 @@ impl AnchoringSandboxState {
         &self.latest_anchored_tx.as_ref().unwrap().0
     }
 
-    pub fn latest_anchored_tx_signatures(&self) -> &[TxAnchoringSignature] {
+    pub fn latest_anchored_tx_signatures(&self) -> &[MsgAnchoringSignature] {
         self.latest_anchored_tx.as_ref().unwrap().1.as_ref()
     }
 
@@ -84,7 +84,7 @@ impl AnchoringSandboxState {
                 builder = builder.add_funds(fund, out);
             }
 
-            let tx = builder.into_transaction();
+            let tx = builder.into_transaction().unwrap();
             let signs = self.gen_anchoring_signatures(sandbox, &tx);
             let signed_tx = self.finalize_tx(tx.clone(), signs.as_ref());
             (tx, signed_tx, signs)
@@ -97,16 +97,15 @@ impl AnchoringSandboxState {
         (propose_tx, signs)
     }
 
-    pub fn finalize_tx(&self, tx: AnchoringTx, signs: &[TxAnchoringSignature]) -> AnchoringTx {
+    pub fn finalize_tx(&self, tx: AnchoringTx, signs: &[MsgAnchoringSignature]) -> AnchoringTx {
         let collected_signs = collect_signatures(&tx, &self.genesis, signs.iter()).unwrap();
         tx.finalize(&self.genesis.redeem_script().0, collected_signs)
-            .unwrap()
     }
 
     pub fn gen_anchoring_signatures(&self,
                                     sandbox: &Sandbox,
                                     tx: &AnchoringTx)
-                                    -> Vec<TxAnchoringSignature> {
+                                    -> Vec<MsgAnchoringSignature> {
         let (redeem_script, addr) = self.genesis.redeem_script();
 
         let priv_keys = self.priv_keys(&addr);
@@ -117,12 +116,12 @@ impl AnchoringSandboxState {
                                            input as usize,
                                            &redeem_script.0,
                                            priv_key.secret_key());
-                signs.push(TxAnchoringSignature::new(sandbox.p(validator),
-                                                     validator as u32,
-                                                     tx.clone(),
-                                                     input,
-                                                     &signature,
-                                                     sandbox.s(validator)));
+                signs.push(MsgAnchoringSignature::new(sandbox.p(validator),
+                                                      validator as u32,
+                                                      tx.clone(),
+                                                      input,
+                                                      &signature,
+                                                      sandbox.s(validator)));
             }
         }
         signs
