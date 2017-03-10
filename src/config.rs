@@ -4,6 +4,8 @@ use serde_json;
 
 use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;
+use rand;
+use rand::Rng;
 
 use exonum::storage::StorageValue;
 use exonum::crypto::{hash, Hash, HexValue};
@@ -32,42 +34,6 @@ pub struct AnchoringConfig {
     pub fee: u64,
     pub frequency: u64,
     pub utxo_confirmations: u64,
-}
-
-pub fn generate_anchoring_config(client: &AnchoringRpc,
-                                 count: u8,
-                                 total_funds: u64)
-                                 -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
-    let rpc = AnchoringRpcConfig {
-        host: client.url().into(),
-        username: client.username().clone(),
-        password: client.password().clone(),
-    };
-    let mut pub_keys = Vec::new();
-    let mut node_cfgs = Vec::new();
-    let mut priv_keys = Vec::new();
-
-    for idx in 0..count as usize {
-        let account = format!("node_{}", idx);
-        let (pub_key, priv_key) = client.gen_keypair(&account).unwrap();
-
-        pub_keys.push(pub_key.clone());
-        node_cfgs.push(AnchoringNodeConfig::new(rpc.clone()));
-        priv_keys.push(priv_key.clone());
-    }
-
-    let majority_count = ::majority_count(count);
-    let (_, address) =
-        client.create_multisig_address(BITCOIN_NETWORK, majority_count, pub_keys.iter())
-            .unwrap();
-    let tx = FundingTx::create(&client, &address, total_funds).unwrap();
-
-    let genesis_cfg = AnchoringConfig::new(pub_keys, tx);
-    for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
-        node_cfg.private_keys.insert(address.to_base58check(), priv_keys[idx].clone());
-    }
-
-    (genesis_cfg, node_cfgs)
 }
 
 impl AnchoringConfig {
@@ -128,6 +94,52 @@ impl AnchoringNodeConfig {
 
 implement_serde_hex! {AnchoringTx}
 implement_serde_hex! {FundingTx}
+
+pub fn generate_anchoring_config_with_rng<R: Rng>
+    (client: &AnchoringRpc,
+     count: u8,
+     total_funds: u64,
+     rng: &mut R)
+     -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
+    let rpc = AnchoringRpcConfig {
+        host: client.url().into(),
+        username: client.username().clone(),
+        password: client.password().clone(),
+    };
+    let mut pub_keys = Vec::new();
+    let mut node_cfgs = Vec::new();
+    let mut priv_keys = Vec::new();
+
+    for _ in 0..count as usize {
+        let (pub_key, priv_key) = btc::gen_keypair_with_rng(BITCOIN_NETWORK, rng);
+
+        pub_keys.push(pub_key.clone());
+        node_cfgs.push(AnchoringNodeConfig::new(rpc.clone()));
+        priv_keys.push(priv_key.clone());
+    }
+
+    let majority_count = ::majority_count(count);
+    let (_, address) =
+        client.create_multisig_address(BITCOIN_NETWORK, majority_count, pub_keys.iter())
+            .unwrap();
+    let tx = FundingTx::create(&client, &address, total_funds).unwrap();
+
+    let genesis_cfg = AnchoringConfig::new(pub_keys, tx);
+    for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
+        node_cfg.private_keys.insert(address.to_base58check(), priv_keys[idx].clone());
+    }
+
+    (genesis_cfg, node_cfgs)
+}
+
+pub fn generate_anchoring_config(client: &AnchoringRpc,
+                                 count: u8,
+                                 total_funds: u64)
+                                 -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
+    let mut rng = rand::thread_rng();
+    generate_anchoring_config_with_rng(client, count, total_funds, &mut rng)
+}
+
 
 #[cfg(test)]
 mod tests {

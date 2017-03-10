@@ -33,8 +33,7 @@ fn gen_anchoring_keys(client: &AnchoringRpc,
     let mut validators = Vec::new();
     let mut priv_keys = Vec::new();
     for i in 0..count {
-        let account = format!("node_{}", i);
-        let (pub_key, priv_key) = client.gen_keypair(&account).unwrap();
+        let (pub_key, priv_key) = btc::gen_keypair(Network::Testnet);
         validators.push(pub_key);
         priv_keys.push(priv_key);
     }

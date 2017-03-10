@@ -2,7 +2,7 @@ pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
 use serde_json::value::ToJson;
-use bitcoin::util::base58::FromBase58;
+use bitcoin::util::base58::{ToBase58, FromBase58};
 
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{Hash, HexValue};
@@ -56,14 +56,16 @@ pub fn anchor_first_block(sandbox: &Sandbox,
                           client: &SandboxClient,
                           sandbox_state: &SandboxState,
                           anchoring_state: &mut AnchoringSandboxState) {
+    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
                 {
-                    "txid": "a03b10b17fc8b86dd0b1b6ebcc3bc3c6dd4b7173302ef68628f5ed768dbd7049",
+                    "txid": &anchoring_state.genesis.funding_tx.txid(),
                     "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                    "address": &anchoring_addr.to_base58check(),
                     "account": "multisig",
                     "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
                     "amount": 0.00010000,
@@ -78,7 +80,7 @@ pub fn anchor_first_block(sandbox: &Sandbox,
         0,
         sandbox.last_hash(),
         &[],
-        &btc::Address::from_base58check("2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu").unwrap()
+        &anchoring_addr,
     );
     let anchored_tx = anchoring_state.latest_anchored_tx();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
@@ -115,15 +117,16 @@ pub fn anchor_first_block_lect_normal(sandbox: &Sandbox,
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     let anchored_tx = anchoring_state.latest_anchored_tx();
+    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
 
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
                 {
                     "txid": &anchored_tx.txid(),
                     "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                    "address": &anchoring_addr.to_base58check(),
                     "account": "multisig",
                     "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
                     "amount": 0.00010000,
@@ -151,15 +154,16 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
     let other_lect = anchoring_state.genesis.funding_tx.clone();
+    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
 
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
                 {
                     "txid": &other_lect.txid(),
                     "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                    "address": &anchoring_addr.to_base58check(),
                     "account": "multisig",
                     "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
                     "amount": 0.00010000,
@@ -183,12 +187,12 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
 
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
                 {
                     "txid": &other_lect.txid(),
                     "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                    "address": &anchoring_addr.to_base58check(),
                     "account": "multisig",
                     "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
                     "amount": 0.00010000,
@@ -241,14 +245,15 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
         (other_lect, other_signatures)
     };
 
+    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
                 {
                     "txid": &other_lect.txid(),
                     "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                    "address": &anchoring_addr.to_base58check(),
                     "account": "multisig",
                     "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
                     "amount": 0.00010000,
@@ -282,14 +287,15 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
+    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
                 {
                     "txid": "fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491",
                     "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                    "address": &anchoring_addr.to_base58check(),
                     "account": "multisig",
                     "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
                     "amount": 0.00010000,
@@ -305,7 +311,7 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
         10,
         sandbox.last_hash(),
         &[],
-        &btc::Address::from_base58check("2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu").unwrap()
+        &btc::Address::from_base58check(&anchoring_addr.to_base58check()).unwrap()
     );
     let anchored_tx = anchoring_state.latest_anchored_tx();
 
@@ -328,12 +334,12 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
     sandbox.broadcast(txs[0].clone());
     client.expect(vec![request! {
             method: "listunspent",
-            params: [0, 9999999, ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu"]],
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
                 {
                     "txid": &anchored_tx.txid(),
                     "vout": 0,
-                    "address": "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                    "address": &anchoring_addr.to_base58check(),
                     "account": "multisig",
                     "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
                     "amount": 0.00010000,

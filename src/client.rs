@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use bitcoinrpc;
-use bitcoin::util::base58::{FromBase58, ToBase58};
+use bitcoin::util::base58::{ToBase58};
 use bitcoin::network::constants::Network;
 
 use exonum::crypto::HexValue;
@@ -34,16 +34,6 @@ impl AnchoringRpc {
             username: self.0.username().clone(),
             password: self.0.password().clone(),
         }
-    }
-
-    pub fn gen_keypair(&self, account: &str) -> Result<(btc::PublicKey, btc::PrivateKey)> {
-        let addr = self.0.getnewaddress(account)?;
-        let info = self.0.validateaddress(&addr)?;
-        let privkey = self.0.dumpprivkey(&addr)?;
-
-        let pubkey = btc::PublicKey::from_hex(info.pubkey).unwrap();
-        let privkey = btc::PrivateKey::from_base58check(&privkey).unwrap();
-        Ok((pubkey, privkey))
     }
 
     pub fn get_transaction(&self, txid: &str) -> Result<BitcoinTx> {

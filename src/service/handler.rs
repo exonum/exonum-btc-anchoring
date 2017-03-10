@@ -108,8 +108,8 @@ impl AnchoringHandler {
                     return Ok(AnchoringState::Anchoring { cfg: actual });
                 };
 
-                debug!("current_lect={:#?}", current_lect);
                 debug!("prev_lect={:#?}", prev_lect);
+                debug!("current_lect={:#?}", current_lect);
 
                 let current_addr = current_lect.output_address(actual.network());
                 if current_addr != actual.redeem_script().1 {

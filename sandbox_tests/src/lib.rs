@@ -10,13 +10,15 @@ extern crate secp256k1;
 extern crate blockchain_explorer;
 #[macro_use]
 extern crate log;
+extern crate rand;
 
 use std::ops::Deref;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, MutexGuard};
 
 pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
+use rand::{SeedableRng, StdRng};
 use bitcoin::util::base58::{ToBase58, FromBase58};
 
 use exonum::crypto::Hash;
@@ -29,7 +31,8 @@ use sandbox::sandbox_tests_helper::VALIDATOR_0;
 use sandbox::config_updater::ConfigUpdateService;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::config::{generate_anchoring_config, AnchoringConfig, AnchoringNodeConfig};
+use anchoring_service::config::{generate_anchoring_config_with_rng, AnchoringConfig,
+                                AnchoringNodeConfig};
 use anchoring_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature, AnchoringRpc,
                         collect_signatures};
 use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};
@@ -54,6 +57,10 @@ pub struct AnchoringSandboxState {
 }
 
 impl AnchoringSandboxState {
+    pub fn handler(&self) -> MutexGuard<AnchoringHandler> {
+        self.handler.lock().unwrap()
+    }
+
     pub fn latest_anchored_tx(&self) -> &AnchoringTx {
         &self.latest_anchored_tx.as_ref().unwrap().0
     }
@@ -139,116 +146,117 @@ impl AnchoringSandboxState {
 pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
                                     -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let requests = vec![
-        request! {
-            method: "getnewaddress",
-            params: ["node_0"],
-            response: "mwfpMzcF1b63RDM2ggzhwcBE8edsVfctUW"
-        },
-        request! {
-            method: "validateaddress",
-            params: ["mwfpMzcF1b63RDM2ggzhwcBE8edsVfctUW"],
-            response: {
-                "account":"node_0","address":"mwfpMzcF1b63RDM2ggzhwcBE8edsVfctUW","hdkeypath":"m/0'/0'/1611'","hdmasterkeyid":"e2aabb596d105e11c1838c0b6bede91e1f2a95ee","iscompressed":true,"ismine":true,"isscript":false,"isvalid":true,"iswatchonly":false,"pubkey":"03475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c","scriptPubKey":"76a914b12f2284d35eb69554f15950aa96935f43fab7a188ac"
-            }
-        },
-        request! {
-            method: "dumpprivkey",
-            params: ["mwfpMzcF1b63RDM2ggzhwcBE8edsVfctUW"],
-            response: "cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE"
-        },
-        request! {
-            method: "getnewaddress",
-            params: [
-                "node_1"
-            ],
-            response: "mxaKfmSXj8JR8ZjfPvhi2GFPFbf7cM8tF1"
-        },
-        request! {
-            method: "validateaddress",
-            params: [
-                "mxaKfmSXj8JR8ZjfPvhi2GFPFbf7cM8tF1"
-            ],
-            response: 
-                {"account":"node_1","address":"mxaKfmSXj8JR8ZjfPvhi2GFPFbf7cM8tF1","hdkeypath":"m/0'/0'/1024'","hdmasterkeyid":"e2aabb596d105e11c1838c0b6bede91e1f2a95ee","iscompressed":true,"ismine":true,"isscript":false,"isvalid":true,"iswatchonly":false,"pubkey":"02a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0","scriptPubKey":"76a914d9e2a44fc0f8321aacc1a76fdffa036c0b4eb02e88ac"}
-        },
-        request! {
-            method: "dumpprivkey",
-            params: [
-                "mxaKfmSXj8JR8ZjfPvhi2GFPFbf7cM8tF1"
-            ],
-            response: 
-                "cMk66oMazTgquBVaBLHzDi8FMgAaRN3tSf6iZykf9bCh3D3FsLX1"
-        },
-        request! {
-            method: "getnewaddress",
-            params: [
-                "node_2"
-            ],
-            response: 
-                "mrasCaRhAxTbPpbbwaXQVg9Azyors9g3Zv"
-        },
-        request! {
-            method: "validateaddress",
-            params: [
-                "mrasCaRhAxTbPpbbwaXQVg9Azyors9g3Zv"
-            ],
-            response: {
-                "account":"node_2","address":"mrasCaRhAxTbPpbbwaXQVg9Azyors9g3Zv","hdkeypath":"m/0'/0'/1025'","hdmasterkeyid":"e2aabb596d105e11c1838c0b6bede91e1f2a95ee","iscompressed":true,"ismine":true,"isscript":false,"isvalid":true,"iswatchonly":false,"pubkey":"0230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb49","scriptPubKey":"76a914df9eb587014e39cda894ab357f43e268de6ace6588ac"
-            }
-        },
-        request! {
-            method: "dumpprivkey",
-            params: [
-                "mrasCaRhAxTbPpbbwaXQVg9Azyors9g3Zv"
-            ],
-            response: "cT2S5KgUQJ41G6RnakJ2XcofvoxK68L9B44hfFTnH4ddygaxi7rc"
-        },
-        request! {
-            method: "getnewaddress",
-            params: [
-                "node_3"
-            ],
-            response: "mrXPgwhZezYj9tkMyZFGJdHrr1kQnK7aDu"
-        },
-        request! {
-            method: "validateaddress",
-            params: [
-                "mrXPgwhZezYj9tkMyZFGJdHrr1kQnK7aDu"
-            ],
-            response: {
-                "account":"node_3","address":"mrXPgwhZezYj9tkMyZFGJdHrr1kQnK7aDu","hdkeypath":"m/0'/0'/1026'","hdmasterkeyid":"e2aabb596d105e11c1838c0b6bede91e1f2a95ee","iscompressed":true,"ismine":true,"isscript":false,"isvalid":true,"iswatchonly":false,"pubkey":"036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e","scriptPubKey":"76a9141e9098bea4655360446daf63384eb20107c94e7588ac"
-            }
-        },
-        request! {
-            method: "dumpprivkey",
-            params: [
-                "mrXPgwhZezYj9tkMyZFGJdHrr1kQnK7aDu"
-            ],
-            response: "cRUKB8Nrhxwd5Rh6rcX3QK1h7FosYPw5uzEsuPpzLcDNErZCzSaj"
-        },
+    //     request! {
+    //         method: "getnewaddress",
+    //         params: ["node_0"],
+    //         response: "mwfpMzcF1b63RDM2ggzhwcBE8edsVfctUW"
+    //     },
+    //     request! {
+    //         method: "validateaddress",
+    //         params: ["mwfpMzcF1b63RDM2ggzhwcBE8edsVfctUW"],
+    //         response: {
+    //             "account":"node_0","address":"mwfpMzcF1b63RDM2ggzhwcBE8edsVfctUW","hdkeypath":"m/0'/0'/1611'","hdmasterkeyid":"e2aabb596d105e11c1838c0b6bede91e1f2a95ee","iscompressed":true,"ismine":true,"isscript":false,"isvalid":true,"iswatchonly":false,"pubkey":"03475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c","scriptPubKey":"76a914b12f2284d35eb69554f15950aa96935f43fab7a188ac"
+    //         }
+    //     },
+    //     request! {
+    //         method: "dumpprivkey",
+    //         params: ["mwfpMzcF1b63RDM2ggzhwcBE8edsVfctUW"],
+    //         response: "cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE"
+    //     },
+    //     request! {
+    //         method: "getnewaddress",
+    //         params: [
+    //             "node_1"
+    //         ],
+    //         response: "mxaKfmSXj8JR8ZjfPvhi2GFPFbf7cM8tF1"
+    //     },
+    //     request! {
+    //         method: "validateaddress",
+    //         params: [
+    //             "mxaKfmSXj8JR8ZjfPvhi2GFPFbf7cM8tF1"
+    //         ],
+    //         response:
+    //             {"account":"node_1","address":"mxaKfmSXj8JR8ZjfPvhi2GFPFbf7cM8tF1","hdkeypath":"m/0'/0'/1024'","hdmasterkeyid":"e2aabb596d105e11c1838c0b6bede91e1f2a95ee","iscompressed":true,"ismine":true,"isscript":false,"isvalid":true,"iswatchonly":false,"pubkey":"02a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0","scriptPubKey":"76a914d9e2a44fc0f8321aacc1a76fdffa036c0b4eb02e88ac"}
+    //     },
+    //     request! {
+    //         method: "dumpprivkey",
+    //         params: [
+    //             "mxaKfmSXj8JR8ZjfPvhi2GFPFbf7cM8tF1"
+    //         ],
+    //         response:
+    //             "cMk66oMazTgquBVaBLHzDi8FMgAaRN3tSf6iZykf9bCh3D3FsLX1"
+    //     },
+    //     request! {
+    //         method: "getnewaddress",
+    //         params: [
+    //             "node_2"
+    //         ],
+    //         response:
+    //             "mrasCaRhAxTbPpbbwaXQVg9Azyors9g3Zv"
+    //     },
+    //     request! {
+    //         method: "validateaddress",
+    //         params: [
+    //             "mrasCaRhAxTbPpbbwaXQVg9Azyors9g3Zv"
+    //         ],
+    //         response: {
+    //             "account":"node_2","address":"mrasCaRhAxTbPpbbwaXQVg9Azyors9g3Zv","hdkeypath":"m/0'/0'/1025'","hdmasterkeyid":"e2aabb596d105e11c1838c0b6bede91e1f2a95ee","iscompressed":true,"ismine":true,"isscript":false,"isvalid":true,"iswatchonly":false,"pubkey":"0230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb49","scriptPubKey":"76a914df9eb587014e39cda894ab357f43e268de6ace6588ac"
+    //         }
+    //     },
+    //     request! {
+    //         method: "dumpprivkey",
+    //         params: [
+    //             "mrasCaRhAxTbPpbbwaXQVg9Azyors9g3Zv"
+    //         ],
+    //         response: "cT2S5KgUQJ41G6RnakJ2XcofvoxK68L9B44hfFTnH4ddygaxi7rc"
+    //     },
+    //     request! {
+    //         method: "getnewaddress",
+    //         params: [
+    //             "node_3"
+    //         ],
+    //         response: "mrXPgwhZezYj9tkMyZFGJdHrr1kQnK7aDu"
+    //     },
+    //     request! {
+    //         method: "validateaddress",
+    //         params: [
+    //             "mrXPgwhZezYj9tkMyZFGJdHrr1kQnK7aDu"
+    //         ],
+    //         response: {
+    //             "account":"node_3","address":"mrXPgwhZezYj9tkMyZFGJdHrr1kQnK7aDu","hdkeypath":"m/0'/0'/1026'","hdmasterkeyid":"e2aabb596d105e11c1838c0b6bede91e1f2a95ee","iscompressed":true,"ismine":true,"isscript":false,"isvalid":true,"iswatchonly":false,"pubkey":"036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e","scriptPubKey":"76a9141e9098bea4655360446daf63384eb20107c94e7588ac"
+    //         }
+    //     },
+    //     request! {
+    //         method: "dumpprivkey",
+    //         params: [
+    //             "mrXPgwhZezYj9tkMyZFGJdHrr1kQnK7aDu"
+    //         ],
+    //         response: "cRUKB8Nrhxwd5Rh6rcX3QK1h7FosYPw5uzEsuPpzLcDNErZCzSaj"
+    //     },
         request! {
             method: "importaddress",
-            params: ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu", "multisig", false, false]
+            params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
         },
         request! {
             method: "sendtoaddress",
             params: [
-                "2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu",
+                "2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA",
                 "0.00004"
             ],
-            response: "a03b10b17fc8b86dd0b1b6ebcc3bc3c6dd4b7173302ef68628f5ed768dbd7049"
+            response: "a788a2f0a369f3985c5f713d985bb1e7bd3dfb8b35f194b39a5f3ae7d709af9a"
         },
         request! {
             method: "getrawtransaction",
             params: [
-                "a03b10b17fc8b86dd0b1b6ebcc3bc3c6dd4b7173302ef68628f5ed768dbd7049",
+                "a788a2f0a369f3985c5f713d985bb1e7bd3dfb8b35f194b39a5f3ae7d709af9a",
                 0
             ],
-            response: "01000000019532a4022a22226a6f694c3f21216b2c9f5c1c79007eb7d3be06bc2f1f9e52fb000000006a47304402203661efd05ca422fad958b534dbad2e1c7db42bbd1e73e9b91f43a2f7be2f92040220740cf883273978358f25ca5dd5700cce5e65f4f0a0be2e1a1e19a8f168095400012102ae1b03b0f596be41a247080437a50f4d8e825b170770dcb4e5443a2eb2ecab2afeffffff02a00f00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678716e1ff05000000001976a91402f5d7475a10a9c24cea32575bd8993d3fabbfd388ac089e1000"
+            response: "0100000001e56b729856ecd8a9712cb86a8a702bbd05478b0a323f06d2bcfdce373fc9c71b010000006a4730440220410e697174595270abbf2e2542ce42186ef6d48fc0dcf9a2c26cb639d6d9e8930220735ff3e6f464d426eec6dd5acfda268624ef628aab38124a1a0b82c1670dddd501210323751396efcc7e842b522b9d95d84a4f0e4663861124150860d0f728c2cc7d56feffffff02a00f00000000000017a914f18eb74087f751109cc9052befd4177a52c9a30a870313d70b000000001976a914eed3fc59a211ef5cbf1986971cae80bcc983d23a88ac35ae1000"
         },
     ];
     client.expect(requests);
-    generate_anchoring_config(client, 4, ANCHORING_FUNDS)
+    let mut rng: StdRng = SeedableRng::from_seed([1, 2, 3, 4].as_ref());
+    generate_anchoring_config_with_rng(client, 4, ANCHORING_FUNDS, &mut rng)
 }
 
 pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, AnchoringSandboxState)
@@ -273,7 +281,7 @@ pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, Anchori
 
     client.expect(vec![request! {
             method: "importaddress",
-            params: ["2NAkCcmVunAzQvKFgyQDbCApuKd9xwN6SRu", "multisig", false, false]
+            params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
         }]);
     let service = AnchoringService::new(AnchoringRpc(client.clone()),
                                         genesis.clone(),

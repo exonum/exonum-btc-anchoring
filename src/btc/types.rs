@@ -8,7 +8,7 @@ use bitcoin::blockdata::script::Builder;
 use bitcoin::util::hash::Sha256dHash;
 use bitcoin::util::base58::{FromBase58, ToBase58, Error as FromBase58Error};
 
-use secp256k1::key::PublicKey as RawPublicKey;
+pub use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
 
 use exonum::crypto::{HexValue, FromHexError, hash, Hash};
