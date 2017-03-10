@@ -287,7 +287,7 @@ impl AnchoringHandler {
     // все транзакции из цепочки должны быть анкорящими и нам должен быть знаком их выходной адрес
     // самым концом цепочки всегда выступает первая фундирующая транзакция
     fn find_lect_deep(&self,
-                      mut lect: BitcoinTx,
+                      lect: BitcoinTx,
                       multisig: &MultisigAddress,
                       state: &NodeState)
                       -> Result<Option<BitcoinTx>, ServiceError> {
@@ -296,12 +296,16 @@ impl AnchoringHandler {
         let first_funding_tx = schema.lects(id).get(0)?.unwrap();
 
         let mut times = 10000;
+
+        let mut current_tx = lect.clone();
         while times > 0 {
-            let kind = TxKind::from(lect.clone());
+            let kind = TxKind::from(current_tx.clone());
             match kind {
                 TxKind::FundingTx(tx) => {
                     if tx == first_funding_tx {
-                        return Ok(Some(tx.into()));
+                        return Ok(Some(lect.into()));
+                    } else {
+                        return Ok(None);
                     }
                 }
                 TxKind::Anchoring(tx) => {
@@ -310,11 +314,11 @@ impl AnchoringHandler {
                         break;
                     }
                     if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
-                        return Ok(Some(tx.into()));
+                        return Ok(Some(lect.into()));
                     } else {
                         times -= 1;
                         let txid = tx.prev_hash().be_hex_string();
-                        lect = self.client.get_transaction(&txid)?;
+                        current_tx = self.client.get_transaction(&txid)?;
                         debug!("Check prev lect={:#?}", lect);
                     }
                 }

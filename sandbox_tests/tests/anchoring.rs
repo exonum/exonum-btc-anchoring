@@ -18,7 +18,8 @@ use bitcoin::util::base58::ToBase58;
 use exonum::crypto::HexValue;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
-use anchoring_service::sandbox::{Request};
+use anchoring_service::sandbox::Request;
+use anchoring_service::transactions::{TransactionBuilder, AnchoringTx};
 use anchoring_sandbox::{RpcError, anchoring_sandbox};
 use anchoring_sandbox::helpers::*;
 
@@ -137,10 +138,10 @@ fn test_anchoring_second_block_additional_funds() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     let (_, signatures) = anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
-                                                                           10,
-                                                                           block_hash_on_height(&sandbox, 10),
-                                                                           &[funds],
-                                                                           &anchoring_addr);
+                                          10,
+                                          block_hash_on_height(&sandbox, 10),
+                                          &[funds],
+                                          &anchoring_addr);
 
     sandbox.broadcast(signatures[0].clone());
     sandbox.broadcast(signatures[1].clone());
@@ -162,7 +163,7 @@ fn test_anchoring_second_block_additional_funds() {
 
 // We anchor second block after successfuly anchored first
 // problems: second anchoring tx is lost
-// result: we have lost anchoring tx 
+// result: we have lost anchoring tx
 #[test]
 fn test_anchoring_second_block_lect_lost() {
     let _ = ::blockchain_explorer::helpers::init_logger();
@@ -235,20 +236,142 @@ fn test_anchoring_second_block_lect_lost() {
     anchoring_state.latest_anchored_tx = Some((prev_anchored_tx, prev_tx_signatures));
 }
 
-// TODO
-
-// Мы находим lect, у которого prev_hash нам не известен
+// We find lect, whose prev_hash is not known
 // problems: prev_hash is unknown
-// result: мы раскручиваем цепочку до funding_tx и обновляем его
-// #[test]
-// fn test_anchoring_find_lect_chain() {
-//     unimplemented!();
-// }
+// result: we unroll chain to funding_tx up to funding_tx and update lect
+#[test]
+fn test_anchoring_find_lect_chain_normal() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
 
-// Мы находим lect, у которого prev_hash нам не известен
-// problems: prev_hash is unknown
-// result: мы раскручиваем цепочку и находим в ней транзакцию на другой адрес
-// #[test]
-// fn test_anchoring_find_lect_chain_wrong() {
-//     unimplemented!();
-// }
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    // Just add few heights
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
+    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let anchored_txs = (1..3)
+        .map(|height| {
+            anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
+                                                             height,
+                                                             block_hash_on_height(&sandbox,
+                                                                                  height),
+                                                             &[],
+                                                             &anchoring_addr);
+            anchoring_state.latest_anchored_tx().clone()
+        })
+        .collect::<Vec<_>>();
+    let current_anchored_tx = anchored_txs.last().unwrap();
+
+    let request = {
+        let mut request = Vec::new();
+
+        request.push(request! {
+            method: "listunspent",
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            response: [
+                {
+                    "txid": &current_anchored_tx.txid(),
+                    "vout": 0,
+                    "address": &anchoring_addr.to_base58check(),
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 0,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        });
+        for tx in anchored_txs.iter().rev() {
+            request.push(request! {
+                method: "getrawtransaction",
+                params: [&tx.txid(), 0],
+                response: &tx.to_hex()
+            });
+        }
+        request
+    };
+    client.expect(request);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
+    let txs = (0..4)
+        .map(|idx| gen_service_tx_lect(&sandbox, idx, &current_anchored_tx, 2))
+        .collect::<Vec<_>>();
+    sandbox.broadcast(txs[0].clone());
+}
+
+// We find lect, whose prev_hash is not known
+// problems: prev_hash is unknown, chain has wrong prev_hashes
+// result: we unroll chain to funding_tx up to weird tx and discard lect
+#[test]
+fn test_anchoring_find_lect_chain_wrong() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    // Just add few heights
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
+    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let anchored_txs = {
+
+        let mut tx = AnchoringTx::from_hex("0100000001c13d4c739390c799344fa89fb701add04e5ccaf3d580e4d4379c4b897e3a2266000000006b483045022100ff88211040a8a95a42ca8520749c1b2b4024ce07b3ed1b51da8bb90ef77dbe5d022034b34ef638d23ef0ea532e2c84a8816cb32021112d4bcf1457b4e2c149d1b83f01210250749a68b12a93c2cca6f86a9a9c9ba37f5191e85334c340856209a17cca349afeffffff0240420f000000000017a914180d8e6b0ad7f63177e943752c278294709425bd872908da0b000000001976a914dee9f9433b3f2d24cbd833f83a41e4c1235efa3f88acd6ac1000").unwrap();
+        let mut txs = vec![tx.clone()];
+        for height in 1..4 {
+            tx = TransactionBuilder::with_prev_tx(&tx, 0)
+                .fee(100)
+                .payload(height, block_hash_on_height(&sandbox, height))
+                .send_to(anchoring_addr.clone())
+                .into_transaction()
+                .unwrap();
+            txs.push(tx.clone());
+        }
+        anchoring_state.latest_anchored_tx = Some((tx, vec![]));
+        txs
+    };
+    let current_anchored_tx = anchored_txs.last().unwrap();
+
+    let request = {
+        let mut request = Vec::new();
+
+        request.push(request! {
+            method: "listunspent",
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            response: [
+                {
+                    "txid": &current_anchored_tx.txid(),
+                    "vout": 0,
+                    "address": &anchoring_addr.to_base58check(),
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 0,
+                    "spendable": false,
+                    "solvable": false
+                },
+                
+            ]
+        });
+        for tx in anchored_txs.iter().rev() {
+            request.push(request! {
+                method: "getrawtransaction",
+                params: [&tx.txid(), 0],
+                response: &tx.to_hex()
+            });
+        }
+        request
+    };
+    client.expect(request);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
+    let txs = (0..4)
+        .map(|idx| gen_service_tx_lect(&sandbox, idx, &anchoring_state.genesis.funding_tx, 2))
+        .collect::<Vec<_>>();
+    sandbox.broadcast(txs[0].clone());
+}
