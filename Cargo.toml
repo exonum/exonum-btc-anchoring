@@ -20,11 +20,11 @@ log = "0.3.0"
 clap = "2.20.5"
 iron = "0.5.1"
 router = "0.5.1"
+tempdir = "0.3.0"
+rand = "0.3.0"
 
 [dev-dependencies]
-rand = "0.3.0"
 env_logger = "0.3.0"
-tempdir = "0.3.0"
 
 [features]
 default = []

@@ -11,10 +11,9 @@ extern crate byteorder;
 #[macro_use]
 extern crate log;
 #[cfg(test)]
-extern crate rand;
-#[cfg(test)]
 extern crate env_logger;
-#[cfg(test)]
+
+extern crate rand;
 extern crate tempdir;
 
 #[macro_use]

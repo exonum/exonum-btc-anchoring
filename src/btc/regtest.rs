@@ -1,5 +1,5 @@
 use std::ops::Drop;
-use std::process::{Command, Child};
+use std::process::{Command, Child, Stdio};
 use std::path::Path;
 use std::fs;
 use std::fs::File;
@@ -10,6 +10,9 @@ use std::time::Duration;
 
 use bitcoinrpc;
 use bitcoin::util::base58::ToBase58;
+use tempdir::TempDir;
+use rand;
+use rand::Rng;
 
 use client::AnchoringRpc;
 use config::AnchoringRpcConfig;
@@ -45,7 +48,9 @@ impl RegTestNode {
             password: Some("regtest".to_string()),
         };
 
-        let process = Command::new("bitcoind").arg(format!("-datadir={}", dir.to_str().unwrap()))
+        let process = Command::new("bitcoind").stdout(Stdio::piped())
+            .stderr(Stdio::piped())
+            .arg(format!("-datadir={}", dir.to_str().unwrap()))
             .spawn()?;
         let client = AnchoringRpc::new(rpc);
         // Wait for bitcoind node
@@ -59,6 +64,13 @@ impl RegTestNode {
             }
         }
         Err(io::ErrorKind::TimedOut.into())
+    }
+
+    pub fn with_rand_ports<D: AsRef<Path>>(dir: D) -> io::Result<RegTestNode> {
+        let mut rng = rand::thread_rng();
+        let rpc_port = rng.gen();
+        let listen_addr = format!("127.0.0.1:{}", rng.gen::<u16>());
+        RegTestNode::new(dir, listen_addr, rpc_port)
     }
 
     pub fn generate_blocks(&self, n: u64) -> Result<Vec<String>, bitcoinrpc::Error> {
@@ -80,27 +92,28 @@ impl RegTestNode {
 impl Drop for RegTestNode {
     fn drop(&mut self) {
         trace!("stop regtest={:#?}", self.client.stop());
+        thread::sleep(Duration::from_secs(3));
         trace!("kill regtest={:#?}", self.process.kill());
-        trace!("wait regtest={:#?}", self.process.wait());
-        trace!("stderr regtest={:#?}", self.process.stderr);
-        trace!("stdout regtest={:#?}", self.process.stdout);
     }
+}
+
+pub fn temporary_regtest_node() -> io::Result<(TempDir, RegTestNode)> {
+    let tmp_dir = TempDir::new("bitcoind").unwrap();
+    let regtest_node = RegTestNode::with_rand_ports(&tmp_dir)?;
+    Ok((tmp_dir, regtest_node))
 }
 
 #[cfg(test)]
 mod tests {
     extern crate blockchain_explorer;
 
-    use tempdir::TempDir;
-
-    use super::RegTestNode;
+    use super::temporary_regtest_node;
 
     #[test]
     fn test_regtest_generate_blocks() {
         let _ = blockchain_explorer::helpers::init_logger();
 
-        let tmp_dir = TempDir::new("bitcoind").unwrap();
-        let regtest = RegTestNode::new(&tmp_dir, "127.0.0.1:20000", 16000).unwrap();
+        let (_, regtest) = temporary_regtest_node().unwrap();
         regtest.generate_blocks(100).expect("Generate 100 blocks");
     }
 }
