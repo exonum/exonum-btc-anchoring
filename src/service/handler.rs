@@ -84,6 +84,7 @@ impl AnchoringHandler {
     pub fn current_state(&self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
         let actual = self.actual_config(state)?;
         let state = if let Some(cfg) = self.following_config(state)? {
+            debug!("following_cfg={:#?}", cfg);
             if actual.redeem_script().1 != cfg.config.redeem_script().1 {
                 AnchoringState::Transferring {
                     from: actual,
