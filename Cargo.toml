@@ -22,6 +22,7 @@ iron = "0.5.1"
 router = "0.5.1"
 tempdir = "0.3.0"
 rand = "0.3.0"
+derive-error = "0.0.3"
 
 [dev-dependencies]
 env_logger = "0.3.0"

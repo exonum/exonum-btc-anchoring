@@ -231,7 +231,7 @@ impl AnchoringHandler {
                                                              &state.secret_key());
                 state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
                 // Cache lect
-                AnchoringSchema::new(state.view()).add_lect(state.id(), lect);
+                AnchoringSchema::new(state.view()).add_lect(state.id(), lect)?;
             }
         } else {
             // случай, когда транзакция пропала из за форка и была единственная на этот адрес
