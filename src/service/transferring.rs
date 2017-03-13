@@ -30,7 +30,7 @@ impl AnchoringHandler {
             self.try_finalize_proposal_tx(proposal, &multisig, state)?;
         } else {
             // Or try to create proposal
-            match self.collect_lects(state).unwrap() {
+            match self.collect_lects(state)? {
                 LectKind::Anchoring(lect) => {
                     debug!("lect={:#?}", lect);
                     // в этом случае ничего делать не нужно

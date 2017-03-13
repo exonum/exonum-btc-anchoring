@@ -193,7 +193,7 @@ impl AnchoringHandler {
     // Пытаемся обновить нашу последнюю известную анкорящую транзакцию
     // Помимо этого, если мы обнаруживаем, что она набрала достаточно подтверждений
     // для перехода на новый адрес, то переходим на него
-    pub fn update_our_lect(&self,
+    pub fn update_our_lect(&mut self,
                            multisig: &MultisigAddress,
                            state: &mut NodeState)
                            -> Result<(), ServiceError> {
@@ -221,17 +221,7 @@ impl AnchoringHandler {
             debug!("our_lect={:#?}", our_lect);
 
             if lect != our_lect {
-                info!("LECT ====== txid={}, total_count={}",
-                      lect.txid().to_hex(),
-                      lects_count);
-                let lect_msg = MsgAnchoringUpdateLatest::new(&state.public_key(),
-                                                             state.id(),
-                                                             lect.clone(),
-                                                             lects_count,
-                                                             &state.secret_key());
-                state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
-                // Cache lect
-                AnchoringSchema::new(state.view()).add_lect(state.id(), lect)?;
+                self.send_updated_lect(lect, lects_count, state)?;
             }
         } else {
             // случай, когда транзакция пропала из за форка и была единственная на этот адрес
@@ -256,16 +246,7 @@ impl AnchoringHandler {
                 debug!("lect={:#?}", lect);
                 debug!("our_lect={:#?}", our_lect);
 
-                info!("PREV_LECT ====== txid={}, total_count={}",
-                      lect.txid().to_hex(),
-                      lects_count);
-
-                let lect_msg = MsgAnchoringUpdateLatest::new(&state.public_key(),
-                                                             state.id(),
-                                                             lect,
-                                                             lects_count,
-                                                             &state.secret_key());
-                state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
+                self.send_updated_lect(lect, lects_count, state)?;
             }
         }
         Ok(())
@@ -333,5 +314,29 @@ impl AnchoringHandler {
             }
         }
         Ok(None)
+    }
+
+    fn send_updated_lect(&mut self,
+                         lect: BitcoinTx,
+                         lects_count: u64,
+                         state: &mut NodeState)
+                         -> Result<(), StorageError> {
+        if self.proposal_tx.is_some() {
+            self.proposal_tx = None;
+        }
+
+        info!("LECT ====== txid={}, total_count={}",
+              lect.txid().to_hex(),
+              lects_count);
+
+        let lect_msg = MsgAnchoringUpdateLatest::new(&state.public_key(),
+                                                     state.id(),
+                                                     lect.clone(),
+                                                     lects_count,
+                                                     &state.secret_key());
+        state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
+        // Cache lect
+        AnchoringSchema::new(state.view()).add_lect(state.id(), lect)?;
+        Ok(())
     }
 }

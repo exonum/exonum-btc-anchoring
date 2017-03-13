@@ -38,7 +38,7 @@ impl AnchoringHandler {
                                   multisig: &MultisigAddress,
                                   state: &mut NodeState)
                                   -> Result<(), ServiceError> {
-        match self.collect_lects(state).unwrap() {
+        match self.collect_lects(state)? {
             LectKind::Funding(_) => self.try_create_first_proposal_tx(multisig, state),
             LectKind::Anchoring(tx) => {
                 let anchored_height = tx.payload().0;
@@ -163,8 +163,7 @@ impl AnchoringHandler {
 
         let msgs = AnchoringSchema::new(state.view())
             .signatures(&txid)
-            .values()
-            .unwrap();
+            .values()?;
 
         if let Some(signatures) = collect_signatures(&proposal, &multisig.genesis, msgs.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
@@ -184,11 +183,11 @@ impl AnchoringHandler {
 
             debug!("LECT ====== txid={}, total_count={}",
                    new_lect.txid().to_hex(),
-                   AnchoringSchema::new(state.view()).lects(state.id()).len().unwrap());
+                   AnchoringSchema::new(state.view()).lects(state.id()).len()?);
 
             self.proposal_tx = None;
 
-            let lects_count = AnchoringSchema::new(state.view()).lects(state.id()).len().unwrap();
+            let lects_count = AnchoringSchema::new(state.view()).lects(state.id()).len()?;
             let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
                                                         state.id(),
                                                         new_lect.into(),

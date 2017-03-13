@@ -27,12 +27,10 @@ fn anchoring_client() -> AnchoringRpc {
     AnchoringRpc::new(rpc)
 }
 
-fn gen_anchoring_keys(client: &AnchoringRpc,
-                      count: usize)
-                      -> (Vec<btc::PublicKey>, Vec<btc::PrivateKey>) {
+fn gen_anchoring_keys(count: usize) -> (Vec<btc::PublicKey>, Vec<btc::PrivateKey>) {
     let mut validators = Vec::new();
     let mut priv_keys = Vec::new();
-    for i in 0..count {
+    for _ in 0..count {
         let (pub_key, priv_key) = btc::gen_keypair(Network::Testnet);
         validators.push(pub_key);
         priv_keys.push(priv_key);
@@ -138,7 +136,7 @@ fn test_unspent_funding_tx() {
 
     let client = anchoring_client();
 
-    let (validators, _) = gen_anchoring_keys(&client, 4);
+    let (validators, _) = gen_anchoring_keys(4);
 
     let majority_count = ::majority_count(4);
     let (_, address) =
@@ -157,7 +155,7 @@ fn test_anchoring_tx_chain() {
 
     let client = anchoring_client();
 
-    let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
+    let (validators, priv_keys) = gen_anchoring_keys(4);
     let majority_count = ::majority_count(4);
     let (redeem_script, addr) =
         client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
@@ -226,7 +224,7 @@ fn test_anchoring_tx_chain() {
                                 fee);
 
     // Send to next addr
-    let (validators2, priv_keys2) = gen_anchoring_keys(&client, 6);
+    let (validators2, priv_keys2) = gen_anchoring_keys(6);
     let majority_count2 = ::majority_count(6);
     let (redeem_script2, addr2) =
         client.create_multisig_address(Network::Testnet, majority_count2, validators2.iter())
@@ -261,7 +259,7 @@ fn test_anchoring_tx_chain_insufficient_funds() {
 
     let client = anchoring_client();
 
-    let (validators, priv_keys) = gen_anchoring_keys(&client, 4);
+    let (validators, priv_keys) = gen_anchoring_keys(4);
     let majority_count = ::majority_count(4);
     let (redeem_script, addr) =
         client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
