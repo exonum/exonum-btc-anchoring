@@ -174,7 +174,7 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn following_anchoring_config(&self) -> Result<Option<FollowingConfig>, StorageError> {
         let schema = Schema::new(self.view);
-        let idx = schema.get_actual_configuration_index()?;
+        let idx = schema.get_actual_configurations_index()?;
         if let Some(height) = schema.configs_heights().get(idx + 1)? {
             let stored = schema.get_configuration_at_height(height.clone())?.unwrap();
             Ok(Some(FollowingConfig {

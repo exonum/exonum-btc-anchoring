@@ -1,0 +1,17 @@
+[package]
+name = "bitcoinrpc"
+version = "0.1.0"
+authors = ["Aleksei Sidorov <aleksei.sidorov@xdev.re>"]
+
+[dependencies]
+serde = "0.8"
+serde_derive = "0.8"
+serde_json = "0.8"
+log = "0.3"
+bitcoin = "0.9.0"
+hex = "0.2"
+env_logger = "0.3"
+
+[dependencies.jsonrpc-v1]
+version="0.2"
+path="../jsonrpc-v1"
