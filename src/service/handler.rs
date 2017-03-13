@@ -226,10 +226,12 @@ impl AnchoringHandler {
                       lects_count);
                 let lect_msg = MsgAnchoringUpdateLatest::new(&state.public_key(),
                                                              state.id(),
-                                                             lect,
+                                                             lect.clone(),
                                                              lects_count,
                                                              &state.secret_key());
                 state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
+                // Cache lect
+                AnchoringSchema::new(state.view()).add_lect(state.id(), lect);
             }
         } else {
             // случай, когда транзакция пропала из за форка и была единственная на этот адрес
@@ -296,8 +298,12 @@ impl AnchoringHandler {
         let id = state.id();
         let first_funding_tx = schema.lects(id).get(0)?.unwrap();
 
-        let mut times = 10000;
+        // Проверяем саму транзакцию на наличие среди известных
+        if schema.find_lect_position(id, &lect.id())?.is_some() {
+            return Ok(Some(lect.into()));
+        }
 
+        let mut times = 10000;
         let mut current_tx = lect.clone();
         while times > 0 {
             let kind = TxKind::from(current_tx.clone());
@@ -320,7 +326,7 @@ impl AnchoringHandler {
                         times -= 1;
                         let txid = tx.prev_hash().be_hex_string();
                         current_tx = self.client.get_transaction(&txid)?;
-                        debug!("Check prev lect={:#?}", lect);
+                        debug!("Check prev lect={:#?}", current_tx);
                     }
                 }
                 TxKind::Other(_) => return Ok(None),
