@@ -143,27 +143,27 @@ impl<'a> AnchoringSchema<'a> {
     pub fn signatures(&self,
                       txid: &TxId)
                       -> ListTable<MapTable<View, [u8], Vec<u8>>, u64, MsgAnchoringSignature> {
-        let prefix = [&[ANCHORING_SERVICE as u8, 02], txid.as_ref()].concat();
+        let prefix = [&[ANCHORING_SERVICE as u8, 2], txid.as_ref()].concat();
         ListTable::new(MapTable::new(prefix, self.view))
     }
 
     pub fn lects(&self,
                  validator: u32)
                  -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, BitcoinTx> {
-        let mut prefix = vec![ANCHORING_SERVICE as u8, 03, 0, 0, 0, 0, 0, 0, 0, 0];
+        let mut prefix = vec![ANCHORING_SERVICE as u8, 3, 0, 0, 0, 0, 0, 0, 0, 0];
         BigEndian::write_u32(&mut prefix[2..], validator);
         MerkleTable::new(MapTable::new(prefix, self.view))
     }
 
     pub fn lect_indexes(&self, validator: u32) -> MapTable<View, TxId, u64> {
-        let mut prefix = vec![ANCHORING_SERVICE as u8, 04, 0, 0, 0, 0, 0, 0, 0, 0];
+        let mut prefix = vec![ANCHORING_SERVICE as u8, 4, 0, 0, 0, 0, 0, 0, 0, 0];
         BigEndian::write_u32(&mut prefix[2..], validator);
         MapTable::new(prefix, self.view)
     }
 
     // List of known anchoring addresses
     pub fn known_addresses(&self) -> MapTable<View, str, Vec<u8>> {
-        let prefix = vec![ANCHORING_SERVICE as u8, 05];
+        let prefix = vec![ANCHORING_SERVICE as u8, 5];
         MapTable::new(prefix, self.view)
     }
 
@@ -250,8 +250,8 @@ impl MsgAnchoringSignature {
         // Verify signature
         let cfg = schema.current_anchoring_config()?;
         let (redeem_script, _) = cfg.redeem_script();
-        let ref pub_key = cfg.validators[self.validator() as usize];
-        if !tx.verify(&redeem_script, self.input(), &pub_key, self.signature()) {
+        let pub_key = &cfg.validators[self.validator() as usize];
+        if !tx.verify(&redeem_script, self.input(), pub_key, self.signature()) {
             error!("Received tx with incorrect signature content={:#?}", self);
             return Ok(());
         }

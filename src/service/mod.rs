@@ -120,7 +120,7 @@ pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
 
     // remove holes from signatures preserve order
     let mut actual_signatures = HashMap::new();
-    for (input, signatures) in signatures.into_iter() {
+    for (input, signatures) in signatures {
         let signatures = signatures.into_iter()
             .filter_map(|x| x)
             .take(majority_count)

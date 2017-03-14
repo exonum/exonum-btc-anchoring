@@ -71,8 +71,7 @@ impl AnchoringHandler {
                 .unwrap();
 
             let out = funding_tx.find_out(&multisig.addr).unwrap();
-            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out)
-                .fee(multisig.genesis.fee)
+            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out).fee(multisig.genesis.fee)
                 .payload(height, hash)
                 .send_to(multisig.addr.clone())
                 .into_transaction()?;
@@ -82,7 +81,7 @@ impl AnchoringHandler {
                    proposal.0.to_hex());
 
             // Sign proposal
-            self.sign_proposal_tx(proposal, &multisig, state)?;
+            self.sign_proposal_tx(proposal, multisig, state)?;
         } else {
             warn!("Funding transaction is not suitable.");
         }
@@ -105,7 +104,7 @@ impl AnchoringHandler {
                 .fee(multisig.genesis.fee)
                 .payload(height, hash)
                 .send_to(multisig.addr.clone());
-            for funds in self.avaliable_funding_tx(multisig)? {
+            if let Some(funds) = self.avaliable_funding_tx(multisig)? {
                 let out = funds.find_out(&multisig.addr).expect("Funding tx has multisig output");
                 builder = builder.add_funds(&funds, out);
             }
@@ -131,11 +130,11 @@ impl AnchoringHandler {
             let signature = proposal.sign(&multisig.redeem_script, input, &multisig.priv_key);
 
             let sign_msg = MsgAnchoringSignature::new(state.public_key(),
-                                                     state.id(),
-                                                     proposal.clone(),
-                                                     input,
-                                                     &signature,
-                                                     state.secret_key());
+                                                      state.id(),
+                                                      proposal.clone(),
+                                                      input,
+                                                      &signature,
+                                                      state.secret_key());
 
             debug!("Sign_msg={:#?}, sighex={}", sign_msg, signature.to_hex());
             state.add_transaction(AnchoringMessage::Signature(sign_msg));
@@ -161,14 +160,14 @@ impl AnchoringHandler {
             return Ok(());
         }
 
-        let msgs = AnchoringSchema::new(state.view())
-            .signatures(&txid)
-            .values()?;
+        let msgs = AnchoringSchema::new(state.view()).signatures(&txid).values()?;
 
-        if let Some(signatures) = collect_signatures(&proposal, &multisig.genesis, msgs.iter()) {
+        if let Some(signatures) = collect_signatures(&proposal, multisig.genesis, msgs.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
-            if self.client.get_transaction_info(&new_lect.txid())?.is_none() {
+            if self.client
+                   .get_transaction_info(&new_lect.txid())?
+                   .is_none() {
                 self.client.send_transaction(new_lect.clone().into())?;
             }
 
@@ -189,10 +188,10 @@ impl AnchoringHandler {
 
             let lects_count = AnchoringSchema::new(state.view()).lects(state.id()).len()?;
             let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
-                                                        state.id(),
-                                                        new_lect.into(),
-                                                        lects_count,
-                                                        state.secret_key());
+                                                         state.id(),
+                                                         new_lect.into(),
+                                                         lects_count,
+                                                         state.secret_key());
             state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
         } else {
             warn!("Insufficient signatures for proposal={:#?}", proposal);

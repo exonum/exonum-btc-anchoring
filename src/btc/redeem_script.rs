@@ -57,7 +57,7 @@ impl RedeemScript {
         let mut builder = Builder::new();
         let context = Secp256k1::without_caps();
 
-        for instruction in self.0.clone().into_iter() {
+        for instruction in &self.0 {
             match instruction {
                 Instruction::PushBytes(bytes) => {
                     if bytes.len() == 33 {

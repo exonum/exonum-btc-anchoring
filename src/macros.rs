@@ -25,9 +25,6 @@ macro_rules! implement_wrapper {
             fn eq(&self, other: &$from) -> bool {
                 self.0.eq(other)
             }
-            fn ne(&self, other: &$from) -> bool {
-                self.0.ne(other)
-            }
         }
     )
 }
@@ -43,7 +40,7 @@ macro_rules! implement_base58_wrapper {
 
         impl FromBase58 for $to {
             fn from_base58_layout(data: Vec<u8>) -> Result<$to, FromBase58Error> {
-                $from::from_base58_layout(data).map(|x| $to(x))
+                $from::from_base58_layout(data).map($to)
             }
         }
 
@@ -217,9 +214,6 @@ macro_rules! implement_tx_from_raw {
     impl PartialEq<BitcoinTx> for $name {
         fn eq(&self, other: &BitcoinTx) -> bool {
             self.0.eq(other)
-        }
-        fn ne(&self, other: &BitcoinTx) -> bool {
-            self.0.ne(other)
         }
     }
 

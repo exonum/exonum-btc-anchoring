@@ -122,7 +122,7 @@ pub fn generate_anchoring_config_with_rng<R: Rng>
     let (_, address) =
         client.create_multisig_address(BITCOIN_NETWORK, majority_count, pub_keys.iter())
             .unwrap();
-    let tx = FundingTx::create(&client, &address, total_funds).unwrap();
+    let tx = FundingTx::create(client, &address, total_funds).unwrap();
 
     let genesis_cfg = AnchoringConfig::new(pub_keys, tx);
     for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {

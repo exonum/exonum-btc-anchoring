@@ -182,7 +182,7 @@ impl AnchoringHandler {
                      -> Result<Option<BitcoinTx>, ServiceError> {
         let lects: Vec<_> = self.client.unspent_transactions(&multisig.addr)?;
         debug!("lects={:#?}", lects);
-        for lect in lects.into_iter() {
+        for lect in lects {
             if let Some(tx) = self.find_lect_deep(lect, multisig, state)? {
                 return Ok(Some(tx));
             }
@@ -208,7 +208,7 @@ impl AnchoringHandler {
             }
         }
 
-        if let Some(lect) = self.find_lect(&multisig, state)? {
+        if let Some(lect) = self.find_lect(multisig, state)? {
             /// Случай, когда появился новый lect с другим набором подписей
             let (our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
@@ -255,7 +255,7 @@ impl AnchoringHandler {
     pub fn avaliable_funding_tx(&self,
                                 multisig: &MultisigAddress)
                                 -> Result<Option<FundingTx>, ServiceError> {
-        let ref funding_tx = multisig.genesis.funding_tx;
+        let funding_tx = &multisig.genesis.funding_tx;
         if let Some(info) = funding_tx.is_unspent(&self.client, &multisig.addr)? {
             debug!("avaliable_funding_tx={:#?}, confirmations={}",
                    funding_tx,
@@ -329,11 +329,11 @@ impl AnchoringHandler {
               lect.txid().to_hex(),
               lects_count);
 
-        let lect_msg = MsgAnchoringUpdateLatest::new(&state.public_key(),
+        let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
                                                      state.id(),
                                                      lect.clone(),
                                                      lects_count,
-                                                     &state.secret_key());
+                                                     state.secret_key());
         state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
         // Cache lect
         AnchoringSchema::new(state.view()).add_lect(state.id(), lect)?;
