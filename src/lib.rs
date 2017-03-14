@@ -37,7 +37,6 @@ pub mod sandbox;
 mod tests;
 
 use bitcoin::blockdata::script::{Script, Builder};
-use bitcoin::network::constants::Network;
 
 use exonum::crypto::{FromHexError, ToHex, FromHex};
 
@@ -50,8 +49,6 @@ pub use client::{AnchoringRpc, RpcClient};
 pub use btc::RedeemScript;
 
 pub const SATOSHI_DIVISOR: f64 = 100_000_000.0;
-// TODO add feature for bitcoin network
-pub const BITCOIN_NETWORK: Network = Network::Testnet;
 
 pub type BitcoinSignature = Vec<u8>;
 

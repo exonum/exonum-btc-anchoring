@@ -256,7 +256,7 @@ pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
     ];
     client.expect(requests);
     let mut rng: StdRng = SeedableRng::from_seed([1, 2, 3, 4].as_ref());
-    generate_anchoring_config_with_rng(client, 4, ANCHORING_FUNDS, &mut rng)
+    generate_anchoring_config_with_rng(client, btc::Network::Testnet, 4, ANCHORING_FUNDS, &mut rng)
 }
 
 pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, AnchoringSandboxState)

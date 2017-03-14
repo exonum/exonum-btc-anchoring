@@ -4,6 +4,7 @@ use std::fmt;
 pub use bitcoin::blockdata::transaction::Transaction as RawTransaction;
 pub use bitcoin::util::address::{Privkey as RawPrivkey, Address as RawAddress};
 pub use bitcoin::blockdata::script::Script as RawScript;
+pub use bitcoin::network::constants::Network as RawNetwork;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::util::hash::Sha256dHash;
 use bitcoin::util::base58::{FromBase58, ToBase58, Error as FromBase58Error};
@@ -115,5 +116,55 @@ impl StorageValue for RedeemScript {
 
     fn hash(&self) -> Hash {
         hash(self.0.clone().into_vec().as_ref())
+    }
+}
+
+#[derive(Debug, Clone, Copy,  PartialEq)]
+pub enum Network {
+    Bitcoin,
+    Testnet,
+}
+
+impl Into<RawNetwork> for Network {
+    fn into(self) -> RawNetwork {
+        match self {
+            Network::Bitcoin => RawNetwork::Bitcoin,
+            Network::Testnet => RawNetwork::Testnet,
+        }
+    }
+}
+
+impl ::serde::Serialize for Network {
+    fn serialize<S>(&self, ser: &mut S) -> ::std::result::Result<(), S::Error>
+        where S: ::serde::Serializer
+    {
+        match *self {
+            Network::Bitcoin => ser.serialize_str("bitcoin"),
+            Network::Testnet => ser.serialize_str("testnet"),
+        }
+    }
+}
+
+impl ::serde::Deserialize for Network {
+    fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
+        where D: ::serde::Deserializer
+    {
+        struct NetworkVisitor;
+
+        impl ::serde::de::Visitor for NetworkVisitor {
+            type Value = Network;
+
+            fn visit_str<E>(&mut self, s: &str) -> Result<Network, E>
+                where E: ::serde::Error
+            {
+                match s {
+                    "bitcoin" => Ok(Network::Bitcoin),
+                    "testnet" => Ok(Network::Testnet),
+                    _ => Err(::serde::de::Error::invalid_value("Wrong network"))
+                }
+            }
+        }
+
+        deserializer.deserialize_str(NetworkVisitor)
     }
 }

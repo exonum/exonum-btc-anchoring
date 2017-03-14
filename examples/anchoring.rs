@@ -31,6 +31,7 @@ use anchoring_service::AnchoringService;
 use anchoring_service::AnchoringRpc;
 use anchoring_service::config::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
                                 generate_anchoring_config};
+use anchoring_service::btc;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {
@@ -119,7 +120,10 @@ fn main() {
                 password: passwd,
             };
             let (anchoring_genesis, anchoring_nodes) =
-                generate_anchoring_config(&AnchoringRpc::new(rpc.clone()), count, total_funds);
+                generate_anchoring_config(&AnchoringRpc::new(rpc.clone()),
+                                          btc::Network::Testnet,
+                                          count,
+                                          total_funds);
 
             let node_cfgs = generate_testnet_config(count, start_port);
             let dir = dir.join("validators");
