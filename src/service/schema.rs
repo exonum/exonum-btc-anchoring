@@ -62,7 +62,6 @@ pub struct AnchoringSchema<'a> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct FollowingConfig {
     pub actual_from: u64,
-    // pub proposal_height: u64,
     pub config: AnchoringConfig,
 }
 
@@ -234,8 +233,9 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn is_address_known(&self, addr: &btc::Address) -> Result<bool, StorageError> {
-        self.known_addresses().get(&addr.to_base58check())
-        .map(|x| x.is_some())
+        self.known_addresses()
+            .get(&addr.to_base58check())
+            .map(|x| x.is_some())
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {
@@ -246,27 +246,44 @@ impl<'a> AnchoringSchema<'a> {
 impl MsgAnchoringSignature {
     pub fn execute(&self, view: &View) -> Result<(), StorageError> {
         let schema = AnchoringSchema::new(view);
+
         let tx = self.tx();
-        // Verify signature
+        let id = self.validator();
         let cfg = schema.current_anchoring_config()?;
-        let (redeem_script, _) = cfg.redeem_script();
-        let pub_key = &cfg.validators[self.validator() as usize];
-        if !tx.verify(&redeem_script, self.input(), pub_key, self.signature()) {
-            error!("Received tx with incorrect signature content={:#?}", self);
-            return Ok(());
+        // Verify signature
+        if let Some(pub_key) = cfg.validators.get(id as usize) {
+            let (redeem_script, _) = cfg.redeem_script();
+
+            if tx.input.len() as u32 <= self.input() {
+                error!("Received msg with incorrect signature content={:#?}", self);
+                return Ok(());
+            }
+            if !tx.verify(&redeem_script, self.input(), pub_key, self.signature()) {
+                error!("Received msg with incorrect signature content={:#?}", self);
+                return Ok(());
+            }
+            schema.signatures(&tx.id()).append(self.clone())
+        } else {
+            Ok(())
         }
-        schema.signatures(&tx.id()).append(self.clone())
     }
 }
 
 impl MsgAnchoringUpdateLatest {
     pub fn execute(&self, view: &View) -> Result<(), StorageError> {
         let schema = AnchoringSchema::new(view);
+
         let tx = self.tx();
-        // TODO Verify lect
-        if schema.lects(self.validator()).len()? == self.lect_count() {
-            schema.add_lect(self.validator(), tx)?;
+        let id = self.validator();
+        // Verify lect with actual cfg
+        let actual_cfg = Schema::new(view).get_actual_configuration()?;
+        if actual_cfg.validators.get(id as usize) != Some(self.from()) {
+            error!("Received weird lect msg={:#?}", self);
+            return Ok(());
         }
-        Ok(())
+        if schema.lects(id).len()? != self.lect_count() {
+            return Ok(());
+        }
+        schema.add_lect(id, tx)
     }
 }

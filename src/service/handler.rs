@@ -225,12 +225,12 @@ impl AnchoringHandler {
             }
         } else {
             // случай, когда транзакция пропала из за форка и была единственная на этот адрес
-            let (lect, our_lect, lects_count) = {
+            let (prev_lect, our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
 
-                let lect = {
-                    if let Some(lect) = schema.prev_lect(state.id())? {
-                        lect
+                let prev_lect = {
+                    if let Some(prev_lect) = schema.prev_lect(state.id())? {
+                        prev_lect
                     } else {
                         warn!("Unable to find previous lect!");
                         return Ok(());
@@ -239,14 +239,14 @@ impl AnchoringHandler {
                 let our_lect: AnchoringTx = schema.lect(state.id())?
                     .into();
                 let count = schema.lects(state.id()).len()?;
-                (lect, our_lect, count)
+                (prev_lect, our_lect, count)
             };
 
             if our_lect.output_address(multisig.genesis.network()) == multisig.addr {
-                debug!("lect={:#?}", lect);
+                debug!("prev_lect={:#?}", prev_lect);
                 debug!("our_lect={:#?}", our_lect);
 
-                self.send_updated_lect(lect, lects_count, state)?;
+                self.send_updated_lect(prev_lect, lects_count, state)?;
             }
         }
         Ok(())

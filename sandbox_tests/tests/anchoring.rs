@@ -13,13 +13,18 @@ extern crate blockchain_explorer;
 #[macro_use]
 extern crate log;
 
+use std::ops::Deref;
+
 use bitcoin::util::base58::ToBase58;
+use bitcoin::blockdata::script::Script;
 
 use exonum::crypto::HexValue;
+use exonum::messages::Message;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
 use anchoring_service::sandbox::Request;
 use anchoring_service::transactions::{TransactionBuilder, AnchoringTx};
+use anchoring_service::MsgAnchoringSignature;
 use anchoring_sandbox::{RpcError, anchoring_sandbox};
 use anchoring_sandbox::helpers::*;
 
@@ -374,4 +379,210 @@ fn test_anchoring_find_lect_chain_wrong() {
         .map(|idx| gen_service_tx_lect(&sandbox, idx, &anchoring_state.genesis.funding_tx, 2))
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
+}
+
+// We received lect message with correct content
+// problems: None
+// result: we appect it
+#[test]
+fn test_anchoring_lect_correct_validator() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let lect = gen_service_tx_lect_wrong(&sandbox, 0, 0, anchoring_state.latest_anchored_tx(), 2);
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[lect]);
+    // Ensure that service accept it
+    let lects_after = dump_lects(&sandbox, 0);
+    assert_eq!(lects_after.last().unwrap(),
+               anchoring_state.latest_anchored_tx().deref());
+}
+
+// We received lect message with different validator id
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_lect_wrong_validator() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let wrong_lect =
+        gen_service_tx_lect_wrong(&sandbox, 2, 0, anchoring_state.latest_anchored_tx(), 2);
+
+    let lects_before = dump_lects(&sandbox, 0);
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[wrong_lect]);
+    // Ensure that service ignore tx
+    let lects_after = dump_lects(&sandbox, 0);
+    assert_eq!(lects_after, lects_before);
+}
+
+// We received lect message with nonexistent validator id
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_lect_nonexistent_validator() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let wrong_lect =
+        gen_service_tx_lect_wrong(&sandbox, 2, 1000, anchoring_state.latest_anchored_tx(), 2);
+
+    let lects_before = dump_lects(&sandbox, 2);
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[wrong_lect]);
+    // Ensure that service ignore tx
+    let lects_after = dump_lects(&sandbox, 0);
+    assert_eq!(lects_after, lects_before);
+}
+
+// We received signature message with wrong sign
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_signature_wrong_validator() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let signatures = anchoring_state.latest_anchored_tx_signatures();
+    let tx = {
+        let mut tx = anchoring_state.latest_anchored_tx().clone();
+        tx.0.input[0].script_sig = Script::new();
+        tx
+    };
+
+    let wrong_sign = MsgAnchoringSignature::new(sandbox.p(1),
+                                                1,
+                                                tx.clone(),
+                                                0,
+                                                signatures[0].signature(),
+                                                sandbox.s(1));
+
+
+    let signs_before = dump_signatures(&sandbox, &tx.id());
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[wrong_sign.raw().clone()]);
+    // Ensure that service ignore tx
+    let signs_after = dump_signatures(&sandbox, &tx.id());
+    assert_eq!(signs_before, signs_after);
+}
+
+// We received correct signature message with nonexistent id
+// problems: None
+// result: we add signature
+#[test]
+fn test_anchoring_signature_nonexistent_tx() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let signatures = anchoring_state.latest_anchored_tx_signatures();
+    let tx = anchoring_state.latest_anchored_tx().clone();
+
+    let msg_sign = MsgAnchoringSignature::new(sandbox.p(1),
+                                              1,
+                                              tx.clone(),
+                                              0,
+                                              signatures[1].signature(),
+                                              sandbox.s(1));
+
+
+    let signs_before = dump_signatures(&sandbox, &tx.id());
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_sign.raw().clone()]);
+    // Ensure that service adds it
+    let signs_after = dump_signatures(&sandbox, &tx.id());
+
+    assert!(signs_before.is_empty());
+    assert_eq!(signs_after[0], msg_sign);
+}
+
+// We received signature message with wrong sign
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_signature_nonexistent_validator() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let signatures = anchoring_state.latest_anchored_tx_signatures();
+    let tx = {
+        let mut tx = anchoring_state.latest_anchored_tx().clone();
+        tx.0.input[0].script_sig = Script::new();
+        tx
+    };
+
+    let wrong_sign = MsgAnchoringSignature::new(sandbox.p(1),
+                                                1000,
+                                                tx.clone(),
+                                                0,
+                                                signatures[0].signature(),
+                                                sandbox.s(1));
+
+
+    let signs_before = dump_signatures(&sandbox, &tx.id());
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[wrong_sign.raw().clone()]);
+    // Ensure that service ignore tx
+    let signs_after = dump_signatures(&sandbox, &tx.id());
+    assert_eq!(signs_before, signs_after);
+}
+
+// We received signature message with wrong sign
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_signature_nonexistent_input() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let signatures = anchoring_state.latest_anchored_tx_signatures();
+    let tx = {
+        let mut tx = anchoring_state.latest_anchored_tx().clone();
+        tx.0.input[0].script_sig = Script::new();
+        tx
+    };
+
+    let wrong_sign = MsgAnchoringSignature::new(sandbox.p(1),
+                                                0,
+                                                tx.clone(),
+                                                100,
+                                                signatures[0].signature(),
+                                                sandbox.s(1));
+
+
+    let signs_before = dump_signatures(&sandbox, &tx.id());
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[wrong_sign.raw().clone()]);
+    // Ensure that service ignore tx
+    let signs_after = dump_signatures(&sandbox, &tx.id());
+    assert_eq!(signs_before, signs_after);
 }

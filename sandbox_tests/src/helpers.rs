@@ -14,7 +14,7 @@ use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactio
 use sandbox::config_updater::TxConfig;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest};
+use anchoring_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest, MsgAnchoringSignature, AnchoringSchema};
 use anchoring_service::transactions::{BitcoinTx, RawBitcoinTx};
 use anchoring_service::config::AnchoringConfig;
 use anchoring_service::btc;
@@ -32,6 +32,34 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                                           count,
                                           sandbox.s(validator as usize));
     tx.raw().clone()
+}
+
+pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
+                                 real_id: u32,
+                                 fake_id: u32,
+                                 tx: &RawBitcoinTx,
+                                 count: u64)
+                                 -> RawTransaction {
+    let tx = MsgAnchoringUpdateLatest::new(sandbox.p(real_id as usize),
+                                           fake_id,
+                                           BitcoinTx::from(tx.clone()),
+                                           count,
+                                           sandbox.s(real_id as usize));
+    tx.raw().clone()
+}
+
+pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
+    let b = sandbox.blockchain_copy().clone();
+    let v = b.view();
+    let s = AnchoringSchema::new(&v);
+    s.lects(id).values().unwrap()
+}
+
+pub fn dump_signatures(sandbox: &Sandbox, txid: &btc::TxId) -> Vec<MsgAnchoringSignature> {
+    let b = sandbox.blockchain_copy().clone();
+    let v = b.view();
+    let s = AnchoringSchema::new(&v);
+    s.signatures(txid).values().unwrap()
 }
 
 pub fn gen_update_config_tx(sandbox: &Sandbox,
