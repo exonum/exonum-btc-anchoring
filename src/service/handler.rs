@@ -33,7 +33,7 @@ pub enum AnchoringState {
         from: AnchoringConfig,
         to: AnchoringConfig,
     },
-    Waiting { cfg: AnchoringConfig },
+    Recoverring { cfg: AnchoringConfig },
     Broken,
 }
 
@@ -97,38 +97,13 @@ impl AnchoringHandler {
             let schema = AnchoringSchema::new(state.view());
 
             let current_lect = schema.lect(state.id())?;
-            if let Some(prev_lect) = schema.prev_lect(state.id())? {
-                let current_lect = if let TxKind::Anchoring(tx) = TxKind::from(current_lect) {
-                    tx
-                } else {
-                    return Ok(AnchoringState::Anchoring { cfg: actual });
-                };
-                let prev_lect = if let TxKind::Anchoring(tx) = TxKind::from(prev_lect) {
-                    tx
-                } else {
-                    return Ok(AnchoringState::Anchoring { cfg: actual });
-                };
-
-                debug!("prev_lect={:#?}", prev_lect);
-                debug!("current_lect={:#?}", current_lect);
-
+            if let TxKind::Anchoring(current_lect) = TxKind::from(current_lect) {
                 let current_addr = current_lect.output_address(actual.network());
-                if current_addr != actual.redeem_script().1 {
-                    AnchoringState::Waiting { cfg: actual }
-                } else {
-                    let prev_addr = prev_lect.output_address(actual.network());
-                    if current_addr != prev_addr {
-                        let confirmations = current_lect.confirmations(&self.client)?
-                            .unwrap_or_else(|| 0);
 
-                        if confirmations < actual.utxo_confirmations {
-                            AnchoringState::Waiting { cfg: actual }
-                        } else {
-                            AnchoringState::Anchoring { cfg: actual }
-                        }
-                    } else {
-                        AnchoringState::Anchoring { cfg: actual }
-                    }
+                if current_addr != actual.redeem_script().1 {
+                    AnchoringState::Recoverring { cfg: actual }
+                } else {
+                    AnchoringState::Anchoring { cfg: actual }
                 }
             } else {
                 AnchoringState::Anchoring { cfg: actual }
@@ -143,7 +118,7 @@ impl AnchoringHandler {
             AnchoringState::Transferring { from, to } => {
                 self.handle_transferring_state(from, to, state)
             }
-            AnchoringState::Waiting { cfg } => self.handle_waiting_state(cfg, state),
+            AnchoringState::Recoverring { cfg } => self.handle_recovering_state(cfg, state),
             AnchoringState::Broken => panic!("Broken anchoring state detected!"),
         }
     }
@@ -196,7 +171,7 @@ impl AnchoringHandler {
     pub fn update_our_lect(&mut self,
                            multisig: &MultisigAddress,
                            state: &mut NodeState)
-                           -> Result<(), ServiceError> {
+                           -> Result<Option<BitcoinTx>, ServiceError> {
         debug!("Update our lect");
         // убеждаемся, что нам известен этот адрес
         {
@@ -221,35 +196,33 @@ impl AnchoringHandler {
             debug!("our_lect={:#?}", our_lect);
 
             if lect != our_lect {
-                self.send_updated_lect(lect, lects_count, state)?;
+                self.send_updated_lect(lect.clone(), lects_count, state)?;
             }
+
+            Ok(Some(lect.into()))
         } else {
-            // случай, когда транзакция пропала из за форка и была единственная на этот адрес
-            let (prev_lect, our_lect, lects_count) = {
+            let (prev_lect, current_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
 
-                let prev_lect = {
-                    if let Some(prev_lect) = schema.prev_lect(state.id())? {
-                        prev_lect
-                    } else {
-                        warn!("Unable to find previous lect!");
-                        return Ok(());
-                    }
-                };
-                let our_lect: AnchoringTx = schema.lect(state.id())?
-                    .into();
-                let count = schema.lects(state.id()).len()?;
-                (prev_lect, our_lect, count)
+                let prev_lect = schema.prev_lect(state.id())?.map(TxKind::from);
+                let current_lect = TxKind::from(schema.lect(state.id())?);
+                let lects_count = schema.lects(state.id()).len()?;
+                (prev_lect, current_lect, lects_count)
             };
 
-            if our_lect.output_address(multisig.genesis.network()) == multisig.addr {
-                debug!("prev_lect={:#?}", prev_lect);
-                debug!("our_lect={:#?}", our_lect);
+            if let (Some(TxKind::Anchoring(prev_lect)), TxKind::Anchoring(current_lect)) =
+                (prev_lect, current_lect) {
+                    
+                let network = multisig.genesis.network();
+                let prev_lect_addr = prev_lect.output_address(network);
+                let current_lect_addr = current_lect.output_address(network);
 
-                self.send_updated_lect(prev_lect, lects_count, state)?;
+                if current_lect_addr == multisig.addr && current_lect_addr != prev_lect_addr {
+                    self.send_updated_lect(prev_lect.into(), lects_count, state)?;
+                }
             }
+            Ok(None)
         }
-        Ok(())
     }
 
     pub fn avaliable_funding_tx(&self,
@@ -260,9 +233,7 @@ impl AnchoringHandler {
             debug!("avaliable_funding_tx={:#?}, confirmations={}",
                    funding_tx,
                    info.confirmations);
-            if info.confirmations >= multisig.genesis.utxo_confirmations {
-                return Ok(Some(funding_tx.clone()));
-            }
+            return Ok(Some(funding_tx.clone()));
         }
         Ok(None)
     }

@@ -5,19 +5,22 @@ use bitcoin::util::base58::ToBase58;
 use config::AnchoringConfig;
 use error::Error as ServiceError;
 use service::{AnchoringHandler, MultisigAddress, LectKind};
+use transactions::AnchoringTx;
+use AnchoringSchema;
 
 impl AnchoringHandler {
     pub fn handle_transferring_state(&mut self,
-                                    from: AnchoringConfig,
-                                    to: AnchoringConfig,
-                                    state: &mut NodeState)
-                                    -> Result<(), ServiceError> {
+                                     from: AnchoringConfig,
+                                     to: AnchoringConfig,
+                                     state: &mut NodeState)
+                                     -> Result<(), ServiceError> {
         let multisig: MultisigAddress = {
             let mut multisig = self.multisig_address(&from);
             multisig.addr = to.redeem_script().1;
             multisig
         };
-        debug!("Transferring state, addr={}", multisig.addr.to_base58check());
+        debug!("Transferring state, addr={}",
+               multisig.addr.to_base58check());
 
         // Точно так же обновляем lect каждые n блоков
         if state.height() % self.node.check_lect_frequency == 0 {
@@ -63,18 +66,30 @@ impl AnchoringHandler {
         Ok(())
     }
 
-    pub fn handle_waiting_state(&mut self,
-                                cfg: AnchoringConfig,
-                                state: &mut NodeState)
-                                -> Result<(), ServiceError> {
+    pub fn handle_recovering_state(&mut self,
+                                   cfg: AnchoringConfig,
+                                   state: &mut NodeState)
+                                   -> Result<(), ServiceError> {
         let multisig: MultisigAddress = self.multisig_address(&cfg);
-        debug!("Waiting after transfer state, addr={}",
+        debug!("Trying to recover tx chain after transfer to addr={}",
                multisig.addr.to_base58check());
 
-        // Точно так же обновляем lect каждые n блоков
         if state.height() % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
             self.update_our_lect(&multisig, state)?;
+            // Check prev lect
+            let prev_lect: AnchoringTx = AnchoringSchema::new(state.view())
+                .prev_lect(state.id())?
+                .unwrap()
+                .into();
+            let network = multisig.genesis.network();
+            if prev_lect.output_address(network) == multisig.addr {
+                // resend transferring transaction
+                self.client.send_transaction(prev_lect.into())?;
+            } else {
+                // start a new anchoring transaction from scratch
+                // TODO
+            }
         }
         Ok(())
     }

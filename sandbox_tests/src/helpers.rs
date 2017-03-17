@@ -67,6 +67,7 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
                             service_cfg: AnchoringConfig)
                             -> RawTransaction {
     let mut cfg = sandbox.cfg();
+    cfg.actual_from = actual_from;
     *cfg.services.get_mut(&ANCHORING_SERVICE).unwrap() = service_cfg.to_json();
     let tx = TxConfig::new(sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
     tx.raw().clone()

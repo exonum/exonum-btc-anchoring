@@ -360,7 +360,6 @@ fn test_anchoring_find_lect_chain_wrong() {
                     "spendable": false,
                     "solvable": false
                 },
-                
             ]
         });
         for tx in anchored_txs.iter().rev() {
@@ -374,11 +373,6 @@ fn test_anchoring_find_lect_chain_wrong() {
     };
     client.expect(request);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-
-    let txs = (0..4)
-        .map(|idx| gen_service_tx_lect(&sandbox, idx, &anchoring_state.genesis.funding_tx, 2))
-        .collect::<Vec<_>>();
-    sandbox.broadcast(txs[0].clone());
 }
 
 // We received lect message with correct content
