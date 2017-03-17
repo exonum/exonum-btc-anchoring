@@ -76,9 +76,7 @@ impl Service for AnchoringService {
         let handler = self.handler.lock().unwrap();
         let cfg = self.genesis.clone();
         let (_, addr) = cfg.redeem_script();
-        handler.client
-            .importaddress(&addr.to_base58check(), "multisig", false, false)
-            .unwrap();
+        handler.client.importaddress(&addr.to_base58check(), "multisig", false, false).unwrap();
 
         AnchoringSchema::new(view).create_genesis_config(&cfg)?;
         Ok(cfg.to_json())
@@ -86,7 +84,10 @@ impl Service for AnchoringService {
 
     fn handle_commit(&self, state: &mut NodeState) -> Result<(), StorageError> {
         debug!("Handle commit, height={}", state.height());
-        match self.handler.lock().unwrap().handle_commit(state) {
+        match self.handler
+                  .lock()
+                  .unwrap()
+                  .handle_commit(state) {
             Err(ServiceError::Storage(e)) => Err(e),
             Err(e) => {
                 error!("An error occured: {:?}", e);

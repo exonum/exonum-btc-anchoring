@@ -1,7 +1,7 @@
 use std::ops::Deref;
 
 use bitcoinrpc;
-use bitcoin::util::base58::{ToBase58};
+use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;
 
 use exonum::crypto::HexValue;
@@ -41,7 +41,9 @@ impl AnchoringRpc {
         Ok(BitcoinTx::from_hex(tx).unwrap())
     }
 
-    pub fn get_transaction_info(&self, txid: &str) -> Result<Option<bitcoinrpc::RawTransactionInfo>> {
+    pub fn get_transaction_info(&self,
+                                txid: &str)
+                                -> Result<Option<bitcoinrpc::RawTransactionInfo>> {
         let r = self.0.getrawtransaction_verbose(txid);
         match r {
             Ok(tx) => Ok(Some(tx)),
@@ -81,14 +83,12 @@ impl AnchoringRpc {
                                            addr: &str,
                                            limit: u32)
                                            -> Result<Vec<bitcoinrpc::TransactionInfo>> {
-        self.0
-            .listtransactions(limit, 0, true)
-            .map(|v| {
-                v.into_iter()
-                    .rev()
-                    .filter(|tx| tx.address == Some(addr.into()))
-                    .collect::<Vec<_>>()
-            })
+        self.0.listtransactions(limit, 0, true).map(|v| {
+            v.into_iter()
+                .rev()
+                .filter(|tx| tx.address == Some(addr.into()))
+                .collect::<Vec<_>>()
+        })
     }
 
     pub fn get_unspent_transactions(&self,

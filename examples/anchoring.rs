@@ -77,30 +77,30 @@ fn main() {
         .version(env!("CARGO_PKG_VERSION"))
         .author("Aleksey S. <aleksei.sidorov@xdev.re>")
         .subcommand(GenerateCommand::new()
-            .arg(Arg::with_name("ANCHORING_RPC_HOST")
-                .long("anchoring-host")
-                .value_name("ANCHORING_RPC_HOST")
-                .takes_value(true))
-            .arg(Arg::with_name("ANCHORING_RPC_USER")
-                .long("anchoring-user")
-                .value_name("ANCHORING_RPC_USER")
-                .required(false)
-                .takes_value(true))
-            .arg(Arg::with_name("ANCHORING_RPC_PASSWD")
-                .long("anchoring-password")
-                .value_name("ANCHORING_RPC_PASSWD")
-                .required(false)
-                .takes_value(true))
-            .arg(Arg::with_name("ANCHORING_FUNDS")
-                .long("anchoring-funds")
-                .value_name("ANCHORING_FUNDS")
-                .takes_value(true)))
+                        .arg(Arg::with_name("ANCHORING_RPC_HOST")
+                                 .long("anchoring-host")
+                                 .value_name("ANCHORING_RPC_HOST")
+                                 .takes_value(true))
+                        .arg(Arg::with_name("ANCHORING_RPC_USER")
+                                 .long("anchoring-user")
+                                 .value_name("ANCHORING_RPC_USER")
+                                 .required(false)
+                                 .takes_value(true))
+                        .arg(Arg::with_name("ANCHORING_RPC_PASSWD")
+                                 .long("anchoring-password")
+                                 .value_name("ANCHORING_RPC_PASSWD")
+                                 .required(false)
+                                 .takes_value(true))
+                        .arg(Arg::with_name("ANCHORING_FUNDS")
+                                 .long("anchoring-funds")
+                                 .value_name("ANCHORING_FUNDS")
+                                 .takes_value(true)))
         .subcommand(RunCommand::new().arg(Arg::with_name("HTTP_PORT")
-            .short("p")
-            .long("port")
-            .value_name("HTTP_PORT")
-            .help("Run http server on given port")
-            .takes_value(true)));
+                                              .short("p")
+                                              .long("port")
+                                              .value_name("HTTP_PORT")
+                                              .help("Run http server on given port")
+                                              .takes_value(true)));
     let matches = app.get_matches();
 
     match matches.subcommand() {
@@ -112,7 +112,10 @@ fn main() {
             let host = matches.value_of("ANCHORING_RPC_HOST").unwrap().to_string();
             let user = matches.value_of("ANCHORING_RPC_USER").map(|x| x.to_string());
             let passwd = matches.value_of("ANCHORING_RPC_PASSWD").map(|x| x.to_string());
-            let total_funds: u64 = matches.value_of("ANCHORING_FUNDS").unwrap().parse().unwrap();
+            let total_funds: u64 = matches.value_of("ANCHORING_FUNDS")
+                .unwrap()
+                .parse()
+                .unwrap();
 
             let rpc = AnchoringRpcConfig {
                 host: host,
@@ -146,8 +149,7 @@ fn main() {
             let cfg: ServicesConfig = ConfigFile::load(&path).unwrap();
 
             let anchoring_cfg = cfg.anchoring_service;
-            let services: Vec<Box<Service>> =
-                vec![Box::new(AnchoringService::new(AnchoringRpc::new(anchoring_cfg.node
+            let services: Vec<Box<Service>> = vec![Box::new(AnchoringService::new(AnchoringRpc::new(anchoring_cfg.node
                                                         .rpc
                                                         .clone()),
                                                     anchoring_cfg.genesis,

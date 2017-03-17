@@ -212,7 +212,7 @@ impl AnchoringHandler {
 
             if let (Some(TxKind::Anchoring(prev_lect)), TxKind::Anchoring(current_lect)) =
                 (prev_lect, current_lect) {
-                    
+
                 let network = multisig.genesis.network();
                 let prev_lect_addr = prev_lect.output_address(network);
                 let current_lect_addr = current_lect.output_address(network);
@@ -248,7 +248,9 @@ impl AnchoringHandler {
                       -> Result<Option<BitcoinTx>, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let id = state.id();
-        let first_funding_tx = schema.lects(id).get(0)?.unwrap();
+        let first_funding_tx = schema.lects(id)
+            .get(0)?
+            .unwrap();
 
         // Проверяем саму транзакцию на наличие среди известных
         if schema.find_lect_position(id, &lect.id())?.is_some() {

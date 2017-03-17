@@ -73,12 +73,11 @@ impl AnchoringHandler {
                 .unwrap();
 
             let out = funding_tx.find_out(&multisig.addr).unwrap();
-            let proposal =
-                TransactionBuilder::with_prev_tx(&funding_tx, out).fee(multisig.genesis.fee)
-                    .payload(height, hash)
-                    .prev_tx_chain(prev_tx_chain)
-                    .send_to(multisig.addr.clone())
-                    .into_transaction()?;
+            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out).fee(multisig.genesis.fee)
+                .payload(height, hash)
+                .prev_tx_chain(prev_tx_chain)
+                .send_to(multisig.addr.clone())
+                .into_transaction()?;
 
             debug!("initial_proposal={:#?}, txhex={}",
                    proposal,
@@ -170,8 +169,8 @@ impl AnchoringHandler {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
             if self.client
-                .get_transaction_info(&new_lect.txid())?
-                .is_none() {
+                   .get_transaction_info(&new_lect.txid())?
+                   .is_none() {
                 self.client.send_transaction(new_lect.clone().into())?;
             }
 

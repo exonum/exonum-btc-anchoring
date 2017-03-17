@@ -58,9 +58,9 @@ impl RegTestNode {
             thread::sleep(Duration::from_secs(2));
             if client.getinfo().is_ok() {
                 return Ok(RegTestNode {
-                    process: process,
-                    client: client,
-                });
+                              process: process,
+                              client: client,
+                          });
             }
         }
         Err(io::ErrorKind::TimedOut.into())

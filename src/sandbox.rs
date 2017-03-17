@@ -61,7 +61,7 @@ impl SandboxClient {
             .expect(format!("expected response for method={}, params={:#?}",
                             method,
                             params)
-                .as_str());
+                            .as_str());
 
         assert_eq!(expected.method, method);
         assert_eq!(expected.params,
@@ -79,7 +79,10 @@ impl SandboxClient {
                     "Send unexpected requests: {:#?}",
                     requests.deref());
         }
-        self.requests.lock().unwrap().extend(requests);
+        self.requests
+            .lock()
+            .unwrap()
+            .extend(requests);
     }
     pub fn getinfo(&self) -> Result<Info> {
         self.request("getinfo", Vec::new())

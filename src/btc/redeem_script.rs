@@ -25,9 +25,7 @@ impl RedeemScript {
             total_count += 1;
         }
 
-        let script = builder.push_int(total_count)
-            .push_opcode(All::OP_CHECKMULTISIG)
-            .into_script();
+        let script = builder.push_int(total_count).push_opcode(All::OP_CHECKMULTISIG).into_script();
         RedeemScript(script)
     }
 
@@ -42,9 +40,7 @@ impl RedeemScript {
             total_count += 1;
         }
 
-        let script = builder.push_int(total_count)
-            .push_opcode(All::OP_CHECKMULTISIG)
-            .into_script();
+        let script = builder.push_int(total_count).push_opcode(All::OP_CHECKMULTISIG).into_script();
         RedeemScript(script)
     }
 
@@ -104,9 +100,9 @@ mod tests {
                     "02bdd272891c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a5",
                     "03280883dc31ccaee34218819aaa245480c35a33acd91283586ff6d1284ed681e5",
                     "03e2bc790a6e32bf5a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb0"]
-            .into_iter()
-            .map(|x| PublicKey::from_hex(x).unwrap())
-            .collect::<Vec<_>>();
+                .into_iter()
+                .map(|x| PublicKey::from_hex(x).unwrap())
+                .collect::<Vec<_>>();
 
         let redeem_script = RedeemScript::from_pubkeys(&keys, 3);
         assert_eq!(redeem_script.to_hex(), redeem_script_hex);
@@ -126,9 +122,8 @@ mod tests {
     fn test_sign_raw_transaction() {
         let unsigned_tx = BitcoinTx::from_hex("01000000015d1b8ba33a162d8f6e7c5707fbb557e726c32f30f77f2ba348a48c3c5d71ee0b0000000000ffffffff02b80b00000000000017a914889fc9c82819c7a728974ffa78cc884e3e9e68838700000000000000002c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000").unwrap();
 
-        let priv_key =
-            Privkey::from_base58check("cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE")
-                .unwrap();
+        let priv_key = Privkey::from_base58check("cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE")
+            .unwrap();
         let pub_key = {
             let context = Secp256k1::new();
             RawPublicKey::from_secret_key(&context, priv_key.secret_key()).unwrap()

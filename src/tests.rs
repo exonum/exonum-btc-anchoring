@@ -45,12 +45,9 @@ fn make_signatures(redeem_script: &btc::RedeemScript,
                    -> HashMap<u32, Vec<BitcoinSignature>> {
     let majority_count = (priv_keys.len() as u8) * 2 / 3 + 1;
 
-    let mut signatures = inputs.iter()
-        .map(|input| (*input, vec![None; priv_keys.len()]))
-        .collect::<Vec<_>>();
-    let mut priv_keys = priv_keys.iter()
-        .enumerate()
-        .collect::<Vec<_>>();
+    let mut signatures =
+        inputs.iter().map(|input| (*input, vec![None; priv_keys.len()])).collect::<Vec<_>>();
+    let mut priv_keys = priv_keys.iter().enumerate().collect::<Vec<_>>();
     rand::thread_rng().shuffle(&mut priv_keys);
 
     for (input_idx, input) in inputs.iter().enumerate() {
@@ -103,7 +100,11 @@ fn send_anchoring_tx(client: &AnchoringRpc,
     assert_eq!(tx.payload(), (block_height, block_hash));
 
     debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
-    let lect_tx = client.unspent_transactions(&to).unwrap().first().unwrap().clone();
+    let lect_tx = client.unspent_transactions(&to)
+        .unwrap()
+        .first()
+        .unwrap()
+        .clone();
     assert_eq!(lect_tx.0, tx.0);
     tx
 }
@@ -186,7 +187,11 @@ fn test_anchoring_tx_chain() {
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
         assert!(funding_tx.is_unspent(&client, &addr).unwrap().is_none());
-        let lect_tx = client.unspent_transactions(&addr).unwrap().first().unwrap().clone();
+        let lect_tx = client.unspent_transactions(&addr)
+            .unwrap()
+            .first()
+            .unwrap()
+            .clone();
         assert_eq!(lect_tx.0, tx.0);
         tx
     };
@@ -290,7 +295,11 @@ fn test_anchoring_tx_chain_insufficient_funds() {
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
         assert!(funding_tx.is_unspent(&client, &addr).unwrap().is_none());
-        let lect_tx = client.unspent_transactions(&addr).unwrap().first().unwrap().clone();
+        let lect_tx = client.unspent_transactions(&addr)
+            .unwrap()
+            .first()
+            .unwrap()
+            .clone();
         assert_eq!(lect_tx.0, tx.0);
         tx
     };

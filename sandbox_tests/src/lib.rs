@@ -62,11 +62,18 @@ impl AnchoringSandboxState {
     }
 
     pub fn latest_anchored_tx(&self) -> &AnchoringTx {
-        &self.latest_anchored_tx.as_ref().unwrap().0
+        &self.latest_anchored_tx
+             .as_ref()
+             .unwrap()
+             .0
     }
 
     pub fn latest_anchored_tx_signatures(&self) -> &[MsgAnchoringSignature] {
-        self.latest_anchored_tx.as_ref().unwrap().1.as_ref()
+        self.latest_anchored_tx
+            .as_ref()
+            .unwrap()
+            .1
+            .as_ref()
     }
 
     pub fn gen_anchoring_tx_with_signatures(&mut self,
@@ -100,9 +107,7 @@ impl AnchoringSandboxState {
         };
         self.latest_anchored_tx = Some((signed_tx, signs.clone()));
 
-        let signs = signs.into_iter()
-            .map(|tx| tx.raw().clone())
-            .collect::<Vec<_>>();
+        let signs = signs.into_iter().map(|tx| tx.raw().clone()).collect::<Vec<_>>();
         (propose_tx, signs)
     }
 

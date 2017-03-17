@@ -125,8 +125,7 @@ pub fn generate_anchoring_config_with_rng<R>(client: &AnchoringRpc,
 
     let majority_count = ::majority_count(count);
     let (_, address) =
-        client.create_multisig_address(network.into(), majority_count, pub_keys.iter())
-            .unwrap();
+        client.create_multisig_address(network.into(), majority_count, pub_keys.iter()).unwrap();
     let tx = FundingTx::create(client, &address, total_funds).unwrap();
 
     let genesis_cfg = AnchoringConfig::new(pub_keys, tx);

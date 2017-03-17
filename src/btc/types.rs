@@ -83,7 +83,10 @@ impl HexValue for PublicKey {
 
 impl HexValue for RedeemScript {
     fn to_hex(&self) -> String {
-        self.0.clone().into_vec().to_hex()
+        self.0
+            .clone()
+            .into_vec()
+            .to_hex()
     }
     fn from_hex<T: AsRef<str>>(v: T) -> Result<Self, FromHexError> {
         let bytes = Vec::<u8>::from_hex(v.as_ref())?;
@@ -115,7 +118,10 @@ impl StorageValue for RedeemScript {
     }
 
     fn hash(&self) -> Hash {
-        hash(self.0.clone().into_vec().as_ref())
+        hash(self.0
+                 .clone()
+                 .into_vec()
+                 .as_ref())
     }
 }
 
@@ -160,7 +166,7 @@ impl ::serde::Deserialize for Network {
                 match s {
                     "bitcoin" => Ok(Network::Bitcoin),
                     "testnet" => Ok(Network::Testnet),
-                    _ => Err(::serde::de::Error::invalid_value("Wrong network"))
+                    _ => Err(::serde::de::Error::invalid_value("Wrong network")),
                 }
             }
         }

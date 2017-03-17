@@ -177,9 +177,9 @@ impl<'a> AnchoringSchema<'a> {
         if let Some(height) = schema.configs_heights().get(idx + 1)? {
             let stored = schema.get_configuration_at_height(height.clone())?.unwrap();
             Ok(Some(FollowingConfig {
-                actual_from: stored.actual_from,
-                config: self.parse_config(&stored),
-            }))
+                        actual_from: stored.actual_from,
+                        config: self.parse_config(&stored),
+                    }))
         } else {
             Ok(None)
         }
@@ -233,9 +233,7 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn is_address_known(&self, addr: &btc::Address) -> Result<bool, StorageError> {
-        self.known_addresses()
-            .get(&addr.to_base58check())
-            .map(|x| x.is_some())
+        self.known_addresses().get(&addr.to_base58check()).map(|x| x.is_some())
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {
