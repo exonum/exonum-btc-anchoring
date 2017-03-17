@@ -14,7 +14,8 @@ use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactio
 use sandbox::config_updater::TxConfig;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest, MsgAnchoringSignature, AnchoringSchema};
+use anchoring_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest, MsgAnchoringSignature,
+                        AnchoringSchema};
 use anchoring_service::transactions::{BitcoinTx, RawBitcoinTx};
 use anchoring_service::config::AnchoringConfig;
 use anchoring_service::btc;
@@ -27,10 +28,10 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            count: u64)
                            -> RawTransaction {
     let tx = MsgAnchoringUpdateLatest::new(sandbox.p(validator as usize),
-                                          validator,
-                                          BitcoinTx::from(tx.clone()),
-                                          count,
-                                          sandbox.s(validator as usize));
+                                           validator,
+                                           BitcoinTx::from(tx.clone()),
+                                           count,
+                                           sandbox.s(validator as usize));
     tx.raw().clone()
 }
 
@@ -106,11 +107,11 @@ pub fn anchor_first_block(sandbox: &Sandbox,
         }]);
 
     let (_, signatures) = anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
-        0,
-        sandbox.last_hash(),
-        &[],
-        &anchoring_addr,
-    );
+                                                                           0,
+                                                                           sandbox.last_hash(),
+                                                                           &[],
+                                                                           None,
+                                                                           &anchoring_addr);
     let anchored_tx = anchoring_state.latest_anchored_tx();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
@@ -340,6 +341,7 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
         10,
         sandbox.last_hash(),
         &[],
+        None,
         &btc::Address::from_base58check(&anchoring_addr.to_base58check()).unwrap()
     );
     let anchored_tx = anchoring_state.latest_anchored_tx();

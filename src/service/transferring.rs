@@ -87,8 +87,9 @@ impl AnchoringHandler {
                 // resend transferring transaction
                 self.client.send_transaction(prev_lect.into())?;
             } else {
-                // start a new anchoring transaction from scratch
-                // TODO
+                // start a new anchoring chain from scratch
+                let lect_id = AnchoringSchema::new(state.view()).lect(state.id())?.id();
+                self.try_create_anchoring_tx_chain(&multisig, Some(lect_id), state)?;
             }
         }
         Ok(())

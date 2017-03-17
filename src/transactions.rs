@@ -31,6 +31,7 @@ pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
 const ANCHORING_TX_FUNDS_OUTPUT: u32 = 0;
 const ANCHORING_TX_DATA_OUTPUT: u32 = 1;
+// const ANCHORING_TX_PREV_CHAIN_OUTPUT: u32 = 2;
 // Структура у анкорящей транзакции строгая:
 // - нулевой вход это прошлая анкорящая транзакция или фундирующая, если транзакция исходная
 // - нулевой выход это всегда следующая анкорящая транзакция
@@ -59,6 +60,7 @@ pub struct TransactionBuilder {
     output: Option<btc::Address>,
     fee: Option<u64>,
     payload: Option<(u64, Hash)>,
+    prev_tx_chain: Option<TxId>,
 }
 
 impl HexValueEx for RawBitcoinTx {
@@ -98,10 +100,10 @@ impl FundingTx {
             .iter()
             .position(|output| if let Some(Instruction::PushBytes(bytes)) =
                 output.script_pubkey.into_iter().nth(1) {
-                          Hash160::from(bytes) == redeem_script_hash
-                      } else {
-                          false
-                      })
+                Hash160::from(bytes) == redeem_script_hash
+            } else {
+                false
+            })
             .map(|x| x as u32)
     }
 
@@ -124,10 +126,10 @@ impl AnchoringTx {
         let script = &self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].script_pubkey;
         let bytes = script.into_iter()
             .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
-                            Some(bytes)
-                        } else {
-                            None
-                        })
+                Some(bytes)
+            } else {
+                None
+            })
             .next()
             .unwrap();
 
@@ -145,6 +147,10 @@ impl AnchoringTx {
 
     pub fn payload(&self) -> (Height, Hash) {
         find_payload(&self.0).expect("Unable to find payload")
+    }
+
+    pub fn prev_tx_chain(&self) -> Option<TxId> {
+        unimplemented!();
     }
 
     pub fn prev_hash(&self) -> TxId {
@@ -239,6 +245,7 @@ impl TransactionBuilder {
             output: None,
             payload: None,
             fee: None,
+            prev_tx_chain: None,
         }
     }
 
@@ -262,6 +269,11 @@ impl TransactionBuilder {
         self
     }
 
+    pub fn prev_tx_chain(mut self, txid: Option<TxId>) -> TransactionBuilder {
+        self.prev_tx_chain = txid;
+        self
+    }
+
     pub fn into_transaction(mut self) -> Result<AnchoringTx, ServiceError> {
         let available_funds: u64 = self.inputs
             .iter()
@@ -275,8 +287,13 @@ impl TransactionBuilder {
             return Err(ServiceError::InsufficientFunds);
         }
         let total_funds = available_funds - fee;
-        let tx =
-            create_anchoring_transaction(addr, height, block_hash, self.inputs.iter(), total_funds);
+
+        let tx = create_anchoring_transaction(addr,
+                                              height,
+                                              block_hash,
+                                              self.inputs.iter(),
+                                              total_funds,
+                                              self.prev_tx_chain);
         Ok(tx)
     }
 }
@@ -285,7 +302,8 @@ fn create_anchoring_transaction<'a, I>(addr: btc::Address,
                                        block_height: Height,
                                        block_hash: Hash,
                                        inputs: I,
-                                       out_funds: u64)
+                                       out_funds: u64,
+                                       prev_chain_txid: Option<TxId>)
                                        -> AnchoringTx
     where I: Iterator<Item = &'a (RawBitcoinTx, u32)>
 {
@@ -310,14 +328,31 @@ fn create_anchoring_transaction<'a, I>(addr: btc::Address,
         };
         Builder::new().push_opcode(All::OP_RETURN).push_slice(data.as_ref()).into_script()
     };
-    let outputs = vec![TxOut {
-                           value: out_funds,
-                           script_pubkey: addr.script_pubkey(),
-                       },
-                       TxOut {
-                           value: 0,
-                           script_pubkey: metadata_script,
-                       }];
+    let mut outputs = vec![TxOut {
+                               value: out_funds,
+                               script_pubkey: addr.script_pubkey(),
+                           },
+                           TxOut {
+                               value: 0,
+                               script_pubkey: metadata_script,
+                           }];
+
+    if let Some(prev_chain_txid) = prev_chain_txid {
+        let txout = TxOut {
+            value: 0,
+            script_pubkey: {
+                let data = {
+                    let mut data = [0u8; 34];
+                    data[0] = 1; // version
+                    data[1] = 32; // data len
+                    data[2..34].copy_from_slice(prev_chain_txid.as_ref());
+                    data
+                };
+                Builder::new().push_opcode(All::OP_RETURN).push_slice(data.as_ref()).into_script()
+            },
+        };
+        outputs.push(txout);
+    }
 
     let tx = RawBitcoinTx {
         version: 1,
@@ -397,20 +432,20 @@ fn find_payload(tx: &RawBitcoinTx) -> Option<(Height, Hash)> {
             output.script_pubkey
                 .into_iter()
                 .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
-                                Some(bytes)
-                            } else {
-                                None
-                            })
+                    Some(bytes)
+                } else {
+                    None
+                })
                 .next()
         })
         .and_then(|bytes| if bytes.len() == 42 && bytes[0] == 1 {
-                      // TODO check len
-                      let height = LittleEndian::read_u64(&bytes[2..10]);
-                      let block_hash = Hash::from_slice(&bytes[10..42]).unwrap();
-                      Some((height, block_hash))
-                  } else {
-                      None
-                  })
+            // TODO check len
+            let height = LittleEndian::read_u64(&bytes[2..10]);
+            let block_hash = Hash::from_slice(&bytes[10..42]).unwrap();
+            Some((height, block_hash))
+        } else {
+            None
+        })
 }
 
 #[cfg(test)]
@@ -439,9 +474,9 @@ mod tests {
                     "02bdd272891c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a5",
                     "03280883dc31ccaee34218819aaa245480c35a33acd91283586ff6d1284ed681e5",
                     "03e2bc790a6e32bf5a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb0"]
-                .into_iter()
-                .map(|x| PublicKey::from_hex(x).unwrap())
-                .collect::<Vec<_>>();
+            .into_iter()
+            .map(|x| PublicKey::from_hex(x).unwrap())
+            .collect::<Vec<_>>();
 
         let redeem_script = RedeemScript::from_pubkeys(&keys, 3);
         assert_eq!(redeem_script.to_hex(), redeem_script_hex);
@@ -461,8 +496,9 @@ mod tests {
     fn test_sign_raw_transaction() {
         let unsigned_tx = BitcoinTx::from_hex("01000000015d1b8ba33a162d8f6e7c5707fbb557e726c32f30f77f2ba348a48c3c5d71ee0b0000000000ffffffff02b80b00000000000017a914889fc9c82819c7a728974ffa78cc884e3e9e68838700000000000000002c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000").unwrap();
 
-        let priv_key = Privkey::from_base58check("cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE")
-            .unwrap();
+        let priv_key =
+            Privkey::from_base58check("cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE")
+                .unwrap();
         let pub_key = {
             let context = Secp256k1::new();
             RawPublicKey::from_secret_key(&context, priv_key.secret_key()).unwrap()
@@ -496,17 +532,17 @@ mod tests {
                          "cMk66oMazTgquBVaBLHzDi8FMgAaRN3tSf6iZykf9bCh3D3FsLX1",
                          "cT2S5KgUQJ41G6RnakJ2XcofvoxK68L9B44hfFTnH4ddygaxi7rc",
                          "cRUKB8Nrhxwd5Rh6rcX3QK1h7FosYPw5uzEsuPpzLcDNErZCzSaj"]
-                .iter()
-                .map(|x| btc::PrivateKey::from_base58check(x).unwrap())
-                .collect::<Vec<_>>();
+            .iter()
+            .map(|x| btc::PrivateKey::from_base58check(x).unwrap())
+            .collect::<Vec<_>>();
 
         let pub_keys = ["03475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c",
                         "02a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0",
                         "0230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb49",
                         "036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e"]
-                .iter()
-                .map(|x| btc::PublicKey::from_hex(x).unwrap())
-                .collect::<Vec<_>>();
+            .iter()
+            .map(|x| btc::PublicKey::from_hex(x).unwrap())
+            .collect::<Vec<_>>();
         let redeem_script = RedeemScript::from_pubkeys(pub_keys.iter(), 3)
             .compressed(Network::Testnet);
 
@@ -546,9 +582,9 @@ mod tests {
                         "02a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0",
                         "0230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb49",
                         "036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e"]
-                .iter()
-                .map(|x| btc::PublicKey::from_hex(x).unwrap())
-                .collect::<Vec<_>>();
+            .iter()
+            .map(|x| btc::PublicKey::from_hex(x).unwrap())
+            .collect::<Vec<_>>();
         let redeem_script = RedeemScript::from_pubkeys(&pub_keys, 3).compressed(Network::Testnet);
 
         assert_eq!(tx.output_address(Network::Testnet).to_base58check(),

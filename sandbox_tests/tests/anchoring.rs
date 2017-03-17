@@ -113,40 +113,42 @@ fn test_anchoring_second_block_additional_funds() {
 
     let funds = anchoring_state.genesis.funding_tx.clone();
     client.expect(vec![request! {
-            method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
-            response: [
-                {
-                    "txid": "fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491",
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 1,
-                    "spendable": false,
-                    "solvable": false
-                },
-                {
-                    "txid": &funds.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 75,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
-        }]);
+                            method: "listunspent",
+                            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+                            response: [
+                                {
+                                    "txid": "fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491",
+                                    "vout": 0,
+                                    "address": &anchoring_addr.to_base58check(),
+                                    "account": "multisig",
+                                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                                    "amount": 0.00010000,
+                                    "confirmations": 1,
+                                    "spendable": false,
+                                    "solvable": false
+                                },
+                                {
+                                    "txid": &funds.txid(),
+                                    "vout": 0,
+                                    "address": &anchoring_addr.to_base58check(),
+                                    "account": "multisig",
+                                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                                    "amount": 0.00010000,
+                                    "confirmations": 75,
+                                    "spendable": false,
+                                    "solvable": false
+                                }
+                            ]
+                        }]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
-    let (_, signatures) = anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
-                                          10,
-                                          block_hash_on_height(&sandbox, 10),
-                                          &[funds],
-                                          &anchoring_addr);
+    let (_, signatures) =
+        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
+                                                         10,
+                                                         block_hash_on_height(&sandbox, 10),
+                                                         &[funds],
+                                                         None,
+                                                         &anchoring_addr);
 
     sandbox.broadcast(signatures[0].clone());
     sandbox.broadcast(signatures[1].clone());
@@ -189,27 +191,27 @@ fn test_anchoring_second_block_lect_lost() {
     }
 
     client.expect(vec![request! {
-            method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
-            response: [
-                {
-                    "txid": &prev_anchored_tx.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
-        },
+                            method: "listunspent",
+                            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+                            response: [
+                                {
+                                    "txid": &prev_anchored_tx.txid(),
+                                    "vout": 0,
+                                    "address": &anchoring_addr.to_base58check(),
+                                    "account": "multisig",
+                                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                                    "amount": 0.00010000,
+                                    "confirmations": 0,
+                                    "spendable": false,
+                                    "solvable": false
+                                }
+                            ]
+                        },
                        request! {
-            method: "getrawtransaction",
-            params: [&prev_anchored_tx.txid(), 0],
-            response: &prev_anchored_tx.to_hex()
-        }]);
+                            method: "getrawtransaction",
+                            params: [&prev_anchored_tx.txid(), 0],
+                            response: &prev_anchored_tx.to_hex()
+                        }]);
 
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
@@ -220,22 +222,22 @@ fn test_anchoring_second_block_lect_lost() {
 
     // Trying to resend lost lect tx
     client.expect(vec![request! {
-            method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
-            response: [
-                {
-                    "txid": &prev_anchored_tx.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
-        }]);
+                        method: "listunspent",
+                        params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+                        response: [
+                            {
+                                "txid": &prev_anchored_tx.txid(),
+                                "vout": 0,
+                                "address": &anchoring_addr.to_base58check(),
+                                "account": "multisig",
+                                "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                                "amount": 0.00010000,
+                                "confirmations": 0,
+                                "spendable": false,
+                                "solvable": false
+                            }
+                        ]
+                    }]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &txs);
 
     anchoring_state.latest_anchored_tx = Some((prev_anchored_tx, prev_tx_signatures));
@@ -264,6 +266,7 @@ fn test_anchoring_find_lect_chain_normal() {
                                                              block_hash_on_height(&sandbox,
                                                                                   height),
                                                              &[],
+                                                             None,
                                                              &anchoring_addr);
             anchoring_state.latest_anchored_tx().clone()
         })

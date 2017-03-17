@@ -4,6 +4,7 @@ use exonum::crypto::ToHex;
 
 use bitcoin::util::base58::ToBase58;
 
+use btc;
 use btc::HexValueEx;
 use config::AnchoringConfig;
 use transactions::{AnchoringTx, TransactionBuilder};
@@ -39,7 +40,7 @@ impl AnchoringHandler {
                                   state: &mut NodeState)
                                   -> Result<(), ServiceError> {
         match self.collect_lects(state)? {
-            LectKind::Funding(_) => self.try_create_first_proposal_tx(multisig, state),
+            LectKind::Funding(_) => self.try_create_anchoring_tx_chain(multisig, None, state),
             LectKind::Anchoring(tx) => {
                 let anchored_height = tx.payload().0;
                 let nearest_anchored_height = multisig.genesis
@@ -57,10 +58,11 @@ impl AnchoringHandler {
     }
 
     // Create first anchoring tx proposal from funding tx in AnchoringNodeConfig
-    pub fn try_create_first_proposal_tx(&mut self,
-                                        multisig: &MultisigAddress,
-                                        state: &mut NodeState)
-                                        -> Result<(), ServiceError> {
+    pub fn try_create_anchoring_tx_chain(&mut self,
+                                         multisig: &MultisigAddress,
+                                         prev_tx_chain: Option<btc::TxId>,
+                                         state: &mut NodeState)
+                                         -> Result<(), ServiceError> {
         debug!("Create first proposal tx");
         if let Some(funding_tx) = self.avaliable_funding_tx(multisig)? {
             // Create anchoring proposal
@@ -71,10 +73,12 @@ impl AnchoringHandler {
                 .unwrap();
 
             let out = funding_tx.find_out(&multisig.addr).unwrap();
-            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out).fee(multisig.genesis.fee)
-                .payload(height, hash)
-                .send_to(multisig.addr.clone())
-                .into_transaction()?;
+            let proposal =
+                TransactionBuilder::with_prev_tx(&funding_tx, out).fee(multisig.genesis.fee)
+                    .payload(height, hash)
+                    .prev_tx_chain(prev_tx_chain)
+                    .send_to(multisig.addr.clone())
+                    .into_transaction()?;
 
             debug!("initial_proposal={:#?}, txhex={}",
                    proposal,
@@ -166,8 +170,8 @@ impl AnchoringHandler {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
             if self.client
-                   .get_transaction_info(&new_lect.txid())?
-                   .is_none() {
+                .get_transaction_info(&new_lect.txid())?
+                .is_none() {
                 self.client.send_transaction(new_lect.clone().into())?;
             }
 

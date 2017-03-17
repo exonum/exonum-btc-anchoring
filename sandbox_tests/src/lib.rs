@@ -74,6 +74,7 @@ impl AnchoringSandboxState {
                                             height: u64,
                                             block_hash: Hash,
                                             funds: &[FundingTx],
+                                            prev_tx_chain: Option<btc::TxId>,
                                             addr: &btc::Address)
                                             -> (AnchoringTx, Vec<RawTransaction>) {
         let (propose_tx, signed_tx, signs) = {
@@ -84,6 +85,7 @@ impl AnchoringSandboxState {
 
             let mut builder = TransactionBuilder::with_prev_tx(prev_tx, 0)
                 .payload(height, block_hash)
+                .prev_tx_chain(prev_tx_chain)
                 .send_to(addr.clone())
                 .fee(1000);
             for fund in funds {
