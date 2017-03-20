@@ -76,7 +76,8 @@ impl AnchoringHandler {
 
         if state.height() % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
-            if self.update_our_lect(&multisig, state)?.is_none() {
+            let lect = self.update_our_lect(&multisig, state)?;
+            if lect.is_none() {
                 // Check prev lect
                 let prev_lect: AnchoringTx = AnchoringSchema::new(state.view())
                     .prev_lect(state.id())?

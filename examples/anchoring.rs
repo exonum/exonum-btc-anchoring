@@ -98,7 +98,12 @@ fn main() {
                                  .long("anchoring-funds")
                                  .value_name("ANCHORING_FUNDS")
                                  .takes_value(true)))
-        .subcommand(SubCommand::with_name("keypair").help("Generates a new bitcoin keypair"))
+        .subcommand(SubCommand::with_name("keypair")
+                        .help("Generates a new bitcoin keypair")
+                        .arg(Arg::with_name("NETWORK")
+                                 .help("Keypair network")
+                                 .required(true)
+                                 .index(1)))
         .subcommand(RunCommand::new().arg(Arg::with_name("HTTP_PORT")
                                               .short("p")
                                               .long("port")
@@ -162,8 +167,14 @@ fn main() {
             let blockchain = Blockchain::new(db, services);
             run_node(blockchain, cfg.node, port)
         }
-        ("keypair", Some(_)) => {
-            let (p, s) = btc::gen_keypair(Network::Testnet);
+        ("keypair", Some(matches)) => {
+            let network = match matches.value_of("NETWORK").unwrap() {
+                "testnet" => Network::Testnet,
+                "bitcoin" => Network::Bitcoin,
+                _ => panic!("Wrong network type"),
+            };
+
+            let (p, s) = btc::gen_keypair(network);
             println!("pub_key={}", p.to_hex());
             println!("sec_key={}", s.to_base58check());
         }
