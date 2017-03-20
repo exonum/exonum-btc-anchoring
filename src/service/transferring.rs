@@ -76,20 +76,22 @@ impl AnchoringHandler {
 
         if state.height() % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
-            self.update_our_lect(&multisig, state)?;
-            // Check prev lect
-            let prev_lect: AnchoringTx = AnchoringSchema::new(state.view())
-                .prev_lect(state.id())?
-                .unwrap()
-                .into();
-            let network = multisig.genesis.network();
-            if prev_lect.output_address(network) == multisig.addr {
-                // resend transferring transaction
-                self.client.send_transaction(prev_lect.into())?;
-            } else {
-                // start a new anchoring chain from scratch
-                let lect_id = AnchoringSchema::new(state.view()).lect(state.id())?.id();
-                self.try_create_anchoring_tx_chain(&multisig, Some(lect_id), state)?;
+            if self.update_our_lect(&multisig, state)?.is_none() {
+                // Check prev lect
+                let prev_lect: AnchoringTx = AnchoringSchema::new(state.view())
+                    .prev_lect(state.id())?
+                    .unwrap()
+                    .into();
+                let network = multisig.genesis.network();
+                if prev_lect.output_address(network) == multisig.addr {
+                    // resend transferring transaction
+                    debug!("Resend transferring transaction, txid={}", prev_lect.txid());
+                    self.client.send_transaction(prev_lect.into())?;
+                } else {
+                    // start a new anchoring chain from scratch
+                    let lect_id = AnchoringSchema::new(state.view()).lect(state.id())?.id();
+                    self.try_create_anchoring_tx_chain(&multisig, Some(lect_id), state)?;
+                }
             }
         }
         Ok(())

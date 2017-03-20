@@ -6,6 +6,7 @@ extern crate log;
 extern crate serde_derive;
 extern crate iron;
 extern crate router;
+extern crate bitcoin;
 
 extern crate exonum;
 extern crate blockchain_explorer;
@@ -15,13 +16,15 @@ extern crate configuration_service;
 use std::net::SocketAddr;
 use std::thread;
 
-use clap::{App, Arg};
+use clap::{App, Arg, SubCommand};
 use router::Router;
-
+use bitcoin::network::constants::Network;
+use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::{Blockchain, Service};
 use exonum::node::{Node, NodeConfig};
 use exonum::config::ConfigFile;
+use exonum::crypto::HexValue;
 use blockchain_explorer::helpers::{GenerateCommand, RunCommand, generate_testnet_config};
 use blockchain_explorer::config_api::ConfigApi;
 use blockchain_explorer::api::Api;
@@ -30,7 +33,7 @@ use configuration_service::ConfigurationService;
 use anchoring_service::AnchoringService;
 use anchoring_service::AnchoringRpc;
 use anchoring_service::config::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
-                                generate_anchoring_config};
+                                testnet_generate_anchoring};
 use anchoring_service::btc;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -95,6 +98,7 @@ fn main() {
                                  .long("anchoring-funds")
                                  .value_name("ANCHORING_FUNDS")
                                  .takes_value(true)))
+        .subcommand(SubCommand::with_name("keypair").help("Generates a new bitcoin keypair"))
         .subcommand(RunCommand::new().arg(Arg::with_name("HTTP_PORT")
                                               .short("p")
                                               .long("port")
@@ -123,10 +127,10 @@ fn main() {
                 password: passwd,
             };
             let (anchoring_genesis, anchoring_nodes) =
-                generate_anchoring_config(&AnchoringRpc::new(rpc.clone()),
-                                          btc::Network::Testnet,
-                                          count,
-                                          total_funds);
+                testnet_generate_anchoring(&AnchoringRpc::new(rpc.clone()),
+                                           btc::Network::Testnet,
+                                           count,
+                                           total_funds);
 
             let node_cfgs = generate_testnet_config(count, start_port);
             let dir = dir.join("validators");
@@ -157,6 +161,11 @@ fn main() {
                      Box::new(ConfigurationService::new())];
             let blockchain = Blockchain::new(db, services);
             run_node(blockchain, cfg.node, port)
+        }
+        ("keypair", Some(_)) => {
+            let (p, s) = btc::gen_keypair(Network::Testnet);
+            println!("pub_key={}", p.to_hex());
+            println!("sec_key={}", s.to_base58check());
         }
         _ => {
             panic!("Wrong subcommand");

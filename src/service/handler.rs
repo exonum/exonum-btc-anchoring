@@ -1,6 +1,5 @@
 use exonum::blockchain::NodeState;
 use exonum::storage::{List, Error as StorageError};
-use exonum::crypto::ToHex;
 
 use bitcoin::util::base58::ToBase58;
 
@@ -299,7 +298,7 @@ impl AnchoringHandler {
         }
 
         info!("LECT ====== txid={}, total_count={}",
-              lect.txid().to_hex(),
+              lect.txid(),
               lects_count);
 
         let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),

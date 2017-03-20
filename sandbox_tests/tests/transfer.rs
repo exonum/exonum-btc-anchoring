@@ -50,6 +50,29 @@ fn gen_following_cfg(sandbox: &Sandbox,
     (gen_update_config_tx(sandbox, from_height, cfg.clone()), cfg)
 }
 
+fn gen_following_cfg_unchanged_self_key(sandbox: &Sandbox,
+                                        anchoring_state: &mut AnchoringSandboxState,
+                                        from_height: u64,
+                                        funds: Option<FundingTx>)
+                                        -> (RawTransaction, AnchoringConfig) {
+    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+
+    let mut cfg = anchoring_state.genesis.clone();
+    let mut priv_keys = anchoring_state.priv_keys(&anchoring_addr);
+    cfg.validators.swap(1, 2);
+    priv_keys.swap(1, 2);
+    if let Some(funds) = funds {
+        cfg.funding_tx = funds;
+    }
+
+    let following_addr = cfg.redeem_script().1;
+    for (id, ref mut node) in anchoring_state.nodes.iter_mut().enumerate() {
+        node.private_keys.insert(following_addr.to_base58check(), priv_keys[id].clone());
+    }
+    anchoring_state.handler().add_private_key(&following_addr, priv_keys[0].clone());
+    (gen_update_config_tx(sandbox, from_height, cfg.clone()), cfg)
+}
+
 // We commit a new configuration and take actions to transfer tx chain to the new address
 // problems:
 // - none
@@ -64,6 +87,192 @@ fn test_anchoring_transfer_config_normal() {
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
     let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, &mut anchoring_state, 16, None);
+    let (_, following_addr) = following_cfg.redeem_script();
+
+    // Check insufficient confirmations case
+    let anchored_tx = anchoring_state.latest_anchored_tx().clone();
+    client.expect(vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&anchored_tx.txid(), 1],
+            response: {
+                "hash":&anchored_tx.txid(),"hex":&anchored_tx.to_hex(),"confirmations": 10,
+                "locktime":1088682,"size":223,"txid":"4ae2de1782b19ddab252d88d570f60bc821bd745d031029a8b28f7427c8d0e93","version":1,"vin":[{"scriptSig":{"asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876","hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"},"sequence":429496729,"txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645","vout":0}],"vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],"asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL","hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87","reqSigs":1,"type":"scripthash"},"value":0.00004},{"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],"asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac","reqSigs":1,"type":"pubkeyhash"},"value":1.00768693}],"vsize":223
+            }
+        }
+    ]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[cfg_tx]);
+
+    // Check enough confirmations case
+    client.expect(vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&anchored_tx.txid(), 1],
+            response: {
+                "hash":&anchored_tx.txid(),"hex":&anchored_tx.to_hex(),"confirmations": 100,
+                "locktime":1088682,"size":223,"txid":"4ae2de1782b19ddab252d88d570f60bc821bd745d031029a8b28f7427c8d0e93","version":1,"vin":[{"scriptSig":{"asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876","hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"},"sequence":429496729,"txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645","vout":0}],"vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],"asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL","hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87","reqSigs":1,"type":"scripthash"},"value":0.00004},{"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],"asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac","reqSigs":1,"type":"pubkeyhash"},"value":1.00768693}],"vsize":223
+            }
+        },
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [following_addr]],
+            response: []
+        }
+    ]);
+
+    let following_multisig = following_cfg.redeem_script();
+    let (_, signatures) =
+        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
+                                                         0,
+                                                         anchored_tx.payload().1,
+                                                         &[],
+                                                         None,
+                                                         &following_multisig.1);
+    let transfer_tx = anchoring_state.latest_anchored_tx().clone();
+
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    sandbox.broadcast(signatures[0].clone());
+
+    client.expect(vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&transfer_tx.txid(), 1],
+            response: {
+                "hash":&transfer_tx.txid(),"hex":&transfer_tx.to_hex(),"confirmations": 0,
+                "locktime":1088682,"size":223,"txid":"4ae2de1782b19ddab252d88d570f60bc821bd745d031029a8b28f7427c8d0e93","version":1,"vin":[{"scriptSig":{"asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876","hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"},"sequence":429496729,"txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645","vout":0}],"vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],"asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL","hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87","reqSigs":1,"type":"scripthash"},"value":0.00004},{"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],"asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac","reqSigs":1,"type":"pubkeyhash"},"value":1.00768693}],"vsize":223
+            }
+        }
+    ]);
+
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
+
+    let lects = (0..4)
+        .map(|id| gen_service_tx_lect(&sandbox, id, &transfer_tx, 2).raw().clone())
+        .collect::<Vec<_>>();
+    sandbox.broadcast(lects[0].clone());
+
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &lects);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
+    client.expect(vec![request! {
+                            method: "importaddress",
+                            params: [&following_addr, "multisig", false, false]
+                        },
+                       request! {
+                            method: "listunspent",
+                            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+                            response: [
+                                {
+                                    "txid": &transfer_tx.txid(),
+                                    "vout": 0,
+                                    "address": &following_multisig.1.to_base58check(),
+                                    "account": "multisig",
+                                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                                    "amount": 0.00010000,
+                                    "confirmations": 1,
+                                    "spendable": false,
+                                    "solvable": false
+                                }
+                            ]
+                        },
+                       request! {
+                            method: "getrawtransaction",
+                            params: [&transfer_tx.txid(), 0],
+                            response: &transfer_tx.to_hex()
+                        }]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
+    client.expect(vec![request! {
+                            method: "listunspent",
+                            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+                            response: [
+                                {
+                                    "txid": &transfer_tx.txid(),
+                                    "vout": 0,
+                                    "address": &following_multisig.1.to_base58check(),
+                                    "account": "multisig",
+                                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                                    "amount": 0.00010000,
+                                    "confirmations": 0,
+                                    "spendable": false,
+                                    "solvable": false
+                                }
+                            ]
+                        }]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
+    // Update cfg
+    anchoring_state.genesis = following_cfg;
+    let (_, signatures) =
+        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
+                                                         10,
+                                                         block_hash_on_height(&sandbox, 10),
+                                                         &[],
+                                                         None,
+                                                         &following_multisig.1);
+    let anchored_tx = anchoring_state.latest_anchored_tx();
+    sandbox.broadcast(signatures[0].clone());
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[0..1]);
+
+    let signatures = signatures.into_iter().map(|tx| tx.raw().clone()).collect::<Vec<_>>();
+    client.expect(vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&anchored_tx.txid(), 1],
+            response: {
+                "hash":&anchored_tx.txid(),"hex":&anchored_tx.to_hex(),"confirmations": 0,
+                "locktime":1088682,"size":223,"txid":"4ae2de1782b19ddab252d88d570f60bc821bd745d031029a8b28f7427c8d0e93","version":1,"vin":[{"scriptSig":{"asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876","hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"},"sequence":429496729,"txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645","vout":0}],"vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],"asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL","hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87","reqSigs":1,"type":"scripthash"},"value":0.00004},{"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],"asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERIFY OP_CHECKSIG","hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac","reqSigs":1,"type":"pubkeyhash"},"value":1.00768693}],"vsize":223
+            }
+        }
+    ]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[1..]);
+
+    let lects =
+        (0..4).map(|id| gen_service_tx_lect(&sandbox, id, &anchored_tx, 3)).collect::<Vec<_>>();
+    sandbox.broadcast(lects[0].clone());
+
+    client.expect(vec![request! {
+                            method: "listunspent",
+                            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+                            response: [
+                                {
+                                    "txid": &anchored_tx.txid(),
+                                    "vout": 0,
+                                    "address": &following_multisig.1.to_base58check(),
+                                    "account": "multisig",
+                                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                                    "amount": 0.00010000,
+                                    "confirmations": 0,
+                                    "spendable": false,
+                                    "solvable": false
+                                }
+                            ]
+                        },
+                       request! {
+                            method: "getrawtransaction",
+                            params: [&anchored_tx.txid(), 0],
+                            response: &anchored_tx.to_hex()
+                        }]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &lects);
+}
+
+// We commit a new configuration and take actions to transfer tx chain to the new address
+// problems:
+// - none
+// result: success
+#[test]
+fn test_anchoring_transfer_config_unchanged_self_key() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let (cfg_tx, following_cfg) =
+        gen_following_cfg_unchanged_self_key(&sandbox, &mut anchoring_state, 16, None);
     let (_, following_addr) = following_cfg.redeem_script();
 
     // Check insufficient confirmations case

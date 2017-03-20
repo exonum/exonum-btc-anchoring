@@ -97,12 +97,13 @@ impl AnchoringNodeConfig {
 implement_serde_hex! {AnchoringTx}
 implement_serde_hex! {FundingTx}
 
-pub fn generate_anchoring_config_with_rng<R>(client: &AnchoringRpc,
-                                             network: btc::Network,
-                                             count: u8,
-                                             total_funds: u64,
-                                             rng: &mut R)
-                                             -> (AnchoringConfig, Vec<AnchoringNodeConfig>)
+pub fn testnet_generate_anchoring_config_with_rng<R>
+    (client: &AnchoringRpc,
+     network: btc::Network,
+     count: u8,
+     total_funds: u64,
+     rng: &mut R)
+     -> (AnchoringConfig, Vec<AnchoringNodeConfig>)
     where R: Rng
 {
     let network = network.into();
@@ -136,13 +137,13 @@ pub fn generate_anchoring_config_with_rng<R>(client: &AnchoringRpc,
     (genesis_cfg, node_cfgs)
 }
 
-pub fn generate_anchoring_config(client: &AnchoringRpc,
-                                 network: btc::Network,
-                                 count: u8,
-                                 total_funds: u64)
-                                 -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
+pub fn testnet_generate_anchoring(client: &AnchoringRpc,
+                                  network: btc::Network,
+                                  count: u8,
+                                  total_funds: u64)
+                                  -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let mut rng = rand::thread_rng();
-    generate_anchoring_config_with_rng(client, network, count, total_funds, &mut rng)
+    testnet_generate_anchoring_config_with_rng(client, network, count, total_funds, &mut rng)
 }
 
 

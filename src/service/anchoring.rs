@@ -164,7 +164,7 @@ impl AnchoringHandler {
         }
 
         let msgs = AnchoringSchema::new(state.view()).signatures(&txid).values()?;
-
+        debug!("msgs={:#?}", msgs);
         if let Some(signatures) = collect_signatures(&proposal, multisig.genesis, msgs.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs

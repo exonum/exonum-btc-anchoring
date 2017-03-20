@@ -29,7 +29,7 @@ $ bitcoind --reindex --daemon
 Код для генерации начального конфига для сервиса анкоринга
 ```rust
 let (anchoring_genesis, anchoring_nodes) =
-        generate_anchoring_config(&AnchoringRpc::new(rpc.clone()),
+        testnet_generate_anchoring(&AnchoringRpc::new(rpc.clone()),
                                     btc::Network::Testnet,
                                     count,
                                     total_funds);
