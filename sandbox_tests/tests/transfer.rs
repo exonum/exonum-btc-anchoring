@@ -22,7 +22,7 @@ use sandbox::sandbox::Sandbox;
 
 use anchoring_service::sandbox::Request;
 use anchoring_service::transactions::FundingTx;
-use anchoring_service::config::AnchoringConfig;
+use anchoring_service::AnchoringConfig;
 
 use anchoring_sandbox::{CHECK_LECT_FREQUENCY, AnchoringSandboxState, anchoring_sandbox};
 use anchoring_sandbox::helpers::*;

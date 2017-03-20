@@ -31,8 +31,8 @@ use sandbox::sandbox_tests_helper::VALIDATOR_0;
 use sandbox::config_updater::ConfigUpdateService;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::config::{testnet_generate_anchoring_config_with_rng, AnchoringConfig,
-                                AnchoringNodeConfig};
+use anchoring_service::{testnet_generate_anchoring_config_with_rng, AnchoringConfig,
+                        AnchoringNodeConfig};
 use anchoring_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature, AnchoringRpc,
                         collect_signatures};
 use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};

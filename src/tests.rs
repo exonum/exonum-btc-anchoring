@@ -13,7 +13,7 @@ use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
 use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinSignature};
-use config::AnchoringRpcConfig;
+use service::config::AnchoringRpcConfig;
 use transactions::TransactionBuilder;
 use btc;
 use btc::TxId;

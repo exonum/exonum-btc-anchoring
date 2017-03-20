@@ -10,10 +10,10 @@ use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 
 use bitcoin::util::base58::ToBase58;
 
-use config::AnchoringConfig;
 use btc;
 use btc::TxId;
 use transactions::{AnchoringTx, BitcoinTx};
+use service::config::AnchoringConfig;
 
 pub const ANCHORING_SERVICE: u16 = 3;
 const ANCHORING_MESSAGE_SIGNATURE: u16 = 0;

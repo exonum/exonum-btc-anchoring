@@ -10,7 +10,7 @@ use transactions::{BitcoinTx, TxKind};
 use SATOSHI_DIVISOR;
 use btc;
 use btc::RedeemScript;
-use config::AnchoringRpcConfig;
+use service::config::AnchoringRpcConfig;
 
 #[cfg(not(feature="sandbox_tests"))]
 pub use bitcoinrpc::Client as RpcClient;

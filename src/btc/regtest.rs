@@ -15,7 +15,7 @@ use rand;
 use rand::Rng;
 
 use client::AnchoringRpc;
-use config::AnchoringRpcConfig;
+use AnchoringRpcConfig;
 use btc::Address;
 
 #[derive(Debug)]

@@ -32,8 +32,8 @@ use blockchain_explorer::api::Api;
 use configuration_service::ConfigurationService;
 use anchoring_service::AnchoringService;
 use anchoring_service::AnchoringRpc;
-use anchoring_service::config::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
-                                testnet_generate_anchoring};
+use anchoring_service::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
+                        testnet_generate_anchoring_config};
 use anchoring_service::btc;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -132,10 +132,10 @@ fn main() {
                 password: passwd,
             };
             let (anchoring_genesis, anchoring_nodes) =
-                testnet_generate_anchoring(&AnchoringRpc::new(rpc.clone()),
-                                           btc::Network::Testnet,
-                                           count,
-                                           total_funds);
+                testnet_generate_anchoring_config(&AnchoringRpc::new(rpc.clone()),
+                                                  btc::Network::Testnet,
+                                                  count,
+                                                  total_funds);
 
             let node_cfgs = generate_testnet_config(count, start_port);
             let dir = dir.join("validators");

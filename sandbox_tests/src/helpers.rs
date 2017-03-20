@@ -17,7 +17,7 @@ use anchoring_service::sandbox::{SandboxClient, Request};
 use anchoring_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest, MsgAnchoringSignature,
                         AnchoringSchema};
 use anchoring_service::transactions::{BitcoinTx, RawBitcoinTx};
-use anchoring_service::config::AnchoringConfig;
+use anchoring_service::AnchoringConfig;
 use anchoring_service::btc;
 
 use AnchoringSandboxState;

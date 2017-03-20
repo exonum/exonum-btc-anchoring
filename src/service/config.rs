@@ -10,7 +10,7 @@ use rand::Rng;
 use exonum::storage::StorageValue;
 use exonum::crypto::{hash, Hash, HexValue};
 
-use {AnchoringTx, FundingTx, RedeemScript, AnchoringRpc};
+use {AnchoringTx, FundingTx, AnchoringRpc};
 use btc;
 
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
@@ -55,7 +55,7 @@ impl AnchoringConfig {
 
     pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
-        let redeem_script = RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
+        let redeem_script = btc::RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
             .compressed(self.network());
         let addr = btc::Address::from_script(&redeem_script, self.network());
         (redeem_script, addr)
@@ -137,11 +137,11 @@ pub fn testnet_generate_anchoring_config_with_rng<R>
     (genesis_cfg, node_cfgs)
 }
 
-pub fn testnet_generate_anchoring(client: &AnchoringRpc,
-                                  network: btc::Network,
-                                  count: u8,
-                                  total_funds: u64)
-                                  -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
+pub fn testnet_generate_anchoring_config(client: &AnchoringRpc,
+                                         network: btc::Network,
+                                         count: u8,
+                                         total_funds: u64)
+                                         -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let mut rng = rand::thread_rng();
     testnet_generate_anchoring_config_with_rng(client, network, count, total_funds, &mut rng)
 }

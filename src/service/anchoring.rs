@@ -6,11 +6,11 @@ use bitcoin::util::base58::ToBase58;
 
 use btc;
 use btc::HexValueEx;
-use config::AnchoringConfig;
 use transactions::{AnchoringTx, TransactionBuilder};
 use error::Error as ServiceError;
 use service::{AnchoringHandler, AnchoringSchema, LectKind, MultisigAddress, collect_signatures};
 use service::schema::{MsgAnchoringSignature, MsgAnchoringUpdateLatest, AnchoringMessage};
+use service::config::AnchoringConfig;
 
 impl AnchoringHandler {
     pub fn handle_anchoring_state(&mut self,

@@ -2,8 +2,8 @@ use exonum::blockchain::NodeState;
 
 use bitcoin::util::base58::ToBase58;
 
-use config::AnchoringConfig;
 use error::Error as ServiceError;
+use service::config::AnchoringConfig;
 use service::{AnchoringHandler, MultisigAddress, LectKind};
 use transactions::AnchoringTx;
 use AnchoringSchema;
@@ -22,7 +22,7 @@ impl AnchoringHandler {
         debug!("Transferring state, addr={}",
                multisig.addr.to_base58check());
 
-        // Точно так же обновляем lect каждые n блоков
+        // Similar we update lect each n blocks
         if state.height() % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
             self.update_our_lect(&multisig, state)?;
@@ -35,8 +35,7 @@ impl AnchoringHandler {
             // Or try to create proposal
             match self.collect_lects(state)? {
                 LectKind::Anchoring(lect) => {
-                    debug!("lect={:#?}", lect);
-                    // в этом случае ничего делать не нужно
+                    debug!("Have lect={:#?}", lect);
                     if lect.output_address(multisig.genesis.network()) == multisig.addr {
                         return Ok(());
                     }
@@ -44,10 +43,9 @@ impl AnchoringHandler {
                     debug!("lect_addr={}",
                            lect.output_address(multisig.genesis.network()).to_base58check());
                     debug!("following_addr={:?}", multisig.addr);
-                    // проверяем, что нам хватает подтверждений
+                    // check that we have enougth confirmations
                     let confirmations = lect.confirmations(&self.client)?.unwrap_or_else(|| 0);
                     if confirmations >= multisig.genesis.utxo_confirmations {
-                        // FIXME зафиксировать высоту для анкоринга
                         let height = multisig.genesis.nearest_anchoring_height(state.height());
                         self.create_proposal_tx(lect, &multisig, height, state)?;
                     } else {

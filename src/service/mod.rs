@@ -1,4 +1,5 @@
 pub mod schema;
+pub mod config;
 
 mod handler;
 mod anchoring;
@@ -16,12 +17,12 @@ use exonum::crypto::Hash;
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::storage::{View, Error as StorageError};
 
-use config::{AnchoringNodeConfig, AnchoringConfig};
 use {AnchoringRpc, BitcoinSignature};
 use transactions::{TxKind, AnchoringTx};
 use error::Error as ServiceError;
 use service::schema::{ANCHORING_SERVICE, AnchoringMessage, AnchoringSchema, MsgAnchoringSignature};
 use service::handler::{LectKind, MultisigAddress};
+use service::config::{AnchoringNodeConfig, AnchoringConfig};
 
 pub use self::handler::AnchoringHandler;
 

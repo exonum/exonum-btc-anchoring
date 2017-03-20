@@ -5,11 +5,11 @@ use bitcoin::util::base58::ToBase58;
 
 use btc;
 use client::AnchoringRpc;
-use config::{AnchoringNodeConfig, AnchoringConfig};
 use transactions::{BitcoinTx, AnchoringTx, FundingTx};
 use error::Error as ServiceError;
 use service::{AnchoringSchema, TxKind};
 use service::schema::{FollowingConfig, MsgAnchoringUpdateLatest, AnchoringMessage};
+use service::config::{AnchoringNodeConfig, AnchoringConfig};
 
 pub struct AnchoringHandler {
     pub client: AnchoringRpc,
@@ -83,7 +83,6 @@ impl AnchoringHandler {
     pub fn current_state(&self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
         let actual = self.actual_config(state)?;
         let state = if let Some(cfg) = self.following_config(state)? {
-            debug!("following_cfg={:#?}", cfg);
             if actual.redeem_script().1 != cfg.config.redeem_script().1 {
                 AnchoringState::Transferring {
                     from: actual,
