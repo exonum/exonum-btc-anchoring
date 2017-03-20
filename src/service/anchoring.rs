@@ -18,7 +18,7 @@ impl AnchoringHandler {
                                   state: &mut NodeState)
                                   -> Result<(), ServiceError> {
         let multisig = self.multisig_address(&cfg);
-        debug!("Anchoring state, addr={}", multisig.addr.to_base58check());
+        trace!("Anchoring state, addr={}", multisig.addr.to_base58check());
 
         if state.height() % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
@@ -51,7 +51,7 @@ impl AnchoringHandler {
                 Ok(())
             }
             LectKind::None => {
-                warn!("Unable to reach consensus in a lect");
+                warn!("Unable to reach consensus in the lect");
                 Ok(())
             }
         }
@@ -63,7 +63,7 @@ impl AnchoringHandler {
                                          prev_tx_chain: Option<btc::TxId>,
                                          state: &mut NodeState)
                                          -> Result<(), ServiceError> {
-        debug!("Create first proposal tx");
+        trace!("Create tx chain");
         if let Some(funding_tx) = self.avaliable_funding_tx(multisig)? {
             // Create anchoring proposal
             let height = multisig.genesis.nearest_anchoring_height(state.height());
@@ -79,7 +79,7 @@ impl AnchoringHandler {
                 .send_to(multisig.addr.clone())
                 .into_transaction()?;
 
-            debug!("initial_proposal={:#?}, txhex={}",
+            trace!("initial_proposal={:#?}, txhex={}",
                    proposal,
                    proposal.0.to_hex());
 
@@ -114,7 +114,7 @@ impl AnchoringHandler {
             builder.into_transaction()?
         };
 
-        debug!("proposal={:#?}, to={:?}, height={}, hash={}",
+        trace!("proposal={:#?}, to={:?}, height={}, hash={}",
                proposal,
                multisig.addr,
                height,
@@ -128,7 +128,6 @@ impl AnchoringHandler {
                             multisig: &MultisigAddress,
                             state: &mut NodeState)
                             -> Result<(), ServiceError> {
-        debug!("sign proposal tx");
         for input in proposal.inputs() {
             let signature = proposal.sign(&multisig.redeem_script, input, &multisig.priv_key);
 
@@ -139,7 +138,9 @@ impl AnchoringHandler {
                                                       &signature,
                                                       state.secret_key());
 
-            debug!("Sign_msg={:#?}, sighex={}", sign_msg, signature.to_hex());
+            trace!("Sign input msg={:#?}, sighex={}",
+                   sign_msg,
+                   signature.to_hex());
             state.add_transaction(AnchoringMessage::Signature(sign_msg));
         }
         self.proposal_tx = Some(proposal);
@@ -151,7 +152,7 @@ impl AnchoringHandler {
                                     multisig: &MultisigAddress,
                                     state: &mut NodeState)
                                     -> Result<(), ServiceError> {
-        debug!("try finalize proposal tx");
+        trace!("try finalize proposal tx");
         let txid = proposal.id();
 
         let proposal_height = proposal.payload().0;
@@ -164,7 +165,6 @@ impl AnchoringHandler {
         }
 
         let msgs = AnchoringSchema::new(state.view()).signatures(&txid).values()?;
-        debug!("msgs={:#?}", msgs);
         if let Some(signatures) = collect_signatures(&proposal, multisig.genesis, msgs.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
@@ -172,20 +172,19 @@ impl AnchoringHandler {
                    .get_transaction_info(&new_lect.txid())?
                    .is_none() {
                 self.client.send_transaction(new_lect.clone().into())?;
+                trace!("sended signed_tx={:#?}, to={}",
+                       new_lect,
+                       new_lect.output_address(multisig.genesis.network()).to_base58check());
             }
-
-            debug!("sended signed_tx={:#?}, to={}",
-                   new_lect,
-                   new_lect.output_address(multisig.genesis.network()).to_base58check());
 
             info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
                   new_lect.payload().0,
                   new_lect.txid().to_hex(),
                   new_lect.amount());
 
-            debug!("LECT ====== txid={}, total_count={}",
-                   new_lect.txid().to_hex(),
-                   AnchoringSchema::new(state.view()).lects(state.id()).len()?);
+            info!("LECT ====== txid={}, total_count={}",
+                  new_lect.txid().to_hex(),
+                  AnchoringSchema::new(state.view()).lects(state.id()).len()?);
 
             self.proposal_tx = None;
 

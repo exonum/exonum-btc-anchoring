@@ -780,7 +780,6 @@ fn test_anchoring_transfer_config_lost_lect_recover() {
                                                          None,
                                                          &following_multisig.1);
     let transfer_tx_2 = anchoring_state.latest_anchored_tx().clone();
-    debug!("transfer_tx={:#?}", transfer_tx_2);
 
     sandbox.broadcast(signatures[0].clone());
     client.expect(vec![

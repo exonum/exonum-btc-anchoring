@@ -19,8 +19,9 @@ impl AnchoringHandler {
             multisig.addr = to.redeem_script().1;
             multisig
         };
-        debug!("Transferring state, addr={}",
-               multisig.addr.to_base58check());
+        trace!("Transferring state, addr={}, following_config={:#?}",
+               multisig.addr.to_base58check(),
+               to);
 
         // Similar we update lect each n blocks
         if state.height() % self.node.check_lect_frequency == 0 {
@@ -35,14 +36,9 @@ impl AnchoringHandler {
             // Or try to create proposal
             match self.collect_lects(state)? {
                 LectKind::Anchoring(lect) => {
-                    debug!("Have lect={:#?}", lect);
                     if lect.output_address(multisig.genesis.network()) == multisig.addr {
                         return Ok(());
                     }
-
-                    debug!("lect_addr={}",
-                           lect.output_address(multisig.genesis.network()).to_base58check());
-                    debug!("following_addr={:?}", multisig.addr);
                     // check that we have enougth confirmations
                     let confirmations = lect.confirmations(&self.client)?.unwrap_or_else(|| 0);
                     if confirmations >= multisig.genesis.utxo_confirmations {
@@ -69,7 +65,7 @@ impl AnchoringHandler {
                                    state: &mut NodeState)
                                    -> Result<(), ServiceError> {
         let multisig: MultisigAddress = self.multisig_address(&cfg);
-        debug!("Trying to recover tx chain after transfer to addr={}",
+        trace!("Trying to recover tx chain after transfer to addr={}",
                multisig.addr.to_base58check());
 
         if state.height() % self.node.check_lect_frequency == 0 {
@@ -84,7 +80,7 @@ impl AnchoringHandler {
                 let network = multisig.genesis.network();
                 if prev_lect.output_address(network) == multisig.addr {
                     // resend transferring transaction
-                    debug!("Resend transferring transaction, txid={}", prev_lect.txid());
+                    trace!("Resend transferring transaction, txid={}", prev_lect.txid());
                     self.client.send_transaction(prev_lect.into())?;
                 } else {
                     // start a new anchoring chain from scratch

@@ -154,7 +154,6 @@ impl AnchoringHandler {
                      state: &NodeState)
                      -> Result<Option<BitcoinTx>, ServiceError> {
         let lects: Vec<_> = self.client.unspent_transactions(&multisig.addr)?;
-        debug!("lects={:#?}", lects);
         for lect in lects {
             if let Some(tx) = self.find_lect_deep(lect, multisig, state)? {
                 return Ok(Some(tx));
@@ -170,14 +169,16 @@ impl AnchoringHandler {
                            multisig: &MultisigAddress,
                            state: &mut NodeState)
                            -> Result<Option<BitcoinTx>, ServiceError> {
-        debug!("Update our lect");
+        trace!("Update our lect");
         // убеждаемся, что нам известен этот адрес
         {
             let schema = AnchoringSchema::new(state.view());
             if !schema.is_address_known(&multisig.addr)? {
-                self.client
-                    .importaddress(&multisig.addr.to_base58check(), "multisig", false, false)?;
-                schema.add_known_address(&multisig.addr)?
+                let addr = multisig.addr.to_base58check();
+                self.client.importaddress(&addr, "multisig", false, false)?;
+                schema.add_known_address(&multisig.addr)?;
+
+                trace!("Add address to known, addr={}", addr);
             }
         }
 
@@ -189,9 +190,6 @@ impl AnchoringHandler {
                 let count = schema.lects(state.id()).len()?;
                 (our_lect, count)
             };
-
-            debug!("lect={:#?}", lect);
-            debug!("our_lect={:#?}", our_lect);
 
             if lect != our_lect {
                 self.send_updated_lect(lect.clone(), lects_count, state)?;
@@ -228,7 +226,7 @@ impl AnchoringHandler {
                                 -> Result<Option<FundingTx>, ServiceError> {
         let funding_tx = &multisig.genesis.funding_tx;
         if let Some(info) = funding_tx.is_unspent(&self.client, &multisig.addr)? {
-            debug!("avaliable_funding_tx={:#?}, confirmations={}",
+            trace!("avaliable_funding_tx={:#?}, confirmations={}",
                    funding_tx,
                    info.confirmations);
             return Ok(Some(funding_tx.clone()));
@@ -278,7 +276,7 @@ impl AnchoringHandler {
                         times -= 1;
                         let txid = tx.prev_hash().be_hex_string();
                         current_tx = self.client.get_transaction(&txid)?;
-                        debug!("Check prev lect={:#?}", current_tx);
+                        trace!("Check prev lect={:#?}", current_tx);
                     }
                 }
                 TxKind::Other(_) => return Ok(None),

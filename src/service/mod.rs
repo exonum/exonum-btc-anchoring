@@ -84,7 +84,6 @@ impl Service for AnchoringService {
     }
 
     fn handle_commit(&self, state: &mut NodeState) -> Result<(), StorageError> {
-        debug!("Handle commit, height={}", state.height());
         match self.handler
                   .lock()
                   .unwrap()
@@ -128,7 +127,7 @@ pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
             .take(majority_count)
             .collect::<Vec<_>>();
 
-        debug!("signatures for input={}, count={}, majority_count={}",
+        trace!("signatures for input={}, count={}, majority_count={}",
                input,
                signatures.len(),
                majority_count);
