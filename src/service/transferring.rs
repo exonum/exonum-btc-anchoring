@@ -79,15 +79,19 @@ impl AnchoringHandler {
                     .into();
                 let network = multisig.genesis.network();
                 if prev_lect.output_address(network) == multisig.addr {
-                    // resend transferring transaction
+                    // Resend transferring transaction
                     trace!("Resend transferring transaction, txid={}", prev_lect.txid());
                     self.client.send_transaction(prev_lect.into())?;
                 } else {
-                    // start a new anchoring chain from scratch
+                    // Start a new anchoring chain from scratch
                     let lect_id = AnchoringSchema::new(state.view()).lect(state.id())?.id();
                     self.try_create_anchoring_tx_chain(&multisig, Some(lect_id), state)?;
                 }
             }
+        }
+        // Try to finalize new tx chain propose if it exist
+        if let Some(proposal) = self.proposal_tx.clone() {
+            self.try_finalize_proposal_tx(proposal, &multisig, state)?;
         }
         Ok(())
     }
