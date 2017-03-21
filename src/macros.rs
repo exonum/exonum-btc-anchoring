@@ -1,4 +1,3 @@
-#[macro_export]
 macro_rules! implement_wrapper {
     ($from:ident, $to:ident) => (
         impl Deref for $to {
@@ -29,7 +28,6 @@ macro_rules! implement_wrapper {
     )
 }
 
-#[macro_export]
 macro_rules! implement_base58_wrapper {
     ($from:ident, $to:ident) => (
         impl ToBase58 for $to {
@@ -52,7 +50,6 @@ macro_rules! implement_base58_wrapper {
     )
 }
 
-#[macro_export]
 macro_rules! implement_serde_hex {
 ($name:ident) => (
     impl ::serde::Serialize for $name {
@@ -88,7 +85,6 @@ macro_rules! implement_serde_hex {
 )
 }
 
-#[macro_export]
 macro_rules! implement_serde_base58check {
 ($name:ident) => (
     impl ::serde::Serialize for $name {
@@ -124,7 +120,6 @@ macro_rules! implement_serde_base58check {
 )
 }
 
-#[macro_export]
 macro_rules! implement_tx_wrapper {
 ($name:ident) => (
     implement_wrapper! {RawBitcoinTx, $name}    
@@ -196,7 +191,6 @@ macro_rules! implement_tx_wrapper {
 )
 }
 
-#[macro_export]
 macro_rules! implement_tx_from_raw {
 ($name:ident) => (
     impl From<BitcoinTx> for $name {

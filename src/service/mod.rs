@@ -98,6 +98,9 @@ impl Service for AnchoringService {
     }
 }
 
+
+#[doc(hidden)]
+/// The function extract signatures from messages and order them by inputs.
 pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
                                  genesis: &AnchoringConfig,
                                  msgs: I)

@@ -1,3 +1,13 @@
+//! # Exonum anchoring service
+//!
+//! The part of Exonum blockchain.
+//!
+
+#![crate_type = "lib"]
+#![crate_type = "rlib"]
+#![crate_type = "dylib"]
+#![crate_name = "anchoring_service"]
+
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 
@@ -24,7 +34,7 @@ extern crate tempdir;
 #[macro_use]
 mod macros;
 
-mod service;
+pub mod service;
 pub mod transactions;
 pub mod client;
 pub mod btc;
@@ -63,6 +73,7 @@ impl HexValueEx for Script {
     }
 }
 
+/// Returns 2/3+1 of the given number in accordance with the Byzantine fault tolerance  algorithm.
 pub fn majority_count(cnt: u8) -> u8 {
     cnt * 2 / 3 + 1
 }

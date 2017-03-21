@@ -12,6 +12,7 @@ use btc;
 use btc::RedeemScript;
 use service::config::AnchoringRpcConfig;
 
+#[doc(hidden)]
 #[cfg(not(feature="sandbox_tests"))]
 pub use bitcoinrpc::Client as RpcClient;
 #[cfg(feature="sandbox_tests")]

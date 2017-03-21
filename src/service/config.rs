@@ -13,6 +13,7 @@ use exonum::crypto::{hash, Hash, HexValue};
 use {AnchoringTx, FundingTx, AnchoringRpc};
 use btc;
 
+/// Bitcoind node rpc configuration
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AnchoringRpcConfig {
     pub host: String,
@@ -20,13 +21,18 @@ pub struct AnchoringRpcConfig {
     pub password: Option<String>,
 }
 
+/// Private part of anchoring service configuration which stored in local machine. 
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct AnchoringNodeConfig {
+    /// Rpc configuration
     pub rpc: AnchoringRpcConfig,
+    /// Set of private keys for each anchoring address
     pub private_keys: BTreeMap<String, btc::PrivateKey>,
+    /// Frequency of lect check in blocks
     pub check_lect_frequency: u64,
 }
 
+/// Public part of anchoring service configuration which stored in blockchain. 
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct AnchoringConfig {
     pub validators: Vec<btc::PublicKey>,
@@ -38,6 +44,8 @@ pub struct AnchoringConfig {
 }
 
 impl AnchoringConfig {
+    /// Creates default anchoring configuration from given public keys and funding transaction
+    /// which were created earlier by other way.
     pub fn new(validators: Vec<btc::PublicKey>, tx: FundingTx) -> AnchoringConfig {
         AnchoringConfig {
             validators: validators,
@@ -85,6 +93,7 @@ impl StorageValue for AnchoringConfig {
 }
 
 impl AnchoringNodeConfig {
+    /// Creates blank configuration from given rpc config.
     pub fn new(rpc: AnchoringRpcConfig) -> AnchoringNodeConfig {
         AnchoringNodeConfig {
             rpc: rpc,
@@ -97,6 +106,10 @@ impl AnchoringNodeConfig {
 implement_serde_hex! {AnchoringTx}
 implement_serde_hex! {FundingTx}
 
+/// Generates testnet configuration by given rpc for given given nodes amount
+/// using given random number generator.
+/// Note: Bitcoin node that used by rpc have to enough bitcoin amount to generate
+/// funding transaction by given `total_funds`.
 pub fn testnet_generate_anchoring_config_with_rng<R>
     (client: &AnchoringRpc,
      network: btc::Network,
@@ -137,6 +150,8 @@ pub fn testnet_generate_anchoring_config_with_rng<R>
     (genesis_cfg, node_cfgs)
 }
 
+/// Similar to [testnet_generate_anchoring_config_with_rng](fn.testnet_generate_anchoring_config_with_rng.html)
+/// but it use default random number generator.
 pub fn testnet_generate_anchoring_config(client: &AnchoringRpc,
                                          network: btc::Network,
                                          count: u8,
