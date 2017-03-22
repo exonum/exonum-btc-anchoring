@@ -18,7 +18,7 @@ use exonum::crypto::Hash;
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::storage::{View, Error as StorageError};
 
-use BitcoinSignature;
+use btc;
 use client::AnchoringRpc;
 use transactions::{TxKind, AnchoringTx};
 use error::Error as ServiceError;
@@ -107,7 +107,7 @@ impl Service for AnchoringService {
 pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
                                  genesis: &AnchoringConfig,
                                  msgs: I)
-                                 -> Option<HashMap<u32, Vec<BitcoinSignature>>>
+                                 -> Option<HashMap<u32, Vec<btc::Signature>>>
     where I: Iterator<Item = &'a MsgAnchoringSignature>
 {
     let mut signatures = HashMap::new();

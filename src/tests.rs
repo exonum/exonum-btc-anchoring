@@ -12,7 +12,6 @@ use bitcoin::util::base58::ToBase58;
 use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
-use BitcoinSignature;
 use client::AnchoringRpc;
 use transactions::{AnchoringTx, FundingTx};
 use service::config::AnchoringRpcConfig;
@@ -44,7 +43,7 @@ fn make_signatures(redeem_script: &btc::RedeemScript,
                    proposal: &AnchoringTx,
                    inputs: &[u32],
                    priv_keys: &[btc::PrivateKey])
-                   -> HashMap<u32, Vec<BitcoinSignature>> {
+                   -> HashMap<u32, Vec<btc::Signature>> {
     let majority_count = (priv_keys.len() as u8) * 2 / 3 + 1;
 
     let mut signatures =

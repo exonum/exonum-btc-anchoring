@@ -62,8 +62,6 @@ pub use service::config::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConf
 
 const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 
-pub type BitcoinSignature = btc::Signature;
-
 impl HexValueEx for Script {
     fn to_hex(&self) -> String {
         self.clone().into_vec().to_hex()

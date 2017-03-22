@@ -22,7 +22,6 @@ use exonum::node::Height;
 use exonum::storage::StorageValue;
 
 use client::{AnchoringRpc, RpcClient};
-use BitcoinSignature;
 use btc;
 use btc::{TxId, RedeemScript, HexValueEx};
 use error::{RpcError, Error as ServiceError};
@@ -161,7 +160,7 @@ impl AnchoringTx {
                 redeem_script: &btc::RedeemScript,
                 input: u32,
                 priv_key: &Privkey)
-                -> BitcoinSignature {
+                -> btc::Signature {
         sign_input(self, input as usize, redeem_script, priv_key.secret_key())
     }
 
@@ -176,7 +175,7 @@ impl AnchoringTx {
 
     pub fn finalize(self,
                     redeem_script: &btc::RedeemScript,
-                    signatures: HashMap<u32, Vec<BitcoinSignature>>)
+                    signatures: HashMap<u32, Vec<btc::Signature>>)
                     -> AnchoringTx {
         finalize_anchoring_transaction(self, redeem_script, signatures)
     }
@@ -184,7 +183,7 @@ impl AnchoringTx {
     pub fn send(self,
                 client: &AnchoringRpc,
                 redeem_script: &btc::RedeemScript,
-                signatures: HashMap<u32, Vec<BitcoinSignature>>)
+                signatures: HashMap<u32, Vec<btc::Signature>>)
                 -> Result<AnchoringTx, RpcError> {
         let tx = self.finalize(redeem_script, signatures);
         client.send_transaction(tx.clone().into())?;
@@ -407,7 +406,7 @@ fn verify_anchoring_transaction(tx: &RawBitcoinTx,
 
 fn finalize_anchoring_transaction(mut anchoring_tx: AnchoringTx,
                                   redeem_script: &btc::RedeemScript,
-                                  signatures: HashMap<u32, Vec<BitcoinSignature>>)
+                                  signatures: HashMap<u32, Vec<btc::Signature>>)
                                   -> AnchoringTx {
     let redeem_script_bytes = redeem_script.0.clone().into_vec();
     // build scriptSig
