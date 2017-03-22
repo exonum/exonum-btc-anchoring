@@ -12,7 +12,9 @@ use bitcoin::util::base58::ToBase58;
 use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
-use {AnchoringRpc, AnchoringTx, FundingTx, BitcoinSignature};
+use BitcoinSignature;
+use client::AnchoringRpc;
+use transactions::{AnchoringTx, FundingTx};
 use service::config::AnchoringRpcConfig;
 use transactions::TransactionBuilder;
 use btc;

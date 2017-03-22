@@ -35,7 +35,9 @@ extern crate tempdir;
 mod macros;
 
 pub mod service;
+#[doc(hidden)]
 pub mod transactions;
+#[doc(hidden)]
 pub mod client;
 pub mod btc;
 pub mod error;
@@ -50,18 +52,17 @@ use bitcoin::blockdata::script::{Script, Builder};
 use exonum::crypto::{FromHexError, ToHex, FromHex};
 
 use btc::HexValueEx;
-pub use service::{AnchoringService, AnchoringHandler, collect_signatures};
+pub use client::AnchoringRpc;
+pub use service::{AnchoringService, AnchoringHandler};
 pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, MsgAnchoringSignature,
                           MsgAnchoringUpdateLatest};
-pub use transactions::{AnchoringTx, FundingTx, BitcoinTx, TxKind};
-pub use client::{AnchoringRpc, RpcClient};
 pub use service::config::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
                           testnet_generate_anchoring_config_with_rng,
                           testnet_generate_anchoring_config};
 
 const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 
-pub type BitcoinSignature = Vec<u8>;
+pub type BitcoinSignature = btc::Signature;
 
 impl HexValueEx for Script {
     fn to_hex(&self) -> String {

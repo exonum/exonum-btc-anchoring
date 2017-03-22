@@ -1,3 +1,4 @@
+#[doc(hidden)]
 pub mod schema;
 pub mod config;
 
@@ -17,7 +18,8 @@ use exonum::crypto::Hash;
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 use exonum::storage::{View, Error as StorageError};
 
-use {AnchoringRpc, BitcoinSignature};
+use BitcoinSignature;
+use client::AnchoringRpc;
 use transactions::{TxKind, AnchoringTx};
 use error::Error as ServiceError;
 use service::schema::{ANCHORING_SERVICE, AnchoringMessage, AnchoringSchema, MsgAnchoringSignature};
@@ -42,6 +44,7 @@ impl AnchoringService {
         }
     }
 
+    /// Returns an internal handler
     pub fn handler(&self) -> Arc<Mutex<AnchoringHandler>> {
         self.handler.clone()
     }

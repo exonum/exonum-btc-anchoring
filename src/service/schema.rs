@@ -4,8 +4,7 @@ use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
 use exonum::blockchain::{Schema, StoredConfiguration};
-use exonum::storage::{MemoryDB, ListTable, MerkleTable, List, MapTable, View, Map,
-                      Error as StorageError};
+use exonum::storage::{ListTable, MerkleTable, List, MapTable, View, Map, Error as StorageError};
 use exonum::crypto::{PublicKey, Hash};
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 
@@ -98,7 +97,6 @@ impl Message for AnchoringMessage {
     fn verify_signature(&self, public_key: &PublicKey) -> bool {
         match *self {
             AnchoringMessage::UpdateLatest(ref msg) => msg.verify_signature(public_key),
-            // TODO проверка, что подпись за анкорящую транзакцию верная
             AnchoringMessage::Signature(ref msg) => msg.verify_signature(public_key),
         }
     }
@@ -237,20 +235,21 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
-        let cfg = self.current_anchoring_config()?;
-        let lect_hashes = {
-            let mut lect_hashes = Vec::new();
-            for id in 0..cfg.validators.len() as u32 {
-                lect_hashes.push(self.lects(id).root_hash()?);
-            }
-            lect_hashes
-        };
+        // FIXME disabled until get_actual_configuration panics on genesis block
+        // let cfg = Schema::new(self.view).get_actual_configuration()?;
+        // if let Some(cfg) = cfg.services.get(&ANCHORING_SERVICE) {
+        //     let cfg: AnchoringConfig =
+        //         from_value(cfg.clone()).expect("Valid configuration expected");
 
-        // TODO use special function
-        let db = MemoryDB::new();
-        let hashes: MerkleTable<MemoryDB, u64, Hash> = MerkleTable::new(db);
-        hashes.extend(lect_hashes)?;
-        Ok(vec![hashes.root_hash()?])
+        //     let mut lect_hashes = Vec::new();
+        //     for id in 0..cfg.validators.len() as u32 {
+        //         lect_hashes.push(self.lects(id).root_hash()?);
+        //     }
+        //     Ok(lect_hashes)
+        // } else {
+        //     Ok(Vec::new())
+        // }
+        Ok(Vec::new())
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {

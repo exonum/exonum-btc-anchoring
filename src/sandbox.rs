@@ -53,7 +53,6 @@ impl SandboxClient {
                                                    method: &str,
                                                    params: Params)
                                                    -> Result<T> {
-        // TODO return error
         let expected = self.requests
             .lock()
             .unwrap()

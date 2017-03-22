@@ -10,7 +10,8 @@ use rand::Rng;
 use exonum::storage::StorageValue;
 use exonum::crypto::{hash, Hash, HexValue};
 
-use {AnchoringTx, FundingTx, AnchoringRpc};
+use transactions::{AnchoringTx, FundingTx};
+use client::AnchoringRpc;
 use btc;
 
 /// Bitcoind node rpc configuration
@@ -168,7 +169,7 @@ mod tests {
     use serde_json;
 
     use exonum::crypto::HexValue;
-    use AnchoringTx;
+    use transactions::AnchoringTx;
 
     #[test]
     fn anchoring_tx_serde() {

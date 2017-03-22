@@ -12,11 +12,15 @@ use service::schema::{FollowingConfig, MsgAnchoringUpdateLatest, AnchoringMessag
 use service::config::{AnchoringNodeConfig, AnchoringConfig};
 
 pub struct AnchoringHandler {
+    #[doc(hidden)]
     pub client: AnchoringRpc,
+    #[doc(hidden)]
     pub node: AnchoringNodeConfig,
+    #[doc(hidden)]
     pub proposal_tx: Option<AnchoringTx>,
 }
 
+#[doc(hidden)]
 #[derive(Debug)]
 pub struct MultisigAddress<'a> {
     pub genesis: &'a AnchoringConfig,
@@ -25,6 +29,7 @@ pub struct MultisigAddress<'a> {
     pub redeem_script: btc::RedeemScript,
 }
 
+#[doc(hidden)]
 #[derive(Debug)]
 pub enum AnchoringState {
     Anchoring { cfg: AnchoringConfig },
@@ -36,6 +41,7 @@ pub enum AnchoringState {
     Broken,
 }
 
+#[doc(hidden)]
 pub enum LectKind {
     Anchoring(AnchoringTx),
     Funding(FundingTx),
@@ -43,6 +49,7 @@ pub enum LectKind {
 }
 
 impl AnchoringHandler {
+    #[doc(hidden)]
     pub fn new(client: AnchoringRpc, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
             client: client,
@@ -51,6 +58,7 @@ impl AnchoringHandler {
         }
     }
 
+    #[doc(hidden)]
     pub fn multisig_address<'a>(&self, genesis: &'a AnchoringConfig) -> MultisigAddress<'a> {
         let (redeem_script, addr) = genesis.redeem_script();
         let priv_key = self.node.private_keys[&addr.to_base58check()].clone();
@@ -62,16 +70,19 @@ impl AnchoringHandler {
         }
     }
 
+    /// Adds a private_key for the corresponding anchoring address.
     pub fn add_private_key(&mut self, addr: &btc::Address, priv_key: btc::PrivateKey) {
         self.node.private_keys.insert(addr.to_base58check(), priv_key);
     }
 
+    #[doc(hidden)]
     pub fn actual_config(&self, state: &NodeState) -> Result<AnchoringConfig, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let genesis = schema.current_anchoring_config()?;
         Ok(genesis)
     }
 
+    #[doc(hidden)]
     pub fn following_config(&self,
                             state: &NodeState)
                             -> Result<Option<FollowingConfig>, ServiceError> {
@@ -80,6 +91,7 @@ impl AnchoringHandler {
         Ok(cfg)
     }
 
+    #[doc(hidden)]
     pub fn current_state(&self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
         let actual = self.actual_config(state)?;
         let state = if let Some(cfg) = self.following_config(state)? {
@@ -110,6 +122,7 @@ impl AnchoringHandler {
         Ok(state)
     }
 
+    #[doc(hidden)]
     pub fn handle_commit(&mut self, state: &mut NodeState) -> Result<(), ServiceError> {
         match self.current_state(state)? {
             AnchoringState::Anchoring { cfg } => self.handle_anchoring_state(cfg, state),
@@ -121,6 +134,7 @@ impl AnchoringHandler {
         }
     }
 
+    #[doc(hidden)]
     pub fn collect_lects(&self, state: &NodeState) -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
@@ -146,9 +160,10 @@ impl AnchoringHandler {
         }
     }
 
-    // Перебираем все анкорящие транзакции среди listunspent и ищем среди них
-    // ту единственную, у которой prev_hash содержится в нашем массиве lectов
-    // или первую funding транзакцию, если все анкорящие пропали
+    #[doc(hidden)]
+    /// We list unspent transaction by 'listunspent' and search among
+    /// them only one that prev_hash is exists in our `lects` or it equals first `funding_tx`
+    /// if all `lects` have disappeared.
     pub fn find_lect(&self,
                      multisig: &MultisigAddress,
                      state: &NodeState)
@@ -162,9 +177,7 @@ impl AnchoringHandler {
         Ok(None)
     }
 
-    // Пытаемся обновить нашу последнюю известную анкорящую транзакцию
-    // Помимо этого, если мы обнаруживаем, что она набрала достаточно подтверждений
-    // для перехода на новый адрес, то переходим на него
+    #[doc(hidden)]
     pub fn update_our_lect(&mut self,
                            multisig: &MultisigAddress,
                            state: &mut NodeState)
@@ -221,6 +234,7 @@ impl AnchoringHandler {
         }
     }
 
+    #[doc(hidden)]
     pub fn avaliable_funding_tx(&self,
                                 multisig: &MultisigAddress)
                                 -> Result<Option<FundingTx>, ServiceError> {
@@ -234,9 +248,10 @@ impl AnchoringHandler {
         Ok(None)
     }
 
-    // Гглубокий поиск, который проверяет всю цепочку предыдущих транзакций до известной нам.
-    // все транзакции из цепочки должны быть анкорящими и нам должен быть знаком их выходной адрес
-    // самым концом цепочки всегда выступает первая фундирующая транзакция
+    #[doc(hidden)]
+    /// Deep search that check entire previous transaction chain that we know.
+    /// Each transaction in chain must be anchoring and we must know its output address.
+    /// The first transaction in chain is initial `funding_tx`.
     fn find_lect_deep(&self,
                       lect: BitcoinTx,
                       multisig: &MultisigAddress,
@@ -248,7 +263,7 @@ impl AnchoringHandler {
             .get(0)?
             .unwrap();
 
-        // Проверяем саму транзакцию на наличие среди известных
+        // Check that we know tx
         if schema.find_lect_position(id, &lect.id())?.is_some() {
             return Ok(Some(lect.into()));
         }
@@ -285,6 +300,7 @@ impl AnchoringHandler {
         Ok(None)
     }
 
+    #[doc(hidden)]
     fn send_updated_lect(&mut self,
                          lect: BitcoinTx,
                          lects_count: u64,

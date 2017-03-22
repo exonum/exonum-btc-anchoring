@@ -102,7 +102,6 @@ impl AnchoringRpc {
 
     pub fn unspent_transactions(&self, addr: &btc::Address) -> Result<Vec<BitcoinTx>> {
         let unspent_txs = self.get_unspent_transactions(0, 9999999, &addr.to_base58check())?;
-        // FIXME Develop searching algorhytm
         let mut txs = Vec::new();
         for info in unspent_txs {
             let raw_tx = self.get_transaction(&info.txid)?;

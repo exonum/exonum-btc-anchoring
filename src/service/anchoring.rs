@@ -12,6 +12,7 @@ use service::{AnchoringHandler, AnchoringSchema, LectKind, MultisigAddress, coll
 use service::schema::{MsgAnchoringSignature, MsgAnchoringUpdateLatest, AnchoringMessage};
 use service::config::AnchoringConfig;
 
+#[doc(hidden)]
 impl AnchoringHandler {
     pub fn handle_anchoring_state(&mut self,
                                   cfg: AnchoringConfig,

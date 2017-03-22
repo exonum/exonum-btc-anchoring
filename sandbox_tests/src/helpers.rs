@@ -237,17 +237,15 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
     {
         let anchored_tx = anchoring_state.latest_anchored_tx();
 
-        client.expect(vec![// TODO add support for error response
-                           Request {
+        client.expect(vec![request! {
                                method: "getrawtransaction",
-                               params: vec![anchored_tx.txid().to_json(), 1.to_json()],
-                               response: Err(RpcError::NoInformation("Unable to find tx"
-                                                                         .to_string())),
+                               params: [&anchored_tx.txid(), 1],
+                               error: RpcError::NoInformation("Unable to find tx".to_string())
                            },
                            request! {
-                method: "sendrawtransaction",
-                params: [anchored_tx.to_hex()]
-            }]);
+                                method: "sendrawtransaction",
+                                params: [anchored_tx.to_hex()]
+                            }]);
         add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
         sandbox.broadcast(gen_service_tx_lect(sandbox, 0, &anchored_tx, 3))
     }

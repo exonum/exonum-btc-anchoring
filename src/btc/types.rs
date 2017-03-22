@@ -26,15 +26,13 @@ pub struct PublicKey(pub RawPublicKey);
 pub struct Address(pub RawAddress);
 #[derive(Debug, Clone, PartialEq)]
 pub struct RedeemScript(pub RawScript);
-#[derive(Debug, Clone, PartialEq)]
-pub struct Transaction(pub RawTransaction);
+pub type Signature = Vec<u8>;
 
 implement_wrapper! {Sha256dHash, TxId}
 implement_wrapper! {RawPublicKey, PublicKey}
 implement_wrapper! {RawAddress, Address}
 implement_wrapper! {RawPrivkey, PrivateKey}
 implement_wrapper! {RawScript, RedeemScript}
-implement_wrapper! {RawTransaction, Transaction}
 
 implement_base58_wrapper! {RawAddress, Address}
 implement_base58_wrapper! {RawPrivkey, PrivateKey}

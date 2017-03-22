@@ -17,14 +17,14 @@ use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::{Secp256k1, Message, Signature};
 use bitcoinrpc;
 
-// FIXME do not use Hash from crypto, use Sha256Hash explicit
 use exonum::crypto::{hash, Hash, FromHexError, HexValue};
 use exonum::node::Height;
 use exonum::storage::StorageValue;
 
-use {AnchoringRpc, RpcClient, HexValueEx, BitcoinSignature};
+use client::{AnchoringRpc, RpcClient};
+use BitcoinSignature;
 use btc;
-use btc::{TxId, RedeemScript};
+use btc::{TxId, RedeemScript, HexValueEx};
 use error::{RpcError, Error as ServiceError};
 
 pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
@@ -220,7 +220,6 @@ impl From<RawBitcoinTx> for TxKind {
         if find_payload(&tx).is_some() {
             TxKind::Anchoring(AnchoringTx::from(tx))
         } else {
-            // TODO make sure that only first output[0] is p2sh
             // Find output with funds and p2sh script_pubkey
             for out in &tx.output {
                 if out.value > 0 && out.script_pubkey.is_p2sh() {

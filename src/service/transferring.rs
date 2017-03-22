@@ -8,6 +8,7 @@ use service::{AnchoringHandler, MultisigAddress, LectKind};
 use transactions::AnchoringTx;
 use AnchoringSchema;
 
+#[doc(hidden)]
 impl AnchoringHandler {
     pub fn handle_transferring_state(&mut self,
                                      from: AnchoringConfig,
