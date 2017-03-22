@@ -65,8 +65,8 @@ impl Service for AnchoringService {
         ANCHORING_SERVICE
     }
 
-    fn state_hash(&self, _: &View) -> Result<Vec<Hash>, StorageError> {
-        Ok(Vec::new())
+    fn state_hash(&self, view: &View) -> Result<Vec<Hash>, StorageError> {
+        AnchoringSchema::new(view).state_hash()
     }
 
     fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, MessageError> {

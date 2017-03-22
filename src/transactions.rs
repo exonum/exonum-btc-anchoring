@@ -559,14 +559,14 @@ mod tests {
         let mut signatures = HashMap::new();
         for input in tx.inputs() {
             let mut input_signs = Vec::new();
-            for priv_key in priv_keys.iter() {
+            for priv_key in &priv_keys {
                 let sign = tx.sign(&redeem_script, input, priv_key);
                 input_signs.push(sign);
             }
             signatures.insert(input, input_signs);
         }
 
-        for (input, signs) in signatures.iter() {
+        for (input, signs) in &signatures {
             for (id, signature) in signs.iter().enumerate() {
                 assert!(tx.verify(&redeem_script, *input, &pub_keys[id], signature.as_ref()));
             }

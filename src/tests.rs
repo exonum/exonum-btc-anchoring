@@ -53,7 +53,7 @@ fn make_signatures(redeem_script: &btc::RedeemScript,
     for (input_idx, input) in inputs.iter().enumerate() {
         let priv_keys_iter = priv_keys.iter().take(majority_count as usize);
         for &(id, priv_key) in priv_keys_iter {
-            let sign = proposal.sign(redeem_script, *input, &priv_key);
+            let sign = proposal.sign(redeem_script, *input, priv_key);
             signatures[input_idx].1[id] = Some(sign);
         }
     }
@@ -88,19 +88,19 @@ fn send_anchoring_tx(client: &AnchoringRpc,
             .send_to(to.clone());
         for funding_tx in additional_funds {
             let out = funding_tx.find_out(to).unwrap();
-            builder = builder.add_funds(&funding_tx, out);
+            builder = builder.add_funds(funding_tx, out);
         }
         builder.into_transaction().unwrap()
     };
     debug!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
     let inputs = tx.inputs().collect::<Vec<_>>();
-    let signatures = make_signatures(redeem_script, &tx, inputs.as_slice(), &priv_keys);
-    let tx = tx.send(&client, &redeem_script, signatures).unwrap();
+    let signatures = make_signatures(redeem_script, &tx, inputs.as_slice(), priv_keys);
+    let tx = tx.send(client, redeem_script, signatures).unwrap();
     assert_eq!(tx.payload(), (block_height, block_hash));
 
     debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
-    let lect_tx = client.unspent_transactions(&to)
+    let lect_tx = client.unspent_transactions(to)
         .unwrap()
         .first()
         .unwrap()
@@ -207,7 +207,7 @@ fn test_anchoring_tx_chain() {
                                     &redeem_script,
                                     &addr,
                                     block_height,
-                                    block_hash.clone(),
+                                    block_hash,
                                     &priv_keys,
                                     utxo_tx,
                                     &[],
@@ -222,7 +222,7 @@ fn test_anchoring_tx_chain() {
                                 &redeem_script,
                                 &addr,
                                 block_height,
-                                block_hash.clone(),
+                                block_hash,
                                 &priv_keys,
                                 utxo_tx,
                                 &[funding_tx],
@@ -240,7 +240,7 @@ fn test_anchoring_tx_chain() {
                                 &redeem_script,
                                 &addr2,
                                 block_height,
-                                block_hash.clone(),
+                                block_hash,
                                 &priv_keys,
                                 utxo_tx,
                                 &[],
@@ -250,7 +250,7 @@ fn test_anchoring_tx_chain() {
                       &redeem_script2,
                       &addr2,
                       block_height,
-                      block_hash.clone(),
+                      block_hash,
                       &priv_keys2,
                       utxo_tx,
                       &[],
@@ -315,7 +315,7 @@ fn test_anchoring_tx_chain_insufficient_funds() {
                                     &redeem_script,
                                     &addr,
                                     block_height,
-                                    block_hash.clone(),
+                                    block_hash,
                                     &priv_keys,
                                     utxo_tx,
                                     &[],
@@ -329,7 +329,7 @@ fn test_anchoring_tx_chain_insufficient_funds() {
                       &redeem_script,
                       &addr,
                       block_height,
-                      block_hash.clone(),
+                      block_hash,
                       &priv_keys,
                       utxo_tx,
                       &[],

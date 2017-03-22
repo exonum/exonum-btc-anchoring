@@ -4,7 +4,8 @@ use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
 use exonum::blockchain::{Schema, StoredConfiguration};
-use exonum::storage::{ListTable, MerkleTable, List, MapTable, View, Map, Error as StorageError};
+use exonum::storage::{MemoryDB, ListTable, MerkleTable, List, MapTable, View, Map,
+                      Error as StorageError};
 use exonum::crypto::{PublicKey, Hash};
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 
@@ -138,7 +139,6 @@ impl<'a> AnchoringSchema<'a> {
         AnchoringSchema { view: view }
     }
 
-    // хэш это txid
     pub fn signatures(&self,
                       txid: &TxId)
                       -> ListTable<MapTable<View, [u8], Vec<u8>>, u64, MsgAnchoringSignature> {
@@ -234,6 +234,23 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn is_address_known(&self, addr: &btc::Address) -> Result<bool, StorageError> {
         self.known_addresses().get(&addr.to_base58check()).map(|x| x.is_some())
+    }
+
+    pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
+        let cfg = self.current_anchoring_config()?;
+        let lect_hashes = {
+            let mut lect_hashes = Vec::new();
+            for id in 0..cfg.validators.len() as u32 {
+                lect_hashes.push(self.lects(id).root_hash()?);
+            }
+            lect_hashes
+        };
+
+        // TODO use special function
+        let db = MemoryDB::new();
+        let hashes: MerkleTable<MemoryDB, u64, Hash> = MerkleTable::new(db);
+        hashes.extend(lect_hashes)?;
+        Ok(vec![hashes.root_hash()?])
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {
