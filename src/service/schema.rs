@@ -15,11 +15,11 @@ use btc::TxId;
 use transactions::{AnchoringTx, BitcoinTx};
 use service::config::AnchoringConfig;
 
+#[doc(hidden)]
 pub const ANCHORING_SERVICE: u16 = 3;
 const ANCHORING_MESSAGE_SIGNATURE: u16 = 0;
 const ANCHORING_MESSAGE_LATEST: u16 = 1;
 
-// Подпись за анкорящую транзакцию
 message! {
     MsgAnchoringSignature {
         const TYPE = ANCHORING_SERVICE;
@@ -34,7 +34,6 @@ message! {
     }
 }
 
-// Сообщение об обновлении последней корректной транзакции
 message! {
     MsgAnchoringUpdateLatest {
         const TYPE = ANCHORING_SERVICE;
@@ -48,17 +47,19 @@ message! {
     }
 }
 
-
+#[doc(hidden)]
 #[derive(Clone)]
 pub enum AnchoringMessage {
     Signature(MsgAnchoringSignature),
     UpdateLatest(MsgAnchoringUpdateLatest),
 }
 
+#[doc(hidden)]
 pub struct AnchoringSchema<'a> {
     view: &'a View,
 }
 
+#[doc(hidden)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct FollowingConfig {
     pub actual_from: u64,

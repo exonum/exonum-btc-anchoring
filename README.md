@@ -15,7 +15,7 @@ testnet=1
 # server=1 tells Bitcoin-Qt and bitcoind to accept JSON-RPC commands
 server=1
 # Maintain a full transaction index, used by the getrawtransaction rpc call
-txindex=1 # для того, чтобы нода индексировала все транзакции 
+txindex=1
 
 # Bind to given address to listen for JSON-RPC connections. Use [host]:port notation for IPv6.
 # This option can be specified multiple times (default: bind to all interfaces)
@@ -65,6 +65,9 @@ anchoring run --node-config <destdir>/<m>.toml --leveldb-path <destdir>/db/<m>
 In addition you may to set http port for configuration update service. More information you can find by invoke `anchoring help`
 
 **Important warning! Do not use this example in production. Secret keys are stored in the single directory on the single machine and can be stolen.*
+
+# Usage in your blockchain
+See [documentation](example) in a reference documentation.
 
 # Next steps
 You can learn the reference [documentation](link) or full [specification](http://exonum.com/doc/anchoring-spec).

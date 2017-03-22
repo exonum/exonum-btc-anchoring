@@ -3,7 +3,6 @@ use std::collections::BTreeMap;
 use serde_json;
 
 use bitcoin::util::base58::ToBase58;
-use bitcoin::network::constants::Network;
 use rand;
 use rand::Rng;
 
@@ -14,7 +13,7 @@ use transactions::{AnchoringTx, FundingTx};
 use client::AnchoringRpc;
 use btc;
 
-/// Bitcoind node rpc configuration
+/// A `Bitcoind` rpc configuration
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AnchoringRpcConfig {
     pub host: String,
@@ -36,11 +35,18 @@ pub struct AnchoringNodeConfig {
 /// Public part of anchoring service configuration which stored in blockchain.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct AnchoringConfig {
+    /// Public keys validators of which the current `anchoring` address can be obtained.
     pub validators: Vec<btc::PublicKey>,
+    /// The transaction that funds `anchoring` address.
+    /// If the chain of transaction is empty it will be a first transaction in the chain.
     pub funding_tx: FundingTx,
+    /// A fee for each transaction in chain
     pub fee: u64,
+    /// The frequency in blocks with which occurs the generation of a new `anchoring` transactions in chain.
     pub frequency: u64,
+    /// The minimum number of confirmations in bitcoin network for the transition to a new `anchoring` address.
     pub utxo_confirmations: u64,
+    /// The current bitcoin network type
     pub network: btc::Network,
 }
 
@@ -58,10 +64,14 @@ impl AnchoringConfig {
         }
     }
 
-    pub fn network(&self) -> Network {
+    #[doc(hidden)]
+    /// Returns bitcoin network type.
+    pub fn network(&self) -> btc::RawNetwork {
         self.network.into()
     }
 
+    #[doc(hidden)]
+    /// Creates compressed `redeem_script` from public keys in config.
     pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
         let redeem_script = btc::RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
@@ -70,10 +80,14 @@ impl AnchoringConfig {
         (redeem_script, addr)
     }
 
+    #[doc(hidden)]
+    /// Returns the nearest height below the given `height` which needs to be anchored
     pub fn nearest_anchoring_height(&self, height: u64) -> u64 {
         height - height % self.frequency as u64
     }
 
+    #[doc(hidden)]
+    /// For test purpose only
     pub fn majority_count(&self) -> u8 {
         ::majority_count(self.validators.len() as u8)
     }

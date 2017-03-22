@@ -34,12 +34,20 @@ extern crate tempdir;
 #[macro_use]
 mod macros;
 
+#[doc(hidden)]
+/// For test purpose only
 pub mod service;
 #[doc(hidden)]
+/// For test purpose only
 pub mod transactions;
 #[doc(hidden)]
+/// For test purpose only
 pub mod client;
+#[doc(hidden)]
+/// For test purpose only
 pub mod btc;
+#[doc(hidden)]
+/// For test purpose only
 pub mod error;
 
 #[cfg(feature="sandbox_tests")]
@@ -52,6 +60,7 @@ use bitcoin::blockdata::script::{Script, Builder};
 use exonum::crypto::{FromHexError, ToHex, FromHex};
 
 use btc::HexValueEx;
+pub use btc::{Network, RawNetwork};
 pub use client::AnchoringRpc;
 pub use service::{AnchoringService, AnchoringHandler};
 pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, MsgAnchoringSignature,
@@ -59,6 +68,7 @@ pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, MsgAnchoringSignat
 pub use service::config::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
                           testnet_generate_anchoring_config_with_rng,
                           testnet_generate_anchoring_config};
+pub use error::Error;
 
 const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 

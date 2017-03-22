@@ -1,5 +1,10 @@
+//! The service implementation details. 
+
 #[doc(hidden)]
+/// For test purpose only
 pub mod schema;
+#[doc(hidden)]
+/// For test purpose only
 pub mod config;
 
 mod handler;
@@ -28,6 +33,7 @@ use service::config::{AnchoringNodeConfig, AnchoringConfig};
 
 pub use self::handler::AnchoringHandler;
 
+/// An anchoring service implementation for `Exonum` blockchain.
 pub struct AnchoringService {
     genesis: AnchoringConfig,
     handler: Arc<Mutex<AnchoringHandler>>,

@@ -26,6 +26,7 @@ pub struct PublicKey(pub RawPublicKey);
 pub struct Address(pub RawAddress);
 #[derive(Debug, Clone, PartialEq)]
 pub struct RedeemScript(pub RawScript);
+
 pub type Signature = Vec<u8>;
 
 implement_wrapper! {Sha256dHash, TxId}
@@ -123,9 +124,13 @@ impl StorageValue for RedeemScript {
     }
 }
 
+/// A special wrapper over the [`RawNetwork`](enum.RawNetwork.html) 
+/// for serialization as a string.
 #[derive(Debug, Clone, Copy,  PartialEq)]
 pub enum Network {
+    /// Classic bitcoin, serialized as `bitcoin`
     Bitcoin,
+    /// Bitcoin's testnet, serialized as `testnet`
     Testnet,
 }
 

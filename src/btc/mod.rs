@@ -1,8 +1,12 @@
+//! Module contains some wrappers over types from `Bitcoin` crate.
+
 mod types;
 mod redeem_script;
 mod address;
 mod private_key;
 mod public_key;
+#[doc(hidden)]
+/// For test purpose only
 pub mod regtest;
 
 use rand;
@@ -13,12 +17,13 @@ use secp256k1::key;
 
 use exonum::crypto::FromHexError;
 
-pub use self::types::{Address, PrivateKey, PublicKey, TxId, RedeemScript, Network, RawTransaction,
-                      RawNetwork, Signature};
-
+#[doc(hidden)]
+/// For test purpose only
+pub use self::types::{Address, PrivateKey, PublicKey, TxId, RedeemScript, RawTransaction, Signature};
+pub use self::types::{RawNetwork, Network};
 
 #[doc(hidden)]
-// For test purpose only
+/// For test purpose only
 pub trait HexValueEx: Sized {
     fn to_hex(&self) -> String;
     fn from_hex<T: AsRef<str>>(v: T) -> ::std::result::Result<Self, FromHexError>;
