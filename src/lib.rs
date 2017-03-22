@@ -60,7 +60,7 @@ use bitcoin::blockdata::script::{Script, Builder};
 use exonum::crypto::{FromHexError, ToHex, FromHex};
 
 use btc::HexValueEx;
-pub use btc::{Network, RawNetwork};
+pub use btc::{Network, RawNetwork, gen_keypair, gen_keypair_with_rng};
 pub use client::AnchoringRpc;
 pub use service::{AnchoringService, AnchoringHandler};
 pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, MsgAnchoringSignature,

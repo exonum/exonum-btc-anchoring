@@ -60,7 +60,7 @@ Which create the configuration of N nodes using given `bitcoind`.
 You need to launch the whole testnet nodes. 
 The command to launch 'm' node look such this:
 ```
-anchoring run --node-config <destdir>/<m>.toml --leveldb-path <destdir>/db/<m>
+$ anchoring run --node-config <destdir>/<m>.toml --leveldb-path <destdir>/db/<m>
 ```
 In addition you may to set http port for configuration update service. More information you can find by invoke `anchoring help`
 
