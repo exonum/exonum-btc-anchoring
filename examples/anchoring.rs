@@ -26,10 +26,9 @@ use exonum::node::{Node, NodeConfig};
 use exonum::config::ConfigFile;
 use exonum::crypto::HexValue;
 use blockchain_explorer::helpers::{GenerateCommand, RunCommand, generate_testnet_config};
-use blockchain_explorer::config_api::ConfigApi;
 use blockchain_explorer::api::Api;
-
 use configuration_service::ConfigurationService;
+use configuration_service::config_api::ConfigApi;
 use anchoring_service::AnchoringService;
 use anchoring_service::AnchoringRpc;
 use anchoring_service::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,

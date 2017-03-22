@@ -171,13 +171,12 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn following_anchoring_config(&self) -> Result<Option<FollowingConfig>, StorageError> {
         let schema = Schema::new(self.view);
-        let idx = schema.get_actual_configurations_index()?;
-        if let Some(height) = schema.configs_heights().get(idx + 1)? {
-            let stored = schema.get_configuration_at_height(height.clone())?.unwrap();
-            Ok(Some(FollowingConfig {
-                        actual_from: stored.actual_from,
-                        config: self.parse_config(&stored),
-                    }))
+        if let Some(stored) = schema.get_following_configuration()? {
+            let following_cfg = FollowingConfig {
+                actual_from: stored.actual_from,
+                config: self.parse_config(&stored),
+            };
+            Ok(Some(following_cfg))
         } else {
             Ok(None)
         }
@@ -253,7 +252,8 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {
-        from_value(cfg.services[&ANCHORING_SERVICE].clone()).unwrap()
+        let service_id = ANCHORING_SERVICE.to_string();
+        from_value(cfg.services[&service_id].clone()).unwrap()
     }
 }
 

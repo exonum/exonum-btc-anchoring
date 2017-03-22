@@ -7,7 +7,7 @@ use bitcoin::util::base58::{ToBase58, FromBase58};
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{Hash, HexValue};
 use exonum::blockchain::Schema;
-use exonum::storage::List;
+use exonum::storage::{List, StorageValue};
 
 use sandbox::sandbox::Sandbox;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
@@ -27,7 +27,7 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            tx: &RawBitcoinTx,
                            count: u64)
                            -> RawTransaction {
-    let tx = MsgAnchoringUpdateLatest::new(sandbox.p(validator as usize),
+    let tx = MsgAnchoringUpdateLatest::new(&sandbox.p(validator as usize),
                                            validator,
                                            BitcoinTx::from(tx.clone()),
                                            count,
@@ -41,7 +41,7 @@ pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
                                  tx: &RawBitcoinTx,
                                  count: u64)
                                  -> RawTransaction {
-    let tx = MsgAnchoringUpdateLatest::new(sandbox.p(real_id as usize),
+    let tx = MsgAnchoringUpdateLatest::new(&sandbox.p(real_id as usize),
                                            fake_id,
                                            BitcoinTx::from(tx.clone()),
                                            count,
@@ -50,14 +50,14 @@ pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
 }
 
 pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
-    let b = sandbox.blockchain_copy().clone();
+    let b = sandbox.blockchain_ref().clone();
     let v = b.view();
     let s = AnchoringSchema::new(&v);
     s.lects(id).values().unwrap()
 }
 
 pub fn dump_signatures(sandbox: &Sandbox, txid: &btc::TxId) -> Vec<MsgAnchoringSignature> {
-    let b = sandbox.blockchain_copy().clone();
+    let b = sandbox.blockchain_ref().clone();
     let v = b.view();
     let s = AnchoringSchema::new(&v);
     s.signatures(txid).values().unwrap()
@@ -69,13 +69,13 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
                             -> RawTransaction {
     let mut cfg = sandbox.cfg();
     cfg.actual_from = actual_from;
-    *cfg.services.get_mut(&ANCHORING_SERVICE).unwrap() = service_cfg.to_json();
-    let tx = TxConfig::new(sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
+    *cfg.services.get_mut(&ANCHORING_SERVICE.to_string()).unwrap() = service_cfg.to_json();
+    let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
     tx.raw().clone()
 }
 
 pub fn block_hash_on_height(sandbox: &Sandbox, height: u64) -> Hash {
-    let blockchain = sandbox.blockchain_copy();
+    let blockchain = sandbox.blockchain_ref();
     let view = blockchain.view();
     let schema = Schema::new(&view);
     schema.heights()

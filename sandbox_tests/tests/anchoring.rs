@@ -462,7 +462,7 @@ fn test_anchoring_signature_wrong_validator() {
         tx
     };
 
-    let wrong_sign = MsgAnchoringSignature::new(sandbox.p(1),
+    let wrong_sign = MsgAnchoringSignature::new(&sandbox.p(1),
                                                 1,
                                                 tx.clone(),
                                                 0,
@@ -494,7 +494,7 @@ fn test_anchoring_signature_nonexistent_tx() {
     let signatures = anchoring_state.latest_anchored_tx_signatures();
     let tx = anchoring_state.latest_anchored_tx().clone();
 
-    let msg_sign = MsgAnchoringSignature::new(sandbox.p(1),
+    let msg_sign = MsgAnchoringSignature::new(&sandbox.p(1),
                                               1,
                                               tx.clone(),
                                               0,
@@ -532,7 +532,7 @@ fn test_anchoring_signature_nonexistent_validator() {
         tx
     };
 
-    let wrong_sign = MsgAnchoringSignature::new(sandbox.p(1),
+    let wrong_sign = MsgAnchoringSignature::new(&sandbox.p(1),
                                                 1000,
                                                 tx.clone(),
                                                 0,
@@ -568,7 +568,7 @@ fn test_anchoring_signature_nonexistent_input() {
         tx
     };
 
-    let wrong_sign = MsgAnchoringSignature::new(sandbox.p(1),
+    let wrong_sign = MsgAnchoringSignature::new(&sandbox.p(1),
                                                 0,
                                                 tx.clone(),
                                                 100,

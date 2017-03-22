@@ -20,15 +20,15 @@ rand = "0.3.0"
 
 [dependencies.exonum]
 git = "ssh://git@gitlab.xdev.re/digital-assets/digital-assets.git"
-rev = "3b9bafaf46871f87ed596e6510e854ca2167be3c"
+rev = "1039a52ff4c08973aff89ea82752e4643df4d023"
 version = "0.1.0"
 
 [dependencies.blockchain_explorer]
 git = "ssh://git@gitlab.xdev.re/digital-assets/digital-assets.git"
-rev = "3b9bafaf46871f87ed596e6510e854ca2167be3c"
+rev = "1039a52ff4c08973aff89ea82752e4643df4d023"
 version = "0.1.0"
 
 [dependencies.sandbox]
 git = "ssh://git@gitlab.xdev.re/digital-assets/digital-assets.git"
-rev = "3b9bafaf46871f87ed596e6510e854ca2167be3c"
+rev = "1039a52ff4c08973aff89ea82752e4643df4d023"
 version = "0.1.0"

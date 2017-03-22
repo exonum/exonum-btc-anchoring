@@ -130,7 +130,7 @@ impl AnchoringSandboxState {
                                            input as usize,
                                            &redeem_script.0,
                                            priv_key.secret_key());
-                signs.push(MsgAnchoringSignature::new(sandbox.p(validator),
+                signs.push(MsgAnchoringSignature::new(&sandbox.p(validator),
                                                       validator as u32,
                                                       tx.clone(),
                                                       input,
