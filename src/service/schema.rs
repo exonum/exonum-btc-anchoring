@@ -235,21 +235,20 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
-        // FIXME disabled until get_actual_configuration panics on genesis block
-        // let cfg = Schema::new(self.view).get_actual_configuration()?;
-        // if let Some(cfg) = cfg.services.get(&ANCHORING_SERVICE) {
-        //     let cfg: AnchoringConfig =
-        //         from_value(cfg.clone()).expect("Valid configuration expected");
+        let cfg = Schema::new(self.view).get_actual_configuration()?;
+        let service_id = ANCHORING_SERVICE.to_string();
+        if let Some(cfg) = cfg.services.get(&service_id) {
+            let cfg: AnchoringConfig =
+                from_value(cfg.clone()).expect("Valid configuration expected");
 
-        //     let mut lect_hashes = Vec::new();
-        //     for id in 0..cfg.validators.len() as u32 {
-        //         lect_hashes.push(self.lects(id).root_hash()?);
-        //     }
-        //     Ok(lect_hashes)
-        // } else {
-        //     Ok(Vec::new())
-        // }
-        Ok(Vec::new())
+            let mut lect_hashes = Vec::new();
+            for id in 0..cfg.validators.len() as u32 {
+                lect_hashes.push(self.lects(id).root_hash()?);
+            }
+            Ok(lect_hashes)
+        } else {
+            Ok(Vec::new())
+        }
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {

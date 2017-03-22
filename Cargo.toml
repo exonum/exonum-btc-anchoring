@@ -24,17 +24,17 @@ clippy = {version = "0.0.107", optional = true}
 
 [dependencies.exonum]
 git = "ssh://git@gitlab.xdev.re/digital-assets/digital-assets.git"
-rev = "1039a52ff4c08973aff89ea82752e4643df4d023"
+rev = "5a9e84bd8013bb2a772ffdd44eebd288ca8bad90"
 version = "0.1.0"
 
 [dependencies.blockchain_explorer]
 git = "ssh://git@gitlab.xdev.re/digital-assets/digital-assets.git"
-rev = "1039a52ff4c08973aff89ea82752e4643df4d023"
+rev = "5a9e84bd8013bb2a772ffdd44eebd288ca8bad90"
 version = "0.1.0"
 
 [dependencies.configuration_service]
 git = "ssh://git@gitlab.xdev.re/digital-assets/digital-assets.git"
-rev = "1039a52ff4c08973aff89ea82752e4643df4d023"
+rev = "5a9e84bd8013bb2a772ffdd44eebd288ca8bad90"
 version = "0.1.0"
 
 [dev-dependencies]
