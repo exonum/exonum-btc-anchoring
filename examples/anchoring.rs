@@ -52,10 +52,11 @@ fn run_node(blockchain: Blockchain, node_cfg: NodeConfig, port: Option<u16>) {
         let mut node = Node::new(blockchain.clone(), node_cfg.clone());
         let channel = node.channel();
         let api_thread = thread::spawn(move || {
+            let keys = (node_cfg.public_key, node_cfg.secret_key);
             let config_api = ConfigApi {
                 channel: channel.clone(),
                 blockchain: blockchain.clone(),
-                config: node_cfg.clone(),
+                config: keys.clone(),
             };
             let listen_address: SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
             println!("Anchoring node server started on {}", listen_address);

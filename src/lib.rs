@@ -2,6 +2,14 @@
 //!
 //! The part of Exonum blockchain.
 //!
+//! Simple testnet example
+//!
+//! # Examples
+//! ```
+//! extern crate anchoring_service;
+//! extern crate configuration_service;
+//! ```
+//! 
 
 #![crate_type = "lib"]
 #![crate_type = "rlib"]
