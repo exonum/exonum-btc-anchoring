@@ -21,7 +21,8 @@ pub use sandbox::SandboxClient as RpcClient;
 pub type Result<T> = bitcoinrpc::Result<T>;
 pub type Error = bitcoinrpc::Error;
 
-/// A client for `Bitcoind` rpc api
+/// A client for `Bitcoind` rpc api, for more information visit
+/// this [site](https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list)
 #[derive(Debug)]
 pub struct AnchoringRpc(pub RpcClient);
 

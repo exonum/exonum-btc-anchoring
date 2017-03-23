@@ -120,7 +120,6 @@ impl AnchoringHandler {
                multisig.addr,
                height,
                hash.to_hex());
-        // Sign proposal
         self.sign_proposal_tx(proposal, multisig, state)
     }
 
@@ -153,7 +152,7 @@ impl AnchoringHandler {
                                     multisig: &MultisigAddress,
                                     state: &mut NodeState)
                                     -> Result<(), ServiceError> {
-        trace!("try finalize proposal tx");
+        trace!("Try finalize proposal tx");
         let txid = proposal.id();
 
         let proposal_height = proposal.payload().0;
@@ -173,7 +172,7 @@ impl AnchoringHandler {
                    .get_transaction_info(&new_lect.txid())?
                    .is_none() {
                 self.client.send_transaction(new_lect.clone().into())?;
-                trace!("sended signed_tx={:#?}, to={}",
+                trace!("Sended signed_tx={:#?}, to={}",
                        new_lect,
                        new_lect.output_address(multisig.genesis.network()).to_base58check());
             }
