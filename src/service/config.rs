@@ -16,8 +16,11 @@ use btc;
 /// A `Bitcoind` rpc configuration
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AnchoringRpcConfig {
+    /// Rpc url
     pub host: String,
+    /// Rpc username
     pub username: Option<String>,
+    /// Rpc password
     pub password: Option<String>,
 }
 
