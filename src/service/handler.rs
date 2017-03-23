@@ -11,7 +11,7 @@ use service::{AnchoringSchema, TxKind};
 use service::schema::{FollowingConfig, MsgAnchoringUpdateLatest, AnchoringMessage};
 use service::config::{AnchoringNodeConfig, AnchoringConfig};
 
-/// An internal anchoring service handler.
+/// An internal anchoring service handler. Can be used to manage the service.
 pub struct AnchoringHandler {
     #[doc(hidden)]
     pub client: AnchoringRpc,

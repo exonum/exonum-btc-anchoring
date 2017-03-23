@@ -126,6 +126,7 @@ implement_serde_hex! {FundingTx}
 
 /// Generates testnet configuration by given rpc for given given nodes amount
 /// using given random number generator.
+///
 /// Note: Bitcoin node that used by rpc have to enough bitcoin amount to generate
 /// funding transaction by given `total_funds`.
 pub fn testnet_generate_anchoring_config_with_rng<R>
