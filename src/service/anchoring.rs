@@ -179,11 +179,11 @@ impl AnchoringHandler {
 
             info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
                   new_lect.payload().0,
-                  new_lect.txid().to_hex(),
+                  new_lect.txid(),
                   new_lect.amount());
 
             info!("LECT ====== txid={}, total_count={}",
-                  new_lect.txid().to_hex(),
+                  new_lect.txid(),
                   AnchoringSchema::new(state.view()).lects(state.id()).len()?);
 
             self.proposal_tx = None;

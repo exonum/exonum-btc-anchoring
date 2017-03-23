@@ -33,7 +33,7 @@ pub struct MultisigAddress<'a> {
 #[derive(Debug)]
 pub enum AnchoringState {
     Anchoring { cfg: AnchoringConfig },
-    Transferring {
+    Transition {
         from: AnchoringConfig,
         to: AnchoringConfig,
     },
@@ -96,7 +96,7 @@ impl AnchoringHandler {
         let actual = self.actual_config(state)?;
         let state = if let Some(cfg) = self.following_config(state)? {
             if actual.redeem_script().1 != cfg.config.redeem_script().1 {
-                AnchoringState::Transferring {
+                AnchoringState::Transition {
                     from: actual,
                     to: cfg.config,
                 }
@@ -126,8 +126,8 @@ impl AnchoringHandler {
     pub fn handle_commit(&mut self, state: &mut NodeState) -> Result<(), ServiceError> {
         match self.current_state(state)? {
             AnchoringState::Anchoring { cfg } => self.handle_anchoring_state(cfg, state),
-            AnchoringState::Transferring { from, to } => {
-                self.handle_transferring_state(from, to, state)
+            AnchoringState::Transition { from, to } => {
+                self.handle_transition_state(from, to, state)
             }
             AnchoringState::Recoverring { cfg } => self.handle_recovering_state(cfg, state),
             AnchoringState::Broken => panic!("Broken anchoring state detected!"),

@@ -10,7 +10,7 @@ use AnchoringSchema;
 
 #[doc(hidden)]
 impl AnchoringHandler {
-    pub fn handle_transferring_state(&mut self,
+    pub fn handle_transition_state(&mut self,
                                      from: AnchoringConfig,
                                      to: AnchoringConfig,
                                      state: &mut NodeState)
@@ -20,7 +20,7 @@ impl AnchoringHandler {
             multisig.addr = to.redeem_script().1;
             multisig
         };
-        trace!("Transferring state, addr={}, following_config={:#?}",
+        trace!("Transition state, addr={}, following_config={:#?}",
                multisig.addr.to_base58check(),
                to);
 
@@ -46,7 +46,7 @@ impl AnchoringHandler {
                         let height = multisig.genesis.nearest_anchoring_height(state.height());
                         self.create_proposal_tx(lect, &multisig, height, state)?;
                     } else {
-                        warn!("Insufficient confirmations for create transfer transaction, \
+                        warn!("Insufficient confirmations for create transition transaction, \
                                tx={:#?}, confirmations={}",
                               lect,
                               confirmations);
@@ -66,7 +66,7 @@ impl AnchoringHandler {
                                    state: &mut NodeState)
                                    -> Result<(), ServiceError> {
         let multisig: MultisigAddress = self.multisig_address(&cfg);
-        trace!("Trying to recover tx chain after transfer to addr={}",
+        trace!("Trying to recover tx chain after transition to addr={}",
                multisig.addr.to_base58check());
 
         if state.height() % self.node.check_lect_frequency == 0 {
@@ -80,8 +80,7 @@ impl AnchoringHandler {
                     .into();
                 let network = multisig.genesis.network();
                 if prev_lect.output_address(network) == multisig.addr {
-                    // Resend transferring transaction
-                    trace!("Resend transferring transaction, txid={}", prev_lect.txid());
+                    trace!("Resend transition transaction, txid={}", prev_lect.txid());
                     self.client.send_transaction(prev_lect.into())?;
                 } else {
                     // Start a new anchoring chain from scratch
