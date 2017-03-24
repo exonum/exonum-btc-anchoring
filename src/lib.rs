@@ -2,24 +2,24 @@
 //!
 //! Private blockchain infrastructure necessitates additional measures for
 //! accountability of the blockchain validators.
-//! In public PoW blockchains (e.g., Bitcoin), accountability is purely economic
+//! In public `PoW` blockchains (e.g., `Bitcoin`), accountability is purely economic
 //! and is based on game theory and equivocation or retroactive modifications being economically costly.
 //! Not so in private blockchains, where these two behaviors
 //! are a real threat per any realistic threat model that assumes
 //! that the blockchain is of use not only to the system validators,
 //! but also to third parties.
 //!
-//! This crate implements a protocol for blockchain anchoring onto the Bitcoin Blockchain
-//! that utilizes the native Bitcoin capabilities of creating multisig(p2sh) transactions.
-//! This transactions contains metadata from exonum blockchain (block's hash on corresponding height)
+//! This crate implements a protocol for blockchain anchoring onto the `Bitcoin` blockchain
+//! that utilizes the native `Bitcoin` capabilities of creating multisig(p2sh) transactions.
+//! This transactions contains metadata from `Exonum` blockchain (block's hash on corresponding height)
 //! and forms a chain.
 //!
-//! Anchors produced using threshold ECDSA signatures.
+//! Anchors produced using threshold `ECDSA` signatures.
 //! To create a threshold signature, the validators initiate a Byzantine fault-tolerant computation
-//! which results in a single ECDSA signature over the predetermined message keyed
+//! which results in a single `ECDSA` signature over the predetermined message keyed
 //! by a public key which may be deterministically computed in advance based on public keys of the validators.
 //! 
-//! You can read the details in [specification](http://exonum.com/doc/anchoring-spec)
+//! You can read the details in [specification](http://exonum.com/doc/anchoring-spec/)
 //!
 //! # Examples
 //!
