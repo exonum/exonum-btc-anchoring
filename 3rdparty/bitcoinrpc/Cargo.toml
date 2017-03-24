@@ -1,7 +1,7 @@
 [package]
 name = "bitcoinrpc"
 version = "0.1.0"
-authors = ["Aleksei Sidorov <aleksei.sidorov@xdev.re>"]
+authors = ["Aleksei Sidorov <aleksei.sidorov@bitfury.com>"]
 
 [dependencies]
 serde = "0.8"

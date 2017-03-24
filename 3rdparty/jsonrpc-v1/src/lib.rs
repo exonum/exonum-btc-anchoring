@@ -6,7 +6,7 @@
 //     Jean Pierre De Jesus Dudey Diaz <jeandudey@hotmail.com>
 //
 // Modified in 2016 by
-//     Aleksey Sidorov <aleksei.sidorov@xdev.re>
+//     Aleksey Sidorov <gorthauer87@yandex.ru>
 //
 // To the extent possible under law, the author(s) have dedicated all
 // copyright and related and neighboring rights to this software to

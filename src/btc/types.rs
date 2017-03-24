@@ -42,6 +42,16 @@ implement_serde_hex! {RedeemScript}
 implement_serde_base58check! {Address}
 implement_serde_base58check! {PrivateKey}
 
+impl TxId {
+    pub fn from_slice(s: &[u8]) -> Option<TxId> {
+        if s.len() == 32 {
+            Some(TxId(Sha256dHash::from(s)))
+        } else {
+            None
+        }
+    }
+}
+
 impl AsRef<[u8]> for TxId {
     fn as_ref(&self) -> &[u8] {
         self.0[..].as_ref()

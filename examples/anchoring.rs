@@ -28,7 +28,7 @@ use exonum::crypto::HexValue;
 use blockchain_explorer::helpers::{GenerateCommand, RunCommand, generate_testnet_config};
 use blockchain_explorer::api::Api;
 use configuration_service::ConfigurationService;
-use configuration_service::config_api::ConfigApi;
+use configuration_service::config_api::PrivateConfigApi;
 use anchoring_service::AnchoringService;
 use anchoring_service::AnchoringRpc;
 use anchoring_service::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
@@ -53,9 +53,8 @@ fn run_node(blockchain: Blockchain, node_cfg: NodeConfig, port: Option<u16>) {
         let channel = node.channel();
         let api_thread = thread::spawn(move || {
             let keys = (node_cfg.public_key, node_cfg.secret_key);
-            let config_api = ConfigApi {
+            let config_api = PrivateConfigApi {
                 channel: channel.clone(),
-                blockchain: blockchain.clone(),
                 config: keys.clone(),
             };
             let listen_address: SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
@@ -78,7 +77,7 @@ fn main() {
 
     let app = App::new("Simple anchoring service demo program")
         .version(env!("CARGO_PKG_VERSION"))
-        .author("Aleksey S. <aleksei.sidorov@xdev.re>")
+        .author("Aleksey S. <aleksei.sidorov@bitfury.com>")
         .subcommand(GenerateCommand::new()
                         .arg(Arg::with_name("ANCHORING_RPC_HOST")
                                  .long("anchoring-host")
@@ -133,9 +132,9 @@ fn main() {
             };
             let (anchoring_genesis, anchoring_nodes) =
                 gen_anchoring_testnet_config(&AnchoringRpc::new(rpc.clone()),
-                                                  btc::Network::Testnet,
-                                                  count,
-                                                  total_funds);
+                                             btc::Network::Testnet,
+                                             count,
+                                             total_funds);
 
             let node_cfgs = generate_testnet_config(count, start_port);
             let dir = dir.join("validators");

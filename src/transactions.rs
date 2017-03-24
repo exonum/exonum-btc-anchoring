@@ -30,20 +30,19 @@ pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
 const ANCHORING_TX_FUNDS_OUTPUT: u32 = 0;
 const ANCHORING_TX_DATA_OUTPUT: u32 = 1;
-// const ANCHORING_TX_PREV_CHAIN_OUTPUT: u32 = 2;
-// Структура у анкорящей транзакции строгая:
-// - нулевой вход это прошлая анкорящая транзакция или фундирующая, если транзакция исходная
-// - нулевой выход это всегда следующая анкорящая транзакция
-// - первый выход это метаданные
-// Итого транзакции у которых нулевой вход нам не известен, а выходов не два или они содержат другую информацию,
-// считаются априори не валидными.
+const ANCHORING_TX_PREV_CHAIN_OUTPUT: u32 = 2;
+
+/// Anchoring transaction struct is strict:
+/// - Zero input is previous anchoring tx or initial funding tx
+/// - Zero output is next anchoring tx
+/// - First output is anchored metadata
+/// - Second output is optional and contains previous tx chain's tail
 #[derive(Clone, PartialEq)]
 pub struct AnchoringTx(pub RawBitcoinTx);
-// Структура валидной фундирующей транзакции тоже строгая:
-// Входов и выходов может быть несколько, но главное правило, чтобы нулевой вход переводил деньги на мультисиг кошелек
+/// Funding transaction always has an output to `p2sh` address
 #[derive(Clone, PartialEq)]
 pub struct FundingTx(pub RawBitcoinTx);
-// Обертка над обычной биткоин транзакцией
+/// Other unspecified Bitcoin transaction
 #[derive(Debug, Clone, PartialEq)]
 pub struct BitcoinTx(pub RawBitcoinTx);
 
@@ -149,7 +148,7 @@ impl AnchoringTx {
     }
 
     pub fn prev_tx_chain(&self) -> Option<TxId> {
-        unimplemented!();
+        find_prev_txchain(self)
     }
 
     pub fn prev_hash(&self) -> TxId {
@@ -446,6 +445,28 @@ fn find_payload(tx: &RawBitcoinTx) -> Option<(Height, Hash)> {
                   })
 }
 
+fn find_prev_txchain(tx: &RawBitcoinTx) -> Option<TxId> {
+    tx.output
+        .get(ANCHORING_TX_PREV_CHAIN_OUTPUT as usize)
+        .and_then(|output| {
+            output.script_pubkey
+                .into_iter()
+                .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
+                                Some(bytes)
+                            } else {
+                                None
+                            })
+                .next()
+        })
+        .and_then(|bytes| if bytes.len() == 34 && bytes[0] == 1 {
+                      // TODO check len
+                      let prev_tx_id = TxId::from_slice(&bytes[2..34]).unwrap();
+                      Some(prev_tx_id)
+                  } else {
+                      None
+                  })
+}
+
 #[cfg(test)]
 mod tests {
     extern crate blockchain_explorer;
@@ -586,6 +607,21 @@ mod tests {
 
         assert_eq!(tx.output_address(Network::Testnet).to_base58check(),
                    redeem_script.to_address(Network::Testnet));
+    }
+
+    #[test]
+    fn test_anchoring_tx_prev_chain() {
+        let prev_tx = AnchoringTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f079073260856481aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d3ea82f7f841c308d830a9600000000").unwrap();
+        let tx = TransactionBuilder::with_prev_tx(&prev_tx, 0)
+            .fee(1000)
+            .payload(0, Hash::default())
+            .prev_tx_chain(Some(prev_tx.id()))
+            .send_to(btc::Address::from_base58check("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1")
+                         .unwrap())
+            .into_transaction()
+            .unwrap();
+
+        assert_eq!(tx.prev_tx_chain(), Some(prev_tx.id()));
     }
 
     #[test]

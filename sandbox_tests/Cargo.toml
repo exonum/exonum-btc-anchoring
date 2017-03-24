@@ -1,8 +1,8 @@
 [package]
 name = "anchoring_sandbox"
 version = "0.1.0"
-authors = ["Ivan Ivashchenko <ivan.ivashchenko@xdev.re",
-           "Aleksey Sidorov <aleksei.sidorov@xdev.re>"]
+authors = ["Ivan Ivashchenko <ivan.ivashchenko@bitfury.com",
+           "Aleksey Sidorov <aleksei.sidorov@bitfury.com>"]
 
 [dependencies]
 anchoring_service = {version="0.1", path="../", features=["sandbox_tests"]}
@@ -20,20 +20,15 @@ rand = "0.3.0"
 
 [dependencies.exonum]
 git = "ssh://git@gitlab.xdev.re/digital-assets/digital-assets.git"
-rev = "5a9e84bd8013bb2a772ffdd44eebd288ca8bad90"
+rev = "803f985a556ceeca8ed18256b83f90cfa0b2e370"
 version = "0.1.0"
 
 [dependencies.sandbox]
 git = "ssh://git@gitlab.xdev.re/digital-assets/digital-assets.git"
-rev = "5a9e84bd8013bb2a772ffdd44eebd288ca8bad90"
+rev = "803f985a556ceeca8ed18256b83f90cfa0b2e370"
 version = "0.1.0"
 
 [dependencies.blockchain_explorer]
 git = "ssh://git@gitlab.xdev.re/digital-assets/digital-assets.git"
-rev = "5a9e84bd8013bb2a772ffdd44eebd288ca8bad90"
-version = "0.1.0"
-
-[dependencies.configuration_service]
-git = "ssh://git@gitlab.xdev.re/digital-assets/exonum-configuration.git"
-rev = "96623005c271bfd23018617771aa12330a3fbac5"
+rev = "803f985a556ceeca8ed18256b83f90cfa0b2e370"
 version = "0.1.0"
