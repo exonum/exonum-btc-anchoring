@@ -67,7 +67,7 @@ In addition you may to set http port for configuration update service. More info
 **Important warning! Do not use this example in production. Secret keys are stored in the single directory on the single machine and can be stolen.*
 
 # Usage in your blockchain
-See [documentation](example) in a reference documentation.
+See [example](http://exonum.com/doc/crates/anchoring_service/index.html#examples) in a reference documentation.
 
 # Next steps
-You can learn the reference [documentation](link) or full [specification](http://exonum.com/doc/anchoring-spec).
+You can learn the reference [documentation](http://exonum.com/doc/crates/anchoring_service/index.html) or full [specification](http://exonum.com/doc/anchoring-spec).
