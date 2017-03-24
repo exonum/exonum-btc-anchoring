@@ -174,7 +174,7 @@ impl AnchoringHandler {
                 self.client.send_transaction(new_lect.clone().into())?;
                 trace!("Sended signed_tx={:#?}, to={}",
                        new_lect,
-                       new_lect.output_address(multisig.genesis.network()).to_base58check());
+                       new_lect.output_address(multisig.genesis.network).to_base58check());
             }
 
             info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",

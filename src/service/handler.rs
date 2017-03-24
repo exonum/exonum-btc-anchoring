@@ -109,7 +109,7 @@ impl AnchoringHandler {
 
             let current_lect = schema.lect(state.id())?;
             if let TxKind::Anchoring(current_lect) = TxKind::from(current_lect) {
-                let current_addr = current_lect.output_address(actual.network());
+                let current_addr = current_lect.output_address(actual.network);
 
                 if current_addr != actual.redeem_script().1 {
                     AnchoringState::Recoverring { cfg: actual }
@@ -223,7 +223,7 @@ impl AnchoringHandler {
             if let (Some(TxKind::Anchoring(prev_lect)), TxKind::Anchoring(current_lect)) =
                 (prev_lect, current_lect) {
 
-                let network = multisig.genesis.network();
+                let network = multisig.genesis.network;
                 let prev_lect_addr = prev_lect.output_address(network);
                 let current_lect_addr = current_lect.output_address(network);
 
@@ -282,7 +282,7 @@ impl AnchoringHandler {
                     }
                 }
                 TxKind::Anchoring(tx) => {
-                    let lect_addr = tx.output_address(multisig.genesis.network());
+                    let lect_addr = tx.output_address(multisig.genesis.network);
                     if !schema.is_address_known(&lect_addr)? {
                         break;
                     }

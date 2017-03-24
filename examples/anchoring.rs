@@ -32,7 +32,7 @@ use configuration_service::config_api::ConfigApi;
 use anchoring_service::AnchoringService;
 use anchoring_service::AnchoringRpc;
 use anchoring_service::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
-                        testnet_generate_anchoring_config};
+                        gen_anchoring_testnet_config};
 use anchoring_service::btc;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -132,7 +132,7 @@ fn main() {
                 password: passwd,
             };
             let (anchoring_genesis, anchoring_nodes) =
-                testnet_generate_anchoring_config(&AnchoringRpc::new(rpc.clone()),
+                gen_anchoring_testnet_config(&AnchoringRpc::new(rpc.clone()),
                                                   btc::Network::Testnet,
                                                   count,
                                                   total_funds);
@@ -173,7 +173,7 @@ fn main() {
                 _ => panic!("Wrong network type"),
             };
 
-            let (p, s) = btc::gen_keypair(network);
+            let (p, s) = btc::gen_btc_keypair(network);
             println!("pub_key={}", p.to_hex());
             println!("sec_key={}", s.to_base58check());
         }

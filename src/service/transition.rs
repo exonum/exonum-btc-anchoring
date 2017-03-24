@@ -37,7 +37,7 @@ impl AnchoringHandler {
             // Or try to create proposal
             match self.collect_lects(state)? {
                 LectKind::Anchoring(lect) => {
-                    if lect.output_address(multisig.genesis.network()) == multisig.addr {
+                    if lect.output_address(multisig.genesis.network) == multisig.addr {
                         return Ok(());
                     }
                     // check that we have enougth confirmations
@@ -78,7 +78,7 @@ impl AnchoringHandler {
                     .prev_lect(state.id())?
                     .unwrap()
                     .into();
-                let network = multisig.genesis.network();
+                let network = multisig.genesis.network;
                 if prev_lect.output_address(network) == multisig.addr {
                     trace!("Resend transition transaction, txid={}", prev_lect.txid());
                     self.client.send_transaction(prev_lect.into())?;

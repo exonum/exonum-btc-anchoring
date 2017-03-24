@@ -12,8 +12,8 @@ use exonum::blockchain::Blockchain;
 use exonum::node::Node;
 use exonum::storage::{LevelDB, LevelDBOptions};
 use blockchain_explorer::helpers::generate_testnet_config;
-use anchoring_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, Network,
-                        testnet_generate_anchoring_config};
+use anchoring_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
+                        gen_anchoring_testnet_config};
 
 fn main() {
     // Init crypto engine and pretty logger.
@@ -40,7 +40,7 @@ fn main() {
     // Generate blockchain configuration
     let client = AnchoringRpc::new(rpc_config.clone());
     let (anchoring_genesis, anchoring_nodes) =
-        testnet_generate_anchoring_config(&client, Network::Testnet, count, total_funds);
+        gen_anchoring_testnet_config(&client, BitcoinNetwork::Testnet, count, total_funds);
     let node_cfgs = generate_testnet_config(count, start_port);
 
     // Create testnet threads

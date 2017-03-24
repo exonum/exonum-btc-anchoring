@@ -50,6 +50,7 @@ pub struct AnchoringConfig {
     /// The minimum number of confirmations in bitcoin network for the transition to a new `anchoring` address.
     pub utxo_confirmations: u64,
     /// The current bitcoin network type
+    #[serde(serialize_with = "btc_network_to_str", deserialize_with = "btc_network_from_str")]
     pub network: btc::Network,
 }
 
@@ -68,18 +69,12 @@ impl AnchoringConfig {
     }
 
     #[doc(hidden)]
-    /// Returns bitcoin network type.
-    pub fn network(&self) -> btc::RawNetwork {
-        self.network.into()
-    }
-
-    #[doc(hidden)]
     /// Creates compressed `redeem_script` from public keys in config.
     pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
         let redeem_script = btc::RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
-            .compressed(self.network());
-        let addr = btc::Address::from_script(&redeem_script, self.network());
+            .compressed(self.network);
+        let addr = btc::Address::from_script(&redeem_script, self.network);
         (redeem_script, addr)
     }
 
@@ -93,6 +88,26 @@ impl AnchoringConfig {
     /// For test purpose only
     pub fn majority_count(&self) -> u8 {
         ::majority_count(self.validators.len() as u8)
+    }
+}
+
+fn btc_network_to_str<S>(network: &btc::Network, ser: &mut S) -> Result<(), S::Error>
+    where S: ::serde::Serializer
+{
+    match *network {
+        btc::Network::Bitcoin => ser.serialize_str("bitcoin"),
+        btc::Network::Testnet => ser.serialize_str("testnet"),
+    }
+}
+
+fn btc_network_from_str<D>(deserializer: &mut D) -> Result<btc::Network, D::Error>
+    where D: ::serde::Deserializer
+{
+    let s: String = ::serde::Deserialize::deserialize(deserializer)?;
+    match s.as_str() {
+        "bitcoin" => Ok(btc::Network::Bitcoin),
+        "testnet" => Ok(btc::Network::Testnet),
+        _ => Err(::serde::de::Error::invalid_value("Wrong network")),
     }
 }
 
@@ -129,7 +144,7 @@ implement_serde_hex! {FundingTx}
 ///
 /// Note: Bitcoin node that used by rpc have to enough bitcoin amount to generate
 /// funding transaction by given `total_funds`.
-pub fn testnet_generate_anchoring_config_with_rng<R>
+pub fn gen_anchoring_testnet_config_with_rng<R>
     (client: &AnchoringRpc,
      network: btc::Network,
      count: u8,
@@ -149,7 +164,7 @@ pub fn testnet_generate_anchoring_config_with_rng<R>
     let mut priv_keys = Vec::new();
 
     for _ in 0..count as usize {
-        let (pub_key, priv_key) = btc::gen_keypair_with_rng(network, rng);
+        let (pub_key, priv_key) = btc::gen_btc_keypair_with_rng(network, rng);
 
         pub_keys.push(pub_key.clone());
         node_cfgs.push(AnchoringNodeConfig::new(rpc.clone()));
@@ -169,17 +184,16 @@ pub fn testnet_generate_anchoring_config_with_rng<R>
     (genesis_cfg, node_cfgs)
 }
 
-/// Similar to [`testnet_generate_anchoring_config_with_rng`](fn.testnet_generate_anchoring_config_with_rng.html)
+/// Similar to [`gen_anchoring_testnet_config_with_rng`](fn.gen_anchoring_testnet_config_with_rng.html)
 /// but it use default random number generator.
-pub fn testnet_generate_anchoring_config(client: &AnchoringRpc,
+pub fn gen_anchoring_testnet_config(client: &AnchoringRpc,
                                          network: btc::Network,
                                          count: u8,
                                          total_funds: u64)
                                          -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let mut rng = rand::thread_rng();
-    testnet_generate_anchoring_config_with_rng(client, network, count, total_funds, &mut rng)
+    gen_anchoring_testnet_config_with_rng(client, network, count, total_funds, &mut rng)
 }
-
 
 #[cfg(test)]
 mod tests {

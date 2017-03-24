@@ -21,8 +21,8 @@
 //! use exonum::node::Node;
 //! use exonum::storage::{LevelDB, LevelDBOptions};
 //! use blockchain_explorer::helpers::generate_testnet_config;
-//! use anchoring_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, Network,
-//!                         testnet_generate_anchoring_config};
+//! use anchoring_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
+//!                         gen_anchoring_testnet_config};
 //!
 //! fn main() {
 //!     // Init crypto engine and pretty logger.
@@ -49,7 +49,7 @@
 //!     // Generate blockchain configuration
 //!     let client = AnchoringRpc::new(rpc_config.clone());
 //!     let (anchoring_genesis, anchoring_nodes) =
-//!         testnet_generate_anchoring_config(&client, Network::Testnet, count, total_funds);
+//!         gen_anchoring_testnet_config(&client, BitcoinNetwork::Testnet, count, total_funds);
 //!     let node_cfgs = generate_testnet_config(count, start_port);
 //!
 //!     // Create testnet threads
@@ -143,14 +143,14 @@ use bitcoin::blockdata::script::{Script, Builder};
 use exonum::crypto::{FromHexError, ToHex, FromHex};
 
 use btc::HexValueEx;
-pub use btc::{Network, RawNetwork, gen_keypair, gen_keypair_with_rng};
+pub use btc::{Network as BitcoinNetwork, gen_btc_keypair, gen_btc_keypair_with_rng};
 pub use client::AnchoringRpc;
 pub use service::{AnchoringService, AnchoringHandler};
 pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, MsgAnchoringSignature,
                           MsgAnchoringUpdateLatest};
 pub use service::config::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
-                          testnet_generate_anchoring_config_with_rng,
-                          testnet_generate_anchoring_config};
+                          gen_anchoring_testnet_config_with_rng,
+                          gen_anchoring_testnet_config};
 pub use error::Error;
 
 const SATOSHI_DIVISOR: f64 = 100_000_000.0;

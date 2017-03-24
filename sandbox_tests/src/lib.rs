@@ -31,7 +31,7 @@ use sandbox::sandbox_tests_helper::VALIDATOR_0;
 use sandbox::config_updater::ConfigUpdateService;
 
 use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::{testnet_generate_anchoring_config_with_rng, AnchoringConfig,
+use anchoring_service::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
                         AnchoringNodeConfig};
 use anchoring_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature, AnchoringRpc};
 use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};
@@ -176,7 +176,7 @@ pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
     ];
     client.expect(requests);
     let mut rng: StdRng = SeedableRng::from_seed([1, 2, 3, 4].as_ref());
-    testnet_generate_anchoring_config_with_rng(client,
+    gen_anchoring_testnet_config_with_rng(client,
                                                btc::Network::Testnet,
                                                4,
                                                ANCHORING_FUNDS,

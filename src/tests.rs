@@ -32,7 +32,7 @@ fn gen_anchoring_keys(count: usize) -> (Vec<btc::PublicKey>, Vec<btc::PrivateKey
     let mut validators = Vec::new();
     let mut priv_keys = Vec::new();
     for _ in 0..count {
-        let (pub_key, priv_key) = btc::gen_keypair(Network::Testnet);
+        let (pub_key, priv_key) = btc::gen_btc_keypair(Network::Testnet);
         validators.push(pub_key);
         priv_keys.push(priv_key);
     }
