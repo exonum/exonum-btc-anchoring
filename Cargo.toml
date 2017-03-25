@@ -27,11 +27,11 @@ git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
 
 [dependencies.blockchain_explorer]
-git = "ssh://git@gitlab.xdev.re/exonum/exonum-core.git"
+git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
 
 [dependencies.configuration_service]
-git = "ssh://git@gitlab.xdev.re/exonum/exonum-configuration.git"
+git = "ssh://git@github.com/exonum/exonum-configuration.git"
 version = "0.1.0"
 
 [dev-dependencies]
