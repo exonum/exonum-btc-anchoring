@@ -77,7 +77,7 @@ fn main() {
 
     let app = App::new("Simple anchoring service demo program")
         .version(env!("CARGO_PKG_VERSION"))
-        .author("Aleksey S. <aleksei.sidorov@bitfury.com>")
+        .author("Aleksey S. <aleksei.sidorov@xdev.re>")
         .subcommand(GenerateCommand::new()
                         .arg(Arg::with_name("ANCHORING_RPC_HOST")
                                  .long("anchoring-host")
