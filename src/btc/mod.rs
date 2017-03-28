@@ -29,8 +29,8 @@ pub trait HexValueEx: Sized {
     fn from_hex<T: AsRef<str>>(v: T) -> ::std::result::Result<Self, FromHexError>;
 }
 
-/// Similar to [`gen_btc_keypair_with_rng`](fn.gen_btc_keypair_with_rng.html)
-/// but it use default random number generator.
+/// Same as [`gen_btc_keypair_with_rng`](fn.gen_btc_keypair_with_rng.html)
+/// but it uses default random number generator.
 pub fn gen_btc_keypair(network: Network) -> (PublicKey, PrivateKey) {
     let mut rng = rand::thread_rng();
     gen_btc_keypair_with_rng(network, &mut rng)

@@ -1,4 +1,5 @@
-# Exonum anchoring service
+# Exonum btc anchoring service &emsp; [![Build Status](https://travis-ci.com/exonum/exonum-btc-anchoring.svg?token=XsvDzZa3zu2eW4sVWuqN&branch=master)](https://travis-ci.com/exonum/exonum-btc-anchoring)
+
 This crate is a part of exonum blockchain. Here will short project description, full specification is situated [here](http://exonum.com/doc/anchoring-spec).
 
 # Build steps
