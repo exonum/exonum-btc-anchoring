@@ -50,8 +50,8 @@
 //!
 //!     // Get rpc config from env variables
 //!     let rpc_config = AnchoringRpcConfig {
-//!         host: env::var("ANCHORING_HOST")
-//!             .expect("Env variable ANCHORING_HOST needs to be setted")
+//!         host: env::var("ANCHORING_RELAY_HOST")
+//!             .expect("Env variable ANCHORING_RELAY_HOST needs to be setted")
 //!             .parse()
 //!             .unwrap(),
 //!         username: env::var("ANCHORING_USER").ok(),
