@@ -27,7 +27,7 @@
 //!
 //! ```rust,no_run
 //! extern crate exonum;
-//! extern crate anchoring_service;
+//! extern crate anchoring_btc_service;
 //! extern crate blockchain_explorer;
 //! extern crate tempdir;
 //!
@@ -40,8 +40,8 @@
 //! use exonum::node::Node;
 //! use exonum::storage::{LevelDB, LevelDBOptions};
 //! use blockchain_explorer::helpers::generate_testnet_config;
-//! use anchoring_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
-//!                         gen_anchoring_testnet_config};
+//! use anchoring_btc_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
+//!                             gen_anchoring_testnet_config};
 //!
 //! fn main() {
 //!     // Init crypto engine and pretty logger.
@@ -108,7 +108,7 @@
 #![crate_type = "lib"]
 #![crate_type = "rlib"]
 #![crate_type = "dylib"]
-#![crate_name = "anchoring_service"]
+#![crate_name = "anchoring_btc_service"]
 
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]

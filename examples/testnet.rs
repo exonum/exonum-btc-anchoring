@@ -1,5 +1,5 @@
 extern crate exonum;
-extern crate anchoring_service;
+extern crate anchoring_btc_service;
 extern crate blockchain_explorer;
 extern crate tempdir;
 
@@ -12,8 +12,8 @@ use exonum::blockchain::Blockchain;
 use exonum::node::Node;
 use exonum::storage::{LevelDB, LevelDBOptions};
 use blockchain_explorer::helpers::generate_testnet_config;
-use anchoring_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
-                        gen_anchoring_testnet_config};
+use anchoring_btc_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
+                            gen_anchoring_testnet_config};
 
 fn main() {
     // Init crypto engine and pretty logger.

@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_service;
+extern crate anchoring_btc_service;
 #[macro_use]
-extern crate anchoring_sandbox;
+extern crate anchoring_btc_sandbox;
 extern crate serde;
 extern crate serde_json;
 extern crate bitcoin;
@@ -22,11 +22,11 @@ use exonum::crypto::HexValue;
 use exonum::messages::Message;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
-use anchoring_service::sandbox::Request;
-use anchoring_service::transactions::{TransactionBuilder, AnchoringTx};
-use anchoring_service::MsgAnchoringSignature;
-use anchoring_sandbox::{RpcError, anchoring_sandbox};
-use anchoring_sandbox::helpers::*;
+use anchoring_btc_service::sandbox::Request;
+use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx};
+use anchoring_btc_service::MsgAnchoringSignature;
+use anchoring_btc_sandbox::{RpcError, anchoring_sandbox};
+use anchoring_btc_sandbox::helpers::*;
 
 // We anchor first block
 // problems: None

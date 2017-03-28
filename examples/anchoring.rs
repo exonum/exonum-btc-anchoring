@@ -10,7 +10,7 @@ extern crate bitcoin;
 
 extern crate exonum;
 extern crate blockchain_explorer;
-extern crate anchoring_service;
+extern crate anchoring_btc_service;
 extern crate configuration_service;
 
 use std::net::SocketAddr;
@@ -29,11 +29,11 @@ use blockchain_explorer::helpers::{GenerateCommand, RunCommand, generate_testnet
 use blockchain_explorer::api::Api;
 use configuration_service::ConfigurationService;
 use configuration_service::config_api::PrivateConfigApi;
-use anchoring_service::AnchoringService;
-use anchoring_service::AnchoringRpc;
-use anchoring_service::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
-                        gen_anchoring_testnet_config};
-use anchoring_service::btc;
+use anchoring_btc_service::AnchoringService;
+use anchoring_btc_service::AnchoringRpc;
+use anchoring_btc_service::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
+                            gen_anchoring_testnet_config};
+use anchoring_btc_service::btc;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {

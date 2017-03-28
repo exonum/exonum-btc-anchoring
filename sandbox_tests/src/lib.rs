@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_service;
+extern crate anchoring_btc_service;
 extern crate serde;
 extern crate serde_json;
 extern crate bitcoin;
@@ -30,13 +30,13 @@ use sandbox::timestamping::TimestampingService;
 use sandbox::sandbox_tests_helper::VALIDATOR_0;
 use sandbox::config_updater::ConfigUpdateService;
 
-use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
+use anchoring_btc_service::sandbox::{SandboxClient, Request};
+use anchoring_btc_service::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
                         AnchoringNodeConfig};
-use anchoring_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature, AnchoringRpc};
-use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};
-use anchoring_service::btc;
-use anchoring_service::service::collect_signatures;
+use anchoring_btc_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature, AnchoringRpc};
+use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};
+use anchoring_btc_service::btc;
+use anchoring_btc_service::service::collect_signatures;
 
 #[macro_use]
 mod macros;

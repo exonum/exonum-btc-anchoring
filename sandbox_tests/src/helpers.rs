@@ -13,12 +13,12 @@ use sandbox::sandbox::Sandbox;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 use sandbox::config_updater::TxConfig;
 
-use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest, MsgAnchoringSignature,
-                        AnchoringSchema};
-use anchoring_service::transactions::{BitcoinTx, RawBitcoinTx};
-use anchoring_service::AnchoringConfig;
-use anchoring_service::btc;
+use anchoring_btc_service::sandbox::{SandboxClient, Request};
+use anchoring_btc_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest, MsgAnchoringSignature,
+                            AnchoringSchema};
+use anchoring_btc_service::transactions::{BitcoinTx, RawBitcoinTx};
+use anchoring_btc_service::AnchoringConfig;
+use anchoring_btc_service::btc;
 
 use AnchoringSandboxState;
 

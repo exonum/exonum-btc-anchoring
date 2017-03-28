@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_service;
+extern crate anchoring_btc_service;
 #[macro_use]
-extern crate anchoring_sandbox;
+extern crate anchoring_btc_sandbox;
 extern crate serde;
 extern crate serde_json;
 extern crate bitcoin;
@@ -20,12 +20,12 @@ use exonum::crypto::HexValue;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 use sandbox::sandbox::Sandbox;
 
-use anchoring_service::sandbox::Request;
-use anchoring_service::transactions::FundingTx;
-use anchoring_service::AnchoringConfig;
+use anchoring_btc_service::sandbox::Request;
+use anchoring_btc_service::transactions::FundingTx;
+use anchoring_btc_service::AnchoringConfig;
 
-use anchoring_sandbox::{CHECK_LECT_FREQUENCY, AnchoringSandboxState, anchoring_sandbox};
-use anchoring_sandbox::helpers::*;
+use anchoring_btc_sandbox::{CHECK_LECT_FREQUENCY, AnchoringSandboxState, anchoring_sandbox};
+use anchoring_btc_sandbox::helpers::*;
 
 fn gen_following_cfg(sandbox: &Sandbox,
                      anchoring_state: &mut AnchoringSandboxState,
