@@ -24,7 +24,7 @@ pub struct AnchoringRpcConfig {
     pub password: Option<String>,
 }
 
-/// Private part of anchoring service configuration which stored in local machine.
+/// Private part of anchoring service configuration stored on a local machine.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct AnchoringNodeConfig {
     /// Rpc configuration
@@ -35,7 +35,7 @@ pub struct AnchoringNodeConfig {
     pub check_lect_frequency: u64,
 }
 
-/// Public part of anchoring service configuration which stored in blockchain.
+/// Public part of anchoring service configuration stored in blockchain.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct AnchoringConfig {
     /// Public keys validators of which the current `anchoring` address can be obtained.
@@ -184,8 +184,8 @@ pub fn gen_anchoring_testnet_config_with_rng<R>
     (genesis_cfg, node_cfgs)
 }
 
-/// Similar to [`gen_anchoring_testnet_config_with_rng`](fn.gen_anchoring_testnet_config_with_rng.html)
-/// but it use default random number generator.
+/// Same as [`gen_anchoring_testnet_config_with_rng`](fn.gen_anchoring_testnet_config_with_rng.html)
+/// but it uses default random number generator.
 pub fn gen_anchoring_testnet_config(client: &AnchoringRpc,
                                          network: btc::Network,
                                          count: u8,

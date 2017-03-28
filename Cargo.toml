@@ -5,6 +5,9 @@ authors = ["Ivan Ivashchenko <ivan.ivashchenko@xdev.com",
            "Aleksey Sidorov <aleksei.sidorov@xdev.com>"]
 readme	= "README.md"
 
+[workspace]
+members = ["sandbox_tests"]
+
 [dependencies]
 bitcoinrpc = {version="0.1", path="3rdparty/bitcoinrpc"}
 bitcoin="0.9.0"
@@ -25,10 +28,12 @@ clippy = {version = "0.0.107", optional = true}
 [dependencies.exonum]
 git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
+rev = "fc8ca6e7bdfaebe953817c11b57c84289494fecb"
 
 [dependencies.blockchain_explorer]
 git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
+rev = "fc8ca6e7bdfaebe953817c11b57c84289494fecb"
 
 [dependencies.configuration_service]
 git = "ssh://git@github.com/exonum/exonum-configuration.git"
