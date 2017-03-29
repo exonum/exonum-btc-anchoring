@@ -24,7 +24,7 @@ pub struct AnchoringHandler {
 #[doc(hidden)]
 #[derive(Debug)]
 pub struct MultisigAddress<'a> {
-    pub genesis: &'a AnchoringConfig,
+    pub common: &'a AnchoringConfig,
     pub priv_key: btc::PrivateKey,
     pub addr: btc::Address,
     pub redeem_script: btc::RedeemScript,
@@ -60,11 +60,11 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn multisig_address<'a>(&self, genesis: &'a AnchoringConfig) -> MultisigAddress<'a> {
-        let (redeem_script, addr) = genesis.redeem_script();
+    pub fn multisig_address<'a>(&self, common: &'a AnchoringConfig) -> MultisigAddress<'a> {
+        let (redeem_script, addr) = common.redeem_script();
         let priv_key = self.node.private_keys[&addr.to_base58check()].clone();
         MultisigAddress {
-            genesis: genesis,
+            common: common,
             priv_key: priv_key,
             redeem_script: redeem_script,
             addr: addr,
@@ -81,8 +81,8 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn actual_config(&self, state: &NodeState) -> Result<AnchoringConfig, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
-        let genesis = schema.current_anchoring_config()?;
-        Ok(genesis)
+        let common = schema.current_anchoring_config()?;
+        Ok(common)
     }
 
     #[doc(hidden)]
@@ -226,7 +226,7 @@ impl AnchoringHandler {
             if let (Some(TxKind::Anchoring(prev_lect)), TxKind::Anchoring(current_lect)) =
                 (prev_lect, current_lect) {
 
-                let network = multisig.genesis.network;
+                let network = multisig.common.network;
                 let prev_lect_addr = prev_lect.output_address(network);
                 let current_lect_addr = current_lect.output_address(network);
 
@@ -242,7 +242,7 @@ impl AnchoringHandler {
     pub fn avaliable_funding_tx(&self,
                                 multisig: &MultisigAddress)
                                 -> Result<Option<FundingTx>, ServiceError> {
-        let funding_tx = &multisig.genesis.funding_tx;
+        let funding_tx = &multisig.common.funding_tx;
         if let Some(info) = funding_tx.is_unspent(&self.client, &multisig.addr)? {
             trace!("avaliable_funding_tx={:#?}, confirmations={}",
                    funding_tx,
@@ -283,7 +283,7 @@ impl AnchoringHandler {
                     }
                 }
                 TxKind::Anchoring(tx) => {
-                    let lect_addr = tx.output_address(multisig.genesis.network);
+                    let lect_addr = tx.output_address(multisig.common.network);
                     if !schema.is_address_known(&lect_addr)? {
                         break;
                     }

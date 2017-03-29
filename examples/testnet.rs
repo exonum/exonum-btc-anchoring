@@ -40,7 +40,7 @@ fn main() {
 
     // Generate blockchain configuration
     let client = AnchoringRpc::new(rpc_config.clone());
-    let (anchoring_genesis, anchoring_nodes) =
+    let (anchoring_common, anchoring_nodes) =
         gen_anchoring_testnet_config(&client, BitcoinNetwork::Testnet, count, total_funds);
     let node_cfgs = generate_testnet_config(count, start_port);
 
@@ -50,7 +50,7 @@ fn main() {
         for idx in 0..count as usize {
             // Create anchoring service for node[idx]
             let service = AnchoringService::new(AnchoringRpc::new(rpc_config.clone()),
-                                                anchoring_genesis.clone(),
+                                                anchoring_common.clone(),
                                                 anchoring_nodes[idx].clone());
             // Create database for node[idx]
             let db = {

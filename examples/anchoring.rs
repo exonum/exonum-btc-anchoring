@@ -36,7 +36,7 @@ use anchoring_btc_service::btc;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {
-    pub genesis: AnchoringConfig,
+    pub common: AnchoringConfig,
     pub node: AnchoringNodeConfig,
 }
 
@@ -137,7 +137,7 @@ fn main() {
                 username: user,
                 password: passwd,
             };
-            let (anchoring_genesis, anchoring_nodes) =
+            let (anchoring_common, anchoring_nodes) =
                 gen_anchoring_testnet_config(&AnchoringRpc::new(rpc.clone()),
                                              btc::Network::Testnet,
                                              count,
@@ -149,7 +149,7 @@ fn main() {
                 let cfg = ServicesConfig {
                     node: node_cfg,
                     anchoring_service: AnchoringServiceConfig {
-                        genesis: anchoring_genesis.clone(),
+                        common: anchoring_common.clone(),
                         node: anchoring_nodes[idx].clone(),
                     },
                 };
@@ -166,7 +166,7 @@ fn main() {
             let anchoring_cfg = cfg.anchoring_service;
             let client = AnchoringRpc::new(anchoring_cfg.node.rpc.clone());
             let services: Vec<Box<Service>> = vec![Box::new(AnchoringService::new(client,
-                                                    anchoring_cfg.genesis,
+                                                    anchoring_cfg.common,
                                                     anchoring_cfg.node)),
                      Box::new(ConfigurationService::new())];
             let blockchain = Blockchain::new(db, services);

@@ -32,9 +32,9 @@ fn gen_following_cfg(sandbox: &Sandbox,
                      from_height: u64,
                      funds: Option<FundingTx>)
                      -> (RawTransaction, AnchoringConfig) {
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
-    let mut cfg = anchoring_state.genesis.clone();
+    let mut cfg = anchoring_state.common.clone();
     let mut priv_keys = anchoring_state.priv_keys(&anchoring_addr);
     cfg.validators.swap(0, 3);
     priv_keys.swap(0, 3);
@@ -58,9 +58,9 @@ fn gen_following_cfg_unchanged_self_key(sandbox: &Sandbox,
                                         from_height: u64,
                                         funds: Option<FundingTx>)
                                         -> (RawTransaction, AnchoringConfig) {
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
-    let mut cfg = anchoring_state.genesis.clone();
+    let mut cfg = anchoring_state.common.clone();
     let mut priv_keys = anchoring_state.priv_keys(&anchoring_addr);
     cfg.validators.swap(1, 2);
     priv_keys.swap(1, 2);
@@ -214,14 +214,14 @@ fn test_anchoring_transit_config_normal() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     // Update cfg
-    anchoring_state.genesis = following_cfg;
-    let (_, signatures) = anchoring_state
-        .gen_anchoring_tx_with_signatures(&sandbox,
-                                          10,
-                                          block_hash_on_height(&sandbox, 10),
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    anchoring_state.common = following_cfg;
+    let (_, signatures) =
+        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
+                                                         10,
+                                                         block_hash_on_height(&sandbox, 10),
+                                                         &[],
+                                                         None,
+                                                         &following_multisig.1);
     let anchored_tx = anchoring_state.latest_anchored_tx();
     sandbox.broadcast(signatures[0].clone());
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[0..1]);
@@ -408,14 +408,14 @@ fn test_anchoring_transit_config_unchanged_self_key() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     // Update cfg
-    anchoring_state.genesis = following_cfg;
-    let (_, signatures) = anchoring_state
-        .gen_anchoring_tx_with_signatures(&sandbox,
-                                          10,
-                                          block_hash_on_height(&sandbox, 10),
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    anchoring_state.common = following_cfg;
+    let (_, signatures) =
+        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
+                                                         10,
+                                                         block_hash_on_height(&sandbox, 10),
+                                                         &[],
+                                                         None,
+                                                         &following_multisig.1);
     let anchored_tx = anchoring_state.latest_anchored_tx();
     sandbox.broadcast(signatures[0].clone());
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[0..1]);
@@ -641,14 +641,14 @@ fn test_anchoring_transit_config_with_funding_tx() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     // Update cfg
-    anchoring_state.genesis = following_cfg;
-    let (_, signatures) = anchoring_state
-        .gen_anchoring_tx_with_signatures(&sandbox,
-                                          10,
-                                          block_hash_on_height(&sandbox, 10),
-                                          &[funding_tx.clone()],
-                                          None,
-                                          &following_multisig.1);
+    anchoring_state.common = following_cfg;
+    let (_, signatures) =
+        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
+                                                         10,
+                                                         block_hash_on_height(&sandbox, 10),
+                                                         &[funding_tx.clone()],
+                                                         None,
+                                                         &following_multisig.1);
     let anchored_tx = anchoring_state.latest_anchored_tx();
     sandbox.broadcast(signatures[0].clone());
     sandbox.broadcast(signatures[1].clone());
@@ -1002,14 +1002,14 @@ fn test_anchoring_transit_config_lost_lect_recover_after_cfg_change() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &lects);
 
     // Update cfg
-    anchoring_state.genesis = following_cfg;
-    let (_, signatures) = anchoring_state
-        .gen_anchoring_tx_with_signatures(&sandbox,
-                                          20,
-                                          block_hash_on_height(&sandbox, 20),
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    anchoring_state.common = following_cfg;
+    let (_, signatures) =
+        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
+                                                         20,
+                                                         block_hash_on_height(&sandbox, 20),
+                                                         &[],
+                                                         None,
+                                                         &following_multisig.1);
     sandbox.broadcast(signatures[0].clone());
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[0..1]);
 }
@@ -1066,7 +1066,7 @@ fn test_anchoring_transit_config_lost_lect_new_tx_chain() {
     let following_multisig = following_cfg.redeem_script();
 
     // Update cfg
-    anchoring_state.genesis = following_cfg;
+    anchoring_state.common = following_cfg;
     anchoring_state.latest_anchored_tx = None;
     let (_, signatures) = anchoring_state
         .gen_anchoring_tx_with_signatures(&sandbox,

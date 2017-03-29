@@ -44,8 +44,8 @@ impl AnchoringHandler {
             LectKind::Funding(_) => self.try_create_anchoring_tx_chain(multisig, None, state),
             LectKind::Anchoring(tx) => {
                 let anchored_height = tx.payload().0;
-                let nearest_anchored_height =
-                    multisig.genesis.nearest_anchoring_height(state.height());
+                let nearest_anchored_height = multisig.common
+                    .nearest_anchoring_height(state.height());
                 if nearest_anchored_height > anchored_height {
                     return self.create_proposal_tx(tx, multisig, nearest_anchored_height, state);
                 }
@@ -67,14 +67,14 @@ impl AnchoringHandler {
         trace!("Create tx chain");
         if let Some(funding_tx) = self.avaliable_funding_tx(multisig)? {
             // Create anchoring proposal
-            let height = multisig.genesis.nearest_anchoring_height(state.height());
+            let height = multisig.common.nearest_anchoring_height(state.height());
             let hash = Schema::new(state.view())
                 .heights()
                 .get(height)?
                 .unwrap();
 
             let out = funding_tx.find_out(&multisig.addr).unwrap();
-            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out).fee(multisig.genesis.fee)
+            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out).fee(multisig.common.fee)
                 .payload(height, hash)
                 .prev_tx_chain(prev_tx_chain)
                 .send_to(multisig.addr.clone())
@@ -105,7 +105,7 @@ impl AnchoringHandler {
 
         let proposal = {
             let mut builder = TransactionBuilder::with_prev_tx(&lect, 0)
-                .fee(multisig.genesis.fee)
+                .fee(multisig.common.fee)
                 .payload(height, hash)
                 .send_to(multisig.addr.clone());
             if let Some(funds) = self.avaliable_funding_tx(multisig)? {
@@ -158,19 +158,16 @@ impl AnchoringHandler {
         let txid = proposal.id();
 
         let proposal_height = proposal.payload().0;
-        if multisig.genesis.nearest_anchoring_height(state.height()) !=
-           multisig
-               .genesis
-               .nearest_anchoring_height(proposal_height) {
+        if multisig.common.nearest_anchoring_height(state.height()) !=
+           multisig.common.nearest_anchoring_height(proposal_height) {
             warn!("Unable to finalize anchoring tx for height={}",
                   proposal_height);
             self.proposal_tx = None;
             return Ok(());
         }
 
-        let msgs = AnchoringSchema::new(state.view()).signatures(&txid)
-            .values()?;
-        if let Some(signatures) = collect_signatures(&proposal, multisig.genesis, msgs.iter()) {
+        let msgs = AnchoringSchema::new(state.view()).signatures(&txid).values()?;
+        if let Some(signatures) = collect_signatures(&proposal, multisig.common, msgs.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
             if self.client
@@ -179,9 +176,7 @@ impl AnchoringHandler {
                 self.client.send_transaction(new_lect.clone().into())?;
                 trace!("Sended signed_tx={:#?}, to={}",
                        new_lect,
-                       new_lect
-                           .output_address(multisig.genesis.network)
-                           .to_base58check());
+                       new_lect.output_address(multisig.common.network).to_base58check());
             }
 
             info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",

@@ -103,7 +103,7 @@ fn test_anchoring_second_block_additional_funds() {
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -111,7 +111,7 @@ fn test_anchoring_second_block_additional_funds() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
-    let funds = anchoring_state.genesis.funding_tx.clone();
+    let funds = anchoring_state.common.funding_tx.clone();
     client.expect(vec![request! {
                             method: "listunspent",
                             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
@@ -177,7 +177,7 @@ fn test_anchoring_second_block_lect_lost() {
 
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -258,7 +258,7 @@ fn test_anchoring_find_lect_chain_normal() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
     let anchored_txs = (1..3)
         .map(|height| {
             anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
@@ -326,7 +326,7 @@ fn test_anchoring_find_lect_chain_wrong() {
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
     let anchored_txs = {
 
         let mut tx = AnchoringTx::from_hex("0100000001c13d4c739390c799344fa89fb701add04e5ccaf3d580e4d4379c4b897e3a2266000000006b483045022100ff88211040a8a95a42ca8520749c1b2b4024ce07b3ed1b51da8bb90ef77dbe5d022034b34ef638d23ef0ea532e2c84a8816cb32021112d4bcf1457b4e2c149d1b83f01210250749a68b12a93c2cca6f86a9a9c9ba37f5191e85334c340856209a17cca349afeffffff0240420f000000000017a914180d8e6b0ad7f63177e943752c278294709425bd872908da0b000000001976a914dee9f9433b3f2d24cbd833f83a41e4c1235efa3f88acd6ac1000").unwrap();
