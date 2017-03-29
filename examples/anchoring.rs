@@ -1,4 +1,3 @@
-extern crate env_logger;
 extern crate clap;
 #[macro_use]
 extern crate log;

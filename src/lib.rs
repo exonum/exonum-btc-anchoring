@@ -123,8 +123,6 @@ extern crate secp256k1;
 extern crate byteorder;
 #[macro_use]
 extern crate log;
-#[cfg(test)]
-extern crate env_logger;
 #[macro_use]
 extern crate derive_error;
 
