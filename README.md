@@ -13,4 +13,4 @@ This crate implements a protocol for blockchain anchoring onto the `Bitcoin` blo
 The anchoring service depends on bitcoind. For correct working of the service you need to launch bitcoind with specific configuration, see [tutorial](doc/tutorial.md) for details.
 
 # Licence
-Anchoring service licensed under [Apache License, Version 2.0](https://github.com/serde-rs/serde/blob/master/LICENSE-APACHE).
+Anchoring service licensed under [Apache License, Version 2.0](LICENSE).
