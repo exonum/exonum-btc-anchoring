@@ -1,6 +1,7 @@
 # Complete tutorial
 
-**Important warning! Do not use this example in production. Secret keys are stored in the single directory on the single machine and can be stolen.*
+**Important warning! Do not use this example in production. Secret keys are stored in the single directory on the single machine and can be stolen. 
+You need to provide secure exchange procedure for public part of blockchain configuration (e.g validators keys, btc public keys, configuration of consensus, etc...).*
 
 ## Contents
 * [Bitcoind deploy](#bitcoind-deploy)
@@ -46,7 +47,7 @@ $ cargo install --example anchoring
 ```
 
 ### Generate testnet config
-After installation you need to generate testnet configuration
+After installation you need to generate testnet configuration.
 ```
 $ anchoring generate \
     --output-dir <destdir> <n> \
@@ -57,7 +58,7 @@ $ anchoring generate \
 ```
 Which create the configuration of N nodes using given `bitcoind`.
 
-*warning! It is important that the full node have some bitcoin amount greater  than `<initial_finds>, since the initial funding transaction will create during the testnet generation.*
+*warning! It is important that the full node have some bitcoin amount greater  than `<initial_finds>`, since the initial funding transaction will create during the testnet generation.*
 
 ### Launching testnet
 You need to launch the whole testnet nodes. 
@@ -70,8 +71,10 @@ In addition you may to set http port for configuration update service. More info
 If you want to see additional information including current testnet `multisig` address you may set environment variable `RUST_LOG="anchoring_btc_service=info"`.
 
 ## Funding testnet
-
-TODO
+Sometimes you need to add additional funds to anchoring. 
+This is done in two stages:
+* Send funds to current `multisig` address.
+* Change `funding_tx` variable in anchoring service config. This is makes by the configuration service.
 
 ## Change testnet keys
 
