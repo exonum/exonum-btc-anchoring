@@ -243,7 +243,7 @@ impl AnchoringHandler {
                                 multisig: &MultisigAddress)
                                 -> Result<Option<FundingTx>, ServiceError> {
         let funding_tx = &multisig.common.funding_tx;
-        if let Some(info) = funding_tx.is_unspent(&self.client, &multisig.addr)? {
+        if let Some(info) = funding_tx.has_unspent_info(&self.client, &multisig.addr)? {
             trace!("avaliable_funding_tx={:#?}, confirmations={}",
                    funding_tx,
                    info.confirmations);

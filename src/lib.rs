@@ -13,7 +13,7 @@
 //! that utilizes the native `Bitcoin` capabilities of creating multisig([p2sh][1]) transactions.
 //! This transactions contains metadata from `Exonum` blockchain (block's hash on corresponding height)
 //! and forms a chain.
-//! 
+//!
 //! You can read the details in [specification][2].
 //!
 //! [1]: https://bitcoin.org/en/glossary/p2sh-multisig

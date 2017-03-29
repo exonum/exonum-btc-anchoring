@@ -105,10 +105,10 @@ impl FundingTx {
             .map(|x| x as u32)
     }
 
-    pub fn is_unspent(&self,
-                      client: &RpcClient,
-                      addr: &btc::Address)
-                      -> Result<Option<bitcoinrpc::UnspentTransactionInfo>, RpcError> {
+    pub fn has_unspent_info(&self,
+                            client: &RpcClient,
+                            addr: &btc::Address)
+                            -> Result<Option<bitcoinrpc::UnspentTransactionInfo>, RpcError> {
         let txid = self.txid();
         let txs = client.listunspent(0, 9999999, [addr.to_base58check().as_ref()])?;
         Ok(txs.into_iter().find(|txinfo| txinfo.txid == txid))

@@ -109,9 +109,8 @@ impl AnchoringHandler {
                 .payload(height, hash)
                 .send_to(multisig.addr.clone());
             if let Some(funds) = self.avaliable_funding_tx(multisig)? {
-                let out = funds
-                    .find_out(&multisig.addr)
-                    .expect("Funding tx has multisig output");
+                let out =
+                    funds.find_out(&multisig.addr).expect("Funding tx has proper multisig output");
                 builder = builder.add_funds(&funds, out);
             }
             builder.into_transaction()?

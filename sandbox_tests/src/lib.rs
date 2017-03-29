@@ -32,7 +32,7 @@ use sandbox::config_updater::ConfigUpdateService;
 
 use anchoring_btc_service::sandbox::{SandboxClient, Request};
 use anchoring_btc_service::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
-                        AnchoringNodeConfig};
+                            AnchoringNodeConfig};
 use anchoring_btc_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature, AnchoringRpc};
 use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};
 use anchoring_btc_service::btc;
