@@ -1,14 +1,18 @@
 # Exonum btc anchoring service &emsp; [![Build Status](https://travis-ci.com/exonum/exonum-btc-anchoring.svg?token=XsvDzZa3zu2eW4sVWuqN&branch=master)](https://travis-ci.com/exonum/exonum-btc-anchoring)
 
-This crate is a part of exonum blockchain. Here will short project description, full specification is situated [here](http://exonum.com/doc/anchoring-spec).
+This crate implements a protocol for blockchain anchoring onto the `Bitcoin` blockchain that utilizes the native `Bitcoin` capabilities of creating multisig transactions.
 
-# Build steps
-You can see in [exonum](#) crate.
+## You may looking for:
+* [Reference documentation](http://exonum.com/doc/crates/anchoring_btc_service/index.html)
+* [Specification](http://exonum.com/doc/anchoring-spec/)
+* [Implementation details](http://exonum.com/doc/anchoring-impl/)
+* [Example code](examples/anchoring.rs)
 
-# Bitcoin full node deploy
+# Usage
 The anchoring service depends on bitcoind. For correct working of the service you need to launch bitcoind with specific configuration.
 
-## Configuration
+## Bitcoin full node deploy
+### Configuration
 Here the sample bitcoin.conf file.
 ```ini
 # Run on the test network instead of the real bitcoin network.
@@ -28,7 +32,7 @@ txindex=1
 ```
 Detailed documentation you can find [here](https://en.bitcoin.it/wiki/Running_Bitcoin#Bitcoin.conf_Configuration_File).
 
-## Launching
+### Launching
 You can start the node with the command
 ```
 $ bitcoind --reindex --daemon
@@ -37,13 +41,13 @@ $ bitcoind --reindex --daemon
 
 *note 2: If node deploy for exists configuration be sure that current anchoring address is imported by `importaddress` rpc call.*
 
-# Anchoring testnet example
+## Anchoring testnet example
 For quick anchoring demonstration you can install built-in anchoring example.
 ```
 $ cargo install --example anchoring
 ```
 
-## Generate testnet config
+### Generate testnet config
 After installation you need to generate testnet configuration
 ```
 $ anchoring generate \
@@ -57,7 +61,7 @@ Which create the configuration of N nodes using given `bitcoind`.
 
 *warning! It is important that the full node have some bitcoin amount greater  than `<initial_finds>, since the initial funding transaction will create during the testnet generation.*
 
-## Launching testnet
+### Launching testnet
 You need to launch the whole testnet nodes. 
 The command to launch 'm' node look such this:
 ```
@@ -67,8 +71,11 @@ In addition you may to set http port for configuration update service. More info
 
 **Important warning! Do not use this example in production. Secret keys are stored in the single directory on the single machine and can be stolen.*
 
-# Usage in your blockchain
-See [example](http://exonum.com/doc/crates/anchoring_service/index.html#examples) in a reference documentation.
+## Usage in your blockchain
+See [example](http://exonum.com/doc/crates/anchoring_btc_service/index.html#examples) in a reference documentation.
 
 # Next steps
-You can learn the reference [documentation](http://exonum.com/doc/crates/anchoring_service/index.html) or full [specification](http://exonum.com/doc/anchoring-spec).
+You can learn the reference [documentation](http://exonum.com/doc/crates/anchoring_btc_service/index.html) or full [specification](http://exonum.com/doc/anchoring-spec).
+
+# Licence
+Anchoring service licensed under [Apache License, Version 2.0](https://github.com/serde-rs/serde/blob/master/LICENSE-APACHE).

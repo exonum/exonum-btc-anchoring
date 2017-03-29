@@ -10,16 +10,14 @@
 //! but also to third parties.
 //!
 //! This crate implements a protocol for blockchain anchoring onto the `Bitcoin` blockchain
-//! that utilizes the native `Bitcoin` capabilities of creating multisig(p2sh) transactions.
+//! that utilizes the native `Bitcoin` capabilities of creating multisig([p2sh][1]) transactions.
 //! This transactions contains metadata from `Exonum` blockchain (block's hash on corresponding height)
 //! and forms a chain.
+//! 
+//! You can read the details in [specification][2].
 //!
-//! Anchors produced using threshold `ECDSA` signatures.
-//! To create a threshold signature, the validators initiate a Byzantine fault-tolerant computation
-//! which results in a single `ECDSA` signature over the predetermined message keyed
-//! by a public key which may be deterministically computed in advance based on public keys of the validators.
-//!
-//! You can read the details in [specification](http://exonum.com/doc/anchoring-spec/).
+//! [1]: https://bitcoin.org/en/glossary/p2sh-multisig
+//! [2]: http://exonum.com/doc/anchoring-spec
 //!
 //! # Examples
 //!
