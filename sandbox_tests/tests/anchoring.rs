@@ -23,10 +23,11 @@ use exonum::messages::Message;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
 use anchoring_btc_service::sandbox::Request;
-use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx};
+use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx, verify_input};
 use anchoring_btc_service::MsgAnchoringSignature;
 use anchoring_btc_sandbox::{RpcError, anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
+use anchoring_btc_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
 
 // We anchor first block
 // problems: None
@@ -579,6 +580,59 @@ fn test_anchoring_signature_nonexistent_input() {
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Try to commit tx
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[wrong_sign.raw().clone()]);
+    // Ensure that service ignore tx
+    let signs_after = dump_signatures(&sandbox, &tx.id());
+    assert_eq!(signs_before, signs_after);
+}
+
+// We received signature message with correct input but different signature
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_signature_input_with_different_correct_signature() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let signature_msgs = anchoring_state.latest_anchored_tx_signatures();
+    let tx = {
+        let mut tx = anchoring_state.latest_anchored_tx().clone();
+        tx.0.input[0].script_sig = Script::new();
+        tx
+    };
+
+    let different_sign_msg = {
+        let (redeem_script, addr) = anchoring_state.common.redeem_script();
+        let pub_key = &anchoring_state.common.validators[1];
+        let priv_key = &anchoring_state.priv_keys(&addr)[1];
+
+        let different_signature =
+            sign_tx_input_with_nonce(&tx, 0, &redeem_script, priv_key.secret_key(), 2);
+        assert!(verify_input(&tx,
+                             0,
+                             &redeem_script,
+                             pub_key,
+                             different_signature.as_ref()));
+        assert!(different_signature != signature_msgs[1].signature());
+
+        MsgAnchoringSignature::new(&sandbox.p(1),
+                                   1,
+                                   tx.clone(),
+                                   0,
+                                   different_signature.as_ref(),
+                                   sandbox.s(1))
+    };
+    assert!(signature_msgs[1] != different_sign_msg);
+
+    let signs_before = dump_signatures(&sandbox, &tx.id());
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox,
+                                     &sandbox_state,
+                                     &[different_sign_msg.raw().clone()]);
     // Ensure that service ignore tx
     let signs_after = dump_signatures(&sandbox, &tx.id());
     assert_eq!(signs_before, signs_after);

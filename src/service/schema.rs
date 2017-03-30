@@ -173,6 +173,12 @@ impl<'a> AnchoringSchema<'a> {
         MapTable::new(prefix, self.view)
     }
 
+    // Key is tuple (txid, validator_id, input), see `known_signature_id`.
+    pub fn known_signatures(&self) -> MapTable<View, [u8], MsgAnchoringSignature> {
+        let prefix = vec![ANCHORING_SERVICE as u8, 6];
+        MapTable::new(prefix, self.view)
+    }
+
     pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
         let actual = Schema::new(self.view).get_actual_configuration()?;
         Ok(self.parse_config(&actual))
@@ -245,6 +251,18 @@ impl<'a> AnchoringSchema<'a> {
             .map(|x| x.is_some())
     }
 
+    pub fn add_known_signature(&self, msg: MsgAnchoringSignature) -> Result<(), StorageError> {
+        let txid = msg.tx().id();
+        let signature_id = Self::known_signature_id(&msg);
+        if let Some(sign_msg) = self.known_signatures().get(&signature_id)? {
+            warn!("Received another signature for given tx propose msg={:#?}", sign_msg);
+        } else {
+            self.signatures(&txid).append(msg.clone())?;
+            self.known_signatures().put(&signature_id, msg)?;
+        }
+        Ok(())
+    }
+
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
         let cfg = Schema::new(self.view).get_actual_configuration()?;
         let service_id = ANCHORING_SERVICE.to_string();
@@ -260,6 +278,15 @@ impl<'a> AnchoringSchema<'a> {
         } else {
             Ok(Vec::new())
         }
+    }
+
+    fn known_signature_id(msg: &MsgAnchoringSignature) -> Vec<u8> {
+        let txid = msg.tx().id();
+
+        let mut id = vec![txid.as_ref(), [0; 8].as_ref()].concat();
+        BigEndian::write_u32(&mut id[32..36], msg.validator());
+        BigEndian::write_u32(&mut id[36..40], msg.input());
+        id
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {
@@ -293,7 +320,7 @@ impl MsgAnchoringSignature {
                 error!("Received msg with incorrect signature content={:#?}", self);
                 return Ok(());
             }
-            schema.signatures(&tx.id()).append(self.clone())
+            schema.add_known_signature(self.clone())
         } else {
             Ok(())
         }
