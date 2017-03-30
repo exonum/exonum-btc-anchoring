@@ -81,7 +81,8 @@ impl RegTestNode {
                                n: u64,
                                addr: &Address)
                                -> Result<Vec<String>, bitcoinrpc::Error> {
-        self.client.generatetoaddress(n, &addr.to_base58check(), 99999)
+        self.client
+            .generatetoaddress(n, &addr.to_base58check(), 99999)
     }
 
     pub fn client(&self) -> &AnchoringRpc {
@@ -114,6 +115,8 @@ mod tests {
         let _ = blockchain_explorer::helpers::init_logger();
 
         let (_, regtest) = temporary_regtest_node().unwrap();
-        regtest.generate_blocks(100).expect("Generate 100 blocks");
+        regtest
+            .generate_blocks(100)
+            .expect("Generate 100 blocks");
     }
 }

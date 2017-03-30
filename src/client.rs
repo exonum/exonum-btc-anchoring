@@ -78,7 +78,8 @@ impl AnchoringRpc {
         let redeem_script = RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
         let addr = btc::Address::from_script(&redeem_script, network);
 
-        self.0.importaddress(&addr.to_base58check(), "multisig", false, false)?;
+        self.0
+            .importaddress(&addr.to_base58check(), "multisig", false, false)?;
         Ok((redeem_script, addr))
     }
 
@@ -86,12 +87,14 @@ impl AnchoringRpc {
                                            addr: &str,
                                            limit: u32)
                                            -> Result<Vec<bitcoinrpc::TransactionInfo>> {
-        self.0.listtransactions(limit, 0, true).map(|v| {
-            v.into_iter()
-                .rev()
-                .filter(|tx| tx.address == Some(addr.into()))
-                .collect::<Vec<_>>()
-        })
+        self.0
+            .listtransactions(limit, 0, true)
+            .map(|v| {
+                     v.into_iter()
+                         .rev()
+                         .filter(|tx| tx.address == Some(addr.into()))
+                         .collect::<Vec<_>>()
+                 })
     }
 
     pub fn get_unspent_transactions(&self,

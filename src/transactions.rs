@@ -122,7 +122,8 @@ impl AnchoringTx {
 
     pub fn output_address(&self, network: Network) -> btc::Address {
         let script = &self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].script_pubkey;
-        let bytes = script.into_iter()
+        let bytes = script
+            .into_iter()
             .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
                             Some(bytes)
                         } else {
@@ -304,14 +305,15 @@ fn create_anchoring_transaction<'a, I>(addr: btc::Address,
                                        -> AnchoringTx
     where I: Iterator<Item = &'a (RawBitcoinTx, u32)>
 {
-    let inputs = inputs.map(|&(ref unspent_tx, utxo_vout)| {
-            TxIn {
-                prev_hash: unspent_tx.bitcoin_hash(),
-                prev_index: utxo_vout,
-                script_sig: Script::new(),
-                sequence: 0xFFFFFFFF,
-            }
-        })
+    let inputs = inputs
+        .map(|&(ref unspent_tx, utxo_vout)| {
+                 TxIn {
+                     prev_hash: unspent_tx.bitcoin_hash(),
+                     prev_index: utxo_vout,
+                     script_sig: Script::new(),
+                     sequence: 0xFFFFFFFF,
+                 }
+             })
         .collect::<Vec<_>>();
 
     let metadata_script = {
@@ -323,7 +325,10 @@ fn create_anchoring_transaction<'a, I>(addr: btc::Address,
             data[10..42].copy_from_slice(block_hash.as_ref());
             data
         };
-        Builder::new().push_opcode(All::OP_RETURN).push_slice(data.as_ref()).into_script()
+        Builder::new()
+            .push_opcode(All::OP_RETURN)
+            .push_slice(data.as_ref())
+            .into_script()
     };
     let mut outputs = vec![TxOut {
                                value: out_funds,
@@ -345,7 +350,10 @@ fn create_anchoring_transaction<'a, I>(addr: btc::Address,
                     data[2..34].copy_from_slice(prev_chain_txid.as_ref());
                     data
                 };
-                Builder::new().push_opcode(All::OP_RETURN).push_slice(data.as_ref()).into_script()
+                Builder::new()
+                    .push_opcode(All::OP_RETURN)
+                    .push_slice(data.as_ref())
+                    .into_script()
             },
         };
         outputs.push(txout);
@@ -416,7 +424,9 @@ fn finalize_anchoring_transaction(mut anchoring_tx: AnchoringTx,
             for sign in &signatures {
                 builder = builder.push_slice(sign.as_ref());
             }
-            builder.push_slice(redeem_script_bytes.as_ref()).into_script()
+            builder
+                .push_slice(redeem_script_bytes.as_ref())
+                .into_script()
         };
     }
     anchoring_tx
@@ -426,7 +436,8 @@ fn find_payload(tx: &RawBitcoinTx) -> Option<(Height, Hash)> {
     tx.output
         .get(ANCHORING_TX_DATA_OUTPUT as usize)
         .and_then(|output| {
-            output.script_pubkey
+            output
+                .script_pubkey
                 .into_iter()
                 .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
                                 Some(bytes)
@@ -449,7 +460,8 @@ fn find_prev_txchain(tx: &RawBitcoinTx) -> Option<TxId> {
     tx.output
         .get(ANCHORING_TX_PREV_CHAIN_OUTPUT as usize)
         .and_then(|output| {
-            output.script_pubkey
+            output
+                .script_pubkey
                 .into_iter()
                 .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
                                 Some(bytes)
@@ -481,8 +493,8 @@ mod tests {
 
     use exonum::crypto::{Hash, HexValue};
 
-    use transactions::{BitcoinTx, AnchoringTx, FundingTx, TransactionBuilder, TxKind, verify_input,
-                       sign_input};
+    use transactions::{BitcoinTx, AnchoringTx, FundingTx, TransactionBuilder, TxKind,
+                       verify_input, sign_input};
     use btc::{RedeemScript, PublicKey, HexValueEx};
     use btc;
 

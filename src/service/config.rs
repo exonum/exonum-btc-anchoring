@@ -144,13 +144,12 @@ implement_serde_hex! {FundingTx}
 ///
 /// Note: Bitcoin node that used by rpc have to enough bitcoin amount to generate
 /// funding transaction by given `total_funds`.
-pub fn gen_anchoring_testnet_config_with_rng<R>
-    (client: &AnchoringRpc,
-     network: btc::Network,
-     count: u8,
-     total_funds: u64,
-     rng: &mut R)
-     -> (AnchoringConfig, Vec<AnchoringNodeConfig>)
+pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
+                                                network: btc::Network,
+                                                count: u8,
+                                                total_funds: u64,
+                                                rng: &mut R)
+                                                -> (AnchoringConfig, Vec<AnchoringNodeConfig>)
     where R: Rng
 {
     let network = network.into();
@@ -172,13 +171,16 @@ pub fn gen_anchoring_testnet_config_with_rng<R>
     }
 
     let majority_count = ::majority_count(count);
-    let (_, address) =
-        client.create_multisig_address(network.into(), majority_count, pub_keys.iter()).unwrap();
+    let (_, address) = client
+        .create_multisig_address(network.into(), majority_count, pub_keys.iter())
+        .unwrap();
     let tx = FundingTx::create(client, &address, total_funds).unwrap();
 
     let genesis_cfg = AnchoringConfig::new(pub_keys, tx);
     for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
-        node_cfg.private_keys.insert(address.to_base58check(), priv_keys[idx].clone());
+        node_cfg
+            .private_keys
+            .insert(address.to_base58check(), priv_keys[idx].clone());
     }
 
     (genesis_cfg, node_cfgs)
@@ -187,10 +189,10 @@ pub fn gen_anchoring_testnet_config_with_rng<R>
 /// Same as [`gen_anchoring_testnet_config_with_rng`](fn.gen_anchoring_testnet_config_with_rng.html)
 /// but it uses default random number generator.
 pub fn gen_anchoring_testnet_config(client: &AnchoringRpc,
-                                         network: btc::Network,
-                                         count: u8,
-                                         total_funds: u64)
-                                         -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
+                                    network: btc::Network,
+                                    count: u8,
+                                    total_funds: u64)
+                                    -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let mut rng = rand::thread_rng();
     gen_anchoring_testnet_config_with_rng(client, network, count, total_funds, &mut rng)
 }

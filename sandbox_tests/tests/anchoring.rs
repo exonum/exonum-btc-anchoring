@@ -142,13 +142,13 @@ fn test_anchoring_second_block_additional_funds() {
                         }]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
-                                                         10,
-                                                         block_hash_on_height(&sandbox, 10),
-                                                         &[funds],
-                                                         None,
-                                                         &anchoring_addr);
+    let (_, signatures) = anchoring_state
+        .gen_anchoring_tx_with_signatures(&sandbox,
+                                          10,
+                                          block_hash_on_height(&sandbox, 10),
+                                          &[funds],
+                                          None,
+                                          &anchoring_addr);
 
     sandbox.broadcast(signatures[0].clone());
     sandbox.broadcast(signatures[1].clone());

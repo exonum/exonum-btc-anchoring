@@ -49,8 +49,10 @@ fn make_signatures(redeem_script: &btc::RedeemScript,
                    -> HashMap<u32, Vec<btc::Signature>> {
     let majority_count = (priv_keys.len() as u8) * 2 / 3 + 1;
 
-    let mut signatures =
-        inputs.iter().map(|input| (*input, vec![None; priv_keys.len()])).collect::<Vec<_>>();
+    let mut signatures = inputs
+        .iter()
+        .map(|input| (*input, vec![None; priv_keys.len()]))
+        .collect::<Vec<_>>();
     let mut priv_keys = priv_keys.iter().enumerate().collect::<Vec<_>>();
     rand::thread_rng().shuffle(&mut priv_keys);
 
@@ -62,10 +64,12 @@ fn make_signatures(redeem_script: &btc::RedeemScript,
         }
     }
 
-    signatures.iter()
+    signatures
+        .iter()
         .map(|signs| {
             let input = signs.0;
-            let signs = signs.1
+            let signs = signs
+                .1
                 .iter()
                 .filter_map(|x| x.clone())
                 .take(majority_count as usize)
@@ -104,7 +108,8 @@ fn send_anchoring_tx(client: &AnchoringRpc,
     assert_eq!(tx.payload(), (block_height, block_hash));
 
     debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
-    let lect_tx = client.unspent_transactions(to)
+    let lect_tx = client
+        .unspent_transactions(to)
         .unwrap()
         .first()
         .unwrap()
@@ -144,9 +149,9 @@ fn test_unspent_funding_tx() {
     let (validators, _) = gen_anchoring_keys(4);
 
     let majority_count = ::majority_count(4);
-    let (_, address) =
-        client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
-            .unwrap();
+    let (_, address) = client
+        .create_multisig_address(Network::Testnet, majority_count, validators.iter())
+        .unwrap();
 
     let funding_tx = FundingTx::create(&client, &address, 1000).unwrap();
     let info = funding_tx.is_unspent(&client, &address).unwrap();
@@ -162,9 +167,9 @@ fn test_anchoring_tx_chain() {
 
     let (validators, priv_keys) = gen_anchoring_keys(4);
     let majority_count = ::majority_count(4);
-    let (redeem_script, addr) =
-        client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
-            .unwrap();
+    let (redeem_script, addr) = client
+        .create_multisig_address(Network::Testnet, majority_count, validators.iter())
+        .unwrap();
     debug!("multisig_address={:#?}", redeem_script);
 
     let fee = 1000;
@@ -191,7 +196,8 @@ fn test_anchoring_tx_chain() {
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
         assert!(funding_tx.is_unspent(&client, &addr).unwrap().is_none());
-        let lect_tx = client.unspent_transactions(&addr)
+        let lect_tx = client
+            .unspent_transactions(&addr)
             .unwrap()
             .first()
             .unwrap()
@@ -200,7 +206,9 @@ fn test_anchoring_tx_chain() {
         tx
     };
 
-    let utxos = client.listunspent(0, 9999999, &[addr.to_base58check().as_ref()]).unwrap();
+    let utxos = client
+        .listunspent(0, 9999999, &[addr.to_base58check().as_ref()])
+        .unwrap();
     debug!("utxos={:#?}", utxos);
 
     // Send anchoring txs
@@ -235,9 +243,9 @@ fn test_anchoring_tx_chain() {
     // Send to next addr
     let (validators2, priv_keys2) = gen_anchoring_keys(6);
     let majority_count2 = ::majority_count(6);
-    let (redeem_script2, addr2) =
-        client.create_multisig_address(Network::Testnet, majority_count2, validators2.iter())
-            .unwrap();
+    let (redeem_script2, addr2) = client
+        .create_multisig_address(Network::Testnet, majority_count2, validators2.iter())
+        .unwrap();
 
     debug!("new_multisig_address={:#?}", redeem_script2);
     utxo_tx = send_anchoring_tx(&client,
@@ -270,9 +278,9 @@ fn test_anchoring_tx_chain_insufficient_funds() {
 
     let (validators, priv_keys) = gen_anchoring_keys(4);
     let majority_count = ::majority_count(4);
-    let (redeem_script, addr) =
-        client.create_multisig_address(Network::Testnet, majority_count, validators.iter())
-            .unwrap();
+    let (redeem_script, addr) = client
+        .create_multisig_address(Network::Testnet, majority_count, validators.iter())
+        .unwrap();
     debug!("multisig_address={:#?}", redeem_script);
 
     let fee = 1000;
@@ -299,7 +307,8 @@ fn test_anchoring_tx_chain_insufficient_funds() {
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
         assert!(funding_tx.is_unspent(&client, &addr).unwrap().is_none());
-        let lect_tx = client.unspent_transactions(&addr)
+        let lect_tx = client
+            .unspent_transactions(&addr)
             .unwrap()
             .first()
             .unwrap()
@@ -308,7 +317,9 @@ fn test_anchoring_tx_chain_insufficient_funds() {
         tx
     };
 
-    let utxos = client.listunspent(0, 9999999, &[addr.to_base58check().as_ref()]).unwrap();
+    let utxos = client
+        .listunspent(0, 9999999, &[addr.to_base58check().as_ref()])
+        .unwrap();
     debug!("utxos={:#?}", utxos);
 
     // Send anchoring txs

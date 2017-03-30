@@ -1,4 +1,4 @@
-//! The service implementation details. 
+//! The service implementation details.
 
 #[doc(hidden)]
 /// For test purpose only
@@ -86,17 +86,17 @@ impl Service for AnchoringService {
         let handler = self.handler.lock().unwrap();
         let cfg = self.genesis.clone();
         let (_, addr) = cfg.redeem_script();
-        handler.client.importaddress(&addr.to_base58check(), "multisig", false, false).unwrap();
+        handler
+            .client
+            .importaddress(&addr.to_base58check(), "multisig", false, false)
+            .unwrap();
 
         AnchoringSchema::new(view).create_genesis_config(&cfg)?;
         Ok(cfg.to_json())
     }
 
     fn handle_commit(&self, state: &mut NodeState) -> Result<(), StorageError> {
-        match self.handler
-                  .lock()
-                  .unwrap()
-                  .handle_commit(state) {
+        match self.handler.lock().unwrap().handle_commit(state) {
             Err(ServiceError::Storage(e)) => Err(e),
             Err(e) => {
                 error!("An error occured: {:?}", e);
@@ -134,7 +134,8 @@ pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
     // remove holes from signatures preserve order
     let mut actual_signatures = HashMap::new();
     for (input, signatures) in signatures {
-        let signatures = signatures.into_iter()
+        let signatures = signatures
+            .into_iter()
             .filter_map(|x| x)
             .take(majority_count)
             .collect::<Vec<_>>();

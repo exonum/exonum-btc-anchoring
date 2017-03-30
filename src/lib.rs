@@ -18,7 +18,7 @@
 //! To create a threshold signature, the validators initiate a Byzantine fault-tolerant computation
 //! which results in a single `ECDSA` signature over the predetermined message keyed
 //! by a public key which may be deterministically computed in advance based on public keys of the validators.
-//! 
+//!
 //! You can read the details in [specification](http://exonum.com/doc/anchoring-spec/).
 //!
 //! # Examples

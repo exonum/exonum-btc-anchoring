@@ -78,10 +78,7 @@ impl SandboxClient {
                     "Send unexpected requests: {:#?}",
                     requests.deref());
         }
-        self.requests
-            .lock()
-            .unwrap()
-            .extend(requests);
+        self.requests.lock().unwrap().extend(requests);
     }
     pub fn getinfo(&self) -> Result<Info> {
         self.request("getinfo", Vec::new())
@@ -115,7 +112,10 @@ impl SandboxClient {
               O: AsRef<[TransactionOutput]>
     {
         let mut map = BTreeMap::new();
-        map.extend(outputs.as_ref().iter().map(|x| (x.address.clone(), x.value.clone())));
+        map.extend(outputs
+                       .as_ref()
+                       .iter()
+                       .map(|x| (x.address.clone(), x.value.clone())));
         if let Some(data) = data {
             map.insert("data".into(), data);
         }

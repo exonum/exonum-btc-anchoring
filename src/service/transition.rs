@@ -11,10 +11,10 @@ use AnchoringSchema;
 #[doc(hidden)]
 impl AnchoringHandler {
     pub fn handle_transition_state(&mut self,
-                                     from: AnchoringConfig,
-                                     to: AnchoringConfig,
-                                     state: &mut NodeState)
-                                     -> Result<(), ServiceError> {
+                                   from: AnchoringConfig,
+                                   to: AnchoringConfig,
+                                   state: &mut NodeState)
+                                   -> Result<(), ServiceError> {
         let multisig: MultisigAddress = {
             let mut multisig = self.multisig_address(&from);
             multisig.addr = to.redeem_script().1;
@@ -84,7 +84,9 @@ impl AnchoringHandler {
                     self.client.send_transaction(prev_lect.into())?;
                 } else {
                     // Start a new anchoring chain from scratch
-                    let lect_id = AnchoringSchema::new(state.view()).lect(state.id())?.id();
+                    let lect_id = AnchoringSchema::new(state.view())
+                        .lect(state.id())?
+                        .id();
                     self.try_create_anchoring_tx_chain(&multisig, Some(lect_id), state)?;
                 }
             }
