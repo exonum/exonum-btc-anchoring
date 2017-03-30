@@ -62,18 +62,11 @@ impl AnchoringSandboxState {
     }
 
     pub fn latest_anchored_tx(&self) -> &AnchoringTx {
-        &self.latest_anchored_tx
-             .as_ref()
-             .unwrap()
-             .0
+        &self.latest_anchored_tx.as_ref().unwrap().0
     }
 
     pub fn latest_anchored_tx_signatures(&self) -> &[MsgAnchoringSignature] {
-        self.latest_anchored_tx
-            .as_ref()
-            .unwrap()
-            .1
-            .as_ref()
+        self.latest_anchored_tx.as_ref().unwrap().1.as_ref()
     }
 
     pub fn gen_anchoring_tx_with_signatures(&mut self,
@@ -107,7 +100,10 @@ impl AnchoringSandboxState {
         };
         self.latest_anchored_tx = Some((signed_tx, signs.clone()));
 
-        let signs = signs.into_iter().map(|tx| tx.raw().clone()).collect::<Vec<_>>();
+        let signs = signs
+            .into_iter()
+            .map(|tx| tx.raw().clone())
+            .collect::<Vec<_>>();
         (propose_tx, signs)
     }
 
@@ -177,10 +173,10 @@ pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
     client.expect(requests);
     let mut rng: StdRng = SeedableRng::from_seed([1, 2, 3, 4].as_ref());
     gen_anchoring_testnet_config_with_rng(client,
-                                               btc::Network::Testnet,
-                                               4,
-                                               ANCHORING_FUNDS,
-                                               &mut rng)
+                                          btc::Network::Testnet,
+                                          4,
+                                          ANCHORING_FUNDS,
+                                          &mut rng)
 }
 
 pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, AnchoringSandboxState)
@@ -194,8 +190,10 @@ pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, Anchori
     genesis.frequency = ANCHORING_FREQUENCY;
     for &&(ref addr, ref keys) in &priv_keys {
         for (id, key) in keys.iter().enumerate() {
-            nodes[id].private_keys.insert(addr.to_string(),
-                                          btc::PrivateKey::from_base58check(key).unwrap());
+            nodes[id]
+                .private_keys
+                .insert(addr.to_string(),
+                        btc::PrivateKey::from_base58check(key).unwrap());
         }
     }
 

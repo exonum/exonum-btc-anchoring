@@ -73,7 +73,9 @@ impl AnchoringHandler {
 
     /// Adds a private_key for the corresponding anchoring address.
     pub fn add_private_key(&mut self, addr: &btc::Address, priv_key: btc::PrivateKey) {
-        self.node.private_keys.insert(addr.to_base58check(), priv_key);
+        self.node
+            .private_keys
+            .insert(addr.to_base58check(), priv_key);
     }
 
     #[doc(hidden)]
@@ -189,7 +191,8 @@ impl AnchoringHandler {
             let schema = AnchoringSchema::new(state.view());
             if !schema.is_address_known(&multisig.addr)? {
                 let addr = multisig.addr.to_base58check();
-                self.client.importaddress(&addr, "multisig", false, false)?;
+                self.client
+                    .importaddress(&addr, "multisig", false, false)?;
                 schema.add_known_address(&multisig.addr)?;
 
                 trace!("Add address to known, addr={}", addr);
@@ -260,9 +263,7 @@ impl AnchoringHandler {
                       -> Result<Option<BitcoinTx>, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let id = state.id();
-        let first_funding_tx = schema.lects(id)
-            .get(0)?
-            .unwrap();
+        let first_funding_tx = schema.lects(id).get(0)?.unwrap();
 
         // Check that we know tx
         if schema.find_lect_position(id, &lect.id())?.is_some() {
@@ -286,7 +287,9 @@ impl AnchoringHandler {
                     if !schema.is_address_known(&lect_addr)? {
                         break;
                     }
-                    if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
+                    if schema
+                           .find_lect_position(id, &tx.prev_hash())?
+                           .is_some() {
                         return Ok(Some(lect.into()));
                     } else {
                         times -= 1;

@@ -19,7 +19,8 @@ use exonum::crypto::FromHexError;
 
 #[doc(hidden)]
 /// For test purpose only
-pub use self::types::{Address, PrivateKey, PublicKey, TxId, RedeemScript, RawTransaction, Signature};
+pub use self::types::{Address, PrivateKey, PublicKey, TxId, RedeemScript, RawTransaction,
+                      Signature};
 pub use bitcoin::network::constants::Network;
 
 #[doc(hidden)]

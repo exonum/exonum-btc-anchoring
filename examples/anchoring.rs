@@ -117,10 +117,18 @@ fn main() {
             let dir = GenerateCommand::output_dir(matches);
             let start_port = GenerateCommand::start_port(matches).unwrap_or(2000);
 
-            let host = matches.value_of("ANCHORING_RPC_HOST").unwrap().to_string();
-            let user = matches.value_of("ANCHORING_RPC_USER").map(|x| x.to_string());
-            let passwd = matches.value_of("ANCHORING_RPC_PASSWD").map(|x| x.to_string());
-            let total_funds: u64 = matches.value_of("ANCHORING_FUNDS")
+            let host = matches
+                .value_of("ANCHORING_RPC_HOST")
+                .unwrap()
+                .to_string();
+            let user = matches
+                .value_of("ANCHORING_RPC_USER")
+                .map(|x| x.to_string());
+            let passwd = matches
+                .value_of("ANCHORING_RPC_PASSWD")
+                .map(|x| x.to_string());
+            let total_funds: u64 = matches
+                .value_of("ANCHORING_FUNDS")
                 .unwrap()
                 .parse()
                 .unwrap();

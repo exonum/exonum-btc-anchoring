@@ -25,7 +25,10 @@ impl RedeemScript {
             total_count += 1;
         }
 
-        let script = builder.push_int(total_count).push_opcode(All::OP_CHECKMULTISIG).into_script();
+        let script = builder
+            .push_int(total_count)
+            .push_opcode(All::OP_CHECKMULTISIG)
+            .into_script();
         RedeemScript(script)
     }
 
@@ -40,7 +43,10 @@ impl RedeemScript {
             total_count += 1;
         }
 
-        let script = builder.push_int(total_count).push_opcode(All::OP_CHECKMULTISIG).into_script();
+        let script = builder
+            .push_int(total_count)
+            .push_opcode(All::OP_CHECKMULTISIG)
+            .into_script();
         RedeemScript(script)
     }
 
