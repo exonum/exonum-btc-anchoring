@@ -44,8 +44,8 @@ impl AnchoringHandler {
             LectKind::Funding(_) => self.try_create_anchoring_tx_chain(multisig, None, state),
             LectKind::Anchoring(tx) => {
                 let anchored_height = tx.payload().0;
-                let nearest_anchored_height = multisig.common
-                    .nearest_anchoring_height(state.height());
+                let nearest_anchored_height =
+                    multisig.common.nearest_anchoring_height(state.height());
                 if nearest_anchored_height > anchored_height {
                     return self.create_proposal_tx(tx, multisig, nearest_anchored_height, state);
                 }
@@ -109,8 +109,9 @@ impl AnchoringHandler {
                 .payload(height, hash)
                 .send_to(multisig.addr.clone());
             if let Some(funds) = self.avaliable_funding_tx(multisig)? {
-                let out =
-                    funds.find_out(&multisig.addr).expect("Funding tx has proper multisig output");
+                let out = funds
+                    .find_out(&multisig.addr)
+                    .expect("Funding tx has proper multisig output");
                 builder = builder.add_funds(&funds, out);
             }
             builder.into_transaction()?
@@ -165,7 +166,8 @@ impl AnchoringHandler {
             return Ok(());
         }
 
-        let msgs = AnchoringSchema::new(state.view()).signatures(&txid).values()?;
+        let msgs = AnchoringSchema::new(state.view()).signatures(&txid)
+            .values()?;
         if let Some(signatures) = collect_signatures(&proposal, multisig.common, msgs.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
@@ -175,7 +177,9 @@ impl AnchoringHandler {
                 self.client.send_transaction(new_lect.clone().into())?;
                 trace!("Sended signed_tx={:#?}, to={}",
                        new_lect,
-                       new_lect.output_address(multisig.common.network).to_base58check());
+                       new_lect
+                           .output_address(multisig.common.network)
+                           .to_base58check());
             }
 
             info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",

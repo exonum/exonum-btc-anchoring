@@ -424,8 +424,12 @@ fn test_rpc_anchoring_tx_chain() {
         let tx = tx.send(&client, &redeem_script, signatures).unwrap();
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
-        assert!(funding_tx.has_unspent_info(&client, &addr).unwrap().is_none());
-        let lect_tx = client.unspent_transactions(&addr)
+        assert!(funding_tx
+                    .has_unspent_info(&client, &addr)
+                    .unwrap()
+                    .is_none());
+        let lect_tx = client
+            .unspent_transactions(&addr)
             .unwrap()
             .first()
             .unwrap()
@@ -534,8 +538,12 @@ fn test_rpc_anchoring_tx_chain_insufficient_funds() {
         let tx = tx.send(&client, &redeem_script, signatures).unwrap();
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
-        assert!(funding_tx.has_unspent_info(&client, &addr).unwrap().is_none());
-        let lect_tx = client.unspent_transactions(&addr)
+        assert!(funding_tx
+                    .has_unspent_info(&client, &addr)
+                    .unwrap()
+                    .is_none());
+        let lect_tx = client
+            .unspent_transactions(&addr)
             .unwrap()
             .first()
             .unwrap()
