@@ -6,11 +6,13 @@ extern crate serde;
 extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;
+extern crate byteorder;
 extern crate secp256k1;
 extern crate blockchain_explorer;
 #[macro_use]
 extern crate log;
 extern crate rand;
+extern crate libc;
 
 use std::ops::Deref;
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -44,6 +46,7 @@ mod macros;
 #[cfg(test)]
 mod tests;
 pub mod helpers;
+pub mod secp256k1_hack;
 
 pub const ANCHORING_VALIDATOR: u32 = VALIDATOR_0;
 pub const ANCHORING_FREQUENCY: u64 = 10;

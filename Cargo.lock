@@ -26,6 +26,7 @@ dependencies = [
  "blockchain_explorer 0.1.0 (git+ssh://git@github.com/exonum/exonum-core.git?rev=fc8ca6e7bdfaebe953817c11b57c84289494fecb)",
  "byteorder 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "exonum 0.1.0 (git+ssh://git@github.com/exonum/exonum-core.git?rev=fc8ca6e7bdfaebe953817c11b57c84289494fecb)",
+ "libc 0.2.21 (registry+https://github.com/rust-lang/crates.io-index)",
  "log 0.3.7 (registry+https://github.com/rust-lang/crates.io-index)",
  "rand 0.3.15 (registry+https://github.com/rust-lang/crates.io-index)",
  "sandbox 0.1.0 (git+ssh://git@github.com/exonum/exonum-core.git?rev=fc8ca6e7bdfaebe953817c11b57c84289494fecb)",
