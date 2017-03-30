@@ -170,7 +170,7 @@ impl AnchoringTx {
                   pub_key: &PublicKey,
                   signature: &[u8])
                   -> bool {
-        verify_anchoring_transaction(self, redeem_script, input, pub_key, signature)
+        verify_input(self, input as usize, redeem_script, pub_key, signature)
     }
 
     pub fn finalize(self,
@@ -391,6 +391,11 @@ pub fn verify_input(tx: &RawBitcoinTx,
                     pub_key: &PublicKey,
                     signature: &[u8])
                     -> bool {
+    // Do not verify signatures other than SigHashType::All
+    if Some(&(SigHashType::All.as_u32() as u8)) != signature.last() {
+        return false;
+    }
+
     let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
     let msg = Message::from_slice(&sighash[..]).unwrap();
 
@@ -400,15 +405,6 @@ pub fn verify_input(tx: &RawBitcoinTx,
     } else {
         false
     }
-}
-
-fn verify_anchoring_transaction(tx: &RawBitcoinTx,
-                                redeem_script: &RedeemScript,
-                                vin: u32,
-                                pub_key: &PublicKey,
-                                signature: &[u8])
-                                -> bool {
-    verify_input(tx, vin as usize, redeem_script, pub_key, signature)
 }
 
 fn finalize_anchoring_transaction(mut anchoring_tx: AnchoringTx,
