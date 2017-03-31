@@ -58,14 +58,7 @@ impl AnchoringService {
 
 impl Transaction for AnchoringMessage {
     fn verify(&self) -> bool {
-        if !self.verify_signature(self.from()) {
-            false
-        } else {
-            match *self {
-                AnchoringMessage::Signature(ref msg) => msg.verify(),
-                AnchoringMessage::UpdateLatest(ref msg) => msg.verify(),
-            }
-        }
+        self.verify_signature(self.from()) && self.verify_content()
     }
 
     fn execute(&self, view: &View) -> Result<(), StorageError> {

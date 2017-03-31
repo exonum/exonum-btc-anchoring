@@ -86,6 +86,13 @@ impl AnchoringMessage {
             AnchoringMessage::Signature(ref msg) => msg.from(),
         }
     }
+
+    pub fn verify_content(&self) -> bool {
+        match *self {
+            AnchoringMessage::Signature(ref msg) => msg.verify_content(),
+            AnchoringMessage::UpdateLatest(ref msg) => msg.verify_content(),
+        }
+    }
 }
 
 impl Message for AnchoringMessage {
@@ -262,7 +269,7 @@ impl<'a> AnchoringSchema<'a> {
 }
 
 impl MsgAnchoringSignature {
-    pub fn verify(&self) -> bool {
+    pub fn verify_content(&self) -> bool {
         // Do not verify signatures other than SigHashType::All
         let sighash_type_all = SigHashType::All.as_u32() as u8;
         self.signature().last() == Some(&sighash_type_all)
@@ -294,7 +301,7 @@ impl MsgAnchoringSignature {
 }
 
 impl MsgAnchoringUpdateLatest {
-    pub fn verify(&self) -> bool {
+    pub fn verify_content(&self) -> bool {
         true
     }
 
@@ -337,7 +344,7 @@ mod tests {
                                                             &btc_signature,
                                                             &Signature::zero());
 
-        assert!(msg.verify());
+        assert!(msg.verify_content());
     }
 
     #[test]
@@ -352,6 +359,6 @@ mod tests {
                                                             &btc_signature,
                                                             &Signature::zero());
 
-        assert!(!msg.verify());
+        assert!(!msg.verify_content());
     }
 }
