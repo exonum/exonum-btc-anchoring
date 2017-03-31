@@ -164,12 +164,12 @@ impl AnchoringTx {
         sign_input(self, input as usize, redeem_script, priv_key.secret_key())
     }
 
-    pub fn verify(&self,
-                  redeem_script: &RedeemScript,
-                  input: u32,
-                  pub_key: &PublicKey,
-                  signature: &[u8])
-                  -> bool {
+    pub fn verify_input(&self,
+                        redeem_script: &RedeemScript,
+                        input: u32,
+                        pub_key: &PublicKey,
+                        signature: &[u8])
+                        -> bool {
         verify_input(self, input as usize, redeem_script, pub_key, signature)
     }
 
@@ -590,7 +590,7 @@ mod tests {
 
         for (input, signs) in &signatures {
             for (id, signature) in signs.iter().enumerate() {
-                assert!(tx.verify(&redeem_script, *input, &pub_keys[id], signature.as_ref()));
+                assert!(tx.verify_input(&redeem_script, *input, &pub_keys[id], signature.as_ref()));
             }
         }
     }

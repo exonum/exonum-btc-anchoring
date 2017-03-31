@@ -282,7 +282,7 @@ impl MsgAnchoringSignature {
                 error!("Received msg with incorrect signature content={:#?}", self);
                 return Ok(());
             }
-            if !tx.verify(&redeem_script, self.input(), pub_key, self.signature()) {
+            if !tx.verify_input(&redeem_script, self.input(), pub_key, self.signature()) {
                 error!("Received msg with incorrect signature content={:#?}", self);
                 return Ok(());
             }
