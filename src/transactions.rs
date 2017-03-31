@@ -391,11 +391,6 @@ pub fn verify_input(tx: &RawBitcoinTx,
                     pub_key: &PublicKey,
                     signature: &[u8])
                     -> bool {
-    // Do not verify signatures other than SigHashType::All
-    if Some(&(SigHashType::All.as_u32() as u8)) != signature.last() {
-        return false;
-    }
-
     let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
     let msg = Message::from_slice(&sighash[..]).unwrap();
 
