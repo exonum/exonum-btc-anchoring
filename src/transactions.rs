@@ -479,6 +479,7 @@ mod tests {
     use bitcoin::network::constants::Network;
     use bitcoin::util::base58::{FromBase58, ToBase58};
     use bitcoin::util::address::Privkey;
+    use bitcoin::blockdata::transaction::SigHashType;
     use secp256k1::key::PublicKey as RawPublicKey;
     use secp256k1::Secp256k1;
 
@@ -652,5 +653,37 @@ mod tests {
             TxKind::Other(_) => {}
             _ => panic!("Wrong tx kind!"),
         }
+    }
+
+    #[test]
+    fn test_tx_verify_sighash_type_correct() {
+        let pub_key = btc::PublicKey::from_hex("031cf96b4fef362af7d86ee6c7159fa89485730dac8e3090163dd0c282dbc84f22").unwrap();
+        let redeem_script = btc::RedeemScript::from_hex("5321031cf96b4fef362af7d86ee6c7159fa89485730dac8e3090163dd0c282dbc84f2221028839757bba9bdf46ae553c124479e5c3ded609495f3e93e88ab23c0f559e8be521035c70ffb21d1b454ec650e511e76f6bd3fe76f49c471522ee187abac8d0131a18210234acd7dee22bc23688beed0c7e42c0930cfe024204b7298b0b59d0e76a46476554ae").unwrap();
+        let tx: AnchoringTx = AnchoringTx::from_hex("01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f369a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6e03f742abac0b3108134d900000000").unwrap();
+        let btc_signature = btc::Signature::from_hex("3044022061d0bd408ec10f4f901c6d548151cc53031a3083f28dbcfc132319a162421d24022074f8a1c182088389bfae8646d9d99dea5b47db8f795d02efcc41ab4da0a8e11b01").unwrap();
+
+        assert!(tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature));
+    }
+
+
+    #[test]
+    fn test_tx_verify_incorrect_signature() {
+        let pub_key = btc::PublicKey::from_hex("031cf96b4fef362af7d86ee6c7159fa89485730dac8e3090163dd0c282dbc84f22").unwrap();
+        let redeem_script = btc::RedeemScript::from_hex("5321031cf96b4fef362af7d86ee6c7159fa89485730dac8e3090163dd0c282dbc84f2221028839757bba9bdf46ae553c124479e5c3ded609495f3e93e88ab23c0f559e8be521035c70ffb21d1b454ec650e511e76f6bd3fe76f49c471522ee187abac8d0131a18210234acd7dee22bc23688beed0c7e42c0930cfe024204b7298b0b59d0e76a46476554ae").unwrap();
+        let tx: AnchoringTx = AnchoringTx::from_hex("01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f369a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6e03f742abac0b3108134d900000000").unwrap();
+        let btc_signature = btc::Signature::from_hex("3044022061d0bd408ec10f4f901c6d548151cc53031a3083f28dbcfc132319a162421d24022074f8a1c182088389bfae8646d9d89dea5b47db8f795d02efcc41ab4da0a8e11b01").unwrap();
+
+        assert!(!tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature));
+    }
+
+    #[test]
+    fn test_tx_verify_sighash_type_wrong() {
+        let pub_key = btc::PublicKey::from_hex("031cf96b4fef362af7d86ee6c7159fa89485730dac8e3090163dd0c282dbc84f22").unwrap();
+        let redeem_script = btc::RedeemScript::from_hex("5321031cf96b4fef362af7d86ee6c7159fa89485730dac8e3090163dd0c282dbc84f2221028839757bba9bdf46ae553c124479e5c3ded609495f3e93e88ab23c0f559e8be521035c70ffb21d1b454ec650e511e76f6bd3fe76f49c471522ee187abac8d0131a18210234acd7dee22bc23688beed0c7e42c0930cfe024204b7298b0b59d0e76a46476554ae").unwrap();
+        let tx: AnchoringTx = AnchoringTx::from_hex("01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f369a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6e03f742abac0b3108134d900000000").unwrap();
+        let mut btc_signature = btc::Signature::from_hex("3044022061d0bd408ec10f4f901c6d548151cc53031a3083f28dbcfc132319a162421d24022074f8a1c182088389bfae8646d9d99dea5b47db8f795d02efcc41ab4da0a8e11b01").unwrap();
+        *btc_signature.last_mut().unwrap() = SigHashType::Single.as_u32() as u8;
+
+        assert!(tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature));
     }
 }
