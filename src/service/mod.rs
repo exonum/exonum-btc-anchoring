@@ -58,7 +58,7 @@ impl AnchoringService {
 
 impl Transaction for AnchoringMessage {
     fn verify(&self) -> bool {
-        self.verify_signature(self.from())
+        self.verify_signature(self.from()) && self.verify_content()
     }
 
     fn execute(&self, view: &View) -> Result<(), StorageError> {
