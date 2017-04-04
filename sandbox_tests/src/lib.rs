@@ -33,8 +33,9 @@ use sandbox::config_updater::ConfigUpdateService;
 use anchoring_btc_service::sandbox::{SandboxClient, Request};
 use anchoring_btc_service::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
                             AnchoringNodeConfig};
-use anchoring_btc_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature, AnchoringRpc};
-use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};
+use anchoring_btc_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature,
+                            AnchoringRpc};
+use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
 use anchoring_btc_service::btc;
 use anchoring_btc_service::service::collect_signatures;
 
@@ -122,10 +123,7 @@ impl AnchoringSandboxState {
         let mut signs = Vec::new();
         for (validator, priv_key) in priv_keys.iter().enumerate() {
             for input in tx.inputs() {
-                let signature = sign_input(&tx.0,
-                                           input as usize,
-                                           &redeem_script.0,
-                                           priv_key.secret_key());
+                let signature = tx.sign_input(&redeem_script, input, priv_key);
                 signs.push(MsgAnchoringSignature::new(&sandbox.p(validator),
                                                       validator as u32,
                                                       tx.clone(),
