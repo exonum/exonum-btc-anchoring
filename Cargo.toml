@@ -1,8 +1,8 @@
 [package]
 name = "anchoring_btc_service"
 version = "0.1.0"
-authors = ["Ivan Ivashchenko <ivan.ivashchenko@xdev.com",
-           "Aleksey Sidorov <aleksei.sidorov@xdev.com>"]
+authors = ["Ivan Ivashchenko <ivan.ivashchenko@xdev.re",
+           "Aleksey Sidorov <aleksei.sidorov@xdev.re>"]
 readme	= "README.md"
 
 [workspace]
