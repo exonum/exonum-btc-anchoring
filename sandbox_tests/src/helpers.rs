@@ -13,12 +13,12 @@ use sandbox::sandbox::Sandbox;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 use sandbox::config_updater::TxConfig;
 
-use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest, MsgAnchoringSignature,
-                        AnchoringSchema};
-use anchoring_service::transactions::{BitcoinTx, RawBitcoinTx};
-use anchoring_service::AnchoringConfig;
-use anchoring_service::btc;
+use anchoring_btc_service::sandbox::{SandboxClient, Request};
+use anchoring_btc_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest, MsgAnchoringSignature,
+                            AnchoringSchema};
+use anchoring_btc_service::transactions::{BitcoinTx, RawBitcoinTx};
+use anchoring_btc_service::AnchoringConfig;
+use anchoring_btc_service::btc;
 
 use AnchoringSandboxState;
 
@@ -88,14 +88,14 @@ pub fn anchor_first_block(sandbox: &Sandbox,
                           client: &SandboxClient,
                           sandbox_state: &SandboxState,
                           anchoring_state: &mut AnchoringSandboxState) {
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
     client.expect(vec![request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
                 {
-                    "txid": &anchoring_state.genesis.funding_tx.txid(),
+                    "txid": &anchoring_state.common.funding_tx.txid(),
                     "vout": 0,
                     "address": &anchoring_addr.to_base58check(),
                     "account": "multisig",
@@ -151,7 +151,7 @@ pub fn anchor_first_block_lect_normal(sandbox: &Sandbox,
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     let anchored_tx = anchoring_state.latest_anchored_tx();
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
     client.expect(vec![request! {
             method: "listunspent",
@@ -187,8 +187,8 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
-    let other_lect = anchoring_state.genesis.funding_tx.clone();
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let other_lect = anchoring_state.common.funding_tx.clone();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
     client.expect(vec![request! {
             method: "listunspent",
@@ -278,7 +278,7 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
         (other_lect, other_signatures)
     };
 
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
     client.expect(vec![request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
@@ -320,7 +320,7 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
     add_one_height_with_transactions(sandbox, sandbox_state, &[]);
 
-    let (_, anchoring_addr) = anchoring_state.genesis.redeem_script();
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
     client.expect(vec![request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],

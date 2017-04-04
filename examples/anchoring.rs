@@ -1,4 +1,3 @@
-extern crate env_logger;
 extern crate clap;
 #[macro_use]
 extern crate log;
@@ -10,7 +9,7 @@ extern crate bitcoin;
 
 extern crate exonum;
 extern crate blockchain_explorer;
-extern crate anchoring_service;
+extern crate anchoring_btc_service;
 extern crate configuration_service;
 
 use std::net::SocketAddr;
@@ -29,15 +28,15 @@ use blockchain_explorer::helpers::{GenerateCommand, RunCommand, generate_testnet
 use blockchain_explorer::api::Api;
 use configuration_service::ConfigurationService;
 use configuration_service::config_api::PrivateConfigApi;
-use anchoring_service::AnchoringService;
-use anchoring_service::AnchoringRpc;
-use anchoring_service::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
-                        gen_anchoring_testnet_config};
-use anchoring_service::btc;
+use anchoring_btc_service::AnchoringService;
+use anchoring_btc_service::AnchoringRpc;
+use anchoring_btc_service::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
+                            gen_anchoring_testnet_config};
+use anchoring_btc_service::btc;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {
-    pub genesis: AnchoringConfig,
+    pub common: AnchoringConfig,
     pub node: AnchoringNodeConfig,
 }
 
@@ -138,7 +137,7 @@ fn main() {
                 username: user,
                 password: passwd,
             };
-            let (anchoring_genesis, anchoring_nodes) =
+            let (anchoring_common, anchoring_nodes) =
                 gen_anchoring_testnet_config(&AnchoringRpc::new(rpc.clone()),
                                              btc::Network::Testnet,
                                              count,
@@ -150,7 +149,7 @@ fn main() {
                 let cfg = ServicesConfig {
                     node: node_cfg,
                     anchoring_service: AnchoringServiceConfig {
-                        genesis: anchoring_genesis.clone(),
+                        common: anchoring_common.clone(),
                         node: anchoring_nodes[idx].clone(),
                     },
                 };
@@ -167,7 +166,7 @@ fn main() {
             let anchoring_cfg = cfg.anchoring_service;
             let client = AnchoringRpc::new(anchoring_cfg.node.rpc.clone());
             let services: Vec<Box<Service>> = vec![Box::new(AnchoringService::new(client,
-                                                    anchoring_cfg.genesis,
+                                                    anchoring_cfg.common,
                                                     anchoring_cfg.node)),
                      Box::new(ConfigurationService::new())];
             let blockchain = Blockchain::new(db, services);

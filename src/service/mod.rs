@@ -111,14 +111,14 @@ impl Service for AnchoringService {
 #[doc(hidden)]
 /// The function extract signatures from messages and order them by inputs.
 pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
-                                 genesis: &AnchoringConfig,
+                                 common: &AnchoringConfig,
                                  msgs: I)
                                  -> Option<HashMap<u32, Vec<btc::Signature>>>
     where I: Iterator<Item = &'a MsgAnchoringSignature>
 {
     let mut signatures = HashMap::new();
     for input in proposal.inputs() {
-        signatures.insert(input, vec![None; genesis.validators.len()]);
+        signatures.insert(input, vec![None; common.validators.len()]);
     }
 
     for msg in msgs {
@@ -129,9 +129,9 @@ pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
         signatures_by_input[validator] = Some(msg.signature().to_vec());
     }
 
-    let majority_count = genesis.majority_count() as usize;
+    let majority_count = common.majority_count() as usize;
 
-    // remove holes from signatures preserve order
+    // remove "holes" from signatures preserve order
     let mut actual_signatures = HashMap::new();
     for (input, signatures) in signatures {
         let signatures = signatures

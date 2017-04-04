@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_service;
+extern crate anchoring_btc_service;
 extern crate serde;
 extern crate serde_json;
 extern crate bitcoin;
@@ -30,13 +30,13 @@ use sandbox::timestamping::TimestampingService;
 use sandbox::sandbox_tests_helper::VALIDATOR_0;
 use sandbox::config_updater::ConfigUpdateService;
 
-use anchoring_service::sandbox::{SandboxClient, Request};
-use anchoring_service::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
-                        AnchoringNodeConfig};
-use anchoring_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature, AnchoringRpc};
-use anchoring_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};
-use anchoring_service::btc;
-use anchoring_service::service::collect_signatures;
+use anchoring_btc_service::sandbox::{SandboxClient, Request};
+use anchoring_btc_service::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
+                            AnchoringNodeConfig};
+use anchoring_btc_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature, AnchoringRpc};
+use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx, sign_input};
+use anchoring_btc_service::btc;
+use anchoring_btc_service::service::collect_signatures;
 
 #[macro_use]
 mod macros;
@@ -50,7 +50,7 @@ pub const ANCHORING_FUNDS: u64 = 4000;
 pub const CHECK_LECT_FREQUENCY: u64 = 6;
 
 pub struct AnchoringSandboxState {
-    pub genesis: AnchoringConfig,
+    pub common: AnchoringConfig,
     pub nodes: Vec<AnchoringNodeConfig>,
     pub latest_anchored_tx: Option<(AnchoringTx, Vec<MsgAnchoringSignature>)>,
     pub handler: Arc<Mutex<AnchoringHandler>>,
@@ -81,7 +81,7 @@ impl AnchoringSandboxState {
             let prev_tx = self.latest_anchored_tx
                 .as_ref()
                 .map(|x| x.0.deref())
-                .unwrap_or(self.genesis.funding_tx.deref());
+                .unwrap_or(self.common.funding_tx.deref());
 
             let mut builder = TransactionBuilder::with_prev_tx(prev_tx, 0)
                 .payload(height, block_hash)
@@ -108,15 +108,15 @@ impl AnchoringSandboxState {
     }
 
     pub fn finalize_tx(&self, tx: AnchoringTx, signs: &[MsgAnchoringSignature]) -> AnchoringTx {
-        let collected_signs = collect_signatures(&tx, &self.genesis, signs.iter()).unwrap();
-        tx.finalize(&self.genesis.redeem_script().0, collected_signs)
+        let collected_signs = collect_signatures(&tx, &self.common, signs.iter()).unwrap();
+        tx.finalize(&self.common.redeem_script().0, collected_signs)
     }
 
     pub fn gen_anchoring_signatures(&self,
                                     sandbox: &Sandbox,
                                     tx: &AnchoringTx)
                                     -> Vec<MsgAnchoringSignature> {
-        let (redeem_script, addr) = self.genesis.redeem_script();
+        let (redeem_script, addr) = self.common.redeem_script();
 
         let priv_keys = self.priv_keys(&addr);
         let mut signs = Vec::new();
@@ -183,11 +183,11 @@ pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, Anchori
     where I: IntoIterator<Item = &'a (&'a str, Vec<&'a str>)>
 {
     let mut client = AnchoringRpc(SandboxClient::default());
-    let (mut genesis, mut nodes) = gen_sandbox_anchoring_config(&mut client);
+    let (mut common, mut nodes) = gen_sandbox_anchoring_config(&mut client);
 
     let priv_keys = priv_keys.into_iter().collect::<Vec<_>>();
     // Change default anchoring configs
-    genesis.frequency = ANCHORING_FREQUENCY;
+    common.frequency = ANCHORING_FREQUENCY;
     for &&(ref addr, ref keys) in &priv_keys {
         for (id, key) in keys.iter().enumerate() {
             nodes[id]
@@ -206,14 +206,14 @@ pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, Anchori
             params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
         }]);
     let service = AnchoringService::new(AnchoringRpc(client.clone()),
-                                        genesis.clone(),
+                                        common.clone(),
                                         nodes[ANCHORING_VALIDATOR as usize].clone());
     let service_handler = service.handler();
     let sandbox = sandbox_with_services(vec![Box::new(service),
                                              Box::new(TimestampingService::new()),
                                              Box::new(ConfigUpdateService::new())]);
     let info = AnchoringSandboxState {
-        genesis: genesis,
+        common: common,
         nodes: nodes,
         latest_anchored_tx: None,
         handler: service_handler,

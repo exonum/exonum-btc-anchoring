@@ -7,7 +7,6 @@ use bitcoin::network::constants::Network;
 use exonum::crypto::HexValue;
 
 use transactions::{BitcoinTx, TxKind};
-use SATOSHI_DIVISOR;
 use btc;
 use btc::RedeemScript;
 use service::config::AnchoringRpcConfig;
@@ -20,6 +19,9 @@ pub use sandbox::SandboxClient as RpcClient;
 
 pub type Result<T> = bitcoinrpc::Result<T>;
 pub type Error = bitcoinrpc::Error;
+
+// Rpc method `sendtoaddress` uses amount in btc instead of the satoshis.
+const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 
 /// A client for `Bitcoind` rpc api, for more information visit
 /// this [site](https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list)

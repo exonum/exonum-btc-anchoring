@@ -383,7 +383,7 @@ fn test_rpc_unspent_funding_tx() {
         .unwrap();
 
     let funding_tx = FundingTx::create(&client, &address, 1000).unwrap();
-    let info = funding_tx.is_unspent(&client, &address).unwrap();
+    let info = funding_tx.has_unspent_info(&client, &address).unwrap();
     assert!(info.is_some());
     debug!("{:#?}", info);
 }
@@ -424,7 +424,10 @@ fn test_rpc_anchoring_tx_chain() {
         let tx = tx.send(&client, &redeem_script, signatures).unwrap();
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
-        assert!(funding_tx.is_unspent(&client, &addr).unwrap().is_none());
+        assert!(funding_tx
+                    .has_unspent_info(&client, &addr)
+                    .unwrap()
+                    .is_none());
         let lect_tx = client
             .unspent_transactions(&addr)
             .unwrap()
@@ -535,7 +538,10 @@ fn test_rpc_anchoring_tx_chain_insufficient_funds() {
         let tx = tx.send(&client, &redeem_script, signatures).unwrap();
         debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
-        assert!(funding_tx.is_unspent(&client, &addr).unwrap().is_none());
+        assert!(funding_tx
+                    .has_unspent_info(&client, &addr)
+                    .unwrap()
+                    .is_none());
         let lect_tx = client
             .unspent_transactions(&addr)
             .unwrap()

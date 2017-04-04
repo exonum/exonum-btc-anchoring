@@ -1,5 +1,5 @@
 extern crate exonum;
-extern crate anchoring_service;
+extern crate anchoring_btc_service;
 extern crate blockchain_explorer;
 extern crate tempdir;
 
@@ -12,8 +12,8 @@ use exonum::blockchain::Blockchain;
 use exonum::node::Node;
 use exonum::storage::{LevelDB, LevelDBOptions};
 use blockchain_explorer::helpers::generate_testnet_config;
-use anchoring_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
-                        gen_anchoring_testnet_config};
+use anchoring_btc_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
+                            gen_anchoring_testnet_config};
 
 fn main() {
     // Init crypto engine and pretty logger.
@@ -32,6 +32,7 @@ fn main() {
 
     // Blockchain params
     let count = 4;
+    // Inner exonum network start port (4000, 4001, 4002, ..)
     let start_port = 4000;
     let total_funds = 10000;
     let tmpdir_handle = TempDir::new("exonum_anchoring").unwrap();
@@ -39,7 +40,7 @@ fn main() {
 
     // Generate blockchain configuration
     let client = AnchoringRpc::new(rpc_config.clone());
-    let (anchoring_genesis, anchoring_nodes) =
+    let (anchoring_common, anchoring_nodes) =
         gen_anchoring_testnet_config(&client, BitcoinNetwork::Testnet, count, total_funds);
     let node_cfgs = generate_testnet_config(count, start_port);
 
@@ -49,7 +50,7 @@ fn main() {
         for idx in 0..count as usize {
             // Create anchoring service for node[idx]
             let service = AnchoringService::new(AnchoringRpc::new(rpc_config.clone()),
-                                                anchoring_genesis.clone(),
+                                                anchoring_common.clone(),
                                                 anchoring_nodes[idx].clone());
             // Create database for node[idx]
             let db = {
