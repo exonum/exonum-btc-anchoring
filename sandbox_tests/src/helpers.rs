@@ -13,12 +13,12 @@ use sandbox::sandbox::Sandbox;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 use sandbox::config_updater::TxConfig;
 
-use anchoring_btc_service::sandbox::{SandboxClient, Request};
-use anchoring_btc_service::{ANCHORING_SERVICE, MsgAnchoringUpdateLatest, MsgAnchoringSignature,
-                            AnchoringSchema};
-use anchoring_btc_service::transactions::{BitcoinTx, RawBitcoinTx};
-use anchoring_btc_service::AnchoringConfig;
-use anchoring_btc_service::btc;
+use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
+use anchoring_btc_service::details::btc;
+use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
+use anchoring_btc_service::details::transactions::{RawBitcoinTx, BitcoinTx};
+use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use anchoring_btc_service::blockchain::schema::AnchoringSchema;
 
 use AnchoringSandboxState;
 
@@ -70,7 +70,7 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
     let mut cfg = sandbox.cfg();
     cfg.actual_from = actual_from;
     *cfg.services
-         .get_mut(&ANCHORING_SERVICE.to_string())
+         .get_mut(&ANCHORING_SERVICE_ID.to_string())
          .unwrap() = service_cfg.to_json();
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
     tx.raw().clone()

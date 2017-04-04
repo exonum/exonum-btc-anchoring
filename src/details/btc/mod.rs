@@ -5,9 +5,6 @@ mod redeem_script;
 mod address;
 mod private_key;
 mod public_key;
-#[doc(hidden)]
-/// For test purpose only
-pub mod regtest;
 
 use rand;
 use rand::Rng;

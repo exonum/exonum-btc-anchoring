@@ -85,19 +85,11 @@ impl RedeemScript {
 
 #[cfg(test)]
 mod tests {
-    extern crate blockchain_explorer;
-
-    use bitcoin::util::base58::FromBase58;
     use bitcoin::network::constants::Network;
-    use bitcoin::util::address::Privkey;
-    use bitcoin::blockdata::transaction::SigHashType;
-    use secp256k1::key::PublicKey as RawPublicKey;
-    use secp256k1::Secp256k1;
 
     use exonum::crypto::HexValue;
 
-    use HexValueEx;
-    use transactions::{BitcoinTx, sign_tx_input, verify_tx_input};
+    use details::btc::HexValueEx;
     use super::{RedeemScript, PublicKey};
 
     #[test]
@@ -123,31 +115,6 @@ mod tests {
                    "5321027db7837e51888e94c094703030d162c682c8dba312210f44ff440fbd5e5c24732102bdd272891c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a52103280883dc31ccaee34218819aaa245480c35a33acd91283586ff6d1284ed681e52103e2bc790a6e32bf5a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb054ae");
         assert_eq!(compressed_redeem_script.compressed(Network::Testnet),
                    compressed_redeem_script);
-    }
-
-    #[test]
-    fn test_sign_raw_transaction() {
-        let unsigned_tx = BitcoinTx::from_hex("01000000015d1b8ba33a162d8f6e7c5707fbb557e726c32f30f77f2ba348a48c3c5d71ee0b0000000000ffffffff02b80b00000000000017a914889fc9c82819c7a728974ffa78cc884e3e9e68838700000000000000002c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000").unwrap();
-
-        let priv_key = Privkey::from_base58check("cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE")
-            .unwrap();
-        let pub_key = {
-            let context = Secp256k1::new();
-            RawPublicKey::from_secret_key(&context, priv_key.secret_key()).unwrap()
-        };
-
-        let redeem_script = RedeemScript::from_hex("5321027db7837e51888e94c094703030d162c682c8dba312210f44ff440fbd5e5c24732102bdd272891c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a52103280883dc31ccaee34218819aaa245480c35a33acd91283586ff6d1284ed681e52103e2bc790a6e32bf5a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb054ae").unwrap();
-        let mut actual_signature =
-            sign_tx_input(&unsigned_tx, 0, &redeem_script, priv_key.secret_key());
-        actual_signature.push(SigHashType::All.as_u32() as u8);
-
-        assert_eq!(actual_signature.to_hex(),
-                   "304502210092f1fd6367677ef63dfddfb69cb3644ab10a7c497e5cd391e1d36284dca6a570022021dc2132349afafb9273600698d806f6d5f55756fcc058fba4e49c066116124e01");
-        assert!(verify_tx_input(&unsigned_tx,
-                                0,
-                                &redeem_script,
-                                &pub_key,
-                                &actual_signature[0..actual_signature.len() - 1]));
     }
 
     #[test]

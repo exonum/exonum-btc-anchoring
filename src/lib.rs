@@ -104,11 +104,6 @@
 //! ```
 //!
 
-#![crate_type = "lib"]
-#![crate_type = "rlib"]
-#![crate_type = "dylib"]
-#![crate_name = "anchoring_btc_service"]
-
 #![cfg_attr(feature="clippy", feature(plugin))]
 #![cfg_attr(feature="clippy", plugin(clippy))]
 
@@ -130,55 +125,28 @@ extern crate derive_error;
 extern crate rand;
 extern crate tempdir;
 
-#[macro_use]
-mod macros;
-
 #[doc(hidden)]
-/// For test purpose only
+pub mod details;
+#[doc(hidden)]
+pub mod blockchain;
+#[doc(hidden)]
+pub mod local_storage;
+#[doc(hidden)]
 pub mod service;
 #[doc(hidden)]
-/// For test purpose only
-pub mod transactions;
+pub mod handler;
 #[doc(hidden)]
-/// For test purpose only
-pub mod client;
-#[doc(hidden)]
-/// For test purpose only
-pub mod btc;
-#[doc(hidden)]
-/// For test purpose only
 pub mod error;
 
-#[cfg(feature="sandbox_tests")]
-pub mod sandbox;
-#[cfg(test)]
-mod tests;
-
-use bitcoin::blockdata::script::{Script, Builder};
-
-use exonum::crypto::{FromHexError, ToHex, FromHex};
-
-use btc::HexValueEx;
-pub use btc::{Network as BitcoinNetwork, gen_btc_keypair, gen_btc_keypair_with_rng};
-pub use client::AnchoringRpc;
-pub use service::{AnchoringService, AnchoringHandler};
-pub use service::schema::{AnchoringSchema, ANCHORING_SERVICE, MsgAnchoringSignature,
-                          MsgAnchoringUpdateLatest};
-pub use service::config::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
-                          gen_anchoring_testnet_config_with_rng, gen_anchoring_testnet_config};
+pub use details::btc::{Network as BitcoinNetwork, gen_btc_keypair, gen_btc_keypair_with_rng};
+pub use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
+pub use blockchain::consensus_storage::AnchoringConfig;
+pub use local_storage::AnchoringNodeConfig;
+pub use service::{AnchoringService, ANCHORING_SERVICE_ID, gen_anchoring_testnet_config,
+                  gen_anchoring_testnet_config_with_rng};
+pub use handler::AnchoringHandler;
 pub use error::Error;
 
-impl HexValueEx for Script {
-    fn to_hex(&self) -> String {
-        self.clone().into_vec().to_hex()
-    }
-    fn from_hex<T: AsRef<str>>(v: T) -> ::std::result::Result<Self, FromHexError> {
-        let bytes: Vec<u8> = FromHex::from_hex(v.as_ref())?;
-        Ok(Builder::from(bytes).into_script())
-    }
-}
-
-/// Returns 2/3+1 of the given number in accordance with the Byzantine fault tolerance  algorithm.
 pub fn majority_count(cnt: u8) -> u8 {
     cnt * 2 / 3 + 1
 }

@@ -10,7 +10,7 @@ use bitcoinrpc::*;
 use serde_json::value::{Value, ToJson, from_value};
 use serde::Deserialize;
 
-use service::config::AnchoringRpcConfig;
+use details::rpc::AnchoringRpcConfig;
 
 #[derive(Debug)]
 pub struct Request {

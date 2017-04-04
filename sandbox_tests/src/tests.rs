@@ -1,4 +1,4 @@
-use anchoring_btc_service::sandbox::{SandboxClient, Request};
+use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
 use anchoring_btc_service::AnchoringRpc;
 
 use {anchoring_sandbox, gen_sandbox_anchoring_config};

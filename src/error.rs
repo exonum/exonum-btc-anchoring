@@ -1,13 +1,18 @@
 pub use exonum::storage::Error as StorageError;
-pub use client::Error as RpcError;
+pub use details::error::Error as InternalError;
+use bitcoinrpc::Error as RpcError;
 
-/// A Service error
+/// An anchoring btc service Error type
 #[derive(Debug, Error)]
 pub enum Error {
     /// Storage error
     Storage(StorageError),
-    /// Rpc error
-    Rpc(RpcError),
-    /// Insufficient funds to create anchoring transaction
-    InsufficientFunds,
+    /// An internal error
+    Internal(InternalError),
+}
+
+impl From<RpcError> for Error {
+    fn from(err: RpcError) -> Error {
+        Error::Internal(InternalError::Rpc(err))
+    }
 }

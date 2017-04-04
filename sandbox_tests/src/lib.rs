@@ -32,14 +32,13 @@ use sandbox::timestamping::TimestampingService;
 use sandbox::sandbox_tests_helper::VALIDATOR_0;
 use sandbox::config_updater::ConfigUpdateService;
 
-use anchoring_btc_service::sandbox::{SandboxClient, Request};
 use anchoring_btc_service::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
-                            AnchoringNodeConfig};
-use anchoring_btc_service::{AnchoringService, AnchoringHandler, MsgAnchoringSignature,
-                            AnchoringRpc};
-use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
-use anchoring_btc_service::btc;
-use anchoring_btc_service::service::collect_signatures;
+                            AnchoringNodeConfig, AnchoringRpc, AnchoringService};
+use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
+use anchoring_btc_service::details::btc;
+use anchoring_btc_service::details::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
+use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
+use anchoring_btc_service::handler::{AnchoringHandler, collect_signatures};
 
 #[macro_use]
 mod macros;
