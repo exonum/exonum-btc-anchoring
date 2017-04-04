@@ -2,26 +2,34 @@ use std::ops::Deref;
 
 use bitcoinrpc;
 use bitcoin::util::base58::ToBase58;
-use bitcoin::network::constants::Network;
 
 use exonum::crypto::HexValue;
 
-use transactions::{BitcoinTx, TxKind};
-use btc;
-use btc::RedeemScript;
-use service::config::AnchoringRpcConfig;
+use details::btc;
+use details::transactions::{BitcoinTx, TxKind};
 
 #[doc(hidden)]
 #[cfg(not(feature="sandbox_tests"))]
 pub use bitcoinrpc::Client as RpcClient;
 #[cfg(feature="sandbox_tests")]
-pub use sandbox::SandboxClient as RpcClient;
+pub use super::sandbox::SandboxClient as RpcClient;
 
 pub type Result<T> = bitcoinrpc::Result<T>;
 pub type Error = bitcoinrpc::Error;
 
 // Rpc method `sendtoaddress` uses amount in btc instead of the satoshis.
 const SATOSHI_DIVISOR: f64 = 100_000_000.0;
+
+/// A `Bitcoind` rpc configuration
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+pub struct AnchoringRpcConfig {
+    /// Rpc url
+    pub host: String,
+    /// Rpc username
+    pub username: Option<String>,
+    /// Rpc password
+    pub password: Option<String>,
+}
 
 /// A client for `Bitcoind` rpc api, for more information visit
 /// this [site](https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list)
@@ -71,13 +79,13 @@ impl AnchoringRpc {
     }
 
     pub fn create_multisig_address<'a, I>(&self,
-                                          network: Network,
+                                          network: btc::Network,
                                           count: u8,
                                           pub_keys: I)
-                                          -> Result<(RedeemScript, btc::Address)>
+                                          -> Result<(btc::RedeemScript, btc::Address)>
         where I: IntoIterator<Item = &'a btc::PublicKey>
     {
-        let redeem_script = RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
+        let redeem_script = btc::RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
         let addr = btc::Address::from_script(&redeem_script, network);
 
         self.0

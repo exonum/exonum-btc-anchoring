@@ -1,12 +1,13 @@
-use exonum::blockchain::NodeState;
-
 use bitcoin::util::base58::ToBase58;
 
+use exonum::blockchain::NodeState;
+
 use error::Error as ServiceError;
-use service::config::AnchoringConfig;
-use service::{AnchoringHandler, MultisigAddress, LectKind};
-use transactions::AnchoringTx;
-use AnchoringSchema;
+use details::transactions::AnchoringTx;
+use blockchain::consensus_storage::AnchoringConfig;
+use blockchain::schema::AnchoringSchema;
+
+use super::{AnchoringHandler, MultisigAddress, LectKind};
 
 #[doc(hidden)]
 impl AnchoringHandler {

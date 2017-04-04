@@ -21,10 +21,10 @@ use exonum::crypto::{hash, Hash, FromHexError, HexValue};
 use exonum::node::Height;
 use exonum::storage::StorageValue;
 
-use client::{AnchoringRpc, RpcClient};
-use btc;
-use btc::{TxId, RedeemScript, HexValueEx};
-use error::{RpcError, Error as ServiceError};
+use details::rpc::{AnchoringRpc, RpcClient, Error as RpcError};
+use details::btc;
+use details::btc::{TxId, RedeemScript, HexValueEx};
+use details::error::Error as InternalError;
 
 pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
@@ -81,6 +81,9 @@ implement_tx_wrapper! {BitcoinTx}
 
 implement_tx_from_raw! {AnchoringTx}
 implement_tx_from_raw! {FundingTx}
+
+implement_serde_hex! {AnchoringTx}
+implement_serde_hex! {FundingTx}
 
 impl FundingTx {
     pub fn create(client: &AnchoringRpc,
@@ -277,7 +280,7 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn into_transaction(mut self) -> Result<AnchoringTx, ServiceError> {
+    pub fn into_transaction(mut self) -> Result<AnchoringTx, InternalError> {
         let available_funds: u64 = self.inputs
             .iter()
             .map(|&(ref tx, out)| tx.output[out as usize].value)
@@ -287,7 +290,7 @@ impl TransactionBuilder {
         let fee = self.fee.expect("Fee is not set");
         let (height, block_hash) = self.payload.take().expect("Payload is not set");
         if available_funds < fee {
-            return Err(ServiceError::InsufficientFunds);
+            return Err(InternalError::InsufficientFunds);
         }
         let total_funds = available_funds - fee;
 

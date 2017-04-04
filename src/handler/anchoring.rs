@@ -1,16 +1,18 @@
-use exonum::blockchain::{Schema, NodeState};
-use exonum::storage::List;
-use exonum::crypto::ToHex;
-
 use bitcoin::util::base58::ToBase58;
 
-use btc;
-use btc::HexValueEx;
-use transactions::{AnchoringTx, TransactionBuilder};
+use exonum::blockchain::{NodeState, Schema};
+use exonum::storage::List;
+use exonum::crypto::HexValue;
+
 use error::Error as ServiceError;
-use service::{AnchoringHandler, AnchoringSchema, LectKind, MultisigAddress, collect_signatures};
-use service::schema::{MsgAnchoringSignature, MsgAnchoringUpdateLatest, AnchoringMessage};
-use service::config::AnchoringConfig;
+use details::btc;
+use details::btc::HexValueEx;
+use details::transactions::{AnchoringTx, TransactionBuilder};
+use blockchain::consensus_storage::AnchoringConfig;
+use blockchain::schema::AnchoringSchema;
+use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest, MsgAnchoringSignature};
+
+use super::{AnchoringHandler, MultisigAddress, LectKind, collect_signatures};
 
 #[doc(hidden)]
 impl AnchoringHandler {

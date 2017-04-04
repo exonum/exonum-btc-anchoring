@@ -1,53 +1,18 @@
+use bitcoin::util::base58::ToBase58;
+
 use exonum::blockchain::NodeState;
 use exonum::storage::{List, Error as StorageError};
 
-use bitcoin::util::base58::ToBase58;
-
-use btc;
-use client::AnchoringRpc;
-use transactions::{BitcoinTx, AnchoringTx, FundingTx};
 use error::Error as ServiceError;
-use service::{AnchoringSchema, TxKind};
-use service::schema::{FollowingConfig, MsgAnchoringUpdateLatest, AnchoringMessage};
-use service::config::{AnchoringNodeConfig, AnchoringConfig};
+use details::rpc::AnchoringRpc;
+use details::btc;
+use details::transactions::{TxKind, BitcoinTx, FundingTx};
+use local_storage::AnchoringNodeConfig;
+use blockchain::consensus_storage::AnchoringConfig;
+use blockchain::schema::{AnchoringSchema, FollowingConfig};
+use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest};
 
-/// An internal anchoring service handler. Can be used to manage the service.
-pub struct AnchoringHandler {
-    #[doc(hidden)]
-    pub client: AnchoringRpc,
-    #[doc(hidden)]
-    pub node: AnchoringNodeConfig,
-    #[doc(hidden)]
-    pub proposal_tx: Option<AnchoringTx>,
-}
-
-#[doc(hidden)]
-#[derive(Debug)]
-pub struct MultisigAddress<'a> {
-    pub common: &'a AnchoringConfig,
-    pub priv_key: btc::PrivateKey,
-    pub addr: btc::Address,
-    pub redeem_script: btc::RedeemScript,
-}
-
-#[doc(hidden)]
-#[derive(Debug)]
-pub enum AnchoringState {
-    Anchoring { cfg: AnchoringConfig },
-    Transition {
-        from: AnchoringConfig,
-        to: AnchoringConfig,
-    },
-    Recoverring { cfg: AnchoringConfig },
-    Broken,
-}
-
-#[doc(hidden)]
-pub enum LectKind {
-    Anchoring(AnchoringTx),
-    Funding(FundingTx),
-    None,
-}
+use super::{AnchoringHandler, MultisigAddress, AnchoringState, LectKind};
 
 impl AnchoringHandler {
     #[doc(hidden)]

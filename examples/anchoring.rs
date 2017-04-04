@@ -31,8 +31,7 @@ use configuration_service::config_api::PrivateConfigApi;
 use anchoring_btc_service::AnchoringService;
 use anchoring_btc_service::AnchoringRpc;
 use anchoring_btc_service::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
-                            gen_anchoring_testnet_config};
-use anchoring_btc_service::btc;
+                            gen_anchoring_testnet_config, gen_btc_keypair, BitcoinNetwork};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {
@@ -139,7 +138,7 @@ fn main() {
             };
             let (anchoring_common, anchoring_nodes) =
                 gen_anchoring_testnet_config(&AnchoringRpc::new(rpc.clone()),
-                                             btc::Network::Testnet,
+                                             BitcoinNetwork::Testnet,
                                              count,
                                              total_funds);
 
@@ -179,7 +178,7 @@ fn main() {
                 _ => panic!("Wrong network type"),
             };
 
-            let (p, s) = btc::gen_btc_keypair(network);
+            let (p, s) = gen_btc_keypair(network);
             println!("pub_key={}", p.to_hex());
             println!("sec_key={}", s.to_base58check());
         }

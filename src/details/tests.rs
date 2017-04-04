@@ -5,6 +5,8 @@ use std::env;
 
 use std::collections::HashMap;
 
+use serde_json;
+use serde_json::value::ToJson;
 use rand::Rng;
 use bitcoin::network::constants::Network;
 use bitcoin::util::base58::{FromBase58, ToBase58};
@@ -16,12 +18,11 @@ use secp256k1::Secp256k1;
 use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
-use client::AnchoringRpc;
-use transactions::{AnchoringTx, FundingTx, sign_tx_input, verify_tx_input};
-use service::config::AnchoringRpcConfig;
-use transactions::{TransactionBuilder, BitcoinTx, TxKind};
-use btc;
-use btc::HexValueEx;
+use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
+use details::transactions::{AnchoringTx, FundingTx, sign_tx_input, verify_tx_input, TransactionBuilder,
+                            BitcoinTx, TxKind};
+use details::btc;
+use details::btc::HexValueEx;
 
 fn anchoring_client() -> AnchoringRpc {
     let rpc = AnchoringRpcConfig {
@@ -143,6 +144,16 @@ fn test_anchoring_txid() {
 
     assert_eq!(txid2.to_hex(), txid_hex);
     assert_eq!(txid2, txid);
+}
+
+#[test]
+fn anchoring_tx_serde() {
+    let hex = "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c0990100000000ffffffff0240899500000000001976a914b85133a96a5cadf6cddcfb1d17c79f42c3bbc9dd88ac00000000000000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000";
+    let tx = AnchoringTx::from_hex(hex).unwrap();
+    let json = tx.to_json().to_string();
+    let tx2: AnchoringTx = serde_json::from_str(&json).unwrap();
+
+    assert_eq!(tx2, tx);
 }
 
 #[test]

@@ -15,6 +15,8 @@ use exonum::crypto::{HexValue, FromHexError, hash, Hash};
 use exonum::messages::Field;
 use exonum::storage::StorageValue;
 
+use super::HexValueEx;
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub struct TxId(Sha256dHash);
 #[derive(Clone, PartialEq)]
@@ -96,6 +98,16 @@ impl HexValue for RedeemScript {
     fn from_hex<T: AsRef<str>>(v: T) -> Result<Self, FromHexError> {
         let bytes = Vec::<u8>::from_hex(v.as_ref())?;
         Ok(RedeemScript::from(Builder::from(bytes).into_script()))
+    }
+}
+
+impl HexValueEx for RawScript {
+    fn to_hex(&self) -> String {
+        self.clone().into_vec().to_hex()
+    }
+    fn from_hex<T: AsRef<str>>(v: T) -> ::std::result::Result<Self, FromHexError> {
+        let bytes = Vec::<u8>::from_hex(v.as_ref())?;
+        Ok(Builder::from(bytes).into_script())
     }
 }
 

@@ -14,9 +14,8 @@ use tempdir::TempDir;
 use rand;
 use rand::Rng;
 
-use client::AnchoringRpc;
-use AnchoringRpcConfig;
-use btc::Address;
+use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
+use details::btc::Address;
 
 #[derive(Debug)]
 pub struct RegTestNode {
