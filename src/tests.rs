@@ -364,6 +364,7 @@ fn test_tx_verify_correct_signature_different() {
 
     let btc_signature_1 = tx.sign_input(&redeem_script, 0, &priv_keys[0]);
     let mut btc_signature_2 = btc_signature_1.clone();
+    // Set an incorrect length of the DER-encoded sequence in the signature
     btc_signature_2[1] = btc_signature_2[1].wrapping_add(1);
 
     debug!("{}", btc_signature_1.to_hex());
