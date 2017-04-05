@@ -352,8 +352,10 @@ fn test_tx_verify_incorrect_signature() {
     assert!(!tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature));
 }
 
+/// Verifies that non-strict DER signatures do not pass verification
+/// See https://github.com/bitcoin/bips/blob/master/bip-0066.mediawiki
 #[test]
-fn test_tx_verify_correct_signature_different() {
+fn test_tx_verify_non_strict_der_signature() {
     let _ = blockchain_explorer::helpers::init_logger();
 
     let (pub_keys, priv_keys) = gen_anchoring_keys(4);
