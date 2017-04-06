@@ -131,7 +131,7 @@ impl AnchoringHandler {
                             state: &mut NodeState)
                             -> Result<(), ServiceError> {
         for input in proposal.inputs() {
-            let signature = proposal.sign(&multisig.redeem_script, input, &multisig.priv_key);
+            let signature = proposal.sign_input(&multisig.redeem_script, input, &multisig.priv_key);
 
             let sign_msg = MsgAnchoringSignature::new(state.public_key(),
                                                       state.id(),

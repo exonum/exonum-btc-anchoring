@@ -156,12 +156,15 @@ impl AnchoringTx {
         TxId::from(self.0.input[0].prev_hash)
     }
 
-    pub fn sign(&self,
-                redeem_script: &btc::RedeemScript,
-                input: u32,
-                priv_key: &Privkey)
-                -> btc::Signature {
-        sign_input(self, input as usize, redeem_script, priv_key.secret_key())
+    pub fn sign_input(&self,
+                      redeem_script: &btc::RedeemScript,
+                      input: u32,
+                      priv_key: &Privkey)
+                      -> btc::Signature {
+        let mut sign_data = sign_tx_input(self, input as usize, redeem_script, priv_key.secret_key());
+        /// Adds btc related sighash type byte
+        sign_data.push(SigHashType::All.as_u32() as u8);
+        sign_data
     }
 
     pub fn verify_input(&self,
@@ -170,7 +173,9 @@ impl AnchoringTx {
                         pub_key: &PublicKey,
                         signature: &[u8])
                         -> bool {
-        verify_input(self, input as usize, redeem_script, pub_key, signature)
+        /// Cuts off btc related sighash type byte
+        let signature = &signature[0..signature.len() - 1];
+        verify_tx_input(self, input as usize, redeem_script, pub_key, signature)
     }
 
     pub fn finalize(self,
@@ -369,7 +374,7 @@ fn create_anchoring_transaction<'a, I>(addr: btc::Address,
     AnchoringTx::from(tx)
 }
 
-pub fn sign_input(tx: &RawBitcoinTx,
+pub fn sign_tx_input(tx: &RawBitcoinTx,
                   input: usize,
                   subscript: &Script,
                   sec_key: &SecretKey)
@@ -380,12 +385,10 @@ pub fn sign_input(tx: &RawBitcoinTx,
     let msg = Message::from_slice(&sighash[..]).unwrap();
     let sign = context.sign(&msg, sec_key).unwrap();
     // Serialize signature
-    let mut sign_data = sign.serialize_der(&context);
-    sign_data.push(SigHashType::All.as_u32() as u8);
-    sign_data
+    sign.serialize_der(&context)
 }
 
-pub fn verify_input(tx: &RawBitcoinTx,
+pub fn verify_tx_input(tx: &RawBitcoinTx,
                     input: usize,
                     subscript: &Script,
                     pub_key: &PublicKey,
@@ -395,7 +398,7 @@ pub fn verify_input(tx: &RawBitcoinTx,
     let msg = Message::from_slice(&sighash[..]).unwrap();
 
     let context = Secp256k1::new();
-    if let Ok(sign) = Signature::from_der_lax(&context, signature) {
+    if let Ok(sign) = Signature::from_der(&context, signature) {
         context.verify(&msg, &sign, pub_key).is_ok()
     } else {
         false

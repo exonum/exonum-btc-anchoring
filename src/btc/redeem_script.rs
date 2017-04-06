@@ -90,13 +90,14 @@ mod tests {
     use bitcoin::util::base58::FromBase58;
     use bitcoin::network::constants::Network;
     use bitcoin::util::address::Privkey;
+    use bitcoin::blockdata::transaction::SigHashType;
     use secp256k1::key::PublicKey as RawPublicKey;
     use secp256k1::Secp256k1;
 
     use exonum::crypto::HexValue;
 
     use HexValueEx;
-    use transactions::{BitcoinTx, sign_input, verify_input};
+    use transactions::{BitcoinTx, sign_tx_input, verify_tx_input};
     use super::{RedeemScript, PublicKey};
 
     #[test]
@@ -136,15 +137,17 @@ mod tests {
         };
 
         let redeem_script = RedeemScript::from_hex("5321027db7837e51888e94c094703030d162c682c8dba312210f44ff440fbd5e5c24732102bdd272891c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a52103280883dc31ccaee34218819aaa245480c35a33acd91283586ff6d1284ed681e52103e2bc790a6e32bf5a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb054ae").unwrap();
-        let actual_signature = sign_input(&unsigned_tx, 0, &redeem_script, priv_key.secret_key());
+        let mut actual_signature =
+            sign_tx_input(&unsigned_tx, 0, &redeem_script, priv_key.secret_key());
+        actual_signature.push(SigHashType::All.as_u32() as u8);
 
         assert_eq!(actual_signature.to_hex(),
                    "304502210092f1fd6367677ef63dfddfb69cb3644ab10a7c497e5cd391e1d36284dca6a570022021dc2132349afafb9273600698d806f6d5f55756fcc058fba4e49c066116124e01");
-        assert!(verify_input(&unsigned_tx,
-                             0,
-                             &redeem_script,
-                             &pub_key,
-                             actual_signature.as_ref()));
+        assert!(verify_tx_input(&unsigned_tx,
+                                0,
+                                &redeem_script,
+                                &pub_key,
+                                &actual_signature[0..actual_signature.len() - 1]));
     }
 
     #[test]
