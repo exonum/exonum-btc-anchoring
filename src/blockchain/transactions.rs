@@ -11,7 +11,25 @@ impl MsgAnchoringSignature {
     pub fn verify_content(&self) -> bool {
         // Do not verify signatures other than SigHashType::All
         let sighash_type_all = SigHashType::All.as_u32() as u8;
-        self.signature().last() == Some(&sighash_type_all)
+        if self.signature().last() != Some(&sighash_type_all) {
+            warn!("Received msg with incorrect signature type, content={:#?}",
+                  self);
+            return false;
+        }
+        let tx = self.tx();
+        // Check that input is enough for given tx
+        if tx.input.len() as u32 <= self.input() {
+            warn!("Received msg with incorrect signature content={:#?}", self);
+            return false;
+        }
+        // Check that inputs are empty
+        for input in &tx.input {
+            if !input.script_sig.is_empty() {
+                warn!("Received msg with non empty inputs, content={:#?}", self);
+                return false;
+            }
+        }
+        true
     }
 
     pub fn execute(&self, view: &View) -> Result<(), StorageError> {
@@ -24,12 +42,8 @@ impl MsgAnchoringSignature {
         if let Some(pub_key) = cfg.validators.get(id as usize) {
             let (redeem_script, _) = cfg.redeem_script();
 
-            if tx.input.len() as u32 <= self.input() {
-                error!("Received msg with incorrect signature content={:#?}", self);
-                return Ok(());
-            }
             if !tx.verify_input(&redeem_script, self.input(), pub_key, self.signature()) {
-                error!("Received msg with incorrect signature content={:#?}", self);
+                warn!("Received msg with incorrect signature content={:#?}", self);
                 return Ok(());
             }
             schema.add_known_signature(self.clone())
@@ -52,7 +66,7 @@ impl MsgAnchoringUpdateLatest {
         // Verify lect with actual cfg
         let actual_cfg = Schema::new(view).get_actual_configuration()?;
         if actual_cfg.validators.get(id as usize) != Some(self.from()) {
-            error!("Received weird lect msg={:#?}", self);
+            warn!("Received weird lect msg={:#?}", self);
             return Ok(());
         }
         if schema.lects(id).len()? != self.lect_count() {

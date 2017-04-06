@@ -24,7 +24,7 @@ use details::btc::transactions::{AnchoringTx, FundingTx, sign_tx_input, verify_t
 use details::btc;
 use details::btc::HexValueEx;
 
-fn anchoring_client() -> AnchoringRpc {
+pub fn anchoring_client() -> AnchoringRpc {
     let rpc = AnchoringRpcConfig {
         host: env::var("ANCHORING_RELAY_HOST")
             .expect("Env variable ANCHORING_RELAY_HOST needs to be setted")
@@ -36,7 +36,7 @@ fn anchoring_client() -> AnchoringRpc {
     AnchoringRpc::new(rpc)
 }
 
-fn dummy_anchoring_tx(redeem_script: &btc::RedeemScript) -> AnchoringTx {
+pub fn dummy_anchoring_tx(redeem_script: &btc::RedeemScript) -> AnchoringTx {
     let addr = btc::Address::from_script(redeem_script, Network::Testnet);
     let input_tx = AnchoringTx::from_hex("01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f369a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6e03f742abac0b3108134d900000000").unwrap();
     TransactionBuilder::with_prev_tx(&input_tx, 0)
@@ -47,7 +47,7 @@ fn dummy_anchoring_tx(redeem_script: &btc::RedeemScript) -> AnchoringTx {
         .unwrap()
 }
 
-fn gen_anchoring_keys(count: usize) -> (Vec<btc::PublicKey>, Vec<btc::PrivateKey>) {
+pub fn gen_anchoring_keys(count: usize) -> (Vec<btc::PublicKey>, Vec<btc::PrivateKey>) {
     let mut validators = Vec::new();
     let mut priv_keys = Vec::new();
     for _ in 0..count {
@@ -58,7 +58,7 @@ fn gen_anchoring_keys(count: usize) -> (Vec<btc::PublicKey>, Vec<btc::PrivateKey
     (validators, priv_keys)
 }
 
-fn make_signatures(redeem_script: &btc::RedeemScript,
+pub fn make_signatures(redeem_script: &btc::RedeemScript,
                    proposal: &AnchoringTx,
                    inputs: &[u32],
                    priv_keys: &[btc::PrivateKey])

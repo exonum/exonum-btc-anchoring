@@ -9,4 +9,4 @@ pub mod regtest;
 pub mod sandbox;
 
 #[cfg(test)]
-mod tests;
+pub mod tests;

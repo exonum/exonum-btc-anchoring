@@ -19,12 +19,13 @@ use bitcoin::util::base58::ToBase58;
 use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::SigHashType;
 
-use exonum::crypto::HexValue;
+use exonum::crypto::{HexValue, Hash};
 use exonum::messages::Message;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
 use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx, verify_tx_input};
+use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx,
+                                                        verify_tx_input};
 use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
 use anchoring_btc_sandbox::{RpcError, anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
@@ -493,14 +494,19 @@ fn test_anchoring_signature_nonexistent_tx() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
-    let signatures = anchoring_state.latest_anchored_tx_signatures();
-    let tx = anchoring_state.latest_anchored_tx().clone();
-
+    let (redeem_script, addr) = anchoring_state.common.redeem_script();
+    let tx = TransactionBuilder::with_prev_tx(anchoring_state.latest_anchored_tx(), 0)
+        .fee(100)
+        .payload(0, Hash::zero())
+        .send_to(addr.clone())
+        .into_transaction()
+        .unwrap();
+    let signature = tx.sign_input(&redeem_script, 0, &anchoring_state.priv_keys(&addr)[1]);
     let msg_sign = MsgAnchoringSignature::new(&sandbox.p(1),
                                               1,
                                               tx.clone(),
                                               0,
-                                              signatures[1].signature(),
+                                              signature.as_ref(),
                                               sandbox.s(1));
 
 
@@ -538,42 +544,6 @@ fn test_anchoring_signature_nonexistent_validator() {
                                                 1000,
                                                 tx.clone(),
                                                 0,
-                                                signatures[0].signature(),
-                                                sandbox.s(1));
-
-
-    let signs_before = dump_signatures(&sandbox, &tx.id());
-    // Try to commit tx
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[wrong_sign.raw().clone()]);
-    // Ensure that service ignore tx
-    let signs_after = dump_signatures(&sandbox, &tx.id());
-    assert_eq!(signs_before, signs_after);
-}
-
-// We received signature message with wrong sign
-// problems: None
-// result: we ignore it
-#[test]
-fn test_anchoring_signature_nonexistent_input() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
-
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
-    let sandbox_state = SandboxState::new();
-
-    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-
-    let signatures = anchoring_state.latest_anchored_tx_signatures();
-    let tx = {
-        let mut tx = anchoring_state.latest_anchored_tx().clone();
-        tx.0.input[0].script_sig = Script::new();
-        tx
-    };
-
-    let wrong_sign = MsgAnchoringSignature::new(&sandbox.p(1),
-                                                0,
-                                                tx.clone(),
-                                                100,
                                                 signatures[0].signature(),
                                                 sandbox.s(1));
 
