@@ -17,13 +17,14 @@ use std::ops::Deref;
 
 use bitcoin::util::base58::ToBase58;
 use bitcoin::blockdata::script::Script;
+use bitcoin::blockdata::transaction::SigHashType;
 
 use exonum::crypto::HexValue;
 use exonum::messages::Message;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
 use anchoring_btc_service::sandbox::Request;
-use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx, verify_input};
+use anchoring_btc_service::transactions::{TransactionBuilder, AnchoringTx, verify_tx_input};
 use anchoring_btc_service::MsgAnchoringSignature;
 use anchoring_btc_sandbox::{RpcError, anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
@@ -610,13 +611,15 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
         let pub_key = &anchoring_state.common.validators[1];
         let priv_key = &anchoring_state.priv_keys(&addr)[1];
 
-        let different_signature =
+        let mut different_signature =
             sign_tx_input_with_nonce(&tx, 0, &redeem_script, priv_key.secret_key(), 2);
-        assert!(verify_input(&tx,
-                             0,
-                             &redeem_script,
-                             pub_key,
-                             different_signature.as_ref()));
+        assert!(verify_tx_input(&tx,
+                                0,
+                                &redeem_script,
+                                pub_key,
+                                different_signature.as_ref()));
+
+        different_signature.push(SigHashType::All.as_u32() as u8);
         assert!(different_signature != signature_msgs[1].signature());
 
         MsgAnchoringSignature::new(&sandbox.p(1),
