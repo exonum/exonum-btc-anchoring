@@ -11,9 +11,7 @@ use secp256k1::key::SecretKey;
 use secp256k1::key;
 use secp256k1::Error;
 
-
 use anchoring_btc_service::transactions::RawBitcoinTx;
-
 
 /// The structure with the same memory representation as the `secp256k1::Secp256k1`.
 #[derive(Clone, Copy)]
@@ -79,7 +77,5 @@ pub fn sign_tx_input_with_nonce(tx: &RawBitcoinTx,
     let msg = Message::from_slice(&sighash[..]).unwrap();
     let sign = sign_with_nonce(&mut context, &msg, sec_key, nonce).unwrap();
     // Serialize signature
-    let mut sign_data = sign.serialize_der(&context);
-    sign_data.push(SigHashType::All.as_u32() as u8);
-    sign_data
+    sign.serialize_der(&context)
 }
