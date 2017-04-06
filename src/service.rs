@@ -11,7 +11,7 @@ use exonum::storage::{View, Error as StorageError};
 
 use details::btc;
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
-use details::transactions::FundingTx;
+use details::btc::transactions::FundingTx;
 use local_storage::AnchoringNodeConfig;
 use handler::AnchoringHandler;
 use blockchain::consensus_storage::AnchoringConfig;

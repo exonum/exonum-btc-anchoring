@@ -5,6 +5,7 @@ mod redeem_script;
 mod address;
 mod private_key;
 mod public_key;
+pub mod transactions;
 
 use rand;
 use rand::Rng;

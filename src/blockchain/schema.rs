@@ -10,7 +10,7 @@ use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::ANCHORING_SERVICE_ID;
 use blockchain::dto::MsgAnchoringSignature;
 use details::btc;
-use details::transactions::BitcoinTx;
+use details::btc::transactions::BitcoinTx;
 
 #[doc(hidden)]
 #[derive(Clone, Debug, PartialEq)]

@@ -4,7 +4,7 @@ use exonum::storage::StorageValue;
 use exonum::crypto::{hash, Hash};
 
 use details::btc;
-use details::transactions::FundingTx;
+use details::btc::transactions::FundingTx;
 
 /// Public part of anchoring service configuration stored in blockchain.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]

@@ -2,8 +2,8 @@ use exonum::crypto::{PublicKey, Signature, HexValue};
 
 use bitcoin::blockdata::transaction::SigHashType;
 
-use details::transactions::AnchoringTx;
 use details::btc;
+use details::btc::transactions::AnchoringTx;
 use blockchain::dto::MsgAnchoringSignature;
 
 #[test]

@@ -24,7 +24,7 @@ use exonum::messages::Message;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
 use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::details::transactions::{TransactionBuilder, AnchoringTx, verify_tx_input};
+use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx, verify_tx_input};
 use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
 use anchoring_btc_sandbox::{RpcError, anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;

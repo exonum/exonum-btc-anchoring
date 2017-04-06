@@ -36,7 +36,7 @@ use anchoring_btc_service::{gen_anchoring_testnet_config_with_rng, AnchoringConf
                             AnchoringNodeConfig, AnchoringRpc, AnchoringService};
 use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
 use anchoring_btc_service::details::btc;
-use anchoring_btc_service::details::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
+use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
 use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
 use anchoring_btc_service::handler::{AnchoringHandler, collect_signatures};
 

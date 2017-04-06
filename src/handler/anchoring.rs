@@ -7,7 +7,7 @@ use exonum::crypto::HexValue;
 use error::Error as ServiceError;
 use details::btc;
 use details::btc::HexValueEx;
-use details::transactions::{AnchoringTx, TransactionBuilder};
+use details::btc::transactions::{AnchoringTx, TransactionBuilder};
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest, MsgAnchoringSignature};
