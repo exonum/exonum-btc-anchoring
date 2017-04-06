@@ -15,8 +15,8 @@ use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
 use anchoring_btc_service::details::btc;
+use anchoring_btc_service::details::btc::transactions::{RawBitcoinTx, BitcoinTx};
 use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
-use anchoring_btc_service::details::transactions::{RawBitcoinTx, BitcoinTx};
 use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use anchoring_btc_service::blockchain::schema::AnchoringSchema;
 

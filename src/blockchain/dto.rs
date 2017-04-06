@@ -3,7 +3,7 @@ use std::fmt;
 use exonum::crypto::{PublicKey, Hash};
 use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 
-use details::transactions::{AnchoringTx, BitcoinTx};
+use details::btc::transactions::{AnchoringTx, BitcoinTx};
 
 #[doc(hidden)]
 pub const ANCHORING_SERVICE_ID: u16 = 3;

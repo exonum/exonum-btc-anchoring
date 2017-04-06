@@ -3,7 +3,7 @@ use bitcoin::util::base58::ToBase58;
 use exonum::blockchain::NodeState;
 
 use error::Error as ServiceError;
-use details::transactions::AnchoringTx;
+use details::btc::transactions::AnchoringTx;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 

@@ -6,7 +6,7 @@ use bitcoin::util::base58::ToBase58;
 use exonum::crypto::HexValue;
 
 use details::btc;
-use details::transactions::{BitcoinTx, TxKind};
+use details::btc::transactions::{BitcoinTx, TxKind};
 
 #[doc(hidden)]
 #[cfg(not(feature="sandbox_tests"))]

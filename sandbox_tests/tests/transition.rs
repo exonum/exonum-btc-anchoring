@@ -21,7 +21,7 @@ use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactio
 use sandbox::sandbox::Sandbox;
 
 use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::details::transactions::FundingTx;
+use anchoring_btc_service::details::btc::transactions::FundingTx;
 use anchoring_btc_service::AnchoringConfig;
 
 use anchoring_btc_sandbox::{CHECK_LECT_FREQUENCY, AnchoringSandboxState, anchoring_sandbox};

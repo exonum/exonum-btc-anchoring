@@ -19,7 +19,7 @@ use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
-use details::transactions::{AnchoringTx, FundingTx, sign_tx_input, verify_tx_input, TransactionBuilder,
+use details::btc::transactions::{AnchoringTx, FundingTx, sign_tx_input, verify_tx_input, TransactionBuilder,
                             BitcoinTx, TxKind};
 use details::btc;
 use details::btc::HexValueEx;

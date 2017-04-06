@@ -6,7 +6,7 @@ use exonum::storage::{List, Error as StorageError};
 use error::Error as ServiceError;
 use details::rpc::AnchoringRpc;
 use details::btc;
-use details::transactions::{TxKind, BitcoinTx, FundingTx};
+use details::btc::transactions::{TxKind, BitcoinTx, FundingTx};
 use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::{AnchoringSchema, FollowingConfig};

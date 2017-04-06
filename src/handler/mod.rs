@@ -4,9 +4,9 @@ mod basic;
 
 use std::collections::HashMap;
 
-use details::btc;
 use details::rpc::AnchoringRpc;
-use details::transactions::{AnchoringTx, FundingTx};
+use details::btc;
+use details::btc::transactions::{AnchoringTx, FundingTx};
 use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::MsgAnchoringSignature;
