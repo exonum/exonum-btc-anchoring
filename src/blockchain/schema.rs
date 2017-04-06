@@ -135,12 +135,12 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn add_known_signature(&self, msg: MsgAnchoringSignature) -> Result<(), StorageError> {
-        let txid = msg.tx().id();
+        let ntxid = msg.tx().nid();
         let signature_id = Self::known_signature_id(&msg);
         if let Some(sign_msg) = self.known_signatures().get(&signature_id)? {
             warn!("Received another signature for given tx propose msg={:#?}", sign_msg);
         } else {
-            self.signatures(&txid).append(msg.clone())?;
+            self.signatures(&ntxid).append(msg.clone())?;
             self.known_signatures().put(&signature_id, msg)?;
         }
         Ok(())
