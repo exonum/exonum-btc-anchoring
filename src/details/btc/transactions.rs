@@ -53,6 +53,10 @@ pub enum TxKind {
     Other(BitcoinTx),
 }
 
+pub trait TxFromRaw: Sized {
+    fn from_raw(raw: RawBitcoinTx) -> Option<Self>;
+}
+
 pub struct TransactionBuilder {
     inputs: Vec<(RawBitcoinTx, u32)>,
     output: Option<btc::Address>,
@@ -243,6 +247,32 @@ impl From<RawBitcoinTx> for TxKind {
 impl From<BitcoinTx> for TxKind {
     fn from(tx: BitcoinTx) -> TxKind {
         TxKind::from(tx.0)
+    }
+}
+
+impl TxFromRaw for BitcoinTx {
+    fn from_raw(raw: RawBitcoinTx) -> Option<BitcoinTx> {
+        Some(BitcoinTx(raw))
+    }
+}
+
+impl TxFromRaw for AnchoringTx {
+    fn from_raw(raw: RawBitcoinTx) -> Option<AnchoringTx> {
+        if let TxKind::Anchoring(tx) = TxKind::from(raw) {
+            Some(tx)
+        } else {
+            None
+        }
+    }
+}
+
+impl TxFromRaw for FundingTx {
+    fn from_raw(raw: RawBitcoinTx) -> Option<FundingTx> {
+        if let TxKind::FundingTx(tx) = TxKind::from(raw) {
+            Some(tx)
+        } else {
+            None
+        }
     }
 }
 
