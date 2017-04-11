@@ -17,15 +17,15 @@ impl MsgAnchoringSignature {
             return false;
         }
         let tx = self.tx();
-        // Check that input is enough for given tx
+        // Check that the signature is provided for an existing anchoring tx input
         if tx.input.len() as u32 <= self.input() {
-            warn!("Received msg with incorrect signature content={:#?}", self);
+            warn!("Received msg for non-existing input index, content={:#?}", self);
             return false;
         }
-        // Check that inputs are empty
+        // Check that input scriptSigs are empty
         for input in &tx.input {
             if !input.script_sig.is_empty() {
-                warn!("Received msg with non empty inputs, content={:#?}", self);
+                warn!("Received msg with non empty input scriptSigs, content={:#?}", self);
                 return false;
             }
         }
