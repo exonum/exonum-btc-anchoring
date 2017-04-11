@@ -163,10 +163,8 @@ fn main() {
             let cfg: ServicesConfig = ConfigFile::load(&path).unwrap();
 
             let anchoring_cfg = cfg.anchoring_service;
-            let client = AnchoringRpc::new(anchoring_cfg.node.rpc.clone());
-            let services: Vec<Box<Service>> = vec![Box::new(AnchoringService::new(client,
-                                                    anchoring_cfg.common,
-                                                    anchoring_cfg.node)),
+            let services: Vec<Box<Service>> =
+                vec![Box::new(AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node)),
                      Box::new(ConfigurationService::new())];
             let blockchain = Blockchain::new(db, services);
             run_node(blockchain, cfg.node, port)

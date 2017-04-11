@@ -212,9 +212,9 @@ pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, Anchori
             method: "importaddress",
             params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
         }]);
-    let service = AnchoringService::new(AnchoringRpc(client.clone()),
-                                        common.clone(),
-                                        nodes[ANCHORING_VALIDATOR as usize].clone());
+    let service = AnchoringService::new_with_client(AnchoringRpc(client.clone()),
+                                                    common.clone(),
+                                                    nodes[ANCHORING_VALIDATOR as usize].clone());
     let service_handler = service.handler();
     let sandbox = sandbox_with_services(vec![Box::new(service),
                                              Box::new(TimestampingService::new()),

@@ -28,13 +28,20 @@ pub struct AnchoringService {
 }
 
 impl AnchoringService {
-    pub fn new(client: AnchoringRpc,
+    /// Creates a new service instance with the given `consensus` and `local` configurations.
+    pub fn new(consensus_cfg: AnchoringConfig, local_cfg: AnchoringNodeConfig) -> AnchoringService {
+        let client = AnchoringRpc::new(local_cfg.rpc.clone());
+        Self::new_with_client(client, consensus_cfg, local_cfg)
+    }
+
+    #[doc(hidden)]
+    pub fn new_with_client(client: AnchoringRpc,
                genesis: AnchoringConfig,
-               cfg: AnchoringNodeConfig)
+               local_cfg: AnchoringNodeConfig)
                -> AnchoringService {
         AnchoringService {
             genesis: genesis,
-            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, cfg))),
+            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local_cfg))),
         }
     }
 
