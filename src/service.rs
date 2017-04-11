@@ -30,18 +30,21 @@ pub struct AnchoringService {
 impl AnchoringService {
     /// Creates a new service instance with the given `consensus` and `local` configurations.
     pub fn new(consensus_cfg: AnchoringConfig, local_cfg: AnchoringNodeConfig) -> AnchoringService {
-        let client = AnchoringRpc::new(local_cfg.rpc.clone());
-        Self::new_with_client(client, consensus_cfg, local_cfg)
+        let client = local_cfg.rpc.clone().map(AnchoringRpc::new);
+        AnchoringService {
+            genesis: consensus_cfg,
+            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local_cfg))),
+        }
     }
 
     #[doc(hidden)]
     pub fn new_with_client(client: AnchoringRpc,
-               genesis: AnchoringConfig,
-               local_cfg: AnchoringNodeConfig)
-               -> AnchoringService {
+                           genesis: AnchoringConfig,
+                           local_cfg: AnchoringNodeConfig)
+                           -> AnchoringService {
         AnchoringService {
             genesis: genesis,
-            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local_cfg))),
+            handler: Arc::new(Mutex::new(AnchoringHandler::new(Some(client), local_cfg))),
         }
     }
 
@@ -68,11 +71,11 @@ impl Service for AnchoringService {
         let handler = self.handler.lock().unwrap();
         let cfg = self.genesis.clone();
         let (_, addr) = cfg.redeem_script();
-        handler
-            .client
-            .importaddress(&addr.to_base58check(), "multisig", false, false)
-            .unwrap();
-
+        if let Some(ref client) = handler.client {
+            client
+                .importaddress(&addr.to_base58check(), "multisig", false, false)
+                .unwrap();
+        }
         AnchoringSchema::new(view).create_genesis_config(&cfg)?;
         Ok(cfg.to_json())
     }
@@ -117,7 +120,7 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
         let (pub_key, priv_key) = btc::gen_btc_keypair_with_rng(network, rng);
 
         pub_keys.push(pub_key.clone());
-        node_cfgs.push(AnchoringNodeConfig::new(rpc.clone()));
+        node_cfgs.push(AnchoringNodeConfig::new(Some(rpc.clone())));
         priv_keys.push(priv_key.clone());
     }
 

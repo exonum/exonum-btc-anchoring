@@ -175,10 +175,10 @@ impl AnchoringHandler {
         if let Some(signatures) = collect_signatures(&proposal, multisig.common, msgs.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
-            if self.client
+            if self.client()
                    .get_transaction_info(&new_lect.txid())?
                    .is_none() {
-                self.client.send_transaction(new_lect.clone().into())?;
+                self.client().send_transaction(new_lect.clone().into())?;
                 trace!("Sended signed_tx={:#?}, to={}",
                        new_lect,
                        new_lect

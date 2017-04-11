@@ -16,7 +16,7 @@ use super::{AnchoringHandler, MultisigAddress, AnchoringState, LectKind};
 
 impl AnchoringHandler {
     #[doc(hidden)]
-    pub fn new(client: AnchoringRpc, node: AnchoringNodeConfig) -> AnchoringHandler {
+    pub fn new(client: Option<AnchoringRpc>, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
             client: client,
             node: node,
@@ -31,6 +31,11 @@ impl AnchoringHandler {
             .as_ref()
             .expect("Request `validator_id` only from validator node.")
             .id()
+    }
+
+    #[doc(hidden)]
+    pub fn client(&self) -> &AnchoringRpc {
+        self.client.as_ref().expect("Client need to be exists")
     }
 
     #[doc(hidden)]
@@ -107,6 +112,7 @@ impl AnchoringHandler {
                 self.handle_transition_state(from, to, state)
             }
             AnchoringState::Recovering { cfg } => self.handle_recovering_state(cfg, state),
+            AnchoringState::Auditing { cfg } => self.handle_auditing_state(cfg, state),
             AnchoringState::Broken => panic!("Broken anchoring state detected!"),
         }
     }
@@ -145,7 +151,7 @@ impl AnchoringHandler {
                      multisig: &MultisigAddress,
                      state: &NodeState)
                      -> Result<Option<BitcoinTx>, ServiceError> {
-        let lects: Vec<_> = self.client.unspent_transactions(&multisig.addr)?;
+        let lects: Vec<_> = self.client().unspent_transactions(&multisig.addr)?;
         for lect in lects {
             if let Some(tx) = self.find_lect_deep(lect, multisig, state)? {
                 return Ok(Some(tx));
@@ -166,7 +172,7 @@ impl AnchoringHandler {
             let schema = AnchoringSchema::new(state.view());
             if !schema.is_address_known(&multisig.addr)? {
                 let addr = multisig.addr.to_base58check();
-                self.client
+                self.client()
                     .importaddress(&addr, "multisig", false, false)?;
                 schema.add_known_address(&multisig.addr)?;
 
@@ -219,7 +225,7 @@ impl AnchoringHandler {
                                 -> Result<Option<FundingTx>, ServiceError> {
         let funding_tx = &multisig.common.funding_tx;
         if let Some(info) = funding_tx
-               .has_unspent_info(&self.client, &multisig.addr)? {
+               .has_unspent_info(self.client(), &multisig.addr)? {
             trace!("avaliable_funding_tx={:#?}, confirmations={}",
                    funding_tx,
                    info.confirmations);
@@ -270,7 +276,7 @@ impl AnchoringHandler {
                     } else {
                         times -= 1;
                         let txid = tx.prev_hash().be_hex_string();
-                        current_tx = self.client.get_transaction(&txid)?;
+                        current_tx = self.client().get_transaction(&txid)?;
                         trace!("Check prev lect={:#?}", current_tx);
                     }
                 }
