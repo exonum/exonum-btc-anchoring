@@ -38,7 +38,7 @@ pub enum AnchoringState {
         from: AnchoringConfig,
         to: AnchoringConfig,
     },
-    Recoverring { cfg: AnchoringConfig },
+    Recovering { cfg: AnchoringConfig },
     Broken,
 }
 

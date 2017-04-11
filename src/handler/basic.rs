@@ -88,7 +88,7 @@ impl AnchoringHandler {
                 let current_addr = current_lect.output_address(actual.network);
 
                 if current_addr != actual.redeem_script().1 {
-                    AnchoringState::Recoverring { cfg: actual }
+                    AnchoringState::Recovering { cfg: actual }
                 } else {
                     AnchoringState::Anchoring { cfg: actual }
                 }
@@ -106,7 +106,7 @@ impl AnchoringHandler {
             AnchoringState::Transition { from, to } => {
                 self.handle_transition_state(from, to, state)
             }
-            AnchoringState::Recoverring { cfg } => self.handle_recovering_state(cfg, state),
+            AnchoringState::Recovering { cfg } => self.handle_recovering_state(cfg, state),
             AnchoringState::Broken => panic!("Broken anchoring state detected!"),
         }
     }
