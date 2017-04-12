@@ -143,6 +143,10 @@ impl AnchoringSandboxState {
             .map(|cfg| cfg.private_keys[&addr.to_base58check()].clone())
             .collect::<Vec<_>>()
     }
+
+    pub fn current_priv_keys(&self) -> Vec<btc::PrivateKey> {
+        self.priv_keys(&self.common.redeem_script().1)
+    }
 }
 
 /// Generates config for 4 validators and 10000 funds

@@ -18,6 +18,7 @@ use std::ops::Deref;
 use bitcoin::util::base58::ToBase58;
 use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::SigHashType;
+use bitcoin::network::constants::Network;
 
 use exonum::crypto::{HexValue, Hash};
 use exonum::messages::Message;
@@ -611,7 +612,7 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
     assert_eq!(signs_before, signs_after);
 }
 
-// We received signature message with correct signature 
+// We received signature message with correct signature
 // but signed by different validator
 // problems: None
 // result: we ignore it
@@ -622,7 +623,10 @@ fn test_anchoring_signature_input_from_different_validator() {
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
-    anchor_first_block_without_other_signatures(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_without_other_signatures(&sandbox,
+                                                &client,
+                                                &sandbox_state,
+                                                &mut anchoring_state);
 
     let signatures = anchoring_state.latest_anchored_tx_signatures();
     let tx = {
@@ -637,6 +641,54 @@ fn test_anchoring_signature_input_from_different_validator() {
                                                 0,
                                                 signatures[2].signature(),
                                                 sandbox.s(1));
+
+    let signs_before = dump_signatures(&sandbox, &tx.id());
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[wrong_sign.raw().clone()]);
+    // Ensure that service ignore tx
+    let signs_after = dump_signatures(&sandbox, &tx.id());
+    assert_eq!(signs_before, signs_after);
+}
+
+// We received signature message for anchoring tx with unknown output_address
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_signature_unknown_output_address() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let tx = {
+        let (_, addr) = {
+            let mut anchoring_cfg = anchoring_state.common.clone();
+            anchoring_cfg.validators.swap(1, 2);
+            anchoring_cfg.redeem_script()
+        };
+
+        TransactionBuilder::with_prev_tx(anchoring_state.latest_anchored_tx(), 0)
+            .fee(1000)
+            .payload(0, Hash::zero())
+            .send_to(addr)
+            .into_transaction()
+            .unwrap()
+    };
+    let (redeem_script, addr) = anchoring_state.common.redeem_script();
+    let priv_key = &anchoring_state.current_priv_keys()[0];
+    let signature = tx.sign_input(&redeem_script, 0, &priv_key);
+
+    assert!(tx.output_address(Network::Testnet) != addr);
+    assert!(tx.verify_input(&redeem_script,
+                            0,
+                            &anchoring_state.common.validators[0],
+                            &signature));
+
+    let wrong_sign =
+        MsgAnchoringSignature::new(&sandbox.p(0), 0, tx.clone(), 0, &signature, sandbox.s(0));
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Try to commit tx
