@@ -168,7 +168,7 @@ fn test_anchoring_tx_storage_value() {
 }
 
 #[test]
-fn test_anchroing_tx_message_field_rw_correct() {
+fn test_anchoring_tx_message_field_rw_correct() {
     let hex = "01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f369a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6e03f742abac0b3108134d900000000";
     let dat = Vec::<u8>::from_hex(hex).unwrap();
 
@@ -197,7 +197,7 @@ fn test_bitcoin_tx_message_field_rw_correct() {
 
 #[should_panic(expected = "Result::unwrap()` on an `Err`")]
 #[test]
-fn test_anchroing_tx_message_field_rw_incorrect_unwrap() {
+fn test_anchoring_tx_message_field_rw_garbage_unwrap() {
     let hex = "00000000200000000000";
     let dat = Vec::<u8>::from_hex(hex).unwrap();
 
@@ -210,7 +210,7 @@ fn test_anchroing_tx_message_field_rw_incorrect_unwrap() {
 
 #[test]
 #[should_panic(expected = "Result::unwrap()` on an `Err`")]
-fn test_bitcoin_tx_message_field_rw_incorrect_unwrap() {
+fn test_bitcoin_tx_message_field_rw_garbage_unwrap() {
     let hex = "000000000002000001";
     let dat = Vec::<u8>::from_hex(hex).unwrap();
 
@@ -245,6 +245,36 @@ fn test_anchoring_tx_message_field_rw_without_payload_check() {
 
     let buf2 = buf.clone();
     AnchoringTx::check(&buf2, 0, 8).unwrap();
+}
+
+#[test]
+#[should_panic(expected = "Result::unwrap()` on an `Err`")]
+fn test_anchoring_tx_message_field_rw_wrong_tx_kind_check() {
+    /// Correct non-anchoring tx, created by command:
+    /// `bitcoin-cli sendtoaddress "mynkNvvoysgzn3CX51KwyKyNVbEJEHs8Cw" 0.1`
+    let hex = "02000000011b8ac5ff25dfe2b4675e86d77dda493ade980206ee6a7833729f07a2f1f4998200000000484730440220620a9ea6cfe4f575d2edffa815705a50b95b3eec9e0259abe94a087fafebf59902200c4cd654a506137726bf608288539879d4ee939a3dc5bb8d4411bcbd2a0d836001feffffff0200d7e849000000001976a914618396019f30e77caaea0ec2d5ec5280e26ff23f88ac80969800000000001976a914c86ef8fb71b99cac9e5b1be272ba5420656266f688ac58020000";
+    let dat = Vec::<u8>::from_hex(hex).unwrap();
+
+    let mut buf = vec![255; 8];
+    Field::write(&dat, &mut buf, 0, 8);
+
+    let buf2 = buf.clone();
+    AnchoringTx::check(&buf2, 0, 8).unwrap();
+}
+
+#[test]
+#[should_panic(expected = "Result::unwrap()` on an `Err`")]
+fn test_funding_tx_message_field_rw_wrong_tx_kind_check() {
+    /// Correct non-funding tx, created by command:
+    /// `bitcoin-cli sendtoaddress "mynkNvvoysgzn3CX51KwyKyNVbEJEHs8Cw" 0.1`
+    let hex = "02000000011b8ac5ff25dfe2b4675e86d77dda493ade980206ee6a7833729f07a2f1f4998200000000484730440220620a9ea6cfe4f575d2edffa815705a50b95b3eec9e0259abe94a087fafebf59902200c4cd654a506137726bf608288539879d4ee939a3dc5bb8d4411bcbd2a0d836001feffffff0200d7e849000000001976a914618396019f30e77caaea0ec2d5ec5280e26ff23f88ac80969800000000001976a914c86ef8fb71b99cac9e5b1be272ba5420656266f688ac58020000";
+    let dat = Vec::<u8>::from_hex(hex).unwrap();
+
+    let mut buf = vec![255; 8];
+    Field::write(&dat, &mut buf, 0, 8);
+
+    let buf2 = buf.clone();
+    FundingTx::check(&buf2, 0, 8).unwrap();
 }
 
 #[test]
