@@ -610,3 +610,38 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
     let signs_after = dump_signatures(&sandbox, &tx.id());
     assert_eq!(signs_before, signs_after);
 }
+
+// We received signature message with correct signature 
+// but signed by different validator
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_signature_input_from_different_validator() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block_without_other_signatures(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let signatures = anchoring_state.latest_anchored_tx_signatures();
+    let tx = {
+        let mut tx = anchoring_state.latest_anchored_tx().clone();
+        tx.0.input[0].script_sig = Script::new();
+        tx
+    };
+
+    let wrong_sign = MsgAnchoringSignature::new(&sandbox.p(1),
+                                                2,
+                                                tx.clone(),
+                                                0,
+                                                signatures[2].signature(),
+                                                sandbox.s(1));
+
+    let signs_before = dump_signatures(&sandbox, &tx.id());
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[wrong_sign.raw().clone()]);
+    // Ensure that service ignore tx
+    let signs_after = dump_signatures(&sandbox, &tx.id());
+    assert_eq!(signs_before, signs_after);
+}
