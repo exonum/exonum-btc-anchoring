@@ -134,8 +134,9 @@ impl SandboxClient {
         where O: AsRef<[DependentOutput]>,
               K: AsRef<[String]>
     {
-        let params =
-            vec![txhex.to_json(), outputs.as_ref().to_json(), priv_keys.as_ref().to_json()];
+        let params = vec![txhex.to_json(),
+                          outputs.as_ref().to_json(),
+                          priv_keys.as_ref().to_json()];
         self.request("signrawtransaction", params)
     }
     pub fn sendrawtransaction(&self, txhex: &str) -> Result<String> {
@@ -152,8 +153,10 @@ impl SandboxClient {
                             from: u32,
                             include_watch_only: bool)
                             -> Result<Vec<TransactionInfo>> {
-        let params =
-            vec!["*".to_json(), count.to_json(), from.to_json(), include_watch_only.to_json()];
+        let params = vec!["*".to_json(),
+                          count.to_json(),
+                          from.to_json(),
+                          include_watch_only.to_json()];
         self.request("listtransactions", params)
     }
     pub fn listunspent<'a, V: AsRef<[&'a str]>>(&self,
@@ -168,7 +171,10 @@ impl SandboxClient {
 
     }
     pub fn importaddress(&self, addr: &str, label: &str, rescan: bool, p2sh: bool) -> Result<()> {
-        let params = vec![addr.to_json(), label.to_json(), rescan.to_json(), p2sh.to_json()];
+        let params = vec![addr.to_json(),
+                          label.to_json(),
+                          rescan.to_json(),
+                          p2sh.to_json()];
         // special case for decode {"result":null}
         let r: Result<Option<bool>> = self.request("importaddress", params);
         match r {

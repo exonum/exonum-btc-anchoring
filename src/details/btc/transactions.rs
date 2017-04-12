@@ -113,7 +113,8 @@ impl FundingTx {
                             addr: &btc::Address)
                             -> Result<Option<bitcoinrpc::UnspentTransactionInfo>, RpcError> {
         let txid = self.txid();
-        let txs = client.listunspent(0, 9999999, [addr.to_base58check().as_ref()])?;
+        let txs = client
+            .listunspent(0, 9999999, [addr.to_base58check().as_ref()])?;
         Ok(txs.into_iter().find(|txinfo| txinfo.txid == txid))
     }
 }
@@ -164,7 +165,8 @@ impl AnchoringTx {
                       input: u32,
                       priv_key: &Privkey)
                       -> btc::Signature {
-        let mut sign_data = sign_tx_input(self, input as usize, redeem_script, priv_key.secret_key());
+        let mut sign_data =
+            sign_tx_input(self, input as usize, redeem_script, priv_key.secret_key());
         /// Adds btc related sighash type byte
         sign_data.push(SigHashType::All.as_u32() as u8);
         sign_data
@@ -378,10 +380,10 @@ fn create_anchoring_transaction<'a, I>(addr: btc::Address,
 }
 
 pub fn sign_tx_input(tx: &RawBitcoinTx,
-                  input: usize,
-                  subscript: &Script,
-                  sec_key: &SecretKey)
-                  -> Vec<u8> {
+                     input: usize,
+                     subscript: &Script,
+                     sec_key: &SecretKey)
+                     -> Vec<u8> {
     let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
     // Make signature
     let context = Secp256k1::new();
@@ -392,11 +394,11 @@ pub fn sign_tx_input(tx: &RawBitcoinTx,
 }
 
 pub fn verify_tx_input(tx: &RawBitcoinTx,
-                    input: usize,
-                    subscript: &Script,
-                    pub_key: &PublicKey,
-                    signature: &[u8])
-                    -> bool {
+                       input: usize,
+                       subscript: &Script,
+                       pub_key: &PublicKey,
+                       signature: &[u8])
+                       -> bool {
     let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
     let msg = Message::from_slice(&sighash[..]).unwrap();
 

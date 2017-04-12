@@ -19,8 +19,8 @@ use exonum::crypto::{Hash, hash, HexValue};
 use exonum::storage::StorageValue;
 
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
-use details::btc::transactions::{AnchoringTx, FundingTx, sign_tx_input, verify_tx_input, TransactionBuilder,
-                            BitcoinTx, TxKind};
+use details::btc::transactions::{AnchoringTx, FundingTx, sign_tx_input, verify_tx_input,
+                                 TransactionBuilder, BitcoinTx, TxKind};
 use details::btc;
 use details::btc::HexValueEx;
 
@@ -59,10 +59,10 @@ pub fn gen_anchoring_keys(count: usize) -> (Vec<btc::PublicKey>, Vec<btc::Privat
 }
 
 pub fn make_signatures(redeem_script: &btc::RedeemScript,
-                   proposal: &AnchoringTx,
-                   inputs: &[u32],
-                   priv_keys: &[btc::PrivateKey])
-                   -> HashMap<u32, Vec<btc::Signature>> {
+                       proposal: &AnchoringTx,
+                       inputs: &[u32],
+                       priv_keys: &[btc::PrivateKey])
+                       -> HashMap<u32, Vec<btc::Signature>> {
     let majority_count = (priv_keys.len() as u8) * 2 / 3 + 1;
 
     let mut signatures = inputs

@@ -138,7 +138,8 @@ impl<'a> AnchoringSchema<'a> {
         let ntxid = msg.tx().nid();
         let signature_id = Self::known_signature_id(&msg);
         if let Some(sign_msg) = self.known_signatures().get(&signature_id)? {
-            warn!("Received another signature for given tx propose msg={:#?}", sign_msg);
+            warn!("Received another signature for given tx propose msg={:#?}",
+                  sign_msg);
         } else {
             self.signatures(&ntxid).append(msg.clone())?;
             self.known_signatures().put(&signature_id, msg)?;

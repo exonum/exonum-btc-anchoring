@@ -19,13 +19,15 @@ impl MsgAnchoringSignature {
         let tx = self.tx();
         // Check that the signature is provided for an existing anchoring tx input
         if tx.input.len() as u32 <= self.input() {
-            warn!("Received msg for non-existing input index, content={:#?}", self);
+            warn!("Received msg for non-existing input index, content={:#?}",
+                  self);
             return false;
         }
         // Check that input scriptSigs are empty
         for input in &tx.input {
             if !input.script_sig.is_empty() {
-                warn!("Received msg with non empty input scriptSigs, content={:#?}", self);
+                warn!("Received msg with non empty input scriptSigs, content={:#?}",
+                      self);
                 return false;
             }
         }
