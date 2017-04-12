@@ -76,7 +76,8 @@ impl AnchoringHandler {
                 .unwrap();
 
             let out = funding_tx.find_out(&multisig.addr).unwrap();
-            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out).fee(multisig.common.fee)
+            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out)
+                .fee(multisig.common.fee)
                 .payload(height, hash)
                 .prev_tx_chain(prev_tx_chain)
                 .send_to(multisig.addr.clone())
@@ -168,7 +169,8 @@ impl AnchoringHandler {
             return Ok(());
         }
 
-        let msgs = AnchoringSchema::new(state.view()).signatures(&txid)
+        let msgs = AnchoringSchema::new(state.view())
+            .signatures(&txid)
             .values()?;
         if let Some(signatures) = collect_signatures(&proposal, multisig.common, msgs.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
@@ -191,12 +193,14 @@ impl AnchoringHandler {
 
             info!("LECT ====== txid={}, total_count={}",
                   new_lect.txid(),
-                  AnchoringSchema::new(state.view()).lects(state.id())
+                  AnchoringSchema::new(state.view())
+                      .lects(state.id())
                       .len()?);
 
             self.proposal_tx = None;
 
-            let lects_count = AnchoringSchema::new(state.view()).lects(state.id())
+            let lects_count = AnchoringSchema::new(state.view())
+                .lects(state.id())
                 .len()?;
             let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
                                                          state.id(),

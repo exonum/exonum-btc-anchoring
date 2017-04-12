@@ -47,7 +47,8 @@ impl RegTestNode {
             password: Some("regtest".to_string()),
         };
 
-        let process = Command::new("bitcoind").stdout(Stdio::piped())
+        let process = Command::new("bitcoind")
+            .stdout(Stdio::piped())
             .stderr(Stdio::piped())
             .arg(format!("-datadir={}", dir.to_str().unwrap()))
             .spawn()?;
