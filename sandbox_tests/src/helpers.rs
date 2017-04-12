@@ -83,6 +83,44 @@ pub fn block_hash_on_height(sandbox: &Sandbox, height: u64) -> Hash {
     schema.heights().get(height).unwrap().unwrap()
 }
 
+/// Anchor genesis block using funding tx 
+pub fn anchor_first_block_without_other_signatures(sandbox: &Sandbox,
+                          client: &SandboxClient,
+                          sandbox_state: &SandboxState,
+                          anchoring_state: &mut AnchoringSandboxState) {
+    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
+
+    client.expect(vec![request! {
+            method: "listunspent",
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            response: [
+                {
+                    "txid": &anchoring_state.common.funding_tx.txid(),
+                    "vout": 0,
+                    "address": &anchoring_addr.to_base58check(),
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 50,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        }]);
+
+    let (_, signatures) =
+        anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
+                                                         0,
+                                                         sandbox.last_hash(),
+                                                         &[],
+                                                         None,
+                                                         &anchoring_addr);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
+    sandbox.broadcast(signatures[0].clone());
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[0..1]);
+}
+
 /// Anchor genesis block using funding tx
 pub fn anchor_first_block(sandbox: &Sandbox,
                           client: &SandboxClient,
