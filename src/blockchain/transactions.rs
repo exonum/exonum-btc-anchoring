@@ -39,13 +39,19 @@ impl MsgAnchoringSignature {
 
         let tx = self.tx();
         let id = self.validator();
-        let cfg = schema.current_anchoring_config()?;
+        // Verify from field
+        let actual_cfg = Schema::new(view).get_actual_configuration()?;
+        if actual_cfg.validators.get(id as usize) != Some(self.from()) {
+            warn!("Received weird signature, content={:#?}", self);
+            return Ok(());
+        }
         // Verify signature
-        if let Some(pub_key) = cfg.validators.get(id as usize) {
-            let (redeem_script, _) = cfg.redeem_script();
+        let anchoring_cfg = schema.current_anchoring_config()?;
+        if let Some(pub_key) = anchoring_cfg.validators.get(id as usize) {
+            let (redeem_script, _) = anchoring_cfg.redeem_script();
 
             if !tx.verify_input(&redeem_script, self.input(), pub_key, self.signature()) {
-                warn!("Received msg with incorrect signature content={:#?}", self);
+                warn!("Received msg with incorrect signature, content={:#?}", self);
                 return Ok(());
             }
             schema.add_known_signature(self.clone())
@@ -68,7 +74,7 @@ impl MsgAnchoringUpdateLatest {
         // Verify lect with actual cfg
         let actual_cfg = Schema::new(view).get_actual_configuration()?;
         if actual_cfg.validators.get(id as usize) != Some(self.from()) {
-            warn!("Received weird lect msg={:#?}", self);
+            warn!("Received weird lect, content={:#?}", self);
             return Ok(());
         }
         if schema.lects(id).len()? != self.lect_count() {
