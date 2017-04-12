@@ -42,7 +42,7 @@ impl MsgAnchoringSignature {
         // Verify from field
         let actual_cfg = Schema::new(view).get_actual_configuration()?;
         if actual_cfg.validators.get(id as usize) != Some(self.from()) {
-            warn!("Received weird signature, content={:#?}", self);
+            warn!("Received msg from non-validator, content={:#?}", self);
             return Ok(());
         }
         // Verify signature
@@ -74,7 +74,7 @@ impl MsgAnchoringUpdateLatest {
         // Verify lect with actual cfg
         let actual_cfg = Schema::new(view).get_actual_configuration()?;
         if actual_cfg.validators.get(id as usize) != Some(self.from()) {
-            warn!("Received weird lect, content={:#?}", self);
+            warn!("Received lect from non validator, content={:#?}", self);
             return Ok(());
         }
         if schema.lects(id).len()? != self.lect_count() {
