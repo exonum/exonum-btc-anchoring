@@ -124,10 +124,10 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn collect_lects(&self, state: &NodeState) -> Result<LectKind, StorageError> {
+    pub fn collect_lects(&self, validator_id: u32, state: &NodeState) -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
-        let our_lect = anchoring_schema.lect(self.validator_id(state))?;
+        let our_lect = anchoring_schema.lect(validator_id)?;
         let mut count = 1;
 
         let validators_count = state.validators().len() as u32;

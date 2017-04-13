@@ -42,7 +42,7 @@ impl AnchoringHandler {
                                   multisig: &MultisigAddress,
                                   state: &mut NodeState)
                                   -> Result<(), ServiceError> {
-        match self.collect_lects(state)? {
+        match self.collect_lects(self.validator_id(state), state)? {
             LectKind::Funding(_) => self.try_create_anchoring_tx_chain(multisig, None, state),
             LectKind::Anchoring(tx) => {
                 let anchored_height = tx.payload().0;
@@ -76,8 +76,7 @@ impl AnchoringHandler {
                 .unwrap();
 
             let out = funding_tx.find_out(&multisig.addr).unwrap();
-            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out)
-                .fee(multisig.common.fee)
+            let proposal = TransactionBuilder::with_prev_tx(&funding_tx, out).fee(multisig.common.fee)
                 .payload(height, hash)
                 .prev_tx_chain(prev_tx_chain)
                 .send_to(multisig.addr.clone())
@@ -169,8 +168,7 @@ impl AnchoringHandler {
             return Ok(());
         }
 
-        let msgs = AnchoringSchema::new(state.view())
-            .signatures(&txid)
+        let msgs = AnchoringSchema::new(state.view()).signatures(&txid)
             .values()?;
         if let Some(signatures) = collect_signatures(&proposal, multisig.common, msgs.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
@@ -193,14 +191,12 @@ impl AnchoringHandler {
 
             info!("LECT ====== txid={}, total_count={}",
                   new_lect.txid(),
-                  AnchoringSchema::new(state.view())
-                      .lects(self.validator_id(state))
+                  AnchoringSchema::new(state.view()).lects(self.validator_id(state))
                       .len()?);
 
             self.proposal_tx = None;
 
-            let lects_count = AnchoringSchema::new(state.view())
-                .lects(self.validator_id(state))
+            let lects_count = AnchoringSchema::new(state.view()).lects(self.validator_id(state))
                 .len()?;
             let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
                                                          self.validator_id(state),
