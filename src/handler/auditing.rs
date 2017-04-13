@@ -15,11 +15,12 @@ impl AnchoringHandler {
                                  state: &NodeState)
                                  -> Result<(), ServiceError> {
         if state.height() % self.node.check_lect_frequency == 0 {
-            return match self.collect_lects(state)? {
-                       LectKind::Funding(_) => Ok(()),
-                       LectKind::None => Err(HandlerError::LectNotFound)?,
-                       LectKind::Anchoring(tx) => self.check_anchoring_lect(tx, cfg, state),
-                   };
+            let r = match self.collect_lects(state)? {
+                LectKind::Funding(_) => Ok(()),
+                LectKind::None => Err(HandlerError::LectNotFound.into()),
+                LectKind::Anchoring(tx) => self.check_anchoring_lect(tx, cfg, state),
+            };
+            return r;
         }
         Ok(())
     }
@@ -39,10 +40,11 @@ impl AnchoringHandler {
         let (block_height, block_hash) = tx.payload();
         let schema = Schema::new(state.view());
         if Some(block_hash) != schema.heights().get(block_height)? {
-            Err(HandlerError::IncorrectLect {
-                    reason: "Found lect with wrong payload".to_string(),
-                    tx: tx.into(),
-                })?;
+            let e = HandlerError::IncorrectLect {
+                reason: "Found lect with wrong payload".to_string(),
+                tx: tx.into(),
+            };
+            return Err(e.into());
         }
 
         // Check that we did not miss more than one anchored height

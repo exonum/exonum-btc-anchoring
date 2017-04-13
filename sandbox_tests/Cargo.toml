@@ -21,14 +21,14 @@ libc = "0.2.21"
 [dependencies.exonum]
 git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
-rev = "5bd7cdea015e011b635a8ce89945f45b5f3f3805"
+rev = "088b0cff8af7c8d3a1afd37c3638735f6bb419fd"
 
 [dependencies.sandbox]
 git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
-rev = "5bd7cdea015e011b635a8ce89945f45b5f3f3805"
+rev = "088b0cff8af7c8d3a1afd37c3638735f6bb419fd"
 
 [dependencies.blockchain_explorer]
 git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
-rev = "5bd7cdea015e011b635a8ce89945f45b5f3f3805"
+rev = "088b0cff8af7c8d3a1afd37c3638735f6bb419fd"

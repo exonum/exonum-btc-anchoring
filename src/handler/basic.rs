@@ -35,7 +35,9 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn client(&self) -> &AnchoringRpc {
-        self.client.as_ref().expect("Client need to be exists")
+        self.client
+            .as_ref()
+            .expect("Client need to be exists for validator")
     }
 
     #[doc(hidden)]
@@ -76,32 +78,36 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn current_state(&self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
         let actual = self.actual_config(state)?;
-        let state = if let Some(cfg) = self.following_config(state)? {
-            if actual.redeem_script().1 != cfg.config.redeem_script().1 {
-                AnchoringState::Transition {
-                    from: actual,
-                    to: cfg.config,
-                }
-            } else {
-                AnchoringState::Anchoring { cfg: actual }
-            }
+        if state.validator_state().is_none() {
+            Ok(AnchoringState::Auditing { cfg: actual })
         } else {
-            let schema = AnchoringSchema::new(state.view());
-
-            let current_lect = schema.lect(self.validator_id(state))?;
-            if let TxKind::Anchoring(current_lect) = TxKind::from(current_lect) {
-                let current_addr = current_lect.output_address(actual.network);
-
-                if current_addr != actual.redeem_script().1 {
-                    AnchoringState::Recovering { cfg: actual }
+            let state = if let Some(cfg) = self.following_config(state)? {
+                if actual.redeem_script().1 != cfg.config.redeem_script().1 {
+                    AnchoringState::Transition {
+                        from: actual,
+                        to: cfg.config,
+                    }
                 } else {
                     AnchoringState::Anchoring { cfg: actual }
                 }
             } else {
-                AnchoringState::Anchoring { cfg: actual }
-            }
-        };
-        Ok(state)
+                let schema = AnchoringSchema::new(state.view());
+
+                let current_lect = schema.lect(self.validator_id(state))?;
+                if let TxKind::Anchoring(current_lect) = TxKind::from(current_lect) {
+                    let current_addr = current_lect.output_address(actual.network);
+
+                    if current_addr != actual.redeem_script().1 {
+                        AnchoringState::Recovering { cfg: actual }
+                    } else {
+                        AnchoringState::Anchoring { cfg: actual }
+                    }
+                } else {
+                    AnchoringState::Anchoring { cfg: actual }
+                }
+            };
+            Ok(state)
+        }
     }
 
     #[doc(hidden)]
