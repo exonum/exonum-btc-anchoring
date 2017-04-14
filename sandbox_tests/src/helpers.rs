@@ -83,11 +83,11 @@ pub fn block_hash_on_height(sandbox: &Sandbox, height: u64) -> Hash {
     schema.heights().get(height).unwrap().unwrap()
 }
 
-/// Anchor genesis block using funding tx 
+/// Anchor genesis block using funding tx
 pub fn anchor_first_block_without_other_signatures(sandbox: &Sandbox,
-                          client: &SandboxClient,
-                          sandbox_state: &SandboxState,
-                          anchoring_state: &mut AnchoringSandboxState) {
+                                                   client: &SandboxClient,
+                                                   sandbox_state: &SandboxState,
+                                                   anchoring_state: &mut AnchoringSandboxState) {
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
     client.expect(vec![request! {
