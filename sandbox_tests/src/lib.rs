@@ -147,6 +147,16 @@ impl AnchoringSandboxState {
     pub fn current_priv_keys(&self) -> Vec<btc::PrivateKey> {
         self.priv_keys(&self.common.redeem_script().1)
     }
+
+    pub fn nearest_check_lect_height(&self, sandbox: &Sandbox) -> u64 {
+        let height = sandbox.current_height();
+        height - height % self.nodes[0].check_lect_frequency as u64
+    }
+
+    pub fn nearest_anchoring_height(&self, sandbox: &Sandbox) -> u64 {
+        let height = sandbox.current_height();
+        self.common.nearest_anchoring_height(height)        
+    }
 }
 
 /// Generates config for 4 validators and 10000 funds
@@ -186,7 +196,9 @@ pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
                                           &mut rng)
 }
 
-pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, AnchoringSandboxState)
+/// Initialize sandbox for anchoring node
+pub fn initialize_anchoring_sandbox<'a, I>(priv_keys: I)
+                                           -> (Sandbox, AnchoringRpc, AnchoringSandboxState)
     where I: IntoIterator<Item = &'a (&'a str, Vec<&'a str>)>
 {
     let mut client = AnchoringRpc(SandboxClient::default());

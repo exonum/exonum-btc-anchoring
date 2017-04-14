@@ -24,7 +24,8 @@ use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::details::btc::transactions::{FundingTx, TransactionBuilder};
 use anchoring_btc_service::AnchoringConfig;
 
-use anchoring_btc_sandbox::{CHECK_LECT_FREQUENCY, AnchoringSandboxState, anchoring_sandbox};
+use anchoring_btc_sandbox::{CHECK_LECT_FREQUENCY, AnchoringSandboxState,
+                            initialize_anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
 
 fn gen_following_cfg(sandbox: &Sandbox,
@@ -86,7 +87,7 @@ fn gen_following_cfg_unchanged_self_key(sandbox: &Sandbox,
 #[test]
 fn test_anchoring_transit_config_normal() {
     let _ = ::blockchain_explorer::helpers::init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -356,7 +357,7 @@ fn test_anchoring_transit_config_normal() {
 #[test]
 fn test_anchoring_transit_config_unchanged_self_key() {
     let _ = ::blockchain_explorer::helpers::init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -615,7 +616,7 @@ fn test_anchoring_transit_config_unchanged_self_key() {
 #[test]
 fn test_anchoring_transit_config_with_funding_tx() {
     let _ = ::blockchain_explorer::helpers::init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -920,7 +921,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
 fn test_anchoring_transit_config_lost_lect_recover() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -1121,7 +1122,7 @@ fn test_anchoring_transit_config_lost_lect_recover() {
 fn test_anchoring_transit_config_lost_lect_recover_after_cfg_change() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -1330,7 +1331,7 @@ fn test_anchoring_transit_config_lost_lect_recover_after_cfg_change() {
 fn test_anchoring_transit_config_lost_lect_new_tx_chain() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -1517,7 +1518,7 @@ fn test_anchoring_transit_config_lost_lect_new_tx_chain() {
 #[test]
 fn test_anchoring_transit_msg_signature_incorrect_output_address() {
     let _ = ::blockchain_explorer::helpers::init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);

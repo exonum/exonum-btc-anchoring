@@ -18,6 +18,7 @@ impl AnchoringHandler {
                                  cfg: AnchoringConfig,
                                  state: &NodeState)
                                  -> Result<(), ServiceError> {
+        trace!("Auditing state");
         if state.height() % self.node.check_lect_frequency == 0 {
             // Find lect
             let lect = {
@@ -69,8 +70,9 @@ impl AnchoringHandler {
                           cfg: AnchoringConfig,
                           _: &NodeState)
                           -> Result<(), ServiceError> {
-        let (_, addr) = cfg.redeem_script();
+        info!("CHECKED_INITIAL_LECT ====== txid={}", tx.txid());
 
+        let (_, addr) = cfg.redeem_script();
         if tx != cfg.funding_tx {
             let e = HandlerError::IncorrectLect {
                 reason: "Initial funding_tx is different than lect".to_string(),
@@ -85,8 +87,6 @@ impl AnchoringHandler {
             };
             return Err(e.into());
         }
-
-        info!("CHECKED_INITIAL_LECT ====== txid={}", tx.txid());
         Ok(())
     }
 
@@ -95,10 +95,28 @@ impl AnchoringHandler {
                             cfg: AnchoringConfig,
                             state: &NodeState)
                             -> Result<(), ServiceError> {
+        info!("CHECK_LECT ====== txid={}", tx.txid());
+
+        let anchoring_schema = AnchoringSchema::new(state.view());
         let (_, addr) = cfg.redeem_script();
         // Check that tx address is correct
-        if tx.output_address(cfg.network) != addr {
-            // TODO check following cfg
+        let tx_addr = tx.output_address(cfg.network);
+        if tx_addr != addr {
+            let is_address_correct = {
+                if let Some(following) = anchoring_schema.following_anchoring_config()? {
+                    tx_addr == following.config.redeem_script().1
+                } else {
+                    false
+                }
+            };
+
+            if !is_address_correct {
+                let e = HandlerError::IncorrectLect {
+                    reason: "Found lect with wrong output_address".to_string(),
+                    tx: tx.into(),
+                };
+                return Err(e.into());
+            }
         }
 
         // Payload checks
@@ -111,9 +129,7 @@ impl AnchoringHandler {
             };
             return Err(e.into());
         }
-
         // Check that we did not miss more than one anchored height
-        info!("CHECKED_LECT ====== txid={}", tx.txid());
         Ok(())
     }
 }

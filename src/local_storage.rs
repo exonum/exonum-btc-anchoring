@@ -7,7 +7,7 @@ use details::btc;
 /// Private part of anchoring service configuration stored on a local machine.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
 pub struct AnchoringNodeConfig {
-    /// Rpc configuration. Must be exist if node is validator 
+    /// Rpc configuration. Must be exist if node is validator
     /// otherwise node can only check `lect` payload without any checks with `bitcoind`.
     pub rpc: Option<AnchoringRpcConfig>,
     /// Set of private keys for each anchoring address

@@ -28,7 +28,7 @@ use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx,
                                                         FundingTx, verify_tx_input};
 use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
-use anchoring_btc_sandbox::{RpcError, anchoring_sandbox};
+use anchoring_btc_sandbox::{RpcError, initialize_anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
 use anchoring_btc_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
 
@@ -39,7 +39,7 @@ use anchoring_btc_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
 fn test_anchoring_first_block() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 }
@@ -51,7 +51,7 @@ fn test_anchoring_first_block() {
 fn test_anchoring_update_lect_normal() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -65,7 +65,7 @@ fn test_anchoring_update_lect_normal() {
 fn test_anchoring_update_lect_different() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
     anchor_first_block_lect_different(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 }
@@ -77,7 +77,7 @@ fn test_anchoring_update_lect_different() {
 fn test_anchoring_first_block_lect_lost() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
     anchor_first_block_lect_lost(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     assert_eq!(anchoring_state.latest_anchored_tx, None);
@@ -90,7 +90,7 @@ fn test_anchoring_first_block_lect_lost() {
 fn test_anchoring_second_block_normal() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -104,7 +104,7 @@ fn test_anchoring_second_block_normal() {
 fn test_anchoring_second_block_additional_funds() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
@@ -179,7 +179,7 @@ fn test_anchoring_second_block_additional_funds() {
 fn test_anchoring_second_block_lect_lost() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
@@ -254,7 +254,7 @@ fn test_anchoring_second_block_lect_lost() {
 fn test_anchoring_find_lect_chain_normal() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
@@ -322,7 +322,7 @@ fn test_anchoring_find_lect_chain_normal() {
 fn test_anchoring_find_lect_chain_wrong() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
@@ -395,7 +395,7 @@ fn test_anchoring_find_lect_chain_wrong() {
 fn test_anchoring_lect_correct_validator() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
@@ -416,7 +416,7 @@ fn test_anchoring_lect_correct_validator() {
 fn test_anchoring_lect_wrong_validator() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
@@ -438,7 +438,7 @@ fn test_anchoring_lect_wrong_validator() {
 fn test_anchoring_lect_nonexistent_validator() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
@@ -460,7 +460,7 @@ fn test_anchoring_lect_nonexistent_validator() {
 fn test_anchoring_signature_wrong_validator() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -498,7 +498,7 @@ fn test_anchoring_signature_wrong_validator() {
 fn test_anchoring_signature_nonexistent_tx() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -536,7 +536,7 @@ fn test_anchoring_signature_nonexistent_tx() {
 fn test_anchoring_signature_incorrect_payload() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -574,7 +574,7 @@ fn test_anchoring_signature_incorrect_payload() {
 fn test_anchoring_lect_funding_tx() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -598,7 +598,7 @@ fn test_anchoring_lect_funding_tx() {
 fn test_anchoring_lect_incorrect_funding_tx() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -630,7 +630,7 @@ fn test_anchoring_lect_incorrect_funding_tx() {
 fn test_anchoring_lect_incorrect_anchoring_payload() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -658,7 +658,7 @@ fn test_anchoring_lect_incorrect_anchoring_payload() {
 fn test_anchoring_signature_nonexistent_validator() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -696,7 +696,7 @@ fn test_anchoring_signature_nonexistent_validator() {
 fn test_anchoring_signature_input_with_different_correct_signature() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -752,7 +752,7 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
 fn test_anchoring_signature_input_from_different_validator() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block_without_other_signatures(&sandbox,
@@ -791,7 +791,7 @@ fn test_anchoring_signature_input_from_different_validator() {
 fn test_anchoring_signature_unknown_output_address() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);

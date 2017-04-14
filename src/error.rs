@@ -11,7 +11,7 @@ pub enum Error {
     /// An internal error
     Internal(InternalError),
     /// A handler error,
-    Handler(HandlerError)
+    Handler(HandlerError),
 }
 
 impl From<RpcError> for Error {
@@ -19,4 +19,3 @@ impl From<RpcError> for Error {
         Error::Internal(InternalError::Rpc(err))
     }
 }
-

@@ -14,7 +14,7 @@ impl fmt::Display for Error {
         match *self {
             Error::IncorrectLect { ref reason, ref tx } => {
                 write!(f, "Incorrect lect: {} tx={:#?}", reason, tx)
-            },
+            }
             Error::LectNotFound => write!(f, "Lect not found"),
         }
     }
@@ -24,7 +24,7 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::IncorrectLect { .. } => "Incorrect lect",
-            Error::LectNotFound => "Lect not found"
+            Error::LectNotFound => "Lect not found",
         }
     }
 

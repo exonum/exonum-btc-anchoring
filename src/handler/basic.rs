@@ -43,7 +43,11 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn multisig_address<'a>(&self, common: &'a AnchoringConfig) -> MultisigAddress<'a> {
         let (redeem_script, addr) = common.redeem_script();
-        let priv_key = self.node.private_keys[&addr.to_base58check()].clone();
+        let priv_key = self.node
+            .private_keys
+            .get(&addr.to_base58check())
+            .expect("Expected private key for address")
+            .clone();
         MultisigAddress {
             common: common,
             priv_key: priv_key,
@@ -124,7 +128,10 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn collect_lects(&self, validator_id: u32, state: &NodeState) -> Result<LectKind, StorageError> {
+    pub fn collect_lects(&self,
+                         validator_id: u32,
+                         state: &NodeState)
+                         -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
         let our_lect = anchoring_schema.lect(validator_id)?;
