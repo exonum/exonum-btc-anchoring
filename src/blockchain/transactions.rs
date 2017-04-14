@@ -49,7 +49,7 @@ impl MsgAnchoringSignature {
         let anchoring_cfg = schema.current_anchoring_config()?;
         if let Some(pub_key) = anchoring_cfg.validators.get(id as usize) {
             let (redeem_script, addr) = anchoring_cfg.redeem_script();
-            let tx_addr =tx.output_address(anchoring_cfg.network);
+            let tx_addr = tx.output_address(anchoring_cfg.network);
             // Use following address if it exists
             let addr = if let Some(following) = schema.following_anchoring_config()? {
                 following.config.redeem_script().1
