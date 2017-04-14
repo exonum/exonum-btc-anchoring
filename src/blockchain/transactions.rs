@@ -49,24 +49,18 @@ impl MsgAnchoringSignature {
         let anchoring_cfg = schema.current_anchoring_config()?;
         if let Some(pub_key) = anchoring_cfg.validators.get(id as usize) {
             let (redeem_script, addr) = anchoring_cfg.redeem_script();
-            // Check that output address is correct
-            let tx_addr = tx.output_address(anchoring_cfg.network);
+            let tx_addr =tx.output_address(anchoring_cfg.network);
+            // Use following address if it exists
+            let addr = if let Some(following) = schema.following_anchoring_config()? {
+                following.config.redeem_script().1
+            } else {
+                addr
+            };
             if tx_addr != addr {
-                let addr_is_correct = if let Some(following) = schema
-                       .following_anchoring_config()? {
-                    let (_, addr) = following.config.redeem_script();
-                    addr == tx_addr
-                } else {
-                    false
-                };
-
-                if !addr_is_correct {
-                    warn!("Received msg with incorrect output address, content={:#?}",
-                          self);
-                    return Ok(());
-                }
+                warn!("Received msg with incorrect output address, content={:#?}",
+                      self);
+                return Ok(());
             }
-
             if !tx.verify_input(&redeem_script, self.input(), pub_key, self.signature()) {
                 warn!("Received msg with incorrect signature, content={:#?}", self);
                 return Ok(());
