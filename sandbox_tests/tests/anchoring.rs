@@ -25,7 +25,7 @@ use exonum::messages::Message;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
 
 use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx,
+use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx, FundingTx,
                                                         verify_tx_input};
 use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
 use anchoring_btc_sandbox::{RpcError, anchoring_sandbox};
@@ -498,7 +498,7 @@ fn test_anchoring_signature_nonexistent_tx() {
     let (redeem_script, addr) = anchoring_state.common.redeem_script();
     let tx = TransactionBuilder::with_prev_tx(anchoring_state.latest_anchored_tx(), 0)
         .fee(100)
-        .payload(0, Hash::zero())
+        .payload(0, block_hash_on_height(&sandbox, 0))
         .send_to(addr.clone())
         .into_transaction()
         .unwrap();
@@ -519,6 +519,120 @@ fn test_anchoring_signature_nonexistent_tx() {
 
     assert!(signs_before.is_empty());
     assert_eq!(signs_after[0], msg_sign);
+}
+
+// We received correct signature message with incorrect payload
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_signature_incorrect_payload() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let (redeem_script, addr) = anchoring_state.common.redeem_script();
+    let tx = TransactionBuilder::with_prev_tx(anchoring_state.latest_anchored_tx(), 0)
+        .fee(100)
+        .payload(0, Hash::zero())
+        .send_to(addr.clone())
+        .into_transaction()
+        .unwrap();
+    let signature = tx.sign_input(&redeem_script, 0, &anchoring_state.priv_keys(&addr)[1]);
+    let msg_sign = MsgAnchoringSignature::new(&sandbox.p(1),
+                                              1,
+                                              tx.clone(),
+                                              0,
+                                              signature.as_ref(),
+                                              sandbox.s(1));
+
+
+    let signs_before = dump_signatures(&sandbox, &tx.id());
+    // Try to commit tx
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_sign.raw().clone()]);
+    // Ensure that service adds it
+    let signs_after = dump_signatures(&sandbox, &tx.id());
+
+    assert!(signs_before.is_empty());
+    assert!(signs_after.is_empty());
+}
+
+// We received correct lect with the current funding_tx
+// problems: None
+// result: we add it
+#[test]
+fn test_anchoring_lect_funding_tx() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let tx = anchoring_state.common.funding_tx;
+    let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
+    // Ensure that service adds it
+    let lects_before = dump_lects(&sandbox, 0);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_lect.raw().clone()]);
+    let lects_after = dump_lects(&sandbox, 0);
+
+    assert_eq!(lects_before.len(), 2);
+    assert_eq!(lects_after[2], tx.0);
+}
+
+// We received correct lect with the incorrect funding_tx
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_lect_incorrect_funding_tx() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let tx = FundingTx::from_hex("01000000019532a4022a22226a6f694c3f21216b2c9f5c1c79007eb7d3be06bc2f1f9e52fb000000006a47304402203661efd05ca422fad958b534dbad2e1c7db42bbd1e73e9b91f43a2f7be2f92040220740cf883273978358f25ca5dd5700cce5e65f4f0a0be2e1a1e19a8f168095400012102ae1b03b0f596be41a247080437a50f4d8e825b170770dcb4e5443a2eb2ecab2afeffffff02a00f00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d6e678716e1ff05000000001976a91402f5d7475a10a9c24cea32575bd8993d3fabbfd388ac089e1000").unwrap();
+    let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
+    // Ensure that service adds it
+    let lects_before = dump_lects(&sandbox, 0);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_lect.raw().clone()]);
+    let lects_after = dump_lects(&sandbox, 0);
+
+    assert_eq!(lects_before, lects_after);
+}
+
+// We received correct lect with the incorrect anchoring payload
+// problems: None
+// result: we ignore it
+#[test]
+fn test_anchoring_lect_incorrect_anchoring_payload() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let tx = TransactionBuilder::with_prev_tx(&anchoring_state.common.funding_tx, 0)
+        .fee(1000)
+        .payload(0, Hash::zero())
+        .send_to(anchoring_state.common.redeem_script().1)
+        .into_transaction()
+        .unwrap();
+    let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
+    // Ensure that service adds it
+    let lects_before = dump_lects(&sandbox, 0);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_lect.raw().clone()]);
+    let lects_after = dump_lects(&sandbox, 0);
+
+    assert_eq!(lects_before, lects_after);
 }
 
 // We received signature message with wrong sign

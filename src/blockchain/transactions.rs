@@ -6,6 +6,8 @@ use exonum::storage::{View, List, Error as StorageError};
 
 use blockchain::dto::{AnchoringMessage, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use blockchain::schema::AnchoringSchema;
+use blockchain::consensus_storage::AnchoringConfig;
+use details::btc::transactions::{TxKind, FundingTx, AnchoringTx};
 
 impl MsgAnchoringSignature {
     pub fn verify_content(&self) -> bool {
@@ -35,23 +37,24 @@ impl MsgAnchoringSignature {
     }
 
     pub fn execute(&self, view: &View) -> Result<(), StorageError> {
-        let schema = AnchoringSchema::new(view);
+        let anchoring_schema = AnchoringSchema::new(view);
 
         let tx = self.tx();
         let id = self.validator();
         // Verify from field
-        let actual_cfg = Schema::new(view).get_actual_configuration()?;
+        let schema = Schema::new(view);
+        let actual_cfg = schema.get_actual_configuration()?;
         if actual_cfg.validators.get(id as usize) != Some(self.from()) {
             warn!("Received msg from non-validator, content={:#?}", self);
             return Ok(());
         }
         // Verify signature
-        let anchoring_cfg = schema.current_anchoring_config()?;
+        let anchoring_cfg = anchoring_schema.current_anchoring_config()?;
         if let Some(pub_key) = anchoring_cfg.validators.get(id as usize) {
             let (redeem_script, addr) = anchoring_cfg.redeem_script();
             let tx_addr = tx.output_address(anchoring_cfg.network);
             // Use following address if it exists
-            let addr = if let Some(following) = schema.following_anchoring_config()? {
+            let addr = if let Some(following) = anchoring_schema.following_anchoring_config()? {
                 following.config.redeem_script().1
             } else {
                 addr
@@ -61,11 +64,15 @@ impl MsgAnchoringSignature {
                       self);
                 return Ok(());
             }
+            if !verify_anchoring_tx_payload(&tx, &schema, &anchoring_cfg)? {
+                warn!("Received msg with incorrect payload, content={:#?}", self);
+                return Ok(());
+            }
             if !tx.verify_input(&redeem_script, self.input(), pub_key, self.signature()) {
                 warn!("Received msg with incorrect signature, content={:#?}", self);
                 return Ok(());
             }
-            schema.add_known_signature(self.clone())
+            anchoring_schema.add_known_signature(self.clone())
         } else {
             Ok(())
         }
@@ -78,20 +85,40 @@ impl MsgAnchoringUpdateLatest {
     }
 
     pub fn execute(&self, view: &View) -> Result<(), StorageError> {
-        let schema = AnchoringSchema::new(view);
+        let anchoring_schema = AnchoringSchema::new(view);
 
         let tx = self.tx();
         let id = self.validator();
         // Verify lect with actual cfg
-        let actual_cfg = Schema::new(view).get_actual_configuration()?;
+        let schema = Schema::new(view);
+        let actual_cfg = schema.get_actual_configuration()?;
         if actual_cfg.validators.get(id as usize) != Some(self.from()) {
             warn!("Received lect from non validator, content={:#?}", self);
             return Ok(());
         }
-        if schema.lects(id).len()? != self.lect_count() {
+        let anchoring_cfg = anchoring_schema.current_anchoring_config()?;
+        match TxKind::from(tx.clone()) {
+            TxKind::Anchoring(tx) => {
+                if !verify_anchoring_tx_payload(&tx, &schema, &anchoring_cfg)? {
+                    warn!("Received lect with incorrect payload, content={:#?}", self);
+                    return Ok(());
+                }
+            }
+            TxKind::FundingTx(tx) => {
+                if !verify_funding_tx(&tx, &schema, &anchoring_cfg)? {
+                    warn!("Received lect with incorrect funding_tx, content={:#?}",
+                          self);
+                    return Ok(());
+                }
+            }
+            TxKind::Other(_) => panic!("Incorrect fields deserialization."),
+        }
+
+        if anchoring_schema.lects(id).len()? != self.lect_count() {
+            warn!("Received lect with wrong count, content={:#?}", self);
             return Ok(());
         }
-        schema.add_lect(id, tx)
+        anchoring_schema.add_lect(id, tx)
     }
 }
 
@@ -116,4 +143,19 @@ impl Transaction for AnchoringMessage {
             AnchoringMessage::UpdateLatest(ref msg) => msg.execute(view),
         }
     }
+}
+
+fn verify_anchoring_tx_payload(tx: &AnchoringTx,
+                               schema: &Schema,
+                               _: &AnchoringConfig)
+                               -> Result<bool, StorageError> {
+    let (height, hash) = tx.payload();
+    Ok(schema.heights().get(height)? == Some(hash))
+}
+
+fn verify_funding_tx(tx: &FundingTx,
+                     _: &Schema,
+                     anchoring_cfg: &AnchoringConfig)
+                     -> Result<bool, StorageError> {
+    Ok(tx == &anchoring_cfg.funding_tx)
 }
