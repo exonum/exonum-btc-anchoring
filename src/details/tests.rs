@@ -175,9 +175,8 @@ fn test_anchoring_tx_message_field_rw_correct() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let buf2 = buf.clone();
-    <AnchoringTx as Field>::check(&buf2, 0, 8).unwrap();
-    let dat2: Vec<u8> = Field::read(&buf2, 0, 8);
+    <AnchoringTx as Field>::check(&buf, 0, 8).unwrap();
+    let dat2: Vec<u8> = Field::read(&buf, 0, 8);
     assert_eq!(dat2, dat);
 }
 
@@ -189,9 +188,8 @@ fn test_bitcoin_tx_message_field_rw_correct() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let buf2 = buf.clone();
-    <BitcoinTx as Field>::check(&buf2, 0, 8).unwrap();
-    let dat2: Vec<u8> = Field::read(&buf2, 0, 8);
+    <BitcoinTx as Field>::check(&buf, 0, 8).unwrap();
+    let dat2: Vec<u8> = Field::read(&buf, 0, 8);
     assert_eq!(dat2, dat);
 }
 
@@ -204,8 +202,7 @@ fn test_anchoring_tx_message_field_rw_garbage_unwrap() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let buf2 = buf.clone();
-    let _: BitcoinTx = Field::read(&buf2, 0, 8);
+    let _: BitcoinTx = Field::read(&buf, 0, 8);
 }
 
 #[test]
@@ -217,8 +214,7 @@ fn test_bitcoin_tx_message_field_rw_garbage_unwrap() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let buf2 = buf.clone();
-    let _: BitcoinTx = Field::read(&buf2, 0, 8);
+    let _: BitcoinTx = Field::read(&buf, 0, 8);
 }
 
 #[test]
@@ -230,8 +226,7 @@ fn test_anchoring_tx_message_field_rw_incorrect_check() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let buf2 = buf.clone();
-    AnchoringTx::check(&buf2, 0, 8).unwrap();
+    AnchoringTx::check(&buf, 0, 8).unwrap();
 }
 
 #[test]
@@ -243,8 +238,7 @@ fn test_anchoring_tx_message_field_rw_without_payload_check() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let buf2 = buf.clone();
-    AnchoringTx::check(&buf2, 0, 8).unwrap();
+    AnchoringTx::check(&buf, 0, 8).unwrap();
 }
 
 #[test]
@@ -258,23 +252,22 @@ fn test_anchoring_tx_message_field_rw_wrong_tx_kind_check() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let buf2 = buf.clone();
-    AnchoringTx::check(&buf2, 0, 8).unwrap();
+    AnchoringTx::check(&buf, 0, 8).unwrap();
 }
 
 #[test]
 #[should_panic(expected = "Result::unwrap()` on an `Err`")]
 fn test_funding_tx_message_field_rw_wrong_tx_kind_check() {
     /// Correct non-funding tx, created by command:
-    /// `bitcoin-cli sendtoaddress "mynkNvvoysgzn3CX51KwyKyNVbEJEHs8Cw" 0.1`
-    let hex = "02000000011b8ac5ff25dfe2b4675e86d77dda493ade980206ee6a7833729f07a2f1f4998200000000484730440220620a9ea6cfe4f575d2edffa815705a50b95b3eec9e0259abe94a087fafebf59902200c4cd654a506137726bf608288539879d4ee939a3dc5bb8d4411bcbd2a0d836001feffffff0200d7e849000000001976a914618396019f30e77caaea0ec2d5ec5280e26ff23f88ac80969800000000001976a914c86ef8fb71b99cac9e5b1be272ba5420656266f688ac58020000";
+    /// `bitcoin-cli sendtoaddress "n4a3q23iUKZsmmrT5bVkeAsyqzvR5TmUbf" 0.0001`
+    /// see https://www.blocktrail.com/tBTC/tx/b63170f59291c916b04fc65e110e4cbb7e835150ad1d62e6c03e929b832b4391
+    let hex = "020000000197714d5c9db6334fc5043562a477abac3e4dae088fc94d68a7a634ec98b48373010000006b483045022100a1a611cd455850681814b62cc138491f5e91b4e561ae38c7b26d6f5ba3253e4202203bc7aadc40452a5e1f76f025e198a7badf8374e476e51ab0baf5e1fe952d37cd012103231378cfe95565fe969e6a0fb6a702e2f97c8d48c395315c0f5075214aa19811feffffff0210270000000000001976a914fce0c2a6f0ff5d7ff9681f861ca0b103a079c99088aca68f0f0c000000001976a9146fe0d927826f943309f1f9bd166a1888d757c08388ac68121100";
     let dat = Vec::<u8>::from_hex(hex).unwrap();
 
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let buf2 = buf.clone();
-    FundingTx::check(&buf2, 0, 8).unwrap();
+    FundingTx::check(&buf, 0, 8).unwrap();
 }
 
 #[test]
@@ -286,8 +279,7 @@ fn test_bitcoin_tx_message_field_rw_incorrect_check() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let buf2 = buf.clone();
-    BitcoinTx::check(&buf2, 0, 8).unwrap();
+    BitcoinTx::check(&buf, 0, 8).unwrap();
 }
 
 #[test]
