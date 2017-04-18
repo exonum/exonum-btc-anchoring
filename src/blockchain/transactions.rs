@@ -105,7 +105,7 @@ impl MsgAnchoringUpdateLatest {
                 }
             }
             TxKind::FundingTx(tx) => {
-                if !verify_funding_tx(&tx, &schema, &anchoring_cfg)? {
+                if !verify_funding_tx(&tx, &anchoring_cfg)? {
                     warn!("Received lect with incorrect funding_tx, content={:#?}",
                           self);
                     return Ok(());
@@ -147,14 +147,14 @@ impl Transaction for AnchoringMessage {
 
 fn verify_anchoring_tx_payload(tx: &AnchoringTx,
                                schema: &Schema,
-                               _: &AnchoringConfig)
+                               anchoring_cfg: &AnchoringConfig)
                                -> Result<bool, StorageError> {
     let (height, hash) = tx.payload();
-    Ok(schema.heights().get(height)? == Some(hash))
+    Ok(anchoring_cfg.nearest_anchoring_height(height) == height &&
+       schema.heights().get(height)? == Some(hash))
 }
 
 fn verify_funding_tx(tx: &FundingTx,
-                     _: &Schema,
                      anchoring_cfg: &AnchoringConfig)
                      -> Result<bool, StorageError> {
     Ok(tx == &anchoring_cfg.funding_tx)
