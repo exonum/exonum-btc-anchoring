@@ -64,7 +64,7 @@ impl MsgAnchoringSignature {
                       self);
                 return Ok(());
             }
-            if !verify_anchoring_tx_payload(&tx, &schema, &anchoring_cfg)? {
+            if !verify_anchoring_tx_payload(&tx, &schema)? {
                 warn!("Received msg with incorrect payload, content={:#?}", self);
                 return Ok(());
             }
@@ -99,7 +99,7 @@ impl MsgAnchoringUpdateLatest {
         let anchoring_cfg = anchoring_schema.current_anchoring_config()?;
         match TxKind::from(tx.clone()) {
             TxKind::Anchoring(tx) => {
-                if !verify_anchoring_tx_payload(&tx, &schema, &anchoring_cfg)? {
+                if !verify_anchoring_tx_payload(&tx, &schema)? {
                     warn!("Received lect with incorrect payload, content={:#?}", self);
                     return Ok(());
                 }
@@ -145,13 +145,9 @@ impl Transaction for AnchoringMessage {
     }
 }
 
-fn verify_anchoring_tx_payload(tx: &AnchoringTx,
-                               schema: &Schema,
-                               anchoring_cfg: &AnchoringConfig)
-                               -> Result<bool, StorageError> {
+fn verify_anchoring_tx_payload(tx: &AnchoringTx, schema: &Schema) -> Result<bool, StorageError> {
     let (height, hash) = tx.payload();
-    Ok(anchoring_cfg.nearest_anchoring_height(height) == height &&
-       schema.heights().get(height)? == Some(hash))
+    Ok(schema.heights().get(height)? == Some(hash))
 }
 
 fn verify_funding_tx(tx: &FundingTx,

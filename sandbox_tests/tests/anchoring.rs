@@ -821,31 +821,3 @@ fn test_anchoring_signature_unknown_output_address() {
     let signs_after = dump_signatures(&sandbox, &tx.id());
     assert_eq!(signs_before, signs_after);
 }
-
-// We received correct lect with the non-anchoring height
-// problems: None
-// result: we ignore it
-#[test]
-fn test_anchoring_lect_non_anchoring_height() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
-
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
-    let sandbox_state = SandboxState::new();
-
-    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-
-    let tx = TransactionBuilder::with_prev_tx(&anchoring_state.common.funding_tx, 0)
-        .fee(1000)
-        .payload(1, block_hash_on_height(&sandbox, 1))
-        .send_to(anchoring_state.common.redeem_script().1)
-        .into_transaction()
-        .unwrap();
-    let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
-    let lects_before = dump_lects(&sandbox, 0);
-    // Commit `msg_lect` into blockchain
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_lect.raw().clone()]);
-    // Ensure that service ignores it
-    let lects_after = dump_lects(&sandbox, 0);
-    assert_eq!(lects_after, lects_before);
-}
