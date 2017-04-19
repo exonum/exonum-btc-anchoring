@@ -33,7 +33,7 @@ impl AnchoringHandler {
                                 *v.get_mut() += 1;
                             }
                             Entry::Vacant(v) => {
-                                v.insert(0);
+                                v.insert(1);
                             }
                         }
                     }
@@ -70,8 +70,6 @@ impl AnchoringHandler {
                           cfg: AnchoringConfig,
                           _: &NodeState)
                           -> Result<(), ServiceError> {
-        info!("CHECKED_INITIAL_LECT ====== txid={}", tx.txid());
-
         let (_, addr) = cfg.redeem_script();
         if tx != cfg.funding_tx {
             let e = HandlerError::IncorrectLect {
@@ -87,6 +85,7 @@ impl AnchoringHandler {
             };
             return Err(e.into());
         }
+        info!("CHECKED_INITIAL_LECT ====== txid={}", tx.txid());
         Ok(())
     }
 
@@ -95,8 +94,6 @@ impl AnchoringHandler {
                             cfg: AnchoringConfig,
                             state: &NodeState)
                             -> Result<(), ServiceError> {
-        info!("CHECK_LECT ====== txid={}", tx.txid());
-
         let anchoring_schema = AnchoringSchema::new(state.view());
         let (_, addr) = cfg.redeem_script();
         // Check that tx address is correct
@@ -130,6 +127,8 @@ impl AnchoringHandler {
             return Err(e.into());
         }
         // Check that we did not miss more than one anchored height
+
+        info!("CHECKED_LECT ====== txid={}", tx.txid());
         Ok(())
     }
 }

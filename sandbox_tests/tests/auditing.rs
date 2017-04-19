@@ -15,10 +15,8 @@ extern crate log;
 
 use serde_json::value::ToJson;
 use bitcoin::util::base58::ToBase58;
-use bitcoin::blockdata::script::Script;
-use bitcoin::blockdata::transaction::SigHashType;
 
-use exonum::crypto::{HexValue, Hash};
+use exonum::crypto::HexValue;
 use exonum::messages::{Message, RawTransaction};
 use exonum::storage::StorageValue;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions,
@@ -27,13 +25,9 @@ use sandbox::sandbox::Sandbox;
 use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
-use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx,
-                                                        FundingTx, verify_tx_input};
 use anchoring_btc_service::{AnchoringConfig, ANCHORING_SERVICE_ID};
-use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
-use anchoring_btc_sandbox::{AnchoringSandboxState, RpcError, initialize_anchoring_sandbox};
+use anchoring_btc_sandbox::{AnchoringSandboxState, initialize_anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
-use anchoring_btc_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
 
 fn gen_following_cfg(sandbox: &Sandbox,
                      anchoring_state: &mut AnchoringSandboxState,
@@ -67,7 +61,7 @@ pub fn exclude_node_from_validator(sandbox: &Sandbox,
                                    client: &SandboxClient,
                                    sandbox_state: &mut SandboxState,
                                    anchoring_state: &mut AnchoringSandboxState) {
-    let cfg_change_height = 13;
+    let cfg_change_height = 12;
     let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, anchoring_state, cfg_change_height);
     let (_, following_addr) = following_cfg.redeem_script();
 
@@ -127,7 +121,7 @@ pub fn exclude_node_from_validator(sandbox: &Sandbox,
     ]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
 
-    let lects = (0..3)
+    let lects = (0..4)
         .map(|id| {
                  gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
                      .raw()
@@ -143,6 +137,8 @@ pub fn exclude_node_from_validator(sandbox: &Sandbox,
 
     anchoring_state.common = following_cfg;
     add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+    
+    assert_eq!(anchoring_state.handler().errors, Vec::new());
 }
 
 // We exclude sandbox node from validators

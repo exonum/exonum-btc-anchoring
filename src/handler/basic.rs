@@ -15,12 +15,24 @@ use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest};
 use super::{AnchoringHandler, MultisigAddress, AnchoringState, LectKind};
 
 impl AnchoringHandler {
+    #[cfg(not(feature="sandbox_tests"))]    
     #[doc(hidden)]
     pub fn new(client: Option<AnchoringRpc>, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
             client: client,
             node: node,
             proposal_tx: None,
+        }
+    }
+
+    #[cfg(feature="sandbox_tests")]
+    #[doc(hidden)]
+    pub fn new(client: Option<AnchoringRpc>, node: AnchoringNodeConfig) -> AnchoringHandler {
+        AnchoringHandler {
+            client: client,
+            node: node,
+            proposal_tx: None,
+            errors: Vec::new()
         }
     }
 

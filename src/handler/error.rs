@@ -3,7 +3,7 @@ use std::error;
 
 use details::btc::transactions::BitcoinTx;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum Error {
     IncorrectLect { reason: String, tx: BitcoinTx },
     LectNotFound,
