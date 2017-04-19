@@ -15,6 +15,7 @@ extern crate rand;
 extern crate libc;
 
 use std::ops::Deref;
+use std::ops::Drop;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 pub use bitcoinrpc::RpcError as JsonRpcError;
@@ -39,6 +40,7 @@ use anchoring_btc_service::details::btc;
 use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
 use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
 use anchoring_btc_service::handler::{AnchoringHandler, collect_signatures};
+use anchoring_btc_service::error::HandlerError;
 
 #[macro_use]
 mod macros;
@@ -62,6 +64,12 @@ pub struct AnchoringSandboxState {
 impl AnchoringSandboxState {
     pub fn handler(&self) -> MutexGuard<AnchoringHandler> {
         self.handler.lock().unwrap()
+    }
+
+    pub fn take_errors(&self) -> Vec<HandlerError> {
+        let mut handler = self.handler();
+        let v = handler.errors.drain(..).collect::<Vec<_>>();
+        v
     }
 
     pub fn latest_anchored_tx(&self) -> &AnchoringTx {
@@ -150,12 +158,22 @@ impl AnchoringSandboxState {
 
     pub fn nearest_check_lect_height(&self, sandbox: &Sandbox) -> u64 {
         let height = sandbox.current_height();
-        height - height % self.nodes[0].check_lect_frequency as u64
+        let frequency = self.nodes[0].check_lect_frequency as u64;
+        height - height % frequency + frequency
     }
 
     pub fn nearest_anchoring_height(&self, sandbox: &Sandbox) -> u64 {
         let height = sandbox.current_height();
-        self.common.nearest_anchoring_height(height)        
+        self.common.nearest_anchoring_height(height)
+    }
+}
+
+impl Drop for AnchoringSandboxState {
+    fn drop(&mut self) {
+        let handler = self.handler();
+        if !handler.errors.is_empty() {
+            panic!("Unhandled errors detected: {:?}", handler.errors);
+        }
     }
 }
 

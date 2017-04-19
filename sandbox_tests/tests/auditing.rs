@@ -26,6 +26,7 @@ use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
 use anchoring_btc_service::{AnchoringConfig, ANCHORING_SERVICE_ID};
+use anchoring_btc_service::error::HandlerError;
 use anchoring_btc_sandbox::{AnchoringSandboxState, initialize_anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
 
@@ -137,7 +138,7 @@ pub fn exclude_node_from_validator(sandbox: &Sandbox,
 
     anchoring_state.common = following_cfg;
     add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-    
+
     assert_eq!(anchoring_state.handler().errors, Vec::new());
 }
 
@@ -145,7 +146,7 @@ pub fn exclude_node_from_validator(sandbox: &Sandbox,
 // problems: None
 // result: success
 #[test]
-fn test_exclude_node_from_validators() {
+fn test_auditing_exclude_node_from_validators() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
     let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
@@ -153,6 +154,31 @@ fn test_exclude_node_from_validators() {
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-
     exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+}
+
+// We lost consensus in lects
+// result: Error LectNotFound occured
+#[test]
+fn test_auditing_lost_consensus_in_lects() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
+    let mut sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+
+    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
+        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+    }
+
+    let lect = gen_service_tx_lect(&sandbox,
+                                   0,
+                                   &anchoring_state.common.funding_tx,
+                                   lects_count(&sandbox, 0));
+    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[lect]);
+
+    assert_eq!(anchoring_state.take_errors()[0], HandlerError::LectNotFound);
 }

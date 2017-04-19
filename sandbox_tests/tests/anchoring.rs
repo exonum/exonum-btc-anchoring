@@ -580,8 +580,8 @@ fn test_anchoring_lect_funding_tx() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
-    let tx = anchoring_state.common.funding_tx;
-    let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
+    let tx = &anchoring_state.common.funding_tx;
+    let msg_lect = gen_service_tx_lect(&sandbox, 0, tx, 2);
     let lects_before = dump_lects(&sandbox, 0);
     // Commit `msg_lect` into blockchain
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_lect.raw().clone()]);

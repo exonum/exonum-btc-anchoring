@@ -56,6 +56,10 @@ pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
     s.lects(id).values().unwrap()
 }
 
+pub fn lects_count(sandbox: &Sandbox, id: u32) -> u64 {
+    dump_lects(sandbox, id).len() as u64
+}
+
 pub fn dump_signatures(sandbox: &Sandbox, txid: &btc::TxId) -> Vec<MsgAnchoringSignature> {
     let b = sandbox.blockchain_ref().clone();
     let v = b.view();

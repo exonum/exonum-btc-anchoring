@@ -2,10 +2,9 @@ use std::collections::hash_map::{HashMap, Entry};
 
 use exonum::blockchain::{NodeState, Schema};
 use exonum::storage::List;
-use exonum::storage::StorageValue;
 
 use error::Error as ServiceError;
-use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, TxKind};
+use details::btc::transactions::{AnchoringTx, FundingTx, TxKind};
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 
@@ -28,7 +27,7 @@ impl AnchoringHandler {
                 for validator_id in 0..validators_count {
                     if let Some(last_lect) = anchoring_schema.lects(validator_id).last()? {
                         // TODO implement hash and eq for transaction
-                        match lects.entry(last_lect.serialize()) {
+                        match lects.entry(last_lect.0) {
                             Entry::Occupied(mut v) => {
                                 *v.get_mut() += 1;
                             }
@@ -39,10 +38,9 @@ impl AnchoringHandler {
                     }
                 }
 
-                if let Some((lect_bytes, count)) = lects.iter().max_by_key(|&(_, v)| v) {
+                if let Some((lect, count)) = lects.iter().max_by_key(|&(_, v)| v) {
                     if *count >= ::majority_count(validators_count as u8) {
-                        let lect = BitcoinTx::deserialize(lect_bytes.to_vec());
-                        match TxKind::from(lect) {
+                        match TxKind::from(lect.clone()) {
                             TxKind::Anchoring(tx) => LectKind::Anchoring(tx),
                             TxKind::FundingTx(tx) => LectKind::Funding(tx),
                             TxKind::Other(_) => LectKind::None,
