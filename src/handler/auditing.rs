@@ -93,25 +93,20 @@ impl AnchoringHandler {
                             state: &NodeState)
                             -> Result<(), ServiceError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
-        let (_, addr) = cfg.redeem_script();
         // Check that tx address is correct
         let tx_addr = tx.output_address(cfg.network);
-        if tx_addr != addr {
-            let is_address_correct = {
-                if let Some(following) = anchoring_schema.following_anchoring_config()? {
-                    tx_addr == following.config.redeem_script().1
-                } else {
-                    false
-                }
-            };
+        let addr = if let Some(following) = anchoring_schema.following_anchoring_config()? {
+            following.config.redeem_script().1
+        } else {
+            cfg.redeem_script().1
+        };
 
-            if !is_address_correct {
-                let e = HandlerError::IncorrectLect {
-                    reason: "Found lect with wrong output_address".to_string(),
-                    tx: tx.into(),
-                };
-                return Err(e.into());
-            }
+        if tx_addr != addr {
+            let e = HandlerError::IncorrectLect {
+                reason: "Found lect with wrong output_address".to_string(),
+                tx: tx.into(),
+            };
+            return Err(e.into());
         }
 
         // Payload checks

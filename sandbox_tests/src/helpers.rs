@@ -175,10 +175,7 @@ pub fn anchor_first_block(sandbox: &Sandbox,
                            params: [anchored_tx.to_hex()]
                        }]);
 
-    let signatures = signatures
-        .into_iter()
-        .map(|tx| tx.raw().clone())
-        .collect::<Vec<_>>();
+    let signatures = signatures.into_iter().map(|tx| tx).collect::<Vec<_>>();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
 
     let txs = (0..4)

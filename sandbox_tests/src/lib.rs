@@ -156,6 +156,14 @@ impl AnchoringSandboxState {
         self.priv_keys(&self.common.redeem_script().1)
     }
 
+    pub fn current_addr(&self) -> btc::Address {
+        self.common.redeem_script().1
+    }
+
+    pub fn current_redeem_script(&self) -> btc::RedeemScript {
+        self.common.redeem_script().0
+    }
+
     pub fn nearest_check_lect_height(&self, sandbox: &Sandbox) -> u64 {
         let height = sandbox.current_height();
         let frequency = self.nodes[0].check_lect_frequency as u64;
