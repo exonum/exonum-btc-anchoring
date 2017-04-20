@@ -43,7 +43,13 @@ impl AnchoringHandler {
                         match TxKind::from(lect.clone()) {
                             TxKind::Anchoring(tx) => LectKind::Anchoring(tx),
                             TxKind::FundingTx(tx) => LectKind::Funding(tx),
-                            TxKind::Other(_) => LectKind::None,
+                            TxKind::Other(tx) => {
+                                let e = HandlerError::IncorrectLect {
+                                    reason: "Incorrect lect transaction".to_string(),
+                                    tx: tx.into(),
+                                };
+                                return Err(e.into());
+                            }
                         }
                     } else {
                         LectKind::None
@@ -82,6 +88,17 @@ impl AnchoringHandler {
                 tx: tx.into(),
             };
             return Err(e.into());
+        }
+
+        // Checks with access to the `bitcoind`
+        if let Some(ref client) = self.client {
+            if client.get_transaction(&tx.txid())?.is_none() {
+                let e = HandlerError::IncorrectLect {
+                    reason: "Initial funding_tx does not exists".to_string(),
+                    tx: tx.into(),
+                };
+                return Err(e.into());
+            }
         }
         info!("CHECKED_INITIAL_LECT ====== txid={}", tx.txid());
         Ok(())

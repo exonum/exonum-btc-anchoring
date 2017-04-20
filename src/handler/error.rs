@@ -13,9 +13,9 @@ impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match *self {
             Error::IncorrectLect { ref reason, ref tx } => {
-                write!(f, "Incorrect lect: {} tx={:#?}", reason, tx)
+                write!(f, "Incorrect lect: {}, tx={:#?}", reason, tx)
             }
-            Error::LectNotFound => write!(f, "Lect not found"),
+            Error::LectNotFound => write!(f, "Suitable lect not found"),
         }
     }
 }
@@ -24,7 +24,7 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::IncorrectLect { .. } => "Incorrect lect",
-            Error::LectNotFound => "Lect not found",
+            Error::LectNotFound => "Suitable lect not found",
         }
     }
 

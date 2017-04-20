@@ -29,7 +29,7 @@ use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
 use anchoring_btc_service::blockchain::schema::AnchoringSchema;
 use anchoring_btc_service::{AnchoringConfig, ANCHORING_SERVICE_ID};
 use anchoring_btc_service::error::HandlerError;
-use anchoring_btc_service::details::btc::transactions::TransactionBuilder;
+use anchoring_btc_service::details::btc::transactions::{BitcoinTx, TransactionBuilder};
 use anchoring_btc_sandbox::{AnchoringSandboxState, initialize_anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
 
@@ -193,17 +193,21 @@ fn test_auditing_lost_consensus_in_lects() {
         add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
     }
 
-    let lect = gen_service_tx_lect(&sandbox,
-                                   0,
-                                   &anchoring_state.common.funding_tx,
-                                   lects_count(&sandbox, 0));
-    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[lect]);
+    let lect_tx = BitcoinTx::from(anchoring_state.common.funding_tx.clone().0);
+    let lect = MsgAnchoringUpdateLatest::new(&sandbox.p(0),
+                                             0,
+                                             lect_tx,
+                                             lects_count(&sandbox, 0),
+                                             sandbox.s(0));
+    add_one_height_with_transactions_from_other_validator(&sandbox,
+                                                          &sandbox_state,
+                                                          &[lect.raw().clone()]);
 
     assert_eq!(anchoring_state.take_errors()[0], HandlerError::LectNotFound);
 }
 
 // We found in blockchain `lect` with incorrect payload
-// result: Error LectNotFound occured
+// result: Error IncorrectLect occured
 #[test]
 fn test_auditing_lects_incorrect_payload() {
     let _ = ::blockchain_explorer::helpers::init_logger();
@@ -246,7 +250,7 @@ fn test_auditing_lects_incorrect_payload() {
 }
 
 // We found in blockchain `lect` with incorrect output address
-// result: Error LectNotFound occured
+// result: Error IncorrectLect occured
 #[test]
 fn test_auditing_lects_incorrect_address() {
     let _ = ::blockchain_explorer::helpers::init_logger();
@@ -287,5 +291,49 @@ fn test_auditing_lects_incorrect_address() {
                HandlerError::IncorrectLect {
                    reason: String::from("Found lect with wrong output_address"),
                    tx: strange_lect_tx.into(),
+               });
+}
+
+// FundingTx from lect not found in `bitcoin` network
+// result: Error IncorrectLect occured
+#[test]
+fn test_auditing_lects_lost_funding_tx() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
+    let mut sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+
+    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
+        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+    }
+
+    let lect_tx = BitcoinTx::from(anchoring_state.common.funding_tx.clone().0);
+    let lects = (0..3)
+        .map(|id| {
+                 MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),
+                                               id,
+                                               lect_tx.clone(),
+                                               lects_count(&sandbox, id),
+                                               sandbox.s(id as usize))
+             })
+        .collect::<Vec<_>>();
+    force_commit_lects(&sandbox, lects);
+
+    let requests = vec![request! {
+            method: "getrawtransaction",
+            params: [&lect_tx.txid(), 0],
+            error: RpcError::NoInformation("Unable to find tx".to_string())
+        }];
+    client.expect(requests);
+    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+
+    assert_eq!(anchoring_state.take_errors()[0],
+               HandlerError::IncorrectLect {
+                   reason: String::from("Initial funding_tx does not exists"),
+                   tx: lect_tx.into(),
                });
 }

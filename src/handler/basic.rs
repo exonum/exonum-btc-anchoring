@@ -15,7 +15,7 @@ use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest};
 use super::{AnchoringHandler, MultisigAddress, AnchoringState, LectKind};
 
 impl AnchoringHandler {
-    #[cfg(not(feature="sandbox_tests"))]    
+    #[cfg(not(feature="sandbox_tests"))]
     #[doc(hidden)]
     pub fn new(client: Option<AnchoringRpc>, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
@@ -32,7 +32,7 @@ impl AnchoringHandler {
             client: client,
             node: node,
             proposal_tx: None,
-            errors: Vec::new()
+            errors: Vec::new(),
         }
     }
 
@@ -301,7 +301,11 @@ impl AnchoringHandler {
                     } else {
                         times -= 1;
                         let txid = tx.prev_hash().be_hex_string();
-                        current_tx = self.client().get_transaction(&txid)?;
+                        if let Some(tx) = self.client().get_transaction(&txid)? {
+                            current_tx = tx;
+                        } else {
+                            return Ok(None);
+                        }
                         trace!("Check prev lect={:#?}", current_tx);
                     }
                 }

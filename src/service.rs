@@ -86,11 +86,12 @@ impl Service for AnchoringService {
             Err(ServiceError::Storage(e)) => Err(e),
             #[cfg(feature="sandbox_tests")]
             Err(ServiceError::Handler(e)) => {
+                error!("An error occured: {}", e);
                 handler.errors.push(e);
                 Ok(())
             }
             Err(e) => {
-                error!("An error occured: {:?}", e);
+                error!("An error occured: {}", e);
                 Ok(())
             }
             Ok(()) => Ok(()),
