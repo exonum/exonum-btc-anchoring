@@ -136,8 +136,18 @@ impl AnchoringHandler {
             };
             return Err(e.into());
         }
-        // Check that we did not miss more than one anchored height
 
+        // Checks with access to the `bitcoind`
+        if let Some(ref client) = self.client {
+            if client.get_transaction(&tx.txid())?.is_none() {
+                let e = HandlerError::IncorrectLect {
+                    reason: "Lect does not exists in the bitcoin blockchain".to_string(),
+                    tx: tx.into(),
+                };
+                return Err(e.into());
+            }
+            // Check that we did not miss more than one anchored height
+        }
         info!("CHECKED_LECT ====== txid={}", tx.txid());
         Ok(())
     }

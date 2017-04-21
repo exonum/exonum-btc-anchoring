@@ -156,6 +156,11 @@ pub fn exclude_node_from_validator(sandbox: &Sandbox,
     }
 
     anchoring_state.common = following_cfg;
+    client.expect(vec![request! {
+            method: "getrawtransaction",
+            params: [&transition_tx.txid(), 0],
+            response: transition_tx.to_hex()
+        }]);
     add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
 
     assert_eq!(anchoring_state.handler().errors, Vec::new());
@@ -323,17 +328,48 @@ fn test_auditing_lects_lost_funding_tx() {
         .collect::<Vec<_>>();
     force_commit_lects(&sandbox, lects);
 
-    let requests = vec![request! {
+    client.expect(vec![request! {
             method: "getrawtransaction",
             params: [&lect_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
-        }];
-    client.expect(requests);
+        }]);
     add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
 
     assert_eq!(anchoring_state.take_errors()[0],
                HandlerError::IncorrectLect {
                    reason: String::from("Initial funding_tx does not exists"),
+                   tx: lect_tx.into(),
+               });
+}
+
+// Current lect not found in `bitcoin` network
+// result: Error IncorrectLect occured
+#[test]
+fn test_auditing_lects_lost_current_lect() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
+    let mut sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+
+    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
+        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+    }
+
+    let lect_tx = anchoring_state.latest_anchored_tx().clone();
+    client.expect(vec![request! {
+            method: "getrawtransaction",
+            params: [&lect_tx.txid(), 0],
+            error: RpcError::NoInformation("Unable to find tx".to_string())
+        }]);
+    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+
+    assert_eq!(anchoring_state.take_errors()[0],
+               HandlerError::IncorrectLect {
+                   reason: String::from("Lect does not exists in the bitcoin blockchain"),
                    tx: lect_tx.into(),
                });
 }
