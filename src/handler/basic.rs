@@ -165,7 +165,7 @@ impl AnchoringHandler {
         }
 
         if let Some(lect) = self.find_lect(multisig, state)? {
-            /// Случай, когда появился новый lect с другим набором подписей
+            /// New lect with different signatures set.
             let (our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
                 let our_lect = schema.lect(state.id())?;

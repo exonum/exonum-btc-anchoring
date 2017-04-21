@@ -122,7 +122,7 @@ macro_rules! implement_serde_base58check {
 
 macro_rules! implement_tx_wrapper {
 ($name:ident) => (
-    implement_wrapper! {RawBitcoinTx, $name}    
+    implement_wrapper! {RawBitcoinTx, $name}
 
     impl $name {
         pub fn id(&self) -> TxId {
@@ -189,7 +189,8 @@ macro_rules! implement_tx_wrapper {
         }
 
         fn write(&self, buffer: &'a mut Vec<u8>, from: usize, to: usize) {
-            <&[u8] as ::exonum::messages::Field>::write(&self.clone().serialize().as_slice(), buffer, from, to);
+            <&[u8] as ::exonum::messages::Field>::write(&self.clone().serialize().as_slice(),
+            buffer, from, to);
         }
 
         fn check(buffer: &'a [u8], from: usize, to: usize) -> Result<(), ::exonum::messages::Error> {

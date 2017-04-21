@@ -17,11 +17,13 @@ before_install:
 install:
 - sudo apt-get -qq --yes install gcc g++ make libsodium-dev libleveldb-dev libssl-dev
 - sudo apt-get -qq --yes install bitcoind
+- cargo install rustfmt --force
 before_script:
 - bitcoind -regtest -server -rpcuser=travis -rpcpassword=travis -daemon
 - sleep 10
 - bitcoin-cli -regtest -rpcuser=travis -rpcpassword=travis generate 200
 script:
+- cargo fmt -- --write-mode=diff
 - cargo check --features clippy --verbose
 - cargo test --release --verbose
 - cargo test --manifest-path sandbox_tests/Cargo.toml --verbose
