@@ -16,9 +16,11 @@ pub struct AnchoringConfig {
     pub funding_tx: FundingTx,
     /// A fee for each transaction in chain
     pub fee: u64,
-    /// The frequency in blocks with which occurs the generation of a new `anchoring` transactions in chain.
+    /// The frequency in blocks with which occurs the generation of a new `anchoring`
+    /// transactions in chain.
     pub frequency: u64,
-    /// The minimum number of confirmations in bitcoin network for the transition to a new `anchoring` address.
+    /// The minimum number of confirmations in bitcoin network for the transition to a
+    /// new `anchoring` address.
     pub utxo_confirmations: u64,
     /// The current bitcoin network type
     #[serde(serialize_with = "btc_network_to_str", deserialize_with = "btc_network_from_str")]

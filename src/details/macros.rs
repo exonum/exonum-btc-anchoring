@@ -193,7 +193,8 @@ macro_rules! implement_tx_wrapper {
             buffer, from, to);
         }
 
-        fn check(buffer: &'a [u8], from: usize, to: usize) -> Result<(), ::exonum::messages::Error> {
+        fn check(buffer: &'a [u8], from: usize, to: usize) ->
+            Result<(), ::exonum::messages::Error> {
             let buf: Vec<u8> = ::exonum::messages::Field::read(buffer, from, to);
             let raw_tx = deserialize::<RawBitcoinTx>(buf.as_ref())
                 .map_err(|_| ::exonum::messages::Error::IncorrectMessageType { message_type: 1 })?;
