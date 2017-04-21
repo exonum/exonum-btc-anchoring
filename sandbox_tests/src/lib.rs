@@ -15,7 +15,6 @@ extern crate rand;
 extern crate libc;
 
 use std::ops::Deref;
-use std::ops::Drop;
 use std::sync::{Arc, Mutex, MutexGuard};
 
 pub use bitcoinrpc::RpcError as JsonRpcError;
@@ -173,15 +172,6 @@ impl AnchoringSandboxState {
     pub fn nearest_anchoring_height(&self, sandbox: &Sandbox) -> u64 {
         let height = sandbox.current_height();
         self.common.nearest_anchoring_height(height)
-    }
-}
-
-impl Drop for AnchoringSandboxState {
-    fn drop(&mut self) {
-        let handler = self.handler();
-        if !handler.errors.is_empty() {
-            panic!("Unhandled errors detected: {:?}", handler.errors);
-        }
     }
 }
 

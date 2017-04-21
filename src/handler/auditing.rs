@@ -60,8 +60,8 @@ impl AnchoringHandler {
             };
 
             let r = match lect {
-                LectKind::Funding(tx) => self.check_funding_lect(tx, cfg, state),
-                LectKind::Anchoring(tx) => self.check_anchoring_lect(tx, cfg, state),
+                LectKind::Funding(tx) => self.check_funding_lect(tx, &cfg, state),
+                LectKind::Anchoring(tx) => self.check_anchoring_lect(tx, &cfg, state),
                 LectKind::None => Err(HandlerError::LectNotFound.into()),
             };
             return r;
@@ -71,7 +71,7 @@ impl AnchoringHandler {
 
     fn check_funding_lect(&self,
                           tx: FundingTx,
-                          cfg: AnchoringConfig,
+                          cfg: &AnchoringConfig,
                           _: &NodeState)
                           -> Result<(), ServiceError> {
         let (_, addr) = cfg.redeem_script();
@@ -106,9 +106,60 @@ impl AnchoringHandler {
 
     fn check_anchoring_lect(&self,
                             tx: AnchoringTx,
-                            cfg: AnchoringConfig,
+                            cfg: &AnchoringConfig,
                             state: &NodeState)
                             -> Result<(), ServiceError> {
+        // Verify tx content
+        self.check_anchoring_tx_content(&tx, cfg, state)?;
+        // Checks with access to the `bitcoind`
+        if let Some(ref client) = self.client {
+            if client.get_transaction(&tx.txid())?.is_none() {
+                let e = HandlerError::IncorrectLect {
+                    reason: "Lect does not exists in the bitcoin blockchain".to_string(),
+                    tx: tx.into(),
+                };
+                return Err(e.into());
+            }
+
+            // Get previous tx
+            let prev_txid = tx.prev_hash().be_hex_string();
+            let prev_tx = if let Some(tx) = client.get_transaction(&prev_txid)? {
+                tx
+            } else {
+                let e = HandlerError::IncorrectLect {
+                    reason: "Lect's input does not exists in the bitcoin blockchain".to_string(),
+                    tx: tx.into(),
+                };
+                return Err(e.into());
+            };
+
+            match TxKind::from(prev_tx) {
+                TxKind::Anchoring(prev_tx) => {
+                    // TODO Disabled due for lack of `get_configuration_at_height` method in core schema.
+                    // self.check_anchoring_tx_content(&prev_tx, cfg, state)?;
+                    // TODO Check that we did not miss more than one anchored height
+                }
+                TxKind::FundingTx(prev_tx) => {
+                    self.check_funding_lect(prev_tx, cfg, state)?;
+                }
+                TxKind::Other(tx) => {
+                    let e = HandlerError::IncorrectLect {
+                        reason: "Weird input transaction".to_string(),
+                        tx: tx.into(),
+                    };
+                    return Err(e.into());
+                }
+            }
+        }
+        info!("CHECKED_LECT ====== txid={}", tx.txid());
+        Ok(())
+    }
+
+    fn check_anchoring_tx_content(&self,
+                                  tx: &AnchoringTx,
+                                  cfg: &AnchoringConfig,
+                                  state: &NodeState)
+                                  -> Result<(), ServiceError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
         // Check that tx address is correct
         let tx_addr = tx.output_address(cfg.network);
@@ -121,34 +172,20 @@ impl AnchoringHandler {
         if tx_addr != addr {
             let e = HandlerError::IncorrectLect {
                 reason: "Found lect with wrong output_address".to_string(),
-                tx: tx.into(),
+                tx: tx.clone().into(),
             };
             return Err(e.into());
         }
-
         // Payload checks
         let (block_height, block_hash) = tx.payload();
         let schema = Schema::new(state.view());
         if Some(block_hash) != schema.heights().get(block_height)? {
             let e = HandlerError::IncorrectLect {
                 reason: "Found lect with wrong payload".to_string(),
-                tx: tx.into(),
+                tx: tx.clone().into(),
             };
             return Err(e.into());
         }
-
-        // Checks with access to the `bitcoind`
-        if let Some(ref client) = self.client {
-            if client.get_transaction(&tx.txid())?.is_none() {
-                let e = HandlerError::IncorrectLect {
-                    reason: "Lect does not exists in the bitcoin blockchain".to_string(),
-                    tx: tx.into(),
-                };
-                return Err(e.into());
-            }
-            // Check that we did not miss more than one anchored height
-        }
-        info!("CHECKED_LECT ====== txid={}", tx.txid());
         Ok(())
     }
 }
