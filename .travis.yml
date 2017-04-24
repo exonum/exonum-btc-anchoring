@@ -24,6 +24,7 @@ before_script:
 - bitcoin-cli -regtest -rpcuser=travis -rpcpassword=travis generate 200
 script:
 - cargo fmt -- --write-mode=diff
+- cargo fmt -p sandbox_tests -- --write-mode=diff
 - cargo check --features clippy --verbose
 - cargo test --release --verbose
 - cargo test --manifest-path sandbox_tests/Cargo.toml --verbose

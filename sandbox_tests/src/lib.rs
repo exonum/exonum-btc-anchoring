@@ -152,12 +152,11 @@ impl AnchoringSandboxState {
 /// Generates config for 4 validators and 10000 funds
 pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
                                     -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
-    let requests = vec![
-        request! {
+    let requests = vec![request! {
             method: "importaddress",
             params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
         },
-        request! {
+                        request! {
             method: "sendtoaddress",
             params: [
                 "2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA",
@@ -165,15 +164,19 @@ pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
             ],
             response: "a788a2f0a369f3985c5f713d985bb1e7bd3dfb8b35f194b39a5f3ae7d709af9a"
         },
-        request! {
+                        request! {
             method: "getrawtransaction",
             params: [
                 "a788a2f0a369f3985c5f713d985bb1e7bd3dfb8b35f194b39a5f3ae7d709af9a",
                 0
             ],
-            response: "0100000001e56b729856ecd8a9712cb86a8a702bbd05478b0a323f06d2bcfdce373fc9c71b010000006a4730440220410e697174595270abbf2e2542ce42186ef6d48fc0dcf9a2c26cb639d6d9e8930220735ff3e6f464d426eec6dd5acfda268624ef628aab38124a1a0b82c1670dddd501210323751396efcc7e842b522b9d95d84a4f0e4663861124150860d0f728c2cc7d56feffffff02a00f00000000000017a914f18eb74087f751109cc9052befd4177a52c9a30a870313d70b000000001976a914eed3fc59a211ef5cbf1986971cae80bcc983d23a88ac35ae1000"
-        },
-    ];
+            response: "0100000001e56b729856ecd8a9712cb86a8a702bbd05478b0a323f06d2bcfdce373fc9c71b0\
+                10000006a4730440220410e697174595270abbf2e2542ce42186ef6d48fc0dcf9a2c26cb639d6d9e89\
+                30220735ff3e6f464d426eec6dd5acfda268624ef628aab38124a1a0b82c1670dddd50121032375139\
+                6efcc7e842b522b9d95d84a4f0e4663861124150860d0f728c2cc7d56feffffff02a00f00000000000\
+                017a914f18eb74087f751109cc9052befd4177a52c9a30a870313d70b000000001976a914eed3fc59a\
+                211ef5cbf1986971cae80bcc983d23a88ac35ae1000"
+        }];
     client.expect(requests);
     let mut rng: StdRng = SeedableRng::from_seed([1, 2, 3, 4].as_ref());
     gen_anchoring_testnet_config_with_rng(client,
