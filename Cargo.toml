@@ -38,6 +38,7 @@ rev = "fc8ca6e7bdfaebe953817c11b57c84289494fecb"
 [dependencies.configuration_service]
 git = "ssh://git@github.com/exonum/exonum-configuration.git"
 version = "0.1.0"
+rev = "bb30d5706dd9855d49c94e469148a8fe305cf651"
 
 [features]
 default = []
