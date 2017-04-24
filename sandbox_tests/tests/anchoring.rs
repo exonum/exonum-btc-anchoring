@@ -117,33 +117,33 @@ fn test_anchoring_second_block_additional_funds() {
 
     let funds = anchoring_state.common.funding_tx.clone();
     client.expect(vec![request! {
-                            method: "listunspent",
-                            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
-                            response: [
-                                {
-                                    "txid": "fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491",
-                                    "vout": 0,
-                                    "address": &anchoring_addr.to_base58check(),
-                                    "account": "multisig",
-                                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                                    "amount": 0.00010000,
-                                    "confirmations": 1,
-                                    "spendable": false,
-                                    "solvable": false
-                                },
-                                {
-                                    "txid": &funds.txid(),
-                                    "vout": 0,
-                                    "address": &anchoring_addr.to_base58check(),
-                                    "account": "multisig",
-                                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                                    "amount": 0.00010000,
-                                    "confirmations": 75,
-                                    "spendable": false,
-                                    "solvable": false
-                                }
-                            ]
-                        }]);
+        method: "listunspent",
+        params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+        response: [
+            {
+                "txid": "fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491",
+                "vout": 0,
+                "address": &anchoring_addr.to_base58check(),
+                "account": "multisig",
+                "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                "amount": 0.00010000,
+                "confirmations": 1,
+                "spendable": false,
+                "solvable": false
+            },
+            {
+                "txid": &funds.txid(),
+                "vout": 0,
+                "address": &anchoring_addr.to_base58check(),
+                "account": "multisig",
+                "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                "amount": 0.00010000,
+                "confirmations": 75,
+                "spendable": false,
+                "solvable": false
+            }
+        ]
+    }]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     let (_, signatures) = anchoring_state
@@ -195,27 +195,27 @@ fn test_anchoring_second_block_lect_lost() {
     }
 
     client.expect(vec![request! {
-                            method: "listunspent",
-                            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
-                            response: [
-                                {
-                                    "txid": &prev_anchored_tx.txid(),
-                                    "vout": 0,
-                                    "address": &anchoring_addr.to_base58check(),
-                                    "account": "multisig",
-                                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                                    "amount": 0.00010000,
-                                    "confirmations": 0,
-                                    "spendable": false,
-                                    "solvable": false
-                                }
-                            ]
-                        },
+        method: "listunspent",
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            response: [
+                {
+                    "txid": &prev_anchored_tx.txid(),
+                    "vout": 0,
+                    "address": &anchoring_addr.to_base58check(),
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 0,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        },
                        request! {
-                            method: "getrawtransaction",
-                            params: [&prev_anchored_tx.txid(), 0],
-                            response: &prev_anchored_tx.to_hex()
-                        }]);
+             method: "getrawtransaction",
+             params: [&prev_anchored_tx.txid(), 0],
+             response: &prev_anchored_tx.to_hex()
+        }]);
 
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
@@ -333,7 +333,13 @@ fn test_anchoring_find_lect_chain_wrong() {
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
     let anchored_txs = {
 
-        let mut tx = AnchoringTx::from_hex("0100000001c13d4c739390c799344fa89fb701add04e5ccaf3d580e4d4379c4b897e3a2266000000006b483045022100ff88211040a8a95a42ca8520749c1b2b4024ce07b3ed1b51da8bb90ef77dbe5d022034b34ef638d23ef0ea532e2c84a8816cb32021112d4bcf1457b4e2c149d1b83f01210250749a68b12a93c2cca6f86a9a9c9ba37f5191e85334c340856209a17cca349afeffffff0240420f000000000017a914180d8e6b0ad7f63177e943752c278294709425bd872908da0b000000001976a914dee9f9433b3f2d24cbd833f83a41e4c1235efa3f88acd6ac1000").unwrap();
+        let mut tx = AnchoringTx::from_hex("0100000001c13d4c739390c799344fa89fb701add04e5ccaf3d580\
+            e4d4379c4b897e3a2266000000006b483045022100ff88211040a8a95a42ca8520749c1b2b4024ce07b3ed\
+            1b51da8bb90ef77dbe5d022034b34ef638d23ef0ea532e2c84a8816cb32021112d4bcf1457b4e2c149d1b8\
+            3f01210250749a68b12a93c2cca6f86a9a9c9ba37f5191e85334c340856209a17cca349afeffffff024042\
+            0f000000000017a914180d8e6b0ad7f63177e943752c278294709425bd872908da0b000000001976a914de\
+            e9f9433b3f2d24cbd833f83a41e4c1235efa3f88acd6ac1000")
+                .unwrap();
         let mut txs = vec![tx.clone()];
         for height in 1..4 {
             tx = TransactionBuilder::with_prev_tx(&tx, 0)
@@ -599,9 +605,15 @@ fn test_anchoring_lect_incorrect_funding_tx() {
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
     // Create `p2sh` transaction for unknown multisig address
-    // For details see link
-    // https://www.blocktrail.com/tBTC/tx/be470954627bfbde664b5adc2bbb98280e8491918cf4a678d16cab13e8a9865b
-    let tx = FundingTx::from_hex("02000000017ed7e5c5ebec6c7d3d012f543b0656216ccc3710f4272e0b663176598a9271da010000006a47304402206746eab4ce2a720307686b3b255e8fed99dee6da01575d67394c7b7e095393a102206fbb34a95c139ad217c767bf2bc1db5521af2407ea12d47b3a9e9babfba58df9012102b3aac66108bfa3eee4075c6adee8fd417ca535cfdbe1637be418b7ab92cc5346feffffff02a00f00000000000017a91424f0d34abfec4f4cb19d942202529b8653a0a58d870c170f0c000000001976a9147bb8844ee71cbd2bc735411f4e29971f697fed0a88ac81131100").unwrap();
+    // For details see link be470954627bfbde664b5adc2bbb98280e8491918cf4a678d16cab13e8a9865b
+    // transaction in https://www.blocktrail.com/tBTC/tx
+    let tx = FundingTx::from_hex("02000000017ed7e5c5ebec6c7d3d012f543b0656216ccc3710f4272e0b663176\
+        598a9271da010000006a47304402206746eab4ce2a720307686b3b255e8fed99dee6da01575d67394c7b7e0953\
+        93a102206fbb34a95c139ad217c767bf2bc1db5521af2407ea12d47b3a9e9babfba58df9012102b3aac66108bf\
+        a3eee4075c6adee8fd417ca535cfdbe1637be418b7ab92cc5346feffffff02a00f00000000000017a91424f0d3\
+        4abfec4f4cb19d942202529b8653a0a58d870c170f0c000000001976a9147bb8844ee71cbd2bc735411f4e2997\
+        1f697fed0a88ac81131100")
+            .unwrap();
     let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
     let lects_before = dump_lects(&sandbox, 0);
     // Commit `msg_lect` into blockchain
