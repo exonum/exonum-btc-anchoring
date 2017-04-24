@@ -198,7 +198,7 @@ macro_rules! implement_tx_wrapper {
             let buf: Vec<u8> = ::exonum::messages::Field::read(buffer, from, to);
             let raw_tx = deserialize::<RawBitcoinTx>(buf.as_ref())
                 .map_err(|_| ::exonum::messages::Error::IncorrectMessageType { message_type: 1 })?;
-            if let Some(_) = <$name as TxFromRaw>::from_raw(raw_tx) {
+            if <$name as TxFromRaw>::from_raw(raw_tx).is_some() {
                 Ok(())
             } else {
                 Err(::exonum::messages::Error::IncorrectMessageType { message_type: 2 })
