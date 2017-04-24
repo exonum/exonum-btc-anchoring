@@ -296,8 +296,9 @@ fn test_anchoring_tx_message_field_rw_wrong_tx_kind_check() {
 #[should_panic(expected = "Result::unwrap()` on an `Err`")]
 fn test_funding_tx_message_field_rw_wrong_tx_kind_check() {
     /// Correct non-funding tx, created by command:
-    /// `bitcoin-cli sendtoaddress "n4a3q23iUKZsmmrT5bVkeAsyqzvR5TmUbf" 0.0001` see
-    /// https://www.blocktrail.com/tBTC/tx/b63170f59291c916b04fc65e110e4cbb7e835150ad1d62e6c03e929b832b4391
+    /// `bitcoin-cli sendtoaddress "n4a3q23iUKZsmmrT5bVkeAsyqzvR5TmUbf" 0.0001` see transaction
+    /// b63170f59291c916b04fc65e110e4cbb7e835150ad1d62e6c03e929b832b4391 in the
+    /// https://www.blocktrail.com/tBTC
     let hex = "020000000197714d5c9db6334fc5043562a477abac3e4dae088fc94d68a7a634ec98b48373010000006\
         b483045022100a1a611cd455850681814b62cc138491f5e91b4e561ae38c7b26d6f5ba3253e4202203bc7aadc4\
         0452a5e1f76f025e198a7badf8374e476e51ab0baf5e1fe952d37cd012103231378cfe95565fe969e6a0fb6a70\
