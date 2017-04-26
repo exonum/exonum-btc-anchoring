@@ -290,9 +290,6 @@ impl AnchoringHandler {
                                                      lects_count,
                                                      state.secret_key());
         state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
-        // Cache lect
-        AnchoringSchema::new(state.view())
-            .add_lect(state.id(), lect)?;
         Ok(())
     }
 }

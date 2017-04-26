@@ -151,6 +151,7 @@ impl<'a> AnchoringSchema<'a> {
         let cfg = self.current_anchoring_config()?;
         let mut lect_hashes = Vec::new();
         for id in 0..cfg.validators.len() as u32 {
+            debug!("last lect for id={} is {:#?}, cnt={}", id, self.lects(id).last(), self.lects(id).len()?);
             lect_hashes.push(self.lects(id).root_hash()?);
         }
         Ok(lect_hashes)
@@ -167,6 +168,6 @@ impl<'a> AnchoringSchema<'a> {
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {
         let service_id = ANCHORING_SERVICE_ID.to_string();
-        from_value(cfg.services[&service_id].clone()).unwrap()
+        from_value(cfg.services[&service_id].clone()).expect("Anchoring config does not exists")
     }
 }
