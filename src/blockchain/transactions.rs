@@ -147,7 +147,7 @@ impl Transaction for AnchoringMessage {
 
 fn verify_anchoring_tx_payload(tx: &AnchoringTx, schema: &Schema) -> Result<bool, StorageError> {
     let (height, hash) = tx.payload();
-    Ok(schema.heights().get(height)? == Some(hash))
+    Ok(schema.block_hashes_by_height().get(height)? == Some(hash))
 }
 
 fn verify_funding_tx(tx: &FundingTx,

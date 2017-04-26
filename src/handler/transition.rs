@@ -76,7 +76,7 @@ impl AnchoringHandler {
             if lect.is_none() {
                 // Check prev lect
                 let prev_lect: AnchoringTx = AnchoringSchema::new(state.view())
-                    .prev_lect(state.id())?
+                    .prev_lect(self.validator_id(state))?
                     .unwrap()
                     .into();
                 let network = multisig.common.network;
@@ -86,7 +86,7 @@ impl AnchoringHandler {
                 } else {
                     // Start a new anchoring chain from scratch
                     let lect_id = AnchoringSchema::new(state.view())
-                        .lect(state.id())?
+                        .lect(self.validator_id(state))?
                         .id();
                     self.try_create_anchoring_tx_chain(&multisig, Some(lect_id), state)?;
                 }
