@@ -80,7 +80,11 @@ pub fn block_hash_on_height(sandbox: &Sandbox, height: u64) -> Hash {
     let blockchain = sandbox.blockchain_ref();
     let view = blockchain.view();
     let schema = Schema::new(&view);
-    schema.heights().get(height).unwrap().unwrap()
+    schema
+        .block_hashes_by_height()
+        .get(height)
+        .unwrap()
+        .unwrap()
 }
 
 /// Anchor genesis block using funding tx

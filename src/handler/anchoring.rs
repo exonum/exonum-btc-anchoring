@@ -71,7 +71,7 @@ impl AnchoringHandler {
             // Create anchoring proposal
             let height = multisig.common.nearest_anchoring_height(state.height());
             let hash = Schema::new(state.view())
-                .heights()
+                .block_hashes_by_height()
                 .get(height)?
                 .unwrap();
 
@@ -102,7 +102,7 @@ impl AnchoringHandler {
                               state: &mut NodeState)
                               -> Result<(), ServiceError> {
         let hash = Schema::new(state.view())
-            .heights()
+            .block_hashes_by_height()
             .get(height)?
             .unwrap();
 
@@ -137,7 +137,7 @@ impl AnchoringHandler {
             let signature = proposal.sign_input(&multisig.redeem_script, input, &multisig.priv_key);
 
             let sign_msg = MsgAnchoringSignature::new(state.public_key(),
-                                                      state.id(),
+                                                      self.validator_id(state),
                                                       proposal.clone(),
                                                       input,
                                                       &signature,
@@ -194,16 +194,16 @@ impl AnchoringHandler {
             info!("LECT ====== txid={}, total_count={}",
                   new_lect.txid(),
                   AnchoringSchema::new(state.view())
-                      .lects(state.id())
+                      .lects(self.validator_id(state))
                       .len()?);
 
             self.proposal_tx = None;
 
             let lects_count = AnchoringSchema::new(state.view())
-                .lects(state.id())
+                .lects(self.validator_id(state))
                 .len()?;
             let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
-                                                         state.id(),
+                                                         self.validator_id(state),
                                                          new_lect.into(),
                                                          lects_count,
                                                          state.secret_key());

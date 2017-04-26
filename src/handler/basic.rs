@@ -25,6 +25,15 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
+    pub fn validator_id(&self, state: &NodeState) -> u32 {
+        state
+            .validator_state()
+            .as_ref()
+            .expect("Request `validator_id` only from validator node.")
+            .id()
+    }
+
+    #[doc(hidden)]
     pub fn multisig_address<'a>(&self, common: &'a AnchoringConfig) -> MultisigAddress<'a> {
         let (redeem_script, addr) = common.redeem_script();
         let priv_key = self.node.private_keys[&addr.to_base58check()].clone();
@@ -74,7 +83,7 @@ impl AnchoringHandler {
         } else {
             let schema = AnchoringSchema::new(state.view());
 
-            let current_lect = schema.lect(state.id())?;
+            let current_lect = schema.lect(self.validator_id(state))?;
             if let TxKind::Anchoring(current_lect) = TxKind::from(current_lect) {
                 let current_addr = current_lect.output_address(actual.network);
 
@@ -106,7 +115,7 @@ impl AnchoringHandler {
     pub fn collect_lects(&self, state: &NodeState) -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
-        let our_lect = anchoring_schema.lect(state.id())?;
+        let our_lect = anchoring_schema.lect(self.validator_id(state))?;
         let mut count = 1;
 
         let validators_count = state.validators().len() as u32;
@@ -168,8 +177,8 @@ impl AnchoringHandler {
             /// New lect with different signatures set.
             let (our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
-                let our_lect = schema.lect(state.id())?;
-                let count = schema.lects(state.id()).len()?;
+                let our_lect = schema.lect(self.validator_id(state))?;
+                let count = schema.lects(self.validator_id(state)).len()?;
                 (our_lect, count)
             };
 
@@ -182,9 +191,11 @@ impl AnchoringHandler {
             let (prev_lect, current_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
 
-                let prev_lect = schema.prev_lect(state.id())?.map(TxKind::from);
-                let current_lect = TxKind::from(schema.lect(state.id())?);
-                let lects_count = schema.lects(state.id()).len()?;
+                let prev_lect = schema
+                    .prev_lect(self.validator_id(state))?
+                    .map(TxKind::from);
+                let current_lect = TxKind::from(schema.lect(self.validator_id(state))?);
+                let lects_count = schema.lects(self.validator_id(state)).len()?;
                 (prev_lect, current_lect, lects_count)
             };
 
@@ -228,7 +239,7 @@ impl AnchoringHandler {
                       state: &NodeState)
                       -> Result<Option<BitcoinTx>, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
-        let id = state.id();
+        let id = self.validator_id(state);
         let first_funding_tx = schema.lects(id).get(0)?.unwrap();
 
         // Check that we know tx
@@ -285,7 +296,7 @@ impl AnchoringHandler {
               lects_count);
 
         let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
-                                                     state.id(),
+                                                     self.validator_id(state),
                                                      lect.clone(),
                                                      lects_count,
                                                      state.secret_key());
