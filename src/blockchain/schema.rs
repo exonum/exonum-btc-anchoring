@@ -148,21 +148,12 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
-        // let cfg = Schema::new(self.view).get_actual_configuration()?;
-        // let service_id = ANCHORING_SERVICE_ID.to_string();
-        // if let Some(cfg) = cfg.services.get(&service_id) {
-        //     let cfg: AnchoringConfig =
-        //         from_value(cfg.clone()).expect("Valid configuration expected");
-
-        //     let mut lect_hashes = Vec::new();
-        //     for id in 0..cfg.validators.len() as u32 {
-        //         lect_hashes.push(self.lects(id).root_hash()?);
-        //     }
-        //     Ok(lect_hashes)
-        // } else {
-        //     Ok(Vec::new())
-        // }
-        Ok(Vec::new())
+        let cfg = self.current_anchoring_config()?;
+        let mut lect_hashes = Vec::new();
+        for id in 0..cfg.validators.len() as u32 {
+            lect_hashes.push(self.lects(id).root_hash()?);
+        }
+        Ok(lect_hashes)
     }
 
     fn known_signature_id(msg: &MsgAnchoringSignature) -> Vec<u8> {
