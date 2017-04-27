@@ -30,7 +30,10 @@ pub struct AnchoringConfig {
 impl AnchoringConfig {
     /// Creates default anchoring configuration from given public keys and funding transaction
     /// which were created earlier by other way.
-    pub fn new(network: btc::Network, validators: Vec<btc::PublicKey>, tx: FundingTx) -> AnchoringConfig {
+    pub fn new(network: btc::Network,
+               validators: Vec<btc::PublicKey>,
+               tx: FundingTx)
+               -> AnchoringConfig {
         AnchoringConfig {
             validators: validators,
             funding_tx: tx,
