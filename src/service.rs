@@ -120,7 +120,7 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
         .unwrap();
     let tx = FundingTx::create(client, &address, total_funds).unwrap();
 
-    let genesis_cfg = AnchoringConfig::new(pub_keys, tx);
+    let genesis_cfg = AnchoringConfig::new(network, pub_keys, tx);
     for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
         node_cfg
             .private_keys
