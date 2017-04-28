@@ -19,16 +19,16 @@ rand = "0.3.0"
 libc = "0.2.21"
 
 [dependencies.exonum]
-git = "ssh://git@github.com/alekseysidorov/exonum-core.git"
+git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
-rev = "bb1c29a957c5a57a9de2dbccbdbecbb07027d270"
+rev = "5bd7cdea015e011b635a8ce89945f45b5f3f3805"
 
 [dependencies.sandbox]
-git = "ssh://git@github.com/alekseysidorov/exonum-core.git"
+git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
-rev = "bb1c29a957c5a57a9de2dbccbdbecbb07027d270"
+rev = "5bd7cdea015e011b635a8ce89945f45b5f3f3805"
 
 [dependencies.blockchain_explorer]
-git = "ssh://git@github.com/alekseysidorov/exonum-core.git"
+git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
-rev = "bb1c29a957c5a57a9de2dbccbdbecbb07027d270"
+rev = "5bd7cdea015e011b635a8ce89945f45b5f3f3805"

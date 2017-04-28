@@ -179,7 +179,7 @@ impl AnchoringHandler {
         // Payload checks
         let (block_height, block_hash) = tx.payload();
         let schema = Schema::new(state.view());
-        if Some(block_hash) != schema.heights().get(block_height)? {
+        if Some(block_hash) != schema.block_hashes_by_height().get(block_height)? {
             let e = HandlerError::IncorrectLect {
                 reason: "Found lect with wrong payload".to_string(),
                 tx: tx.clone().into(),
