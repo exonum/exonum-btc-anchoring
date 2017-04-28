@@ -104,7 +104,7 @@ impl MsgAnchoringUpdateLatest {
                     return Ok(());
                 }
                 if !verify_anchoring_tx_prev_hash(&tx, &anchoring_cfg, &anchoring_schema)? {
-                    warn!("Received lect without consensus in prev_lect, content={:#?}",
+                    warn!("Received lect with prev_lect without 2/3+ confirmations, content={:#?}",
                           self);
                     return Ok(());
                 }

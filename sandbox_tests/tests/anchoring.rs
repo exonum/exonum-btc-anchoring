@@ -651,6 +651,44 @@ fn test_anchoring_lect_incorrect_anchoring_payload() {
     assert_eq!(lects_before, lects_after);
 }
 
+// We received correct lect with the unknown prev_hash
+// problems: None
+// result: we ignores it
+#[test]
+fn test_anchoring_lect_unknown_prev_tx() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+
+    let tx = {
+        let prev_tx = TransactionBuilder::with_prev_tx(&anchoring_state.common.funding_tx, 0)
+            .fee(100)
+            .payload(0, Hash::zero())
+            .send_to(anchoring_state.current_addr())
+            .into_transaction()
+            .unwrap();
+
+        TransactionBuilder::with_prev_tx(&prev_tx, 0)
+            .fee(100)
+            .payload(0, block_hash_on_height(&sandbox, 0))
+            .send_to(anchoring_state.current_addr())
+            .into_transaction()
+            .unwrap()
+    };
+
+    let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
+    let lects_before = dump_lects(&sandbox, 0);
+    // Commit `msg_lect` into blockchain
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_lect.raw().clone()]);
+    // Ensure that service ignores it
+    let lects_after = dump_lects(&sandbox, 0);
+    assert_eq!(lects_after, lects_before);
+}
+
 // We received signature message with wrong sign
 // problems: None
 // result: we ignore it
