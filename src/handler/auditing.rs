@@ -135,7 +135,8 @@ impl AnchoringHandler {
 
             match TxKind::from(prev_tx) {
                 TxKind::Anchoring(prev_tx) => {
-                    // TODO Disabled due for lack of `get_configuration_at_height` method in core schema.
+                    // TODO Disabled due for lack of `get_configuration_at_height`
+                    // method in core schema.
                     // self.check_anchoring_tx_content(&prev_tx, cfg, state)?;
                     // TODO Check that we did not miss more than one anchored height
                 }
@@ -144,7 +145,9 @@ impl AnchoringHandler {
                 }
                 TxKind::Other(tx) => {
                     let e = HandlerError::IncorrectLect {
-                        reason: "Weird input transaction".to_string(),
+                        reason: "Transaction format not corresponding to expected: \
+                                 AnchoringTx or FundingTx"
+                                .to_string(),
                         tx: tx.into(),
                     };
                     return Err(e.into());

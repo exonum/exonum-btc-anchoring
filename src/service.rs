@@ -81,7 +81,7 @@ impl Service for AnchoringService {
     }
 
     fn handle_commit(&self, state: &mut NodeState) -> Result<(), StorageError> {
-        let mut handler = self.handler.lock().unwrap(); 
+        let mut handler = self.handler.lock().unwrap();
         match handler.handle_commit(state) {
             Err(ServiceError::Storage(e)) => Err(e),
             #[cfg(feature="sandbox_tests")]
