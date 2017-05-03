@@ -167,6 +167,6 @@ impl<'a> AnchoringSchema<'a> {
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {
         let service_id = ANCHORING_SERVICE_ID.to_string();
-        from_value(cfg.services[&service_id].clone()).expect("Anchoring config does not exists")
+        from_value(cfg.services[&service_id].clone()).expect("Anchoring config does not exist")
     }
 }

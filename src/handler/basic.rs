@@ -159,6 +159,7 @@ impl AnchoringHandler {
                            multisig: &MultisigAddress,
                            state: &mut NodeState)
                            -> Result<Option<BitcoinTx>, ServiceError> {
+        let id = self.validator_id(state);
         trace!("Update our lect");
         // убеждаемся, что нам известен этот адрес
         {
@@ -177,8 +178,8 @@ impl AnchoringHandler {
             /// New lect with different signatures set.
             let (our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
-                let our_lect = schema.lect(self.validator_id(state))?;
-                let count = schema.lects(self.validator_id(state)).len()?;
+                let our_lect = schema.lect(id)?;
+                let count = schema.lects(id).len()?;
                 (our_lect, count)
             };
 
@@ -191,11 +192,9 @@ impl AnchoringHandler {
             let (prev_lect, current_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
 
-                let prev_lect = schema
-                    .prev_lect(self.validator_id(state))?
-                    .map(TxKind::from);
-                let current_lect = TxKind::from(schema.lect(self.validator_id(state))?);
-                let lects_count = schema.lects(self.validator_id(state)).len()?;
+                let prev_lect = schema.prev_lect(id)?.map(TxKind::from);
+                let current_lect = TxKind::from(schema.lect(id)?);
+                let lects_count = schema.lects(id).len()?;
                 (prev_lect, current_lect, lects_count)
             };
 
