@@ -63,13 +63,13 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
-        let actual = Schema::new(self.view).get_actual_configuration()?;
+        let actual = Schema::new(self.view).actual_configuration()?;
         Ok(self.parse_config(&actual))
     }
 
     pub fn following_anchoring_config(&self) -> Result<Option<FollowingConfig>, StorageError> {
         let schema = Schema::new(self.view);
-        if let Some(stored) = schema.get_following_configuration()? {
+        if let Some(stored) = schema.following_configuration()? {
             let following_cfg = FollowingConfig {
                 actual_from: stored.actual_from,
                 config: self.parse_config(&stored),
