@@ -69,6 +69,7 @@ impl SandboxClient {
                    method);
 
         let response = expected.response?;
+        trace!("method: {}, params={:?}, respose={:#}", method, params, response);
         from_value(response).map_err(|e| Error::Other(RpcError::Json(e)))
     }
     pub fn expect<I: IntoIterator<Item = Request>>(&self, requests: I) {
