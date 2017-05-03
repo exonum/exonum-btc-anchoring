@@ -62,7 +62,12 @@ impl AnchoringHandler {
             let r = match lect {
                 LectKind::Funding(tx) => self.check_funding_lect(tx, &cfg, state),
                 LectKind::Anchoring(tx) => self.check_anchoring_lect(tx, &cfg, state),
-                LectKind::None => Err(HandlerError::LectNotFound.into()),
+                LectKind::None => {
+                    let e = HandlerError::LectNotFound {
+                        height: cfg.nearest_anchoring_height(state.height())
+                    };
+                    Err(e.into())
+                }
             };
             return r;
         }

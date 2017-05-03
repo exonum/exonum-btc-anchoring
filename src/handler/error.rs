@@ -6,7 +6,7 @@ use details::btc::transactions::BitcoinTx;
 #[derive(Debug, PartialEq)]
 pub enum Error {
     IncorrectLect { reason: String, tx: BitcoinTx },
-    LectNotFound,
+    LectNotFound { height: u64 },
 }
 
 impl fmt::Display for Error {
@@ -15,7 +15,7 @@ impl fmt::Display for Error {
             Error::IncorrectLect { ref reason, ref tx } => {
                 write!(f, "Incorrect lect: {}, tx={:#?}", reason, tx)
             }
-            Error::LectNotFound => write!(f, "Suitable lect not found"),
+            Error::LectNotFound { height } => write!(f, "Suitable lect not found for height={}", height),
         }
     }
 }
@@ -24,7 +24,7 @@ impl error::Error for Error {
     fn description(&self) -> &str {
         match *self {
             Error::IncorrectLect { .. } => "Incorrect lect",
-            Error::LectNotFound => "Suitable lect not found",
+            Error::LectNotFound { .. } => "Suitable lect not found",
         }
     }
 

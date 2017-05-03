@@ -365,7 +365,7 @@ fn test_auditing_lost_consensus_in_lects() {
                                                           &sandbox_state,
                                                           &[lect.raw().clone()]);
 
-    assert_eq!(anchoring_state.take_errors()[0], HandlerError::LectNotFound);
+    assert_eq!(anchoring_state.take_errors()[0], HandlerError::LectNotFound { height: 10 });
 }
 
 // We found in blockchain `lect` with incorrect payload
