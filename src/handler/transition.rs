@@ -64,7 +64,7 @@ impl AnchoringHandler {
 
     pub fn handle_waiting_state(&mut self,
                                 lect: AnchoringTx,
-                                confirmations: Option<u32>)
+                                confirmations: Option<u64>)
                                 -> Result<(), ServiceError> {
         trace!("Waiting for enough confirmations for the lect={:#?}, current={:?}",
                lect,
