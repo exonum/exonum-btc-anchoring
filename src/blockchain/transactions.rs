@@ -55,7 +55,7 @@ impl MsgAnchoringSignature {
             let tx_addr = tx.output_address(anchoring_cfg.network);
             // Use following address if it exists
             let addr = if let Some(following) = anchoring_schema.following_anchoring_config()? {
-                following.config.redeem_script().1
+                following.redeem_script().1
             } else {
                 addr
             };

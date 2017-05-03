@@ -62,6 +62,20 @@ impl AnchoringHandler {
         Ok(())
     }
 
+    pub fn handle_waiting_state(&mut self,
+                                lect: AnchoringTx,
+                                confirmations: Option<u32>)
+                                -> Result<(), ServiceError> {
+        trace!("Waiting for enough confirmations for the lect={:#?}, current={:?}",
+               lect,
+               confirmations);
+        if confirmations.is_none() {
+            trace!("Resend transition transaction, txid={}", lect.txid());
+            self.client.send_transaction(lect.into())?;
+        }
+        Ok(())
+    }
+
     pub fn handle_recovering_state(&mut self,
                                    cfg: AnchoringConfig,
                                    state: &mut NodeState)
@@ -80,6 +94,7 @@ impl AnchoringHandler {
                     .unwrap()
                     .into();
                 let network = multisig.common.network;
+                // TODO just add new funding tx as new lect
                 if prev_lect.output_address(network) == multisig.addr {
                     trace!("Resend transition transaction, txid={}", prev_lect.txid());
                     self.client.send_transaction(prev_lect.into())?;

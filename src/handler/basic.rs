@@ -9,7 +9,7 @@ use details::btc;
 use details::btc::transactions::{TxKind, BitcoinTx, FundingTx};
 use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
-use blockchain::schema::{AnchoringSchema, FollowingConfig};
+use blockchain::schema::AnchoringSchema;
 use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest};
 
 use super::{AnchoringHandler, MultisigAddress, AnchoringState, LectKind};
@@ -62,7 +62,7 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn following_config(&self,
                             state: &NodeState)
-                            -> Result<Option<FollowingConfig>, ServiceError> {
+                            -> Result<Option<AnchoringConfig>, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let cfg = schema.following_anchoring_config()?;
         Ok(cfg)
@@ -71,11 +71,11 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn current_state(&self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
         let actual = self.actual_config(state)?;
-        let state = if let Some(cfg) = self.following_config(state)? {
-            if actual.redeem_script().1 != cfg.config.redeem_script().1 {
+        let state = if let Some(following) = self.following_config(state)? {
+            if actual.redeem_script().1 != following.redeem_script().1 {
                 AnchoringState::Transition {
                     from: actual,
-                    to: cfg.config,
+                    to: following,
                 }
             } else {
                 AnchoringState::Anchoring { cfg: actual }
@@ -107,6 +107,10 @@ impl AnchoringHandler {
                 self.handle_transition_state(from, to, state)
             }
             AnchoringState::Recoverring { cfg } => self.handle_recovering_state(cfg, state),
+            AnchoringState::Waiting {
+                lect,
+                confirmations,
+            } => self.handle_waiting_state(lect, confirmations),
             AnchoringState::Broken => panic!("Broken anchoring state detected!"),
         }
     }

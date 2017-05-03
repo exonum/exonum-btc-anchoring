@@ -13,13 +13,6 @@ use details::btc;
 use details::btc::transactions::BitcoinTx;
 
 #[doc(hidden)]
-#[derive(Clone, Debug, PartialEq)]
-pub struct FollowingConfig {
-    pub actual_from: u64,
-    pub config: AnchoringConfig,
-}
-
-#[doc(hidden)]
 pub struct AnchoringSchema<'a> {
     view: &'a View,
 }
@@ -67,14 +60,10 @@ impl<'a> AnchoringSchema<'a> {
         Ok(self.parse_config(&actual))
     }
 
-    pub fn following_anchoring_config(&self) -> Result<Option<FollowingConfig>, StorageError> {
+    pub fn following_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
         let schema = Schema::new(self.view);
         if let Some(stored) = schema.get_following_configuration()? {
-            let following_cfg = FollowingConfig {
-                actual_from: stored.actual_from,
-                config: self.parse_config(&stored),
-            };
-            Ok(Some(following_cfg))
+            Ok(Some(self.parse_config(&stored)))
         } else {
             Ok(None)
         }

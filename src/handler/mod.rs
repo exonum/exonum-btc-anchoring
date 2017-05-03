@@ -39,6 +39,10 @@ pub enum AnchoringState {
         to: AnchoringConfig,
     },
     Recoverring { cfg: AnchoringConfig },
+    Waiting {
+        lect: AnchoringTx,
+        confirmations: Option<u32>,
+    },
     Broken,
 }
 
