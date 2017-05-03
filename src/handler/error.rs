@@ -15,7 +15,9 @@ impl fmt::Display for Error {
             Error::IncorrectLect { ref reason, ref tx } => {
                 write!(f, "Incorrect lect: {}, tx={:#?}", reason, tx)
             }
-            Error::LectNotFound { height } => write!(f, "Suitable lect not found for height={}", height),
+            Error::LectNotFound { height } => {
+                write!(f, "Suitable lect not found for height={}", height)
+            }
         }
     }
 }

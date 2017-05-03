@@ -16,7 +16,7 @@ extern crate log;
 use serde_json::value::ToJson;
 use bitcoin::util::base58::ToBase58;
 
-use exonum::crypto::{Hash, HexValue};
+use exonum::crypto::HexValue;
 use exonum::messages::{Message, RawTransaction};
 use exonum::storage::{StorageValue, Fork};
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions,
@@ -29,7 +29,7 @@ use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
 use anchoring_btc_service::blockchain::schema::AnchoringSchema;
 use anchoring_btc_service::{AnchoringConfig, ANCHORING_SERVICE_ID};
 use anchoring_btc_service::error::HandlerError;
-use anchoring_btc_service::details::btc::transactions::{BitcoinTx, TransactionBuilder};
+use anchoring_btc_service::details::btc::transactions::BitcoinTx;
 use anchoring_btc_sandbox::{AnchoringSandboxState, initialize_anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
 
@@ -81,8 +81,6 @@ pub fn exclude_node_from_validator(sandbox: &Sandbox,
                                    client: &SandboxClient,
                                    sandbox_state: &mut SandboxState,
                                    anchoring_state: &mut AnchoringSandboxState) {
-    let prev_lect_tx = anchoring_state.latest_anchored_tx().clone();
-
     let cfg_change_height = 12;
     let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, anchoring_state, cfg_change_height);
     let (_, following_addr) = following_cfg.redeem_script();
@@ -312,11 +310,6 @@ pub fn exclude_node_from_validator(sandbox: &Sandbox,
                             method: "getrawtransaction",
                             params: [&transition_tx.txid(), 0],
                             response: transition_tx.to_hex()
-                        },
-                       request! {
-                            method: "getrawtransaction",
-                            params: [&prev_lect_tx.txid(), 0],
-                            response: prev_lect_tx.to_hex()
                         }]);
     add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
 
@@ -365,95 +358,8 @@ fn test_auditing_lost_consensus_in_lects() {
                                                           &sandbox_state,
                                                           &[lect.raw().clone()]);
 
-    assert_eq!(anchoring_state.take_errors()[0], HandlerError::LectNotFound { height: 10 });
-}
-
-// We found in blockchain `lect` with incorrect payload
-// result: Error IncorrectLect occured
-#[test]
-fn test_auditing_lects_incorrect_payload() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
-
-    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
-    let mut sandbox_state = SandboxState::new();
-
-    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-
-    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
-        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-    }
-
-    let strange_lect_tx = TransactionBuilder::with_prev_tx(&anchoring_state.common.funding_tx, 0)
-        .fee(10)
-        .payload(0, Hash::zero())
-        .send_to(anchoring_state.current_addr())
-        .into_transaction()
-        .unwrap();
-
-    let lects = (0..3)
-        .map(|id| {
-                 MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),
-                                               id,
-                                               strange_lect_tx.clone().into(),
-                                               lects_count(&sandbox, id),
-                                               sandbox.s(id as usize))
-             })
-        .collect::<Vec<_>>();
-    force_commit_lects(&sandbox, lects);
-    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-
     assert_eq!(anchoring_state.take_errors()[0],
-               HandlerError::IncorrectLect {
-                   reason: String::from("Found lect with wrong payload"),
-                   tx: strange_lect_tx.into(),
-               });
-}
-
-// We found in blockchain `lect` with incorrect output address
-// result: Error IncorrectLect occured
-#[test]
-fn test_auditing_lects_incorrect_address() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
-
-    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
-    let mut sandbox_state = SandboxState::new();
-
-    let old_addr = anchoring_state.current_addr();
-
-    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-
-    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
-        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-    }
-
-    let strange_lect_tx = TransactionBuilder::with_prev_tx(&anchoring_state.common.funding_tx, 0)
-        .fee(10)
-        .payload(0, block_hash_on_height(&sandbox, 0))
-        .send_to(old_addr)
-        .into_transaction()
-        .unwrap();
-
-    let lects = (0..3)
-        .map(|id| {
-                 MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),
-                                               id,
-                                               strange_lect_tx.clone().into(),
-                                               lects_count(&sandbox, id),
-                                               sandbox.s(id as usize))
-             })
-        .collect::<Vec<_>>();
-    force_commit_lects(&sandbox, lects);
-    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-
-    assert_eq!(anchoring_state.take_errors()[0],
-               HandlerError::IncorrectLect {
-                   reason: String::from("Found lect with wrong output_address"),
-                   tx: strange_lect_tx.into(),
-               });
+               HandlerError::LectNotFound { height: 10 });
 }
 
 // FundingTx from lect not found in `bitcoin` network
@@ -527,44 +433,6 @@ fn test_auditing_lects_lost_current_lect() {
     assert_eq!(anchoring_state.take_errors()[0],
                HandlerError::IncorrectLect {
                    reason: String::from("Lect does not exists in the bitcoin blockchain"),
-                   tx: lect_tx.into(),
-               });
-}
-
-// Previous lect not found in `bitcoin` network
-// result: Error IncorrectLect occured
-#[test]
-fn test_auditing_lects_lost_prev_lect() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
-
-    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
-    let mut sandbox_state = SandboxState::new();
-
-    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    let prev_lect_tx = anchoring_state.latest_anchored_tx().clone();
-    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-
-    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
-        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-    }
-
-    let lect_tx = anchoring_state.latest_anchored_tx().clone();
-    client.expect(vec![request! {
-                            method: "getrawtransaction",
-                            params: [&lect_tx.txid(), 0],
-                            response: lect_tx.to_hex()
-                        },
-                       request! {
-                            method: "getrawtransaction",
-                            params: [&prev_lect_tx.txid(), 0],
-                            error: RpcError::NoInformation("Unable to find tx".to_string())
-                        }]);
-    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-
-    assert_eq!(anchoring_state.take_errors()[0],
-               HandlerError::IncorrectLect {
-                   reason: String::from("Lect's input does not exists in the bitcoin blockchain"),
                    tx: lect_tx.into(),
                });
 }
