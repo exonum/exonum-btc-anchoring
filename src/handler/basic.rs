@@ -136,14 +136,14 @@ impl AnchoringHandler {
                 if tx.find_out(&actual_addr).is_some() {
                     AnchoringState::Anchoring { cfg: actual }
                 } else {
-                    AnchoringState::Recoverring { cfg: actual }
+                    AnchoringState::Recovering { cfg: actual }
                 }
             }
             TxKind::Anchoring(current_lect) => {
                 let current_lect_addr = current_lect.output_address(actual.network);
                 // Ensure that we did not miss transition lect
                 if current_lect_addr != actual_addr {
-                    let state = AnchoringState::Recoverring { cfg: actual };
+                    let state = AnchoringState::Recovering { cfg: actual };
                     return Ok(state);
                 }
                 // Check that current lect is transition
@@ -172,7 +172,7 @@ impl AnchoringHandler {
             AnchoringState::Transition { from, to } => {
                 self.handle_transition_state(from, to, state)
             }
-            AnchoringState::Recoverring { cfg } => self.handle_recovering_state(cfg, state),
+            AnchoringState::Recovering { cfg } => self.handle_recovering_state(cfg, state),
             AnchoringState::Waiting {
                 lect,
                 confirmations,
