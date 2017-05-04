@@ -91,10 +91,11 @@ impl AnchoringHandler {
         let actual_addr = actual.redeem_script().1;
         let schema = AnchoringSchema::new(state.view());
 
-        let state = if let Some(following) = self.following_config(state)? {
+        // Check that following cfg exist and its address is differ
+        if let Some(following) = self.following_config(state)? {
             let following_addr = following.redeem_script().1;
             if actual_addr != following_addr {
-                // Ensure that the bitcoind knows address
+                // Ensure that bitcoind watching for following addr.
                 self.import_address(&following_addr, state)?;
                 match TxKind::from(schema.lect(self.validator_id(state))?) {
                     TxKind::Anchoring(lect) => {
@@ -102,63 +103,64 @@ impl AnchoringHandler {
                         if lect_addr == following_addr {
                             let confirmations = get_confirmations(&self.client, &lect.txid())?;
                             // Lect now is transition transaction
-                            AnchoringState::Waiting {
+                            let state = AnchoringState::Waiting {
                                 lect: lect,
                                 confirmations: confirmations,
-                            }
+                            };
+                            return Ok(state);
                         } else {
-                            AnchoringState::Transition {
+                            let state = AnchoringState::Transition {
                                 from: actual,
                                 to: following,
-                            }
+                            };
+                            return Ok(state);
                         }
                     }
-                    TxKind::FundingTx(lect) => unimplemented!(),
+                    TxKind::FundingTx(lect) => {
+                        debug_assert_eq!(lect, actual.funding_tx);
+                        let state = AnchoringState::Transition {
+                            from: actual,
+                            to: following,
+                        };
+                        return Ok(state);
+                    }
                     TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
                 }
-            } else {
-                AnchoringState::Anchoring { cfg: actual }
             }
-        } else {
-            let current_lect = schema.lect(self.validator_id(state))?;
-            if let TxKind::Anchoring(current_lect) = TxKind::from(current_lect) {
-                let current_lect_addr = current_lect.output_address(actual.network);
+        }
 
-                if current_lect_addr != actual_addr {
-                    AnchoringState::Recoverring { cfg: actual }
+        let id = self.validator_id(state);
+        let current_lect = schema.lect(id)?;
+        let state = match TxKind::from(current_lect) {
+            TxKind::FundingTx(tx) => {
+                if tx.find_out(&actual_addr).is_some() {
+                    AnchoringState::Anchoring { cfg: actual }
                 } else {
-                    if let Some(prev_lect) = schema.prev_lect(self.validator_id(state))? {
-                        match TxKind::from(prev_lect) {
-                            TxKind::Anchoring(prev_lect) => {
-                                let prev_lect_addr = prev_lect.output_address(actual.network);
-                                if prev_lect_addr != current_lect_addr {
-                                    let confirmations = get_confirmations(&self.client,
-                                                                          &current_lect.txid())?;
-                                    if !is_confirmations_enough(&actual, confirmations) {
-                                        AnchoringState::Waiting {
-                                            lect: current_lect,
-                                            confirmations: confirmations,
-                                        }
-                                    } else {
-                                        AnchoringState::Anchoring { cfg: actual }
-                                    }
-                                } else {
-                                    AnchoringState::Anchoring { cfg: actual }
-                                }
-                            }
-                            TxKind::FundingTx(tx) => {
-                                // TODO
-                                AnchoringState::Anchoring { cfg: actual }
-                            }
-                            TxKind::Other(tx) => panic!("Incorrect prev_lect found={:#?}", tx),
-                        }
-                    } else {
-                        AnchoringState::Anchoring { cfg: actual }
+                    AnchoringState::Recoverring { cfg: actual }
+                }
+            }
+            TxKind::Anchoring(current_lect) => {
+                let current_lect_addr = current_lect.output_address(actual.network);
+                // Ensure that we did not miss transition lect
+                if current_lect_addr != actual_addr {
+                    let state = AnchoringState::Recoverring { cfg: actual };
+                    return Ok(state);
+                }
+                // Check that current lect is transition
+                if current_lect_is_transition(&actual, id, &current_lect_addr, &schema)? {
+                    let confirmations = get_confirmations(&self.client, &current_lect.txid())?;
+                    if !is_confirmations_enough(&actual, confirmations) {
+                        let state = AnchoringState::Waiting {
+                            lect: current_lect,
+                            confirmations: confirmations,
+                        };
+                        return Ok(state);
                     }
                 }
-            } else {
+
                 AnchoringState::Anchoring { cfg: actual }
             }
+            TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
         };
         Ok(state)
     }
@@ -198,7 +200,7 @@ impl AnchoringHandler {
             match TxKind::from(our_lect) {
                 TxKind::Anchoring(tx) => Ok(LectKind::Anchoring(tx)),
                 TxKind::FundingTx(tx) => Ok(LectKind::Funding(tx)),
-                TxKind::Other(_) => panic!("We are fucked up..."),
+                TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
             }
         } else {
             Ok(LectKind::None)
@@ -360,6 +362,29 @@ impl AnchoringHandler {
         state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
         Ok(())
     }
+}
+
+fn current_lect_is_transition(actual: &AnchoringConfig,
+                              validator_id: u32,
+                              current_lect_addr: &btc::Address,
+                              schema: &AnchoringSchema)
+                              -> Result<bool, ServiceError> {
+    let r = if let Some(prev_lect) = schema.prev_lect(validator_id)? {
+        match TxKind::from(prev_lect) {
+            TxKind::Anchoring(prev_lect) => {
+                let prev_lect_addr = prev_lect.output_address(actual.network);
+                prev_lect_addr != current_lect_addr.0
+            }
+            TxKind::FundingTx(tx) => {
+                // TODO get prev cfg
+                false
+            }
+            TxKind::Other(tx) => panic!("Incorrect prev_lect found={:#?}", tx),
+        }
+    } else {
+        false
+    };
+    Ok(r)
 }
 
 fn get_confirmations(client: &AnchoringRpc, txid: &str) -> Result<Option<u64>, ServiceError> {
