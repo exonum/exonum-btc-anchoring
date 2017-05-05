@@ -257,26 +257,6 @@ impl AnchoringHandler {
 
             Ok(Some(lect.into()))
         } else {
-            let (prev_lect, current_lect, lects_count) = {
-                let schema = AnchoringSchema::new(state.view());
-
-                let prev_lect = schema.prev_lect(id)?.map(TxKind::from);
-                let current_lect = TxKind::from(schema.lect(id)?);
-                let lects_count = schema.lects(id).len()?;
-                (prev_lect, current_lect, lects_count)
-            };
-
-            if let (Some(TxKind::Anchoring(prev_lect)), TxKind::Anchoring(current_lect)) =
-                (prev_lect, current_lect) {
-
-                let network = multisig.common.network;
-                let prev_lect_addr = prev_lect.output_address(network);
-                let current_lect_addr = current_lect.output_address(network);
-
-                if current_lect_addr == multisig.addr && current_lect_addr != prev_lect_addr {
-                    self.send_updated_lect(prev_lect.into(), lects_count, state)?;
-                }
-            }
             Ok(None)
         }
     }

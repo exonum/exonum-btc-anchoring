@@ -67,11 +67,11 @@ fn test_anchoring_funding_tx_waiting() {
                        request! {
                            method: "sendrawtransaction",
                            params: [&funding_tx.to_hex()]
-                       }]);  
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]); 
-    
+                       }]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
     client.expect(vec![gen_confirmations_request(funding_tx.clone(), 0)]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]); 
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 }
 
 // We anchor first block and receive lect
