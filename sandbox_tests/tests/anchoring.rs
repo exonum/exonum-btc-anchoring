@@ -584,6 +584,7 @@ fn test_anchoring_lect_funding_tx() {
     let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
     let lects_before = dump_lects(&sandbox, 0);
     // Commit `msg_lect` into blockchain
+    client.expect(vec![gen_confirmations_request(tx.clone(), 50)]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_lect.raw().clone()]);
     // Ensure that service accepts it
     let lects_after = dump_lects(&sandbox, 0);
@@ -776,6 +777,7 @@ fn test_anchoring_signature_input_from_different_validator() {
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_different` into blockchain
+    client.expect(vec![gen_confirmations_request(anchoring_state.common.funding_tx.clone(), 50)]);
     add_one_height_with_transactions(&sandbox,
                                      &sandbox_state,
                                      &[msg_signature_wrong.raw().clone()]);

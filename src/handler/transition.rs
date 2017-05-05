@@ -3,7 +3,7 @@ use bitcoin::util::base58::ToBase58;
 use exonum::blockchain::NodeState;
 
 use error::Error as ServiceError;
-use details::btc::transactions::AnchoringTx;
+use details::btc::transactions::BitcoinTx;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 
@@ -63,7 +63,7 @@ impl AnchoringHandler {
     }
 
     pub fn handle_waiting_state(&mut self,
-                                lect: AnchoringTx,
+                                lect: BitcoinTx,
                                 confirmations: Option<u64>)
                                 -> Result<(), ServiceError> {
         trace!("Waiting for enough confirmations for the lect={:#?}, current={:?}",
@@ -71,7 +71,7 @@ impl AnchoringHandler {
                confirmations);
         if confirmations.is_none() {
             trace!("Resend transition transaction, txid={}", lect.txid());
-            self.client.send_transaction(lect.into())?;
+            self.client.send_transaction(lect)?;
         }
         Ok(())
     }

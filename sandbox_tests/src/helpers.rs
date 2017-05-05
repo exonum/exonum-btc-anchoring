@@ -76,6 +76,45 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
     tx.raw().clone()
 }
 
+pub fn gen_confirmations_request<T: Into<BitcoinTx>>(tx: T, confirmations: u64) -> Request {
+    let tx = tx.into();
+    request! {
+            method: "getrawtransaction",
+            params: [&tx.txid(), 1],
+            response: {
+                "hash":&tx.txid(),
+                "hex":&tx.to_hex(),
+                "confirmations": confirmations,
+                "locktime":1088682,
+                "size":223,
+                "txid":&tx.to_hex(),
+                "version":1,
+                "vin":[{"scriptSig":{"asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bac\
+                    c2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d\
+                    07b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f8\
+                    76","hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd\
+                    28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012\
+                    102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"},
+                    "sequence":429496729,
+                    "txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645",
+                    "vout":0}],
+                "vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],
+                    "asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL",
+                    "hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87",
+                    "reqSigs":1,
+                    "type":"scripthash"},
+                    "value":0.00004},
+                    {"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],
+                    "asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERI\
+                        FY OP_CHECKSIG",
+                    "hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
+                    "reqSigs":1,"type":"pubkeyhash"},
+                    "value":1.00768693}],
+                "vsize":223
+            }
+        }
+}
+
 pub fn block_hash_on_height(sandbox: &Sandbox, height: u64) -> Hash {
     let blockchain = sandbox.blockchain_ref();
     let view = blockchain.view();
@@ -94,7 +133,8 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &Sandbox,
                                                    anchoring_state: &mut AnchoringSandboxState) {
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
-    client.expect(vec![request! {
+    client.expect(vec![gen_confirmations_request(anchoring_state.common.funding_tx.clone(), 50),
+                       request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -122,6 +162,7 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &Sandbox,
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     sandbox.broadcast(signatures[0].clone());
+    client.expect(vec![gen_confirmations_request(anchoring_state.common.funding_tx.clone(), 50)]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[0..1]);
 }
 
@@ -132,7 +173,8 @@ pub fn anchor_first_block(sandbox: &Sandbox,
                           anchoring_state: &mut AnchoringSandboxState) {
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
 
-    client.expect(vec![request! {
+    client.expect(vec![gen_confirmations_request(anchoring_state.common.funding_tx.clone(), 50),
+                       request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -161,7 +203,8 @@ pub fn anchor_first_block(sandbox: &Sandbox,
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
 
     sandbox.broadcast(signatures[0].clone());
-    client.expect(vec![request! {
+    client.expect(vec![gen_confirmations_request(anchoring_state.common.funding_tx.clone(), 50),
+                       request! {
                            method: "getrawtransaction",
                            params: [&anchored_tx.txid(), 1],
                            error: RpcError::NoInformation("Unable to find tx".to_string())
@@ -226,8 +269,9 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
                                     anchoring_state: &mut AnchoringSandboxState) {
     anchor_first_block(sandbox, client, sandbox_state, anchoring_state);
     // Just add few heights
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+    for _ in 0..2 {
+        add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+    }
 
     let other_lect = anchoring_state.common.funding_tx.clone();
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
@@ -261,7 +305,8 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
 
-    client.expect(vec![request! {
+    client.expect(vec![gen_confirmations_request(anchoring_state.common.funding_tx.clone(), 50),
+                       request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -283,7 +328,9 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
     {
         let anchored_tx = anchoring_state.latest_anchored_tx();
 
-        client.expect(vec![request! {
+        client.expect(vec![gen_confirmations_request(anchoring_state.common.funding_tx.clone(),
+                                                     50),
+                           request! {
                                method: "getrawtransaction",
                                params: [&anchored_tx.txid(), 1],
                                error: RpcError::NoInformation("Unable to find tx".to_string())
@@ -392,38 +439,7 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
     let anchored_tx = anchoring_state.latest_anchored_tx();
 
     sandbox.broadcast(signatures[0].clone());
-    client.expect(vec![request! {
-            method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 1],
-            response: {
-                "hash":&anchored_tx.txid(),"hex":&anchored_tx.to_hex(),
-                "locktime":1088682,
-                "size":223,
-                "txid":"4ae2de1782b19ddab252d88d570f60bc821bd745d031029a8b28f7427c8d0e93",
-                "version":1,
-                "vin":[{"scriptSig":{
-                    "asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f738\
-                        00220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a[ALL]\
-                         02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876",
-                    "hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f7\
-                    3800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012102c\
-                    5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"
-                },
-                "sequence":429496729,
-                "txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645",
-                "vout":0}],
-                "vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],
-                "asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL",
-                "hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87",
-                "reqSigs":1,"type":"scripthash"},"value":0.00004},
-                {"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],
-                "asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERIFY \
-                    OP_CHECKSIG",
-                "hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
-                "reqSigs":1,"type":"pubkeyhash"},
-                "value":1.00768693}],"vsize":223
-                }
-        }]);
+    client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 0)]);
     add_one_height_with_transactions(sandbox, sandbox_state, &signatures);
 
     let txs = (0..4)

@@ -104,7 +104,7 @@ impl AnchoringHandler {
                             let confirmations = get_confirmations(&self.client, &lect.txid())?;
                             // Lect now is transition transaction
                             let state = AnchoringState::Waiting {
-                                lect: lect,
+                                lect: lect.into(),
                                 confirmations: confirmations,
                             };
                             return Ok(state);
@@ -134,6 +134,16 @@ impl AnchoringHandler {
         let state = match TxKind::from(current_lect) {
             TxKind::FundingTx(tx) => {
                 if tx.find_out(&actual_addr).is_some() {
+                    debug!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
+                    /// Wait until funding_tx got enough confirmation
+                    let confirmations = get_confirmations(&self.client, &tx.txid())?;
+                    if !is_confirmations_enough(&actual, confirmations) {
+                        let state = AnchoringState::Waiting {
+                            lect: tx.into(),
+                            confirmations: confirmations,
+                        };
+                        return Ok(state);
+                    }
                     AnchoringState::Anchoring { cfg: actual }
                 } else {
                     AnchoringState::Recovering { cfg: actual }
@@ -146,12 +156,13 @@ impl AnchoringHandler {
                     let state = AnchoringState::Recovering { cfg: actual };
                     return Ok(state);
                 }
-                // Check that current lect is transition
+                // If the lect is transition than we need wait
+                // until it reach enough confirmations.
                 if current_lect_is_transition(&actual, id, &current_lect_addr, &schema)? {
                     let confirmations = get_confirmations(&self.client, &current_lect.txid())?;
                     if !is_confirmations_enough(&actual, confirmations) {
                         let state = AnchoringState::Waiting {
-                            lect: current_lect,
+                            lect: current_lect.into(),
                             confirmations: confirmations,
                         };
                         return Ok(state);
@@ -364,6 +375,7 @@ impl AnchoringHandler {
     }
 }
 
+/// Transition lects cannot be recovered without breaking of current anchoring chain.
 fn current_lect_is_transition(actual: &AnchoringConfig,
                               validator_id: u32,
                               current_lect_addr: &btc::Address,
@@ -375,10 +387,7 @@ fn current_lect_is_transition(actual: &AnchoringConfig,
                 let prev_lect_addr = prev_lect.output_address(actual.network);
                 prev_lect_addr != current_lect_addr.0
             }
-            TxKind::FundingTx(tx) => {
-                // TODO get prev cfg
-                false
-            }
+            TxKind::FundingTx(_) => false,
             TxKind::Other(tx) => panic!("Incorrect prev_lect found={:#?}", tx),
         }
     } else {
@@ -388,6 +397,7 @@ fn current_lect_is_transition(actual: &AnchoringConfig,
 }
 
 fn get_confirmations(client: &AnchoringRpc, txid: &str) -> Result<Option<u64>, ServiceError> {
+    println!("get_confirmations txid={}", txid);
     let info = client.get_transaction_info(txid)?;
     Ok(info.and_then(|info| info.confirmations))
 }
