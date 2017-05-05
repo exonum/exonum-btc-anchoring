@@ -426,7 +426,7 @@ fn test_anchoring_lect_wrong_validator() {
     let lects_before = dump_lects(&sandbox, 0);
     // Commit `msg_lect_wrong` into blockchain
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_lect_wrong]);
-    // Ensure that service ignores it
+    // Ensure that service ignore it
     let lects_after = dump_lects(&sandbox, 0);
     assert_eq!(lects_after, lects_before);
 }
@@ -448,7 +448,7 @@ fn test_anchoring_lect_nonexistent_validator() {
     let lects_before = dump_lects(&sandbox, 2);
     // Commit `msg_lect_wrong` into blockchain
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[msg_lect_wrong]);
-    // Ensure that service ignores it
+    // Ensure that service ignore it
     let lects_after = dump_lects(&sandbox, 0);
     assert_eq!(lects_after, lects_before);
 }
@@ -486,7 +486,7 @@ fn test_anchoring_signature_wrong_validator() {
     add_one_height_with_transactions(&sandbox,
                                      &sandbox_state,
                                      &[msg_signature_wrong.raw().clone()]);
-    // Ensure that service ignores it
+    // Ensure that service ignore it
     let signs_after = dump_signatures(&sandbox, &tx.id());
     assert_eq!(signs_before, signs_after);
 }
@@ -653,7 +653,7 @@ fn test_anchoring_lect_incorrect_anchoring_payload() {
 
 // We received correct lect with the unknown prev_hash
 // problems: None
-// result: we ignores it
+// result: we ignore it
 #[test]
 fn test_anchoring_lect_unknown_prev_tx() {
     let _ = ::blockchain_explorer::helpers::init_logger();

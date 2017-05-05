@@ -89,134 +89,16 @@ pub fn exclude_node_from_validators(sandbox: &Sandbox,
 
     // Check insufficient confirmations case
     let anchored_tx = anchoring_state.latest_anchored_tx().clone();
-    client.expect(vec![request! {
-            method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 1],
-            response: {
-                "hash":&anchored_tx.txid(),
-                "hex":&anchored_tx.to_hex(),
-                "confirmations": 10,
-                "locktime": 1088682,
-                "size": 223,
-                "txid": "4ae2de1782b19ddab252d88d570f60bc821bd745d031029a8b28f7427c8d0e93",
-                "version": 1,
-                "vin": [
-                    {
-                    "scriptSig": {
-                        "asm": "3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28\
-                                f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07\
-                                b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace0\
-                                7794e97f876",
-                        "hex": "473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd\
-                                28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d\
-                                07b33e8a012102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace0\
-                                7794e97f876"
-                    },
-                    "sequence": 429496729,
-                    "txid": "094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645",
-                    "vout": 0
-                    }
-                ],
-                "vout": [
-                    {
-                    "n": 0,
-                    "scriptPubKey": {
-                        "addresses": [
-                        "2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"
-                        ],
-                        "asm": "OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL",
-                        "hex": "a914db891024f2aa265e3b1998617e8b18ed3b0495fc87",
-                        "reqSigs": 1,
-                        "type": "scripthash"
-                    },
-                    "value": 0.00004
-                    },
-                    {
-                    "n": 1,
-                    "scriptPubKey": {
-                        "addresses": [
-                        "mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"
-                        ],
-                        "asm": "OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a\
-                                OP_EQUALVERIFY OP_CHECKSIG",
-                        "hex": "76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
-                        "reqSigs": 1,
-                        "type": "pubkeyhash"
-                    },
-                    "value": 1.00768693
-                    }
-                ],
-                "vsize": 223
-            }
-        }]);
+    client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 10)]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[cfg_tx]);
 
     // Check enough confirmations case
-    client.expect(vec![request! {
-            method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 1],
-            response: {
-                "hash":&anchored_tx.txid(),
-                "hex":&anchored_tx.to_hex(),
-                "confirmations": 100,
-                "locktime": 1088682,
-                "size": 223,
-                "txid": "4ae2de1782b19ddab252d88d570f60bc821bd745d031029a8b28f7427c8d0e93",
-                "version": 1,
-                "vin": [
-                    {
-                    "scriptSig": {
-                        "asm": "3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28\
-                                f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07\
-                                b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace0\
-                                7794e97f876",
-                        "hex": "473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd\
-                                28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d\
-                                07b33e8a012102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace0\
-                                7794e97f876"
-                    },
-                    "sequence": 429496729,
-                    "txid": "094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645",
-                    "vout": 0
-                    }
-                ],
-                "vout": [
-                    {
-                    "n": 0,
-                    "scriptPubKey": {
-                        "addresses": [
-                        "2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"
-                        ],
-                        "asm": "OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL",
-                        "hex": "a914db891024f2aa265e3b1998617e8b18ed3b0495fc87",
-                        "reqSigs": 1,
-                        "type": "scripthash"
-                    },
-                    "value": 0.00004
-                    },
-                    {
-                    "n": 1,
-                    "scriptPubKey": {
-                        "addresses": [
-                        "mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"
-                        ],
-                        "asm": "OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a \
-                                OP_EQUALVERIFY OP_CHECKSIG",
-                        "hex": "76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
-                        "reqSigs": 1,
-                        "type": "pubkeyhash"
-                    },
-                    "value": 1.00768693
-                    }
-                ],
-                "vsize": 223
-            }
-        },
+    client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 100),
                        request! {
-            method: "listunspent",
-            params: [0, 9999999, [following_addr]],
-            response: []
-        }]);
+                            method: "listunspent",
+                            params: [0, 9999999, [following_addr]],
+                            response: []
+                       }]);
 
     let following_multisig = following_cfg.redeem_script();
     let (_, signatures) =
@@ -231,66 +113,7 @@ pub fn exclude_node_from_validators(sandbox: &Sandbox,
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
     sandbox.broadcast(signatures[0].clone());
 
-    client.expect(vec![request! {
-            method: "getrawtransaction",
-            params: [&transition_tx.txid(), 1],
-            response: {
-                "hash":&transition_tx.txid(),
-                "hex":&transition_tx.to_hex(),
-                "confirmations": 0,
-                "locktime": 1088682,
-                "size": 223,
-                "txid": "4ae2de1782b19ddab252d88d570f60bc821bd745d031029a8b28f7427c8d0e93",
-                "version": 1,
-                "vin": [
-                    {
-                    "scriptSig": {
-                        "asm": "3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28\
-                                f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07\
-                                b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace0\
-                                7794e97f876",
-                        "hex": "473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd\
-                                28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d\
-                                07b33e8a012102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace0\
-                                7794e97f876"
-                    },
-                    "sequence": 429496729,
-                    "txid": "094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645",
-                    "vout": 0
-                    }
-                ],
-                "vout": [
-                    {
-                    "n": 0,
-                    "scriptPubKey": {
-                        "addresses": [
-                        "2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"
-                        ],
-                        "asm": "OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL",
-                        "hex": "a914db891024f2aa265e3b1998617e8b18ed3b0495fc87",
-                        "reqSigs": 1,
-                        "type": "scripthash"
-                    },
-                    "value": 0.00004
-                    },
-                    {
-                    "n": 1,
-                    "scriptPubKey": {
-                        "addresses": [
-                        "mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"
-                        ],
-                        "asm": "OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a \
-                                OP_EQUALVERIFY OP_CHECKSIG",
-                        "hex": "76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
-                        "reqSigs": 1,
-                        "type": "pubkeyhash"
-                    },
-                    "value": 1.00768693
-                    }
-                ],
-                "vsize": 223
-            }
-        }]);
+    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
 
     let lects = (0..4)
