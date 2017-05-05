@@ -922,3 +922,158 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
     assert_eq!(signs_before, signs_after);
 
 }
+
+// We commit a new configuration and take actions to transit tx chain to the new address
+// problems:
+// - none
+// result: unimplemented
+#[test]
+#[should_panic(expected = "We must not to change genesis configuration!")]
+fn test_anchoring_transit_config_after_funding_tx() {
+    let cfg_change_height = 16;
+
+    let _ = ::blockchain_explorer::helpers::init_logger();
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    let funding_tx = anchoring_state.common.funding_tx.clone();
+
+    client.expect(vec![gen_confirmations_request(funding_tx.clone(), 0)]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
+    // Commit following configuration
+    let (cfg_tx, following_cfg) =
+        gen_following_cfg(&sandbox, &mut anchoring_state, cfg_change_height, None);
+    let (_, following_addr) = following_cfg.redeem_script();
+    client.expect(vec![request! {
+                            method: "importaddress",
+                            params: [&following_addr, "multisig", false, false]
+                       },
+                       gen_confirmations_request(funding_tx.clone(), 0)]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[cfg_tx]);
+
+    // Wait until `funding_tx` get enough confirmations
+    for _ in 0..3 {
+        client.expect(vec![gen_confirmations_request(funding_tx.clone(), 1)]);
+        add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    }
+
+    client.expect(vec![request! {
+                            method: "listunspent",
+                            params: [0, 9999999, [following_addr]],
+                            response: []
+                        },
+                       gen_confirmations_request(funding_tx.clone(), 1)]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+
+    // Has enough confirmations for funding_tx
+    client.expect(vec![gen_confirmations_request(funding_tx.clone(), 100),
+                       request! {
+            method: "listunspent",
+            params: [0, 9999999, [following_addr]],
+            response: []
+        }]);
+
+    let following_multisig = following_cfg.redeem_script();
+    let (_, signatures) = anchoring_state
+        .gen_anchoring_tx_with_signatures(&sandbox,
+                                          0,
+                                          block_hash_on_height(&sandbox, 0),
+                                          &[],
+                                          None,
+                                          &following_multisig.1);
+    let transition_tx = anchoring_state.latest_anchored_tx().clone();
+
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    sandbox.broadcast(signatures[0].clone());
+
+    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 0)]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
+
+    let lects = (0..4)
+        .map(|id| {
+                 gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
+                     .raw()
+                     .clone()
+             })
+        .collect::<Vec<_>>();
+    sandbox.broadcast(lects[0].clone());
+
+    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 0)]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &lects);
+
+    for i in sandbox.current_height()..(cfg_change_height - 1) {
+        client.expect(vec![gen_confirmations_request(transition_tx.clone(), 15 + i)]);
+        add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    }
+
+    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 30),
+                       request! {
+                        method: "listunspent",
+                        params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+                        response: [
+                            {
+                                "txid": &transition_tx.txid(),
+                                "vout": 0,
+                                "address": &following_multisig.1.to_base58check(),
+                                "account": "multisig",
+                                "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                                "amount": 0.00010000,
+                                "confirmations": 30,
+                                "spendable": false,
+                                "solvable": false
+                            }
+                        ]
+                    }]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    // Update cfg
+    anchoring_state.common = following_cfg;
+    let (_, signatures) = anchoring_state
+        .gen_anchoring_tx_with_signatures(&sandbox,
+                                          10,
+                                          block_hash_on_height(&sandbox, 10),
+                                          &[],
+                                          None,
+                                          &following_multisig.1);
+    let anchored_tx = anchoring_state.latest_anchored_tx();
+    sandbox.broadcast(signatures[0].clone());
+    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 40)]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[0..1]);
+
+    let signatures = signatures
+        .into_iter()
+        .map(|tx| tx.raw().clone())
+        .collect::<Vec<_>>();
+    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100),
+                       gen_confirmations_request(anchored_tx.clone(), 0)]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[1..]);
+
+    let lects = (0..4)
+        .map(|id| gen_service_tx_lect(&sandbox, id, &anchored_tx, 3))
+        .collect::<Vec<_>>();
+    sandbox.broadcast(lects[0].clone());
+
+    client.expect(vec![request! {
+                        method: "listunspent",
+                        params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+                        response: [
+                            {
+                                "txid": &anchored_tx.txid(),
+                                "vout": 0,
+                                "address": &following_multisig.1.to_base58check(),
+                                "account": "multisig",
+                                "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                                "amount": 0.00010000,
+                                "confirmations": 0,
+                                "spendable": false,
+                                "solvable": false
+                            }
+                        ]
+                        },
+                       request! {
+                            method: "getrawtransaction",
+                            params: [&anchored_tx.txid(), 0],
+                            response: &anchored_tx.to_hex()
+                        }]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &lects);
+}
