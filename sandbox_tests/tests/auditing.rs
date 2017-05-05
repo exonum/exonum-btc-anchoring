@@ -87,18 +87,10 @@ pub fn exclude_node_from_validators(sandbox: &Sandbox,
     let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, anchoring_state, cfg_change_height);
     let (_, following_addr) = following_cfg.redeem_script();
 
-    // Check insufficient confirmations case
+    // Tx has not enough confirmations.
     let anchored_tx = anchoring_state.latest_anchored_tx().clone();
     client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 10)]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[cfg_tx]);
-
-    // Check enough confirmations case
-    client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 100),
-                       request! {
-                            method: "listunspent",
-                            params: [0, 9999999, [following_addr]],
-                            response: []
-                       }]);
 
     let following_multisig = following_cfg.redeem_script();
     let (_, signatures) =
@@ -109,7 +101,13 @@ pub fn exclude_node_from_validators(sandbox: &Sandbox,
                                                          None,
                                                          &following_multisig.1);
     let transition_tx = anchoring_state.latest_anchored_tx().clone();
-
+    // Tx gets enough confirmations.
+    client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 100),
+                       request! {
+                            method: "listunspent",
+                            params: [0, 9999999, [following_addr]],
+                            response: []
+                       }]);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
     sandbox.broadcast(signatures[0].clone());
 
@@ -156,10 +154,10 @@ fn test_auditing_exclude_node_from_validators() {
     exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
 }
 
-// We lost consensus in lects
+// There is no consensus in `exonum` about current `lect`.
 // result: Error LectNotFound occured
 #[test]
-fn test_auditing_lost_consensus_in_lects() {
+fn test_auditing_no_consensus_in_lect() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
     let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
@@ -190,7 +188,7 @@ fn test_auditing_lost_consensus_in_lects() {
 // FundingTx from lect not found in `bitcoin` network
 // result: Error IncorrectLect occured
 #[test]
-fn test_auditing_lects_lost_funding_tx() {
+fn test_auditing_lect_lost_funding_tx() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
     let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
@@ -233,7 +231,7 @@ fn test_auditing_lects_lost_funding_tx() {
 // FundingTx from lect has no correct outputs
 // result: Error IncorrectLect occured
 #[test]
-fn test_auditing_lects_incorrect_funding_tx() {
+fn test_auditing_lect_incorrect_funding_tx() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
     let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
@@ -280,7 +278,7 @@ fn test_auditing_lects_incorrect_funding_tx() {
 // Current lect not found in `bitcoin` network
 // result: Error IncorrectLect occured
 #[test]
-fn test_auditing_lects_lost_current_lect() {
+fn test_auditing_lect_lost_current_lect() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
     let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
