@@ -367,7 +367,15 @@ fn current_lect_is_transition(actual: &AnchoringConfig,
                 let prev_lect_addr = prev_lect.output_address(actual.network);
                 prev_lect_addr != current_lect_addr.0
             }
-            TxKind::FundingTx(_) => false,
+            TxKind::FundingTx(tx) => {
+                let genesis_cfg = schema.anchoring_config_by_height(0)?;
+                if tx == genesis_cfg.funding_tx {
+                    let prev_lect_addr = genesis_cfg.redeem_script().1;
+                    &prev_lect_addr != current_lect_addr
+                } else {
+                    false
+                }
+            }
             TxKind::Other(tx) => panic!("Incorrect prev_lect found={:#?}", tx),
         }
     } else {

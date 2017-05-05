@@ -51,7 +51,7 @@ fn test_anchoring_first_block() {
 fn test_anchoring_funding_tx_waiting() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     let funding_tx = anchoring_state.common.funding_tx.clone();

@@ -56,17 +56,23 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
-        let actual = Schema::new(self.view).get_actual_configuration()?;
+        let actual = Schema::new(self.view).actual_configuration()?;
         Ok(self.parse_config(&actual))
     }
 
     pub fn following_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
         let schema = Schema::new(self.view);
-        if let Some(stored) = schema.get_following_configuration()? {
+        if let Some(stored) = schema.following_configuration()? {
             Ok(Some(self.parse_config(&stored)))
         } else {
             Ok(None)
         }
+    }
+
+    pub fn anchoring_config_by_height(&self, height: u64) -> Result<AnchoringConfig, StorageError> {
+        let schema = Schema::new(self.view);
+        let stored = schema.configuration_by_height(height)?;
+        Ok(self.parse_config(&stored))
     }
 
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
