@@ -14,6 +14,8 @@ use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest};
 
 use super::{AnchoringHandler, MultisigAddress, AnchoringState, LectKind};
 
+const FIND_LECT_MAX_DEPTH: u64 = 10000;
+
 impl AnchoringHandler {
     #[cfg(not(feature="sandbox_tests"))]
     #[doc(hidden)]
@@ -192,7 +194,6 @@ impl AnchoringHandler {
                            -> Result<Option<BitcoinTx>, ServiceError> {
         let id = self.validator_id(state);
         trace!("Update our lect");
-        // убеждаемся, что нам известен этот адрес
         {
             let schema = AnchoringSchema::new(state.view());
             if !schema.is_address_known(&multisig.addr)? {
@@ -277,7 +278,7 @@ impl AnchoringHandler {
             return Ok(Some(lect.into()));
         }
 
-        let mut times = 10000;
+        let mut times = FIND_LECT_MAX_DEPTH;
         let mut current_tx = lect.clone();
         while times > 0 {
             let kind = TxKind::from(current_tx.clone());
