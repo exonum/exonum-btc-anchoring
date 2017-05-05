@@ -80,6 +80,12 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
+    pub fn anchoring_config_by_height(&self, height: u64) -> Result<AnchoringConfig, StorageError> {
+        let schema = Schema::new(self.view);
+        let stored = schema.configuration_by_height(height)?;
+        Ok(self.parse_config(&stored))
+    }
+
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
         let (_, addr) = cfg.redeem_script();
         self.add_known_address(&addr)?;

@@ -1,5 +1,7 @@
 use std::collections::hash_map::{HashMap, Entry};
 
+use bitcoin::util::base58::ToBase58;
+
 use exonum::blockchain::NodeState;
 use exonum::storage::List;
 
@@ -60,7 +62,7 @@ impl AnchoringHandler {
             };
 
             let r = match lect {
-                LectKind::Funding(tx) => self.check_funding_lect(tx, &cfg, state),
+                LectKind::Funding(tx) => self.check_funding_lect(tx, state),
                 LectKind::Anchoring(tx) => self.check_anchoring_lect(tx),
                 LectKind::None => {
                     let e = HandlerError::LectNotFound {
@@ -74,22 +76,21 @@ impl AnchoringHandler {
         Ok(())
     }
 
-    fn check_funding_lect(&self,
-                          tx: FundingTx,
-                          cfg: &AnchoringConfig,
-                          _: &NodeState)
-                          -> Result<(), ServiceError> {
+    fn check_funding_lect(&self, tx: FundingTx, context: &NodeState) -> Result<(), ServiceError> {
+        let cfg = AnchoringSchema::new(context.view())
+            .anchoring_config_by_height(0)?;
         let (_, addr) = cfg.redeem_script();
         if tx != cfg.funding_tx {
             let e = HandlerError::IncorrectLect {
-                reason: "Initial funding_tx is different than lect".to_string(),
+                reason: "Initial funding_tx from cfg is different than in lect".to_string(),
                 tx: tx.into(),
             };
             return Err(e.into());
         }
-        if tx.find_out(&addr).is_some() {
+        if tx.find_out(&addr).is_none() {
             let e = HandlerError::IncorrectLect {
-                reason: "Initial funding_tx have wrong output address".to_string(),
+                reason: format!("Initial funding_tx has no outputs with address={}",
+                                addr.to_base58check()),
                 tx: tx.into(),
             };
             return Err(e.into());
@@ -99,7 +100,7 @@ impl AnchoringHandler {
         if let Some(ref client) = self.client {
             if client.get_transaction(&tx.txid())?.is_none() {
                 let e = HandlerError::IncorrectLect {
-                    reason: "Initial funding_tx does not exists".to_string(),
+                    reason: "Initial funding_tx not found in the bitcoin blockchain".to_string(),
                     tx: tx.into(),
                 };
                 return Err(e.into());
@@ -115,7 +116,7 @@ impl AnchoringHandler {
         if let Some(ref client) = self.client {
             if client.get_transaction(&tx.txid())?.is_none() {
                 let e = HandlerError::IncorrectLect {
-                    reason: "Lect does not exists in the bitcoin blockchain".to_string(),
+                    reason: "Lect not found in the bitcoin blockchain".to_string(),
                     tx: tx.into(),
                 };
                 return Err(e.into());

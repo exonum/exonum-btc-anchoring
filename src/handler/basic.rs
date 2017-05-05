@@ -49,7 +49,7 @@ impl AnchoringHandler {
     pub fn client(&self) -> &AnchoringRpc {
         self.client
             .as_ref()
-            .expect("Client need to be exists for validator")
+            .expect("Bitcoind client needs to be present for validator node")
     }
 
     #[doc(hidden)]

@@ -400,7 +400,54 @@ fn test_auditing_lects_lost_funding_tx() {
 
     assert_eq!(anchoring_state.take_errors()[0],
                HandlerError::IncorrectLect {
-                   reason: String::from("Initial funding_tx does not exists"),
+                   reason: String::from("Initial funding_tx not found in the bitcoin blockchain"),
+                   tx: lect_tx.into(),
+               });
+}
+
+// FundingTx from lect has no correct outputs
+// result: Error IncorrectLect occured
+#[test]
+fn test_auditing_lects_incorrect_funding_tx() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
+    let mut sandbox_state = SandboxState::new();
+
+    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+
+    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
+        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+    }
+
+    let lect_tx = BitcoinTx::from_hex("020000000152f2e44424d6cc16ce29566b54468084d1d15329b28e\
+                                       8fc7cb9d9d783b8a76d3010000006b4830450221009e5ae44ba558\
+                                       6e4aadb9e1bc5369cc9fe9f16c12ff94454ac90414f1c5a3df9002\
+                                       20794b24afab7501ba12ea504853a31359d718c2a7ff6dd2688e95\
+                                       c5bc6634ce39012102f81d4470a303a508bf03de893223c89360a5\
+                                       d093e3095560b71de245aaf45d57feffffff028096980000000000\
+                                       17a914dcfbafb4c432a24dd4b268570d26d7841a20fbbd87e7cc39\
+                                       0a000000001976a914b3203ee5a42f8f524d14397ef10b84277f78\
+                                       4b4a88acd81d1100")
+            .unwrap();
+    let lects = (0..3)
+        .map(|id| {
+                 MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),
+                                               id,
+                                               lect_tx.clone(),
+                                               lects_count(&sandbox, id),
+                                               sandbox.s(id as usize))
+             })
+        .collect::<Vec<_>>();
+    force_commit_lects(&sandbox, lects);
+
+    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+
+    assert_eq!(anchoring_state.take_errors()[0],
+               HandlerError::IncorrectLect {
+                   reason: String::from("Initial funding_tx from cfg is different than in lect"),
                    tx: lect_tx.into(),
                });
 }
@@ -432,7 +479,7 @@ fn test_auditing_lects_lost_current_lect() {
 
     assert_eq!(anchoring_state.take_errors()[0],
                HandlerError::IncorrectLect {
-                   reason: String::from("Lect does not exists in the bitcoin blockchain"),
+                   reason: String::from("Lect not found in the bitcoin blockchain"),
                    tx: lect_tx.into(),
                });
 }

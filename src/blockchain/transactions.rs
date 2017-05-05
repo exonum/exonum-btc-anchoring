@@ -166,10 +166,10 @@ fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
                     .expect(&format!("Lect with index {} is absent in lects table for validator {}",
                                      prev_lect_idx,
                                      id));
+                assert_eq!(prev_txid,
+                           prev_lect.id(),
+                           "Inconsistent reference to previous lect in Exonum");
 
-                if prev_lect.id() != prev_txid {
-                    panic!("Inconsistency in blockchain found!");
-                }
                 prev_lects_count += 1;
             }
         }
