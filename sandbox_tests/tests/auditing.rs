@@ -33,6 +33,8 @@ use anchoring_btc_service::details::btc::transactions::BitcoinTx;
 use anchoring_btc_sandbox::{AnchoringSandboxState, initialize_anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
 
+/// Generates a configuration that excludes `sandbox node` from consensus.
+/// Then it continues to work as auditor.
 fn gen_following_cfg(sandbox: &Sandbox,
                      anchoring_state: &mut AnchoringSandboxState,
                      from_height: u64)
@@ -77,10 +79,10 @@ pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
 }
 
 // Invoke this method after anchor_first_block_lect_normal
-pub fn exclude_node_from_validator(sandbox: &Sandbox,
-                                   client: &SandboxClient,
-                                   sandbox_state: &mut SandboxState,
-                                   anchoring_state: &mut AnchoringSandboxState) {
+pub fn exclude_node_from_validators(sandbox: &Sandbox,
+                                    client: &SandboxClient,
+                                    sandbox_state: &mut SandboxState,
+                                    anchoring_state: &mut AnchoringSandboxState) {
     let cfg_change_height = 12;
     let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, anchoring_state, cfg_change_height);
     let (_, following_addr) = following_cfg.redeem_script();
@@ -328,7 +330,7 @@ fn test_auditing_exclude_node_from_validators() {
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+    exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
 }
 
 // We lost consensus in lects
@@ -342,7 +344,7 @@ fn test_auditing_lost_consensus_in_lects() {
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+    exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
 
     for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
         add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
@@ -373,7 +375,7 @@ fn test_auditing_lects_lost_funding_tx() {
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+    exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
 
     for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
         add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
@@ -416,7 +418,7 @@ fn test_auditing_lects_incorrect_funding_tx() {
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+    exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
 
     for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
         add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
@@ -463,7 +465,7 @@ fn test_auditing_lects_lost_current_lect() {
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validator(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+    exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
 
     for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
         add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);

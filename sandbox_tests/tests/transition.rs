@@ -1623,7 +1623,7 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
         .map(|tx| tx.raw().clone())
         .collect::<Vec<_>>();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &different_signatures);
-    // Ensure that service ignore tx
+    // Ensure that service ignores tx
     let signs_after = dump_signatures(&sandbox, &txid);
     assert_eq!(signs_before, signs_after);
 
