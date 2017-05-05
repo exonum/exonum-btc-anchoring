@@ -44,6 +44,36 @@ fn test_anchoring_first_block() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 }
 
+// We waiting until the `funding_tx` got enough confirmations
+// problems: None
+// result: success
+#[test]
+fn test_anchoring_funding_tx_waiting() {
+    let _ = ::blockchain_explorer::helpers::init_logger();
+
+    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let sandbox_state = SandboxState::new();
+
+    let funding_tx = anchoring_state.common.funding_tx.clone();
+
+    client.expect(vec![gen_confirmations_request(funding_tx.clone(), 0)]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    // Resend funding_tx if we lost it
+    client.expect(vec![request! {
+                           method: "getrawtransaction",
+                           params: [&funding_tx.txid(), 1],
+                           error: RpcError::NoInformation("Unable to find tx".to_string()),
+                       },
+                       request! {
+                           method: "sendrawtransaction",
+                           params: [&funding_tx.to_hex()]
+                       }]);  
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]); 
+    
+    client.expect(vec![gen_confirmations_request(funding_tx.clone(), 0)]);
+    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]); 
+}
+
 // We anchor first block and receive lect
 // problems: None
 // result: success
