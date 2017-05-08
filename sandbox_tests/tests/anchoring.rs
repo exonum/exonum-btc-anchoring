@@ -44,7 +44,7 @@ fn test_anchoring_first_block() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 }
 
-// We waiting until the `funding_tx` got enough confirmations
+// We wait until `funding_tx` have got enough confirmations.
 // problems: None
 // result: success
 #[test]
