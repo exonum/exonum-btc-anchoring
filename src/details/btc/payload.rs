@@ -31,7 +31,7 @@ pub struct PayloadBuilder {
 }
 
 impl Payload {
-    pub fn from_script(script: Script) -> Option<Payload> {
+    pub fn from_script(script: &Script) -> Option<Payload> {
         let mut instructions = script.into_iter();
         instructions
             .next()
@@ -161,7 +161,7 @@ mod tests {
             .block_height(1234)
             .into_script();
 
-        let payload = Payload::from_script(payload_script).unwrap();
+        let payload = Payload::from_script(&payload_script).unwrap();
         assert_eq!(payload.block_hash, block_hash);
         assert_eq!(payload.block_height, 1234);
         assert_eq!(payload.prev_tx_chain, None);
@@ -178,7 +178,7 @@ mod tests {
             .prev_tx_chain(prev_txid)
             .into_script();
 
-        let payload = Payload::from_script(payload_script).unwrap();
+        let payload = Payload::from_script(&payload_script).unwrap();
         assert_eq!(payload.block_hash, block_hash);
         assert_eq!(payload.block_height, 1234);
         assert_eq!(payload.prev_tx_chain, Some(prev_txid));

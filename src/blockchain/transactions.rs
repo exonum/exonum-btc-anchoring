@@ -179,8 +179,10 @@ fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
 }
 
 fn verify_anchoring_tx_payload(tx: &AnchoringTx, schema: &Schema) -> Result<bool, StorageError> {
-    let (height, hash) = tx.payload();
-    Ok(schema.block_hashes_by_height().get(height)? == Some(hash))
+    let payload = tx.payload();
+    Ok(schema
+           .block_hashes_by_height()
+           .get(payload.block_height)? == Some(payload.block_hash))
 }
 
 fn verify_funding_tx(tx: &FundingTx,

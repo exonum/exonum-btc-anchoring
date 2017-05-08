@@ -176,7 +176,7 @@ fn test_anchoring_transit_config_normal() {
     let (_, signatures) =
         anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
                                                          0,
-                                                         anchored_tx.payload().1,
+                                                         anchored_tx.payload().block_hash,
                                                          &[],
                                                          None,
                                                          &following_multisig.1);
@@ -434,7 +434,7 @@ fn test_anchoring_transit_config_unchanged_self_key() {
     let (_, signatures) =
         anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
                                                          0,
-                                                         anchored_tx.payload().1,
+                                                         anchored_tx.payload().block_hash,
                                                          &[],
                                                          None,
                                                          &following_multisig.1);
@@ -669,7 +669,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
     let (_, signatures) =
         anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
                                                          0,
-                                                         anchored_tx.payload().1,
+                                                         anchored_tx.payload().block_hash,
                                                          &[],
                                                          None,
                                                          &following_multisig.1);
@@ -1596,7 +1596,7 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
     let (_, signatures) =
         anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
                                                          0,
-                                                         anchored_tx.payload().1,
+                                                         anchored_tx.payload().block_hash,
                                                          &[],
                                                          None,
                                                          &following_multisig.1);
