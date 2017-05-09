@@ -111,9 +111,9 @@ fn test_anchoring_second_block_additional_funds() {
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_anchoring_height(&sandbox));
 
     let funds = anchoring_state.common.funding_tx.clone();
     client.expect(vec![request! {
@@ -190,9 +190,9 @@ fn test_anchoring_second_block_lect_lost() {
     let prev_tx_signatures = anchoring_state.latest_anchored_tx_signatures().to_vec();
 
     anchor_second_block_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    for _ in 0..5 {
-        add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-    }
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_check_lect_height(&sandbox));
 
     client.expect(vec![request! {
         method: "listunspent",
@@ -259,8 +259,9 @@ fn test_anchoring_find_lect_chain_normal() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
     // Just add few heights
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_check_lect_height(&sandbox));
 
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
     let anchored_txs = (1..3)
@@ -327,8 +328,9 @@ fn test_anchoring_find_lect_chain_wrong() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
 
     // Just add few heights
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_check_lect_height(&sandbox));
 
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
     let anchored_txs = {

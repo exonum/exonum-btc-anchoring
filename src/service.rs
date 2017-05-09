@@ -18,6 +18,7 @@ use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 use blockchain::dto::AnchoringMessage;
 use error::Error as ServiceError;
+use handler::error::Error as HandlerError;
 
 pub use blockchain::ANCHORING_SERVICE_ID;
 
@@ -89,6 +90,10 @@ impl Service for AnchoringService {
                 error!("An error occured: {}", e);
                 handler.errors.push(e);
                 Ok(())
+            }
+            #[cfg(not(feature="sandbox_tests"))]
+            Err(ServiceError::Handler(HandlerError::IncorrectLect(e))) => {
+                panic!("An critial error occured: {}", e)
             }
             Err(e) => {
                 error!("An error occured: {}", e);

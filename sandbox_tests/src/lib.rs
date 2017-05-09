@@ -163,15 +163,16 @@ impl AnchoringSandboxState {
         self.common.redeem_script().0
     }
 
-    pub fn nearest_check_lect_height(&self, sandbox: &Sandbox) -> u64 {
+    pub fn next_check_lect_height(&self, sandbox: &Sandbox) -> u64 {
         let height = sandbox.current_height();
         let frequency = self.nodes[0].check_lect_frequency as u64;
         height - height % frequency + frequency
     }
 
-    pub fn nearest_anchoring_height(&self, sandbox: &Sandbox) -> u64 {
+    pub fn next_anchoring_height(&self, sandbox: &Sandbox) -> u64 {
         let height = sandbox.current_height();
-        self.common.nearest_anchoring_height(height)
+        let frequency = self.common.frequency as u64;
+        height - height % frequency + frequency
     }
 }
 

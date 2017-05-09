@@ -123,10 +123,7 @@ pub fn exclude_node_from_validators(sandbox: &Sandbox,
         .collect::<Vec<_>>();
     sandbox.broadcast(lects[0].clone());
     add_one_height_with_transactions(&sandbox, &sandbox_state, &lects);
-
-    for _ in sandbox.current_height()..cfg_change_height {
-        add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-    }
+    fast_forward_to_height(sandbox, sandbox_state, cfg_change_height);
 
     anchoring_state.common = following_cfg;
     client.expect(vec![request! {
@@ -166,10 +163,9 @@ fn test_auditing_no_consensus_in_lect() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-
-    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
-        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-    }
+    fast_forward_to_height_from_other_validator(&sandbox,
+                                                &sandbox_state,
+                                                anchoring_state.next_check_lect_height(&sandbox));
 
     let lect_tx = BitcoinTx::from(anchoring_state.common.funding_tx.clone().0);
     let lect = MsgAnchoringUpdateLatest::new(&sandbox.p(0),
@@ -197,10 +193,9 @@ fn test_auditing_lect_lost_funding_tx() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-
-    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
-        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-    }
+    fast_forward_to_height_from_other_validator(&sandbox,
+                                                &sandbox_state,
+                                                anchoring_state.next_check_lect_height(&sandbox));
 
     let lect_tx = BitcoinTx::from(anchoring_state.common.funding_tx.clone().0);
     let lects = (0..3)
@@ -240,10 +235,9 @@ fn test_auditing_lect_incorrect_funding_tx() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-
-    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
-        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-    }
+    fast_forward_to_height_from_other_validator(&sandbox,
+                                                &sandbox_state,
+                                                anchoring_state.next_check_lect_height(&sandbox));
 
     let lect_tx = BitcoinTx::from_hex("020000000152f2e44424d6cc16ce29566b54468084d1d15329b28e\
                                        8fc7cb9d9d783b8a76d3010000006b4830450221009e5ae44ba558\
@@ -287,10 +281,9 @@ fn test_auditing_lect_lost_current_lect() {
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-
-    for _ in sandbox.current_height()..anchoring_state.nearest_check_lect_height(&sandbox) {
-        add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
-    }
+    fast_forward_to_height_from_other_validator(&sandbox,
+                                                &sandbox_state,
+                                                anchoring_state.next_check_lect_height(&sandbox));
 
     let lect_tx = anchoring_state.latest_anchored_tx().clone();
     client.expect(vec![request! {
