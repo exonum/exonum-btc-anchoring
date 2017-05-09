@@ -92,8 +92,12 @@ impl Service for AnchoringService {
                 Ok(())
             }
             #[cfg(not(feature="sandbox_tests"))]
-            Err(ServiceError::Handler(HandlerError::IncorrectLect(e))) => {
-                panic!("An critial error occured: {}", e)
+            Err(ServiceError::Handler(e)) => {
+                if let HandlerError::IncorrectLect { .. } = e {
+                    panic!("A critical error occured: {}", e);
+                }
+                error!("An error occured: {}", e);
+                Ok(())
             }
             Err(e) => {
                 error!("An error occured: {}", e);
