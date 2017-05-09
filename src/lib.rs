@@ -121,6 +121,8 @@ extern crate byteorder;
 extern crate log;
 #[macro_use]
 extern crate derive_error;
+#[cfg(test)]
+extern crate blockchain_explorer;
 
 extern crate rand;
 extern crate tempdir;

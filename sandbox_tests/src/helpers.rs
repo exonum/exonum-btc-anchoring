@@ -8,6 +8,7 @@ use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{Hash, HexValue};
 use exonum::blockchain::Schema;
 use exonum::storage::{List, StorageValue};
+use blockchain_explorer::helpers;
 
 use sandbox::sandbox::Sandbox;
 use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
@@ -469,4 +470,8 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
             response: &anchored_tx.to_hex()
         }]);
     add_one_height_with_transactions(sandbox, sandbox_state, &txs);
+}
+
+pub fn init_logger() {
+    let _ = helpers::init_logger();
 }

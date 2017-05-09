@@ -87,7 +87,7 @@ fn gen_following_cfg_unchanged_self_key(sandbox: &Sandbox,
 fn test_anchoring_transit_config_normal() {
     let cfg_change_height = 16;
 
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    init_logger();
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
@@ -227,7 +227,7 @@ fn test_anchoring_transit_config_normal() {
 fn test_anchoring_transit_config_unchanged_self_key() {
     let cfg_change_height = 16;
 
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    init_logger();
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
@@ -370,7 +370,7 @@ fn test_anchoring_transit_config_unchanged_self_key() {
 fn test_anchoring_transit_config_with_funding_tx() {
     let cfg_change_height = 16;
 
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    init_logger();
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
@@ -544,7 +544,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
 fn test_anchoring_transit_config_lost_lect_recover_before_cfg_change() {
     let cfg_change_height = 16;
 
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    init_logger();
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
@@ -620,7 +620,7 @@ fn test_anchoring_transit_config_lost_lect_recover_before_cfg_change() {
 fn test_anchoring_transit_config_lost_lect_recover_after_cfg_change() {
     let cfg_change_height = 16;
 
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    init_logger();
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
@@ -734,7 +734,7 @@ fn test_anchoring_transit_config_lost_lect_recover_after_cfg_change() {
 fn test_anchoring_transit_config_lost_lect_new_tx_chain() {
     let cfg_change_height = 11;
 
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    init_logger();
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
@@ -859,7 +859,7 @@ fn test_anchoring_transit_config_lost_lect_new_tx_chain() {
 // result: msg ignored
 #[test]
 fn test_anchoring_transit_msg_signature_incorrect_output_address() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    init_logger();
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
@@ -932,7 +932,7 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
 fn test_anchoring_transit_config_after_funding_tx() {
     let cfg_change_height = 16;
 
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    init_logger();
     let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
