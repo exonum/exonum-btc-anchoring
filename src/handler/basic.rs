@@ -85,93 +85,104 @@ impl AnchoringHandler {
         Ok(cfg)
     }
 
+    fn following_config_is_transition
+        (&self,
+         actual_addr: &btc::Address,
+         state: &NodeState)
+         -> Result<Option<(AnchoringConfig, btc::Address)>, ServiceError> {
+        if let Some(following) = self.following_config(state)? {
+            let following_addr = following.redeem_script().1;
+            if actual_addr != &following_addr {
+                return Ok(Some((following, following_addr)));
+            }
+        }
+        Ok(None)
+    }
+
     #[doc(hidden)]
     pub fn current_state(&self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
         let actual = self.actual_config(state)?;
         let actual_addr = actual.redeem_script().1;
         let schema = AnchoringSchema::new(state.view());
 
-        // Check that following cfg exist and its address is differ
-        if let Some(following) = self.following_config(state)? {
-            let following_addr = following.redeem_script().1;
-            if actual_addr != following_addr {
-                // Ensure that bitcoind watching for following addr.
-                self.import_address(&following_addr, state)?;
-                match TxKind::from(schema.lect(self.validator_id(state))?) {
-                    TxKind::Anchoring(lect) => {
-                        let lect_addr = lect.output_address(actual.network);
-                        if lect_addr == following_addr {
-                            let confirmations = get_confirmations(&self.client, &lect.txid())?;
-                            // Lect now is transition transaction
+        // Check that the following cfg exists and its anchoring address is different.
+        let result = self.following_config_is_transition(&actual_addr, state)?;
+        let state = if let Some((following, following_addr)) = result {
+            // Ensure that bitcoind watching for following addr.
+            self.import_address(&following_addr, state)?;
+            
+            match TxKind::from(schema.lect(self.validator_id(state))?) {
+                TxKind::Anchoring(lect) => {
+                    let lect_addr = lect.output_address(actual.network);
+                    if lect_addr == following_addr {
+                        let confirmations = get_confirmations(&self.client, &lect.txid())?;
+                        // Lect now is transition transaction
+                        AnchoringState::Waiting {
+                            lect: lect.into(),
+                            confirmations: confirmations,
+                        }
+                    } else {
+                        AnchoringState::Transition {
+                            from: actual,
+                            to: following,
+                        }
+                    }
+                }
+                TxKind::FundingTx(lect) => {
+                    debug_assert_eq!(lect, actual.funding_tx);
+                    AnchoringState::Transition {
+                        from: actual,
+                        to: following,
+                    }
+                }
+                TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
+            }
+        } else {
+            let id = self.validator_id(state);
+            let current_lect = schema.lect(id)?;
+
+            match TxKind::from(current_lect) {
+                TxKind::FundingTx(tx) => {
+                    if tx.find_out(&actual_addr).is_some() {
+                        debug!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
+                        /// Wait until funding_tx got enough confirmation
+                        let confirmations = get_confirmations(&self.client, &tx.txid())?;
+                        if !is_confirmations_enough(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
-                                lect: lect.into(),
+                                lect: tx.into(),
                                 confirmations: confirmations,
                             };
                             return Ok(state);
-                        } else {
-                            let state = AnchoringState::Transition {
-                                from: actual,
-                                to: following,
+                        }
+                        AnchoringState::Anchoring { cfg: actual }
+                    } else {
+                        AnchoringState::Recovering { cfg: actual }
+                    }
+                }
+                TxKind::Anchoring(current_lect) => {
+                    let current_lect_addr = current_lect.output_address(actual.network);
+                    // Ensure that we did not miss transition lect
+                    if current_lect_addr != actual_addr {
+                        let state = AnchoringState::Recovering { cfg: actual };
+                        return Ok(state);
+                    }
+                    // If the lect is transition than we need wait
+                    // until it reach enough confirmations.
+                    if current_lect_is_transition(&actual, id, &current_lect_addr, &schema)? {
+                        let confirmations = get_confirmations(&self.client, &current_lect.txid())?;
+                        if !is_confirmations_enough(&actual, confirmations) {
+                            let state = AnchoringState::Waiting {
+                                lect: current_lect.into(),
+                                confirmations: confirmations,
                             };
                             return Ok(state);
                         }
                     }
-                    TxKind::FundingTx(lect) => {
-                        debug_assert_eq!(lect, actual.funding_tx);
-                        let state = AnchoringState::Transition {
-                            from: actual,
-                            to: following,
-                        };
-                        return Ok(state);
-                    }
-                    TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
-                }
-            }
-        }
 
-        let id = self.validator_id(state);
-        let current_lect = schema.lect(id)?;
-        let state = match TxKind::from(current_lect) {
-            TxKind::FundingTx(tx) => {
-                if tx.find_out(&actual_addr).is_some() {
-                    debug!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
-                    /// Wait until funding_tx got enough confirmation
-                    let confirmations = get_confirmations(&self.client, &tx.txid())?;
-                    if !is_confirmations_enough(&actual, confirmations) {
-                        let state = AnchoringState::Waiting {
-                            lect: tx.into(),
-                            confirmations: confirmations,
-                        };
-                        return Ok(state);
-                    }
                     AnchoringState::Anchoring { cfg: actual }
-                } else {
-                    AnchoringState::Recovering { cfg: actual }
                 }
+                TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
             }
-            TxKind::Anchoring(current_lect) => {
-                let current_lect_addr = current_lect.output_address(actual.network);
-                // Ensure that we did not miss transition lect
-                if current_lect_addr != actual_addr {
-                    let state = AnchoringState::Recovering { cfg: actual };
-                    return Ok(state);
-                }
-                // If the lect is transition than we need wait
-                // until it reach enough confirmations.
-                if current_lect_is_transition(&actual, id, &current_lect_addr, &schema)? {
-                    let confirmations = get_confirmations(&self.client, &current_lect.txid())?;
-                    if !is_confirmations_enough(&actual, confirmations) {
-                        let state = AnchoringState::Waiting {
-                            lect: current_lect.into(),
-                            confirmations: confirmations,
-                        };
-                        return Ok(state);
-                    }
-                }
-
-                AnchoringState::Anchoring { cfg: actual }
-            }
-            TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
         };
         Ok(state)
     }
