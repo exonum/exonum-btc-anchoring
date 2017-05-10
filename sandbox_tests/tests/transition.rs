@@ -173,13 +173,13 @@ fn test_anchoring_transit_config_normal() {
         }]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
-                                                         0,
-                                                         anchored_tx.payload().block_hash,
-                                                         &[],
-                                                         None,
-                                                         &following_multisig.1);
+    let (_, signatures) = anchoring_state
+        .gen_anchoring_tx_with_signatures(&sandbox,
+                                          0,
+                                          anchored_tx.payload().block_hash,
+                                          &[],
+                                          None,
+                                          &following_multisig.1);
     let transition_tx = anchoring_state.latest_anchored_tx().clone();
 
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
@@ -431,13 +431,13 @@ fn test_anchoring_transit_config_unchanged_self_key() {
         }]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
-                                                         0,
-                                                         anchored_tx.payload().block_hash,
-                                                         &[],
-                                                         None,
-                                                         &following_multisig.1);
+    let (_, signatures) = anchoring_state
+        .gen_anchoring_tx_with_signatures(&sandbox,
+                                          0,
+                                          anchored_tx.payload().block_hash,
+                                          &[],
+                                          None,
+                                          &following_multisig.1);
     let transition_tx = anchoring_state.latest_anchored_tx().clone();
 
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
@@ -666,13 +666,13 @@ fn test_anchoring_transit_config_with_funding_tx() {
 
     // Check enough confirmations case
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
-                                                         0,
-                                                         anchored_tx.payload().block_hash,
-                                                         &[],
-                                                         None,
-                                                         &following_multisig.1);
+    let (_, signatures) = anchoring_state
+        .gen_anchoring_tx_with_signatures(&sandbox,
+                                          0,
+                                          anchored_tx.payload().block_hash,
+                                          &[],
+                                          None,
+                                          &following_multisig.1);
     let transition_tx = anchoring_state.latest_anchored_tx().clone();
     client.expect(vec![request! {
             method: "getrawtransaction",
@@ -1593,13 +1593,13 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
         }]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
-                                                         0,
-                                                         anchored_tx.payload().block_hash,
-                                                         &[],
-                                                         None,
-                                                         &following_multisig.1);
+    let (_, signatures) = anchoring_state
+        .gen_anchoring_tx_with_signatures(&sandbox,
+                                          0,
+                                          anchored_tx.payload().block_hash,
+                                          &[],
+                                          None,
+                                          &following_multisig.1);
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
     sandbox.broadcast(signatures[0].clone());
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[0..1]);

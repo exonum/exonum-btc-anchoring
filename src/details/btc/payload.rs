@@ -11,6 +11,7 @@ const PAYLOAD_VERSION: u8 = 1;
 const PAYLOAD_LEN: u8 = 74;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
+#[repr(u8)]
 pub enum PayloadKind {
     Regular = 0,
     Recover = 1,
