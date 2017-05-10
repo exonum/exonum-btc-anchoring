@@ -141,8 +141,8 @@ impl PayloadBuilder {
         self
     }
 
-    pub fn prev_tx_chain(mut self, txid: btc::TxId) -> PayloadBuilder {
-        self.prev_tx_chain = Some(txid);
+    pub fn prev_tx_chain(mut self, txid: Option<btc::TxId>) -> PayloadBuilder {
+        self.prev_tx_chain = txid;
         self
     }
 
@@ -206,7 +206,7 @@ mod tests {
         let payload_script = PayloadBuilder::new()
             .block_hash(block_hash)
             .block_height(1234)
-            .prev_tx_chain(prev_txid)
+            .prev_tx_chain(Some(prev_txid))
             .into_script();
 
         assert_eq!(payload_script.to_hex(),

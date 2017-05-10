@@ -350,15 +350,11 @@ fn create_anchoring_transaction<'a, I>(addr: btc::Address,
              })
         .collect::<Vec<_>>();
 
-    let metadata_script = {
-        let mut builder = PayloadBuilder::new()
-            .block_hash(block_hash)
-            .block_height(block_height);
-        if let Some(prev_chain_txid) = prev_chain_txid {
-            builder = builder.prev_tx_chain(prev_chain_txid);
-        }
-        builder.into_script()
-    };
+    let metadata_script = PayloadBuilder::new()
+        .block_hash(block_hash)
+        .block_height(block_height)
+        .prev_tx_chain(prev_chain_txid)
+        .into_script();
     let outputs = vec![TxOut {
                            value: out_funds,
                            script_pubkey: addr.script_pubkey(),

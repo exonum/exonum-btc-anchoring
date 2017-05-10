@@ -564,28 +564,11 @@ fn test_tx_kind_funding() {
 
 #[test]
 fn test_tx_kind_anchoring() {
-    let tx = BitcoinTx::from_hex("0100000001bb1175a4e2146904825eecdf851458b2dad48d01571aad803148c2c\
-                                 b30cf2a8600000000fd3c020047304402203346398cb5b2d1cf91938cab6501dc9\
-                                 7e485fc554ffa0c8562310ccf8c229722022075a0a0ef3f72c12f7cb28937ecd1d\
-                                 dedb4443ba6fd1335ac1650728abc8f0e8f014830450221009808a951e94856f73\
-                                 93ebcc2e565551367c2b11395e022252ceb6459196be3490220386ec0f2b9ac906\
-                                 d3ef2470242a1b682d55afcafcf13dadcf76f0b62c227e5b50147304402201e69b\
-                                 648dc3048d397f60bd09ef0ea054cad5584787e72dcf80cd9ec45e96e1d0220164\
-                                 fe843339eca5fb8d1e4558f18aff2b09ddeae0f6a685b47f35f8367d9fce501483\
-                                 04502210084142ab7bb4eb9d8f46ea8c09e2763f4d2263d0f80d46d227ae267775\
-                                 5f8916a022041212be970386e6b7764aa270c1eed22bf171bacedc462232273c31\
-                                 6d919054f0147304402207c0d0b9bf693b8cd7957ce176d5b89f51d229cf18c3e9\
-                                 232f229ae3e638c4dc002201de434bf81fcd7e228f59c8d385084b5b1f611cad3f\
-                                 e83145a5709902f23e07b014ccf5521021e157723942b32aa18752bc1b111eb940\
-                                 ce506eb2efa6180cc382f53944fccb92102200b6dfbae3f350f4638a53fd9364e3\
-                                 35f3ff728ce02de304f24ecc3f8d23db2210342746ab39a58fc1e2d564791ea148\
-                                 3368e2142cff6f1cab4a555730a52ff7dd7210267792e10f894ff3f3a194670a32\
-                                 194eb900c02226d0595382e0ceade61b59922210237c14223d64785250b0e9313a\
-                                 f481b2676ba3f819ec7ff3a025e3506177884a12103b608d67640384a0e4db114d\
-                                 f2fba75ae132b46befcde698cd1a8a4df2b3e4dca56aeffffffff0200000000000\
-                                 000017a91417bf6bf1f8ab6cc5750a508dd26a4452e326ed2c8700000000000000\
-                                 002c6a2a0100020000000000000062467691cf583d4fa78b18fafaf9801f505e0e\
-                                 f03baf0603fd4b0cd004cd1e7500000000")
+    let tx = BitcoinTx::from_hex("01000000019f9def88981026377a76fd99f3f68308aa4566564ec12f85b41513f\
+                                  9b19875040000000000ffffffff02e80300000000000017a9149910d33636283a\
+                                  9dd735053e240f6d7670d914578700000000000000002c6a2a010002000000000\
+                                  0000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd\
+                                  1e7500000000")
             .unwrap();
     match TxKind::from(tx) {
         TxKind::Anchoring(_) => {}
