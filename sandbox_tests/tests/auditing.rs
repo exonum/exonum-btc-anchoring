@@ -162,6 +162,7 @@ fn test_auditing_no_consensus_in_lect() {
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
     anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
+    let next_anchoring_height = anchoring_state.next_anchoring_height(&sandbox);
     exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
     fast_forward_to_height_from_other_validator(&sandbox,
                                                 &sandbox_state,
@@ -178,7 +179,7 @@ fn test_auditing_no_consensus_in_lect() {
                                                           &[lect.raw().clone()]);
 
     assert_eq!(anchoring_state.take_errors()[0],
-               HandlerError::LectNotFound { height: 10 });
+               HandlerError::LectNotFound { height: next_anchoring_height });
 }
 
 // FundingTx from lect not found in `bitcoin` network
