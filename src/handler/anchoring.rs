@@ -42,7 +42,7 @@ impl AnchoringHandler {
                                   multisig: &MultisigAddress,
                                   state: &mut NodeState)
                                   -> Result<(), ServiceError> {
-        match self.collect_lects(self.validator_id(state), state)? {
+        match self.collect_lects_for_validator(self.validator_id(state), state)? {
             LectKind::Funding(_) => self.try_create_anchoring_tx_chain(multisig, None, state),
             LectKind::Anchoring(tx) => {
                 let anchored_height = tx.payload().0;

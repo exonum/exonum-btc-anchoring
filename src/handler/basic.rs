@@ -1,9 +1,12 @@
+use std::collections::hash_map::{HashMap, Entry};
+
 use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::NodeState;
 use exonum::storage::{List, Error as StorageError};
 
 use error::Error as ServiceError;
+use handler::error::Error as HandlerError;
 use details::rpc::AnchoringRpc;
 use details::btc;
 use details::btc::transactions::{TxKind, BitcoinTx, FundingTx};
@@ -142,10 +145,10 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn collect_lects(&self,
-                         validator_id: u32,
-                         state: &NodeState)
-                         -> Result<LectKind, StorageError> {
+    pub fn collect_lects_for_validator(&self,
+                                       validator_id: u32,
+                                       state: &NodeState)
+                                       -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
         let our_lect = anchoring_schema.lect(validator_id)?;
@@ -163,11 +166,56 @@ impl AnchoringHandler {
             match TxKind::from(our_lect) {
                 TxKind::Anchoring(tx) => Ok(LectKind::Anchoring(tx)),
                 TxKind::FundingTx(tx) => Ok(LectKind::Funding(tx)),
-                TxKind::Other(_) => panic!("We are fucked up..."),
+                TxKind::Other(tx) => panic!("Found incorrect lect transaction, content={:#?}", tx),
             }
         } else {
             Ok(LectKind::None)
         }
+    }
+
+    #[doc(hidden)]
+    pub fn collect_lects(&self,
+                         cfg: &AnchoringConfig,
+                         state: &NodeState)
+                         -> Result<LectKind, ServiceError> {
+        let anchoring_schema = AnchoringSchema::new(state.view());
+        let validators_count = cfg.validators.len() as u32;
+
+        let mut lects = HashMap::new();
+        for validator_id in 0..validators_count {
+            if let Some(last_lect) = anchoring_schema.lects(validator_id).last()? {
+                // TODO implement hash and eq for transaction
+                match lects.entry(last_lect.0) {
+                    Entry::Occupied(mut v) => {
+                        *v.get_mut() += 1;
+                    }
+                    Entry::Vacant(v) => {
+                        v.insert(1);
+                    }
+                }
+            }
+        }
+
+        let kind = if let Some((lect, count)) = lects.iter().max_by_key(|&(_, v)| v) {
+            if *count >= ::majority_count(validators_count as u8) {
+                match TxKind::from(lect.clone()) {
+                    TxKind::Anchoring(tx) => LectKind::Anchoring(tx),
+                    TxKind::FundingTx(tx) => LectKind::Funding(tx),
+                    TxKind::Other(tx) => {
+                        let e = HandlerError::IncorrectLect {
+                            reason: "Incorrect lect transaction".to_string(),
+                            tx: tx.into(),
+                        };
+                        return Err(e.into());
+                    }
+                }
+            } else {
+                LectKind::None
+            }
+        } else {
+            LectKind::None
+        };
+        Ok(kind)
     }
 
     #[doc(hidden)]
