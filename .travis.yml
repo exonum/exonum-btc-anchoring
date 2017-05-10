@@ -8,7 +8,7 @@ env:
   - ANCHORING_USER=travis
   - ANCHORING_PASSWORD=travis
 before_install:
-- cargo install rustfmt --force
+- cargo install rustfmt --force --vers 0.8.4
 - rustup override set nightly-2017-01-08
 - rustc --version
 - cargo --version
