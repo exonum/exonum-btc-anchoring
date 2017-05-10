@@ -23,7 +23,7 @@ impl AnchoringHandler {
                 LectKind::Anchoring(tx) => self.check_anchoring_lect(tx),
                 LectKind::None => {
                     let e = HandlerError::LectNotFound {
-                        height: cfg.nearest_anchoring_height(state.height()),
+                        height: cfg.latest_anchoring_height(state.height()),
                     };
                     Err(e.into())
                 }

@@ -44,7 +44,7 @@ impl AnchoringHandler {
                     // check that we have enougth confirmations
                     let confirmations = lect.confirmations(self.client())?.unwrap_or_else(|| 0);
                     if confirmations >= multisig.common.utxo_confirmations {
-                        let height = multisig.common.nearest_anchoring_height(state.height());
+                        let height = multisig.common.latest_anchoring_height(state.height());
                         self.create_proposal_tx(lect, &multisig, height, state)?;
                     } else {
                         warn!("Insufficient confirmations for create transition transaction, \
