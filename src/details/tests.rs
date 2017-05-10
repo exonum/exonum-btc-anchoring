@@ -199,24 +199,23 @@ fn test_anchoring_tx_storage_value() {
 
 #[test]
 fn test_anchoring_tx_message_field_rw_correct() {
-    let hex = "0100000001915c76197521fd5372fd7d5522502ebf908552d5fb587cbac6bd8caec963ab7500000000fd\
-               3d02004830450221008b5fac946a166167062522b89bc5ea3895088bb777c8d6a35c4c413d70bfcdd702\
-               206291bb1065b505c00c0ec692c050c37a3643c86b28eab06a9a887d8ef872e0e8014730440220425994\
-               e627af7fdeb28086581f086ebc5833ca9ddfa376f296eac992f9fdd97102202b4a53376bd5833a0eb21f\
-               f6c66937ef8b6c286851d56a85dc55187d2a95876c014830450221008b2d50bd8f7ecfcd80400355f3bd\
-               ae547c76cfe40f43288810868a2f2088d893022015523e7b7ecc568a907edeb1aecb4563e4db6b54f79b\
-               0414a3fffeb0113d70e20147304402200fb5086437e57f6cd67f2278fefd7dd65e86d90e84c870f5da3c\
-               36fb8e977bbf0220551e02bdcd6ec568246297e0754b071f1ce2f7d9c7c7a131d5d80e7dcfc4d72b0148\
-               3045022100887dab427d5347c9b719d6b8108a268d891d3cc606a2ef6733882bbed9f3c710022062fff5\
-               cf5a2bc5f09568778c3fde9d92e4c699dd22da2dc466c68deffcefe803014ccf55210212a10640879ed8\
-               606768befa54f407db16305be772976d0e86352a53a3575b4b210323d3989b402319f421c8496bb176eb\
-               1d987f7e9c2a938a88dcd47cf53911804421035e78501b2b9e2ddf66cab19145c61ae64db08c6894479d\
-               31803117a11cb9f1fb2102db31433517820372e60b89cd234e2123f3a9d11cc282a0800f420486884d6f\
-               c92103ffac383422fd234fad31fd411d5807bf7d4a14b0fbc87656282d04efd4f31f6f21031b63ecb0e6\
-               74507c72e06afea0e474ae0ba2e6f00059e649efa3fbf0ee8779d556aeffffffff020000000000000000\
-               17a914fb4b006c4b17cb7b09fccbb7e7c4bf74fc8238588700000000000000004c6a4a01000200000000\
-               00000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000000000\
-               0000000000000000000000000000000000000000000000000000000000";
+    let hex = "0100000001bb1175a4e2146904825eecdf851458b2dad48d01571aad803148c2cb30cf2a8600000000fd\
+               3c020047304402203346398cb5b2d1cf91938cab6501dc97e485fc554ffa0c8562310ccf8c2297220220\
+               75a0a0ef3f72c12f7cb28937ecd1ddedb4443ba6fd1335ac1650728abc8f0e8f014830450221009808a9\
+               51e94856f7393ebcc2e565551367c2b11395e022252ceb6459196be3490220386ec0f2b9ac906d3ef247\
+               0242a1b682d55afcafcf13dadcf76f0b62c227e5b50147304402201e69b648dc3048d397f60bd09ef0ea\
+               054cad5584787e72dcf80cd9ec45e96e1d0220164fe843339eca5fb8d1e4558f18aff2b09ddeae0f6a68\
+               5b47f35f8367d9fce50148304502210084142ab7bb4eb9d8f46ea8c09e2763f4d2263d0f80d46d227ae2\
+               677755f8916a022041212be970386e6b7764aa270c1eed22bf171bacedc462232273c316d919054f0147\
+               304402207c0d0b9bf693b8cd7957ce176d5b89f51d229cf18c3e9232f229ae3e638c4dc002201de434bf\
+               81fcd7e228f59c8d385084b5b1f611cad3fe83145a5709902f23e07b014ccf5521021e157723942b32aa\
+               18752bc1b111eb940ce506eb2efa6180cc382f53944fccb92102200b6dfbae3f350f4638a53fd9364e33\
+               5f3ff728ce02de304f24ecc3f8d23db2210342746ab39a58fc1e2d564791ea1483368e2142cff6f1cab4\
+               a555730a52ff7dd7210267792e10f894ff3f3a194670a32194eb900c02226d0595382e0ceade61b59922\
+               210237c14223d64785250b0e9313af481b2676ba3f819ec7ff3a025e3506177884a12103b608d6764038\
+               4a0e4db114df2fba75ae132b46befcde698cd1a8a4df2b3e4dca56aeffffffff02000000000000000017\
+               a91417bf6bf1f8ab6cc5750a508dd26a4452e326ed2c8700000000000000002c6a2a0100020000000000\
+               000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000";
     let dat = Vec::<u8>::from_hex(hex).unwrap();
 
     let mut buf = vec![255; 8];
@@ -293,7 +292,7 @@ fn test_anchoring_tx_message_field_rw_without_payload_check() {
 
 #[test]
 #[should_panic(expected = "Result::unwrap()` on an `Err`")]
-fn test_anchoring_tx_message_field_rw_wrong_tx_kind_check() {
+fn test_anchoring_tx_message_field_rw_wrong_check() {
     /// Correct non-anchoring tx, created by command:
     /// `bitcoin-cli sendtoaddress "mynkNvvoysgzn3CX51KwyKyNVbEJEHs8Cw" 0.1`
     let hex = "02000000011b8ac5ff25dfe2b4675e86d77dda493ade980206ee6a7833729f07a2f1f49982000000004\
@@ -565,29 +564,28 @@ fn test_tx_kind_funding() {
 
 #[test]
 fn test_tx_kind_anchoring() {
-    let tx = BitcoinTx::from_hex("0100000001915c76197521fd5372fd7d5522502ebf908552d5fb587cbac6bd8ca\
-                                  ec963ab7500000000fd3d02004830450221008b5fac946a166167062522b89bc5\
-                                  ea3895088bb777c8d6a35c4c413d70bfcdd702206291bb1065b505c00c0ec692c\
-                                  050c37a3643c86b28eab06a9a887d8ef872e0e8014730440220425994e627af7f\
-                                  deb28086581f086ebc5833ca9ddfa376f296eac992f9fdd97102202b4a53376bd\
-                                  5833a0eb21ff6c66937ef8b6c286851d56a85dc55187d2a95876c014830450221\
-                                  008b2d50bd8f7ecfcd80400355f3bdae547c76cfe40f43288810868a2f2088d89\
-                                  3022015523e7b7ecc568a907edeb1aecb4563e4db6b54f79b0414a3fffeb0113d\
-                                  70e20147304402200fb5086437e57f6cd67f2278fefd7dd65e86d90e84c870f5d\
-                                  a3c36fb8e977bbf0220551e02bdcd6ec568246297e0754b071f1ce2f7d9c7c7a1\
-                                  31d5d80e7dcfc4d72b01483045022100887dab427d5347c9b719d6b8108a268d8\
-                                  91d3cc606a2ef6733882bbed9f3c710022062fff5cf5a2bc5f09568778c3fde9d\
-                                  92e4c699dd22da2dc466c68deffcefe803014ccf55210212a10640879ed860676\
-                                  8befa54f407db16305be772976d0e86352a53a3575b4b210323d3989b402319f4\
-                                  21c8496bb176eb1d987f7e9c2a938a88dcd47cf53911804421035e78501b2b9e2\
-                                  ddf66cab19145c61ae64db08c6894479d31803117a11cb9f1fb2102db31433517\
-                                  820372e60b89cd234e2123f3a9d11cc282a0800f420486884d6fc92103ffac383\
-                                  422fd234fad31fd411d5807bf7d4a14b0fbc87656282d04efd4f31f6f21031b63\
-                                  ecb0e674507c72e06afea0e474ae0ba2e6f00059e649efa3fbf0ee8779d556aef\
-                                  fffffff02000000000000000017a914fb4b006c4b17cb7b09fccbb7e7c4bf74fc\
-                                  8238588700000000000000004c6a4a0100020000000000000062467691cf583d4\
-                                  fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e750000000000000000\
-                                  00000000000000000000000000000000000000000000000000000000")
+    let tx = BitcoinTx::from_hex("0100000001bb1175a4e2146904825eecdf851458b2dad48d01571aad803148c2c\
+                                 b30cf2a8600000000fd3c020047304402203346398cb5b2d1cf91938cab6501dc9\
+                                 7e485fc554ffa0c8562310ccf8c229722022075a0a0ef3f72c12f7cb28937ecd1d\
+                                 dedb4443ba6fd1335ac1650728abc8f0e8f014830450221009808a951e94856f73\
+                                 93ebcc2e565551367c2b11395e022252ceb6459196be3490220386ec0f2b9ac906\
+                                 d3ef2470242a1b682d55afcafcf13dadcf76f0b62c227e5b50147304402201e69b\
+                                 648dc3048d397f60bd09ef0ea054cad5584787e72dcf80cd9ec45e96e1d0220164\
+                                 fe843339eca5fb8d1e4558f18aff2b09ddeae0f6a685b47f35f8367d9fce501483\
+                                 04502210084142ab7bb4eb9d8f46ea8c09e2763f4d2263d0f80d46d227ae267775\
+                                 5f8916a022041212be970386e6b7764aa270c1eed22bf171bacedc462232273c31\
+                                 6d919054f0147304402207c0d0b9bf693b8cd7957ce176d5b89f51d229cf18c3e9\
+                                 232f229ae3e638c4dc002201de434bf81fcd7e228f59c8d385084b5b1f611cad3f\
+                                 e83145a5709902f23e07b014ccf5521021e157723942b32aa18752bc1b111eb940\
+                                 ce506eb2efa6180cc382f53944fccb92102200b6dfbae3f350f4638a53fd9364e3\
+                                 35f3ff728ce02de304f24ecc3f8d23db2210342746ab39a58fc1e2d564791ea148\
+                                 3368e2142cff6f1cab4a555730a52ff7dd7210267792e10f894ff3f3a194670a32\
+                                 194eb900c02226d0595382e0ceade61b59922210237c14223d64785250b0e9313a\
+                                 f481b2676ba3f819ec7ff3a025e3506177884a12103b608d67640384a0e4db114d\
+                                 f2fba75ae132b46befcde698cd1a8a4df2b3e4dca56aeffffffff0200000000000\
+                                 000017a91417bf6bf1f8ab6cc5750a508dd26a4452e326ed2c8700000000000000\
+                                 002c6a2a0100020000000000000062467691cf583d4fa78b18fafaf9801f505e0e\
+                                 f03baf0603fd4b0cd004cd1e7500000000")
             .unwrap();
     match TxKind::from(tx) {
         TxKind::Anchoring(_) => {}
