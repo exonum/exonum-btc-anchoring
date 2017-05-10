@@ -376,7 +376,7 @@ fn current_lect_is_transition(actual: &AnchoringConfig,
         match TxKind::from(prev_lect) {
             TxKind::Anchoring(prev_lect) => {
                 let prev_lect_addr = prev_lect.output_address(actual.network);
-                prev_lect_addr != current_lect_addr.0
+                &prev_lect_addr != current_lect_addr
             }
             TxKind::FundingTx(tx) => {
                 let genesis_cfg = schema.anchoring_config_by_height(0)?;
