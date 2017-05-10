@@ -8,6 +8,7 @@ env:
   - ANCHORING_USER=travis
   - ANCHORING_PASSWORD=travis
 before_install:
+- cargo install rustfmt --force
 - rustup override set nightly-2017-01-08
 - rustc --version
 - cargo --version
@@ -17,7 +18,6 @@ before_install:
 install:
 - sudo apt-get -qq --yes install gcc g++ make libsodium-dev libleveldb-dev libssl-dev
 - sudo apt-get -qq --yes install bitcoind
-- cargo install rustfmt --force
 before_script:
 - bitcoind -regtest -server -rpcuser=travis -rpcpassword=travis -daemon
 - sleep 10

@@ -130,8 +130,7 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn add_known_address(&self, addr: &btc::Address) -> Result<(), StorageError> {
-        self.known_addresses()
-            .put(&addr.to_base58check(), vec![])
+        self.known_addresses().put(&addr.to_base58check(), vec![])
     }
 
     pub fn is_address_known(&self, addr: &btc::Address) -> Result<bool, StorageError> {

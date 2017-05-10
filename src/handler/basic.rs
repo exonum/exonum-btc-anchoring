@@ -250,8 +250,7 @@ impl AnchoringHandler {
                                 multisig: &MultisigAddress)
                                 -> Result<Option<FundingTx>, ServiceError> {
         let funding_tx = &multisig.common.funding_tx;
-        if let Some(info) = funding_tx
-               .has_unspent_info(self.client(), &multisig.addr)? {
+        if let Some(info) = funding_tx.has_unspent_info(self.client(), &multisig.addr)? {
             trace!("avaliable_funding_tx={:#?}, confirmations={}",
                    funding_tx,
                    info.confirmations);
@@ -295,9 +294,7 @@ impl AnchoringHandler {
                     if !schema.is_address_known(&lect_addr)? {
                         break;
                     }
-                    if schema
-                           .find_lect_position(id, &tx.prev_hash())?
-                           .is_some() {
+                    if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
                         return Ok(Some(lect.into()));
                     } else {
                         times -= 1;

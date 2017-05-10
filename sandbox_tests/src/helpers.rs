@@ -359,8 +359,8 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
             .filter(|tx| tx.validator() != 0)
             .cloned()
             .collect::<Vec<_>>();
-        let other_lect = anchoring_state.finalize_tx(anchored_tx.clone(),
-                                                     other_signatures.as_ref());
+        let other_lect = anchoring_state
+            .finalize_tx(anchored_tx.clone(), other_signatures.as_ref());
         (other_lect, other_signatures)
     };
 
