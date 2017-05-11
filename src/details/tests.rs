@@ -199,23 +199,10 @@ fn test_anchoring_tx_storage_value() {
 
 #[test]
 fn test_anchoring_tx_message_field_rw_correct() {
-    let hex = "0100000001bb1175a4e2146904825eecdf851458b2dad48d01571aad803148c2cb30cf2a8600000000fd\
-               3c020047304402203346398cb5b2d1cf91938cab6501dc97e485fc554ffa0c8562310ccf8c2297220220\
-               75a0a0ef3f72c12f7cb28937ecd1ddedb4443ba6fd1335ac1650728abc8f0e8f014830450221009808a9\
-               51e94856f7393ebcc2e565551367c2b11395e022252ceb6459196be3490220386ec0f2b9ac906d3ef247\
-               0242a1b682d55afcafcf13dadcf76f0b62c227e5b50147304402201e69b648dc3048d397f60bd09ef0ea\
-               054cad5584787e72dcf80cd9ec45e96e1d0220164fe843339eca5fb8d1e4558f18aff2b09ddeae0f6a68\
-               5b47f35f8367d9fce50148304502210084142ab7bb4eb9d8f46ea8c09e2763f4d2263d0f80d46d227ae2\
-               677755f8916a022041212be970386e6b7764aa270c1eed22bf171bacedc462232273c316d919054f0147\
-               304402207c0d0b9bf693b8cd7957ce176d5b89f51d229cf18c3e9232f229ae3e638c4dc002201de434bf\
-               81fcd7e228f59c8d385084b5b1f611cad3fe83145a5709902f23e07b014ccf5521021e157723942b32aa\
-               18752bc1b111eb940ce506eb2efa6180cc382f53944fccb92102200b6dfbae3f350f4638a53fd9364e33\
-               5f3ff728ce02de304f24ecc3f8d23db2210342746ab39a58fc1e2d564791ea1483368e2142cff6f1cab4\
-               a555730a52ff7dd7210267792e10f894ff3f3a194670a32194eb900c02226d0595382e0ceade61b59922\
-               210237c14223d64785250b0e9313af481b2676ba3f819ec7ff3a025e3506177884a12103b608d6764038\
-               4a0e4db114df2fba75ae132b46befcde698cd1a8a4df2b3e4dca56aeffffffff02000000000000000017\
-               a91417bf6bf1f8ab6cc5750a508dd26a4452e326ed2c8700000000000000002c6a2a0100020000000000\
-               000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e7500000000";
+    let hex = "010000000141d7585a6cb11e78c27fab0e8f8f8ede9285d6601fd4c4ab72cdadbb3b7af8030000000000\
+               ffffffff02000000000000000017a914e084a290cf26998909b4fa5b42088918eeefee97870000000000\
+               000000326a3045584f4e554d0100020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef0\
+               3baf0603fd4b0cd004cd1e7500000000";
     let dat = Vec::<u8>::from_hex(hex).unwrap();
 
     let mut buf = vec![255; 8];
@@ -564,11 +551,11 @@ fn test_tx_kind_funding() {
 
 #[test]
 fn test_tx_kind_anchoring() {
-    let tx = BitcoinTx::from_hex("01000000019f9def88981026377a76fd99f3f68308aa4566564ec12f85b41513f\
-                                  9b19875040000000000ffffffff02e80300000000000017a9149910d33636283a\
-                                  9dd735053e240f6d7670d914578700000000000000002c6a2a010002000000000\
-                                  0000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd\
-                                  1e7500000000")
+    let tx = BitcoinTx::from_hex("010000000141d7585a6cb11e78c27fab0e8f8f8ede9285d6601fd4c4ab72cdadb\
+                                  b3b7af8030000000000ffffffff02000000000000000017a914e084a290cf2699\
+                                  8909b4fa5b42088918eeefee97870000000000000000326a3045584f4e554d010\
+                                  0020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603\
+                                  fd4b0cd004cd1e7500000000")
             .unwrap();
     match TxKind::from(tx) {
         TxKind::Anchoring(_) => {}
@@ -706,6 +693,7 @@ fn test_rpc_anchoring_tx_chain() {
             .payload(block_height, block_hash)
             .send_to(addr.clone())
             .fee(fee)
+            .prev_tx_chain(Some(funding_tx.id()))
             .into_transaction()
             .unwrap();
         debug!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());

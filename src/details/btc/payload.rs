@@ -8,9 +8,10 @@ use exonum::crypto::Hash;
 use details::btc;
 
 const PAYLOAD_VERSION: u8 = 1;
-const PAYLOAD_HEADER_LEN: usize = 2;
-const PAYLOAD_LEN_REGULAR: usize = 42;
-const PAYLOAD_LEN_RECOVER: usize = 74;
+const PAYLOAD_PREFIX: &'static [u8] = b"EXONUM";
+const PAYLOAD_HEADER_LEN: usize = 8;
+const PAYLOAD_LEN_REGULAR: usize = 48;
+const PAYLOAD_LEN_RECOVER: usize = 80;
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 #[repr(u8)]
@@ -57,12 +58,15 @@ impl Payload {
                     if bytes.len() < PAYLOAD_HEADER_LEN {
                         return None;
                     }
+                    if &bytes[0..6] != PAYLOAD_PREFIX {
+                        return None;
+                    }
                     // Parse metadata
-                    let version = bytes[0];
+                    let version = bytes[6];
                     if version != PAYLOAD_VERSION {
                         return None;
                     }
-                    let kind = match bytes[1] {
+                    let kind = match bytes[7] {
                         0 => PayloadKind::Regular,
                         1 => PayloadKind::Recover,
                         _ => return None,
@@ -72,10 +76,10 @@ impl Payload {
                         return None;
                     }
                     // Get payload data
-                    let block_height = LittleEndian::read_u64(&bytes[2..10]);
-                    let block_hash = Hash::from_slice(&bytes[10..42]).unwrap();
+                    let block_height = LittleEndian::read_u64(&bytes[8..16]);
+                    let block_hash = Hash::from_slice(&bytes[16..48]).unwrap();
                     let prev_tx_chain = if kind == PayloadKind::Recover {
-                        let txid = btc::TxId::from_slice(&bytes[42..74]).unwrap();
+                        let txid = btc::TxId::from_slice(&bytes[48..80]).unwrap();
                         Some(txid)
                     } else {
                         None
@@ -99,12 +103,13 @@ impl Payload {
         let kind = self.kind();
         // Serialize data
         let mut buf = vec![0; kind.len()];
-        buf[0] = version;
-        buf[1] = kind as u8;
-        LittleEndian::write_u64(&mut buf[2..10], self.block_height);
-        buf[10..42].copy_from_slice(self.block_hash.as_ref());
+        buf[0..6].copy_from_slice(PAYLOAD_PREFIX);
+        buf[6] = version;
+        buf[7] = kind as u8;
+        LittleEndian::write_u64(&mut buf[8..16], self.block_height);
+        buf[16..48].copy_from_slice(self.block_hash.as_ref());
         if let Some(prev_tx) = self.prev_tx_chain {
-            buf[42..74].copy_from_slice(prev_tx.as_ref());
+            buf[48..80].copy_from_slice(prev_tx.as_ref());
         }
         // Build script
         Builder::new()
@@ -181,14 +186,14 @@ mod tests {
             .into_script();
 
         assert_eq!(payload_script.to_hex(),
-                   "6a2a0100d204000000000000e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991\
-                    b7852b855");
+                   "6a3045584f4e554d0100d204000000000000e3b0c44298fc1c149afbf4c8996fb92427ae41e4649\
+                   b934ca495991b7852b855");
     }
 
     #[test]
     fn test_payload_regular_deserialize() {
-        let payload_script = Script::from_hex("6a2a0100d204000000000000e3b0c44298fc1c149afbf4c8996f\
-                                               b92427ae41e4649b934ca495991b7852b855")
+        let payload_script = Script::from_hex("6a3045584f4e554d0100d204000000000000e3b0c44298fc1c14\
+                                               9afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
                 .unwrap();
 
         let block_hash = hash(&[]);
@@ -210,15 +215,16 @@ mod tests {
             .into_script();
 
         assert_eq!(payload_script.to_hex(),
-                   "6a4a0101d204000000000000e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991\
-                   b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+                   "6a4c5045584f4e554d0101d204000000000000e3b0c44298fc1c149afbf4c8996fb92427ae41e46\
+                   49b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
     }
 
     #[test]
     fn test_payload_recover_deserialize() {
-        let payload_script = Script::from_hex("6a4a0101d204000000000000e3b0c44298fc1c149afbf4c8996f\
-                                               b92427ae41e4649b934ca495991b7852b855e3b0c44298fc1c14\
-                                               9afbf4c8996fb92427ae41e4649b934ca495991b7852b855")
+        let payload_script = Script::from_hex("6a4c5045584f4e554d0101d204000000000000e3b0c44298fc1c\
+                                               149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3\
+                                               b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca49599\
+                                               1b7852b855")
                 .unwrap();
 
         let block_hash = hash(&[]);
