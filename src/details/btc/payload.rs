@@ -1,3 +1,4 @@
+
 use byteorder::{ByteOrder, LittleEndian};
 
 use bitcoin::blockdata::script::{Script, Instruction, Builder};
@@ -28,12 +29,14 @@ pub struct Payload {
     pub prev_tx_chain: Option<btc::TxId>,
 }
 
+#[derive(Default)]
 pub struct PayloadBuilder {
     block_hash: Option<Hash>,
     block_height: Option<u64>,
     prev_tx_chain: Option<btc::TxId>,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(len_without_is_empty))]    
 impl PayloadKind {
     pub fn len(&self) -> usize {
         match *self {

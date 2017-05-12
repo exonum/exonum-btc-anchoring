@@ -23,7 +23,6 @@ router = "0.5.1"
 tempdir = "0.3.0"
 rand = "0.3.0"
 derive-error = "0.0.3"
-clippy = {version = "0.0.107", optional = true}
 
 [dependencies.exonum]
 git = "ssh://git@github.com/exonum/exonum-core.git"
