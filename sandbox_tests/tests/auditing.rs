@@ -96,7 +96,7 @@ pub fn exclude_node_from_validators(sandbox: &Sandbox,
     let (_, signatures) =
         anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
                                                          0,
-                                                         anchored_tx.payload().1,
+                                                         anchored_tx.payload().block_hash,
                                                          &[],
                                                          None,
                                                          &following_multisig.1);

@@ -216,7 +216,8 @@ mod tests {
 
         assert_eq!(payload_script.to_hex(),
                    "6a4c5045584f4e554d0101d204000000000000e3b0c44298fc1c149afbf4c8996fb92427ae41e46\
-                   49b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855");
+                   49b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7\
+                   852b855");
     }
 
     #[test]
