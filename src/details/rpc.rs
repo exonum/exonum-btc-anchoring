@@ -49,9 +49,13 @@ impl AnchoringRpc {
         }
     }
 
-    pub fn get_transaction(&self, txid: &str) -> Result<BitcoinTx> {
-        let tx = self.0.getrawtransaction(txid)?;
-        Ok(BitcoinTx::from_hex(tx).unwrap())
+    pub fn get_transaction(&self, txid: &str) -> Result<Option<BitcoinTx>> {
+        let r = self.0.getrawtransaction(txid);
+        match r {
+            Ok(tx) => Ok(Some(BitcoinTx::from_hex(tx).unwrap())),
+            Err(bitcoinrpc::Error::NoInformation(_)) => Ok(None),
+            Err(e) => Err(e),
+        }
     }
 
     pub fn get_transaction_info(&self,
@@ -75,7 +79,7 @@ impl AnchoringRpc {
         let addr = address.to_base58check();
         let funds_str = (funds as f64 / SATOSHI_DIVISOR).to_string();
         let utxo_txid = self.0.sendtoaddress(&addr, &funds_str)?;
-        Ok(self.get_transaction(&utxo_txid)?)
+        Ok(self.get_transaction(&utxo_txid)?.unwrap())
     }
 
     pub fn create_multisig_address<'a, I>(&self,
@@ -119,11 +123,12 @@ impl AnchoringRpc {
         let unspent_txs = self.get_unspent_transactions(0, 9999999, &addr.to_base58check())?;
         let mut txs = Vec::new();
         for info in unspent_txs {
-            let raw_tx = self.get_transaction(&info.txid)?;
-            match TxKind::from(raw_tx) {
-                TxKind::Anchoring(tx) => txs.push(tx.into()),
-                TxKind::FundingTx(tx) => txs.push(tx.into()),
-                TxKind::Other(_) => {}
+            if let Some(raw_tx) = self.get_transaction(&info.txid)? {
+                match TxKind::from(raw_tx) {
+                    TxKind::Anchoring(tx) => txs.push(tx.into()),
+                    TxKind::FundingTx(tx) => txs.push(tx.into()),
+                    TxKind::Other(_) => {}
+                }
             }
         }
         Ok(txs)

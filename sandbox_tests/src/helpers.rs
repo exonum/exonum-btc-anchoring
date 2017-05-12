@@ -10,7 +10,8 @@ use exonum::blockchain::Schema;
 use exonum::storage::{List, StorageValue};
 
 use sandbox::sandbox::Sandbox;
-use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
+use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions,
+                                    add_one_height_with_transactions_from_other_validator};
 use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
@@ -56,6 +57,10 @@ pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
     s.lects(id).values().unwrap()
 }
 
+pub fn lects_count(sandbox: &Sandbox, id: u32) -> u64 {
+    dump_lects(sandbox, id).len() as u64
+}
+
 pub fn dump_signatures(sandbox: &Sandbox, txid: &btc::TxId) -> Vec<MsgAnchoringSignature> {
     let b = sandbox.blockchain_ref().clone();
     let v = b.view();
@@ -74,6 +79,45 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
          .unwrap() = service_cfg.to_json();
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
     tx.raw().clone()
+}
+
+pub fn gen_confirmations_request<T: Into<BitcoinTx>>(tx: T, confirmations: u64) -> Request {
+    let tx = tx.into();
+    request! {
+            method: "getrawtransaction",
+            params: [&tx.txid(), 1],
+            response: {
+                "hash":&tx.txid(),
+                "hex":&tx.to_hex(),
+                "confirmations": confirmations,
+                "locktime":1088682,
+                "size":223,
+                "txid":&tx.to_hex(),
+                "version":1,
+                "vin":[{"scriptSig":{"asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bac\
+                    c2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d\
+                    07b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f8\
+                    76","hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd\
+                    28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012\
+                    102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"},
+                    "sequence":429496729,
+                    "txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645",
+                    "vout":0}],
+                "vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],
+                    "asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL",
+                    "hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87",
+                    "reqSigs":1,
+                    "type":"scripthash"},
+                    "value":0.00004},
+                    {"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],
+                    "asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERI\
+                        FY OP_CHECKSIG",
+                    "hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
+                    "reqSigs":1,"type":"pubkeyhash"},
+                    "value":1.00768693}],
+                "vsize":223
+            }
+        }
 }
 
 pub fn block_hash_on_height(sandbox: &Sandbox, height: u64) -> Hash {
@@ -171,10 +215,7 @@ pub fn anchor_first_block(sandbox: &Sandbox,
                            params: [anchored_tx.to_hex()]
                        }]);
 
-    let signatures = signatures
-        .into_iter()
-        .map(|tx| tx.raw().clone())
-        .collect::<Vec<_>>();
+    let signatures = signatures.into_iter().map(|tx| tx).collect::<Vec<_>>();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
 
     let txs = (0..4)
@@ -189,8 +230,9 @@ pub fn anchor_first_block_lect_normal(sandbox: &Sandbox,
                                       sandbox_state: &SandboxState,
                                       anchoring_state: &mut AnchoringSandboxState) {
     // Just add few heights
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_check_lect_height(&sandbox));
 
     let anchored_tx = anchoring_state.latest_anchored_tx();
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
@@ -226,8 +268,9 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
                                     anchoring_state: &mut AnchoringSandboxState) {
     anchor_first_block(sandbox, client, sandbox_state, anchoring_state);
     // Just add few heights
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_check_lect_height(&sandbox));
 
     let other_lect = anchoring_state.common.funding_tx.clone();
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
@@ -304,8 +347,9 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
                                          anchoring_state: &mut AnchoringSandboxState) {
     anchor_first_block(sandbox, client, sandbox_state, anchoring_state);
     // Just add few heights
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_check_lect_height(&sandbox));
 
     let (other_lect, other_signatures) = {
         let anchored_tx = anchoring_state.latest_anchored_tx();
@@ -315,8 +359,8 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
             .filter(|tx| tx.validator() != 0)
             .cloned()
             .collect::<Vec<_>>();
-        let other_lect = anchoring_state.finalize_tx(anchored_tx.clone(),
-                                                     other_signatures.as_ref());
+        let other_lect = anchoring_state
+            .finalize_tx(anchored_tx.clone(), other_signatures.as_ref());
         (other_lect, other_signatures)
     };
 
@@ -358,9 +402,9 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
                                   client: &SandboxClient,
                                   sandbox_state: &SandboxState,
                                   anchoring_state: &mut AnchoringSandboxState) {
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_anchoring_height(&sandbox));
 
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
     client.expect(vec![request! {
@@ -453,4 +497,18 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
             response: &anchored_tx.to_hex()
         }]);
     add_one_height_with_transactions(sandbox, sandbox_state, &txs);
+}
+
+pub fn fast_forward_to_height(sandox: &Sandbox, state: &SandboxState, height: u64) {
+    for _ in sandox.current_height()..height {
+        add_one_height_with_transactions(sandox, state, &[]);
+    }
+}
+
+pub fn fast_forward_to_height_from_other_validator(sandox: &Sandbox,
+                                                   state: &SandboxState,
+                                                   height: u64) {
+    for _ in sandox.current_height()..height {
+        add_one_height_with_transactions_from_other_validator(sandox, state, &[]);
+    }
 }

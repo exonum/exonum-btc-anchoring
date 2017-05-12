@@ -39,14 +39,14 @@ impl<'a> AnchoringSchema<'a> {
     pub fn lects(&self,
                  validator: u32)
                  -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, BitcoinTx> {
-        let mut prefix = vec![ANCHORING_SERVICE_ID as u8, 3, 0, 0, 0, 0, 0, 0, 0, 0];
-        BigEndian::write_u32(&mut prefix[2..], validator);
+        let mut prefix = vec![ANCHORING_SERVICE_ID as u8, 3, 0, 0, 0, 0];
+        BigEndian::write_u32(&mut prefix[2..6], validator);
         MerkleTable::new(MapTable::new(prefix, self.view))
     }
 
     pub fn lect_indexes(&self, validator: u32) -> MapTable<View, btc::TxId, u64> {
-        let mut prefix = vec![ANCHORING_SERVICE_ID as u8, 4, 0, 0, 0, 0, 0, 0, 0, 0];
-        BigEndian::write_u32(&mut prefix[2..], validator);
+        let mut prefix = vec![ANCHORING_SERVICE_ID as u8, 4, 0, 0, 0, 0];
+        BigEndian::write_u32(&mut prefix[2..6], validator);
         MapTable::new(prefix, self.view)
     }
 
@@ -63,13 +63,13 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
-        let actual = Schema::new(self.view).get_actual_configuration()?;
+        let actual = Schema::new(self.view).actual_configuration()?;
         Ok(self.parse_config(&actual))
     }
 
     pub fn following_anchoring_config(&self) -> Result<Option<FollowingConfig>, StorageError> {
         let schema = Schema::new(self.view);
-        if let Some(stored) = schema.get_following_configuration()? {
+        if let Some(stored) = schema.following_configuration()? {
             let following_cfg = FollowingConfig {
                 actual_from: stored.actual_from,
                 config: self.parse_config(&stored),
@@ -78,6 +78,12 @@ impl<'a> AnchoringSchema<'a> {
         } else {
             Ok(None)
         }
+    }
+
+    pub fn anchoring_config_by_height(&self, height: u64) -> Result<AnchoringConfig, StorageError> {
+        let schema = Schema::new(self.view);
+        let stored = schema.configuration_by_height(height)?;
+        Ok(self.parse_config(&stored))
     }
 
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
@@ -124,8 +130,7 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn add_known_address(&self, addr: &btc::Address) -> Result<(), StorageError> {
-        self.known_addresses()
-            .put(&addr.to_base58check(), vec![])
+        self.known_addresses().put(&addr.to_base58check(), vec![])
     }
 
     pub fn is_address_known(&self, addr: &btc::Address) -> Result<bool, StorageError> {

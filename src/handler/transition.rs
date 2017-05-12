@@ -36,15 +36,15 @@ impl AnchoringHandler {
             self.try_finalize_proposal_tx(proposal, &multisig, state)?;
         } else {
             // Or try to create proposal
-            match self.collect_lects(state)? {
+            match self.collect_lects_for_validator(self.validator_id(state), state)? {
                 LectKind::Anchoring(lect) => {
                     if lect.output_address(multisig.common.network) == multisig.addr {
                         return Ok(());
                     }
                     // check that we have enougth confirmations
-                    let confirmations = lect.confirmations(&self.client)?.unwrap_or_else(|| 0);
+                    let confirmations = lect.confirmations(self.client())?.unwrap_or_else(|| 0);
                     if confirmations >= multisig.common.utxo_confirmations {
-                        let height = multisig.common.nearest_anchoring_height(state.height());
+                        let height = multisig.common.latest_anchoring_height(state.height());
                         self.create_proposal_tx(lect, &multisig, height, state)?;
                     } else {
                         warn!("Insufficient confirmations for create transition transaction, \
@@ -82,7 +82,7 @@ impl AnchoringHandler {
                 let network = multisig.common.network;
                 if prev_lect.output_address(network) == multisig.addr {
                     trace!("Resend transition transaction, txid={}", prev_lect.txid());
-                    self.client.send_transaction(prev_lect.into())?;
+                    self.client().send_transaction(prev_lect.into())?;
                 } else {
                     // Start a new anchoring chain from scratch
                     let lect_id = AnchoringSchema::new(state.view())

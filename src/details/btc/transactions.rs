@@ -37,13 +37,13 @@ const ANCHORING_TX_PREV_CHAIN_OUTPUT: u32 = 2;
 /// - Zero output is next anchoring tx
 /// - First output is anchored metadata
 /// - Second output is optional and contains previous tx chain's tail
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct AnchoringTx(pub RawBitcoinTx);
 /// Funding transaction always has an output to `p2sh` address
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq, Hash)]
 pub struct FundingTx(pub RawBitcoinTx);
 /// Other unspecified Bitcoin transaction
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct BitcoinTx(pub RawBitcoinTx);
 
 #[derive(Debug, Clone, PartialEq)]

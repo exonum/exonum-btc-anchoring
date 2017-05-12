@@ -8,6 +8,7 @@ target
 */target
 *.rs.bk
 Cargo.lock
+sandbox_tests/Cargo.lock
 
 # IDE files
 .idea
