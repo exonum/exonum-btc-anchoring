@@ -36,7 +36,7 @@ pub struct PayloadBuilder {
     prev_tx_chain: Option<btc::TxId>,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(len_without_is_empty))]    
+#[cfg_attr(feature = "cargo-clippy", allow(len_without_is_empty))]
 impl PayloadKind {
     pub fn len(&self) -> usize {
         match *self {
