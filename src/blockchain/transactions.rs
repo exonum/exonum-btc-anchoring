@@ -103,6 +103,11 @@ impl MsgAnchoringUpdateLatest {
                     warn!("Received lect with incorrect payload, content={:#?}", self);
                     return Ok(());
                 }
+                if !verify_anchoring_tx_prev_hash(&tx, &anchoring_cfg, &anchoring_schema)? {
+                    warn!("Received lect with prev_lect without 2/3+ confirmations, content={:#?}",
+                          self);
+                    return Ok(());
+                }
             }
             TxKind::FundingTx(tx) => {
                 if !verify_funding_tx(&tx, &anchoring_cfg)? {
@@ -143,6 +148,34 @@ impl Transaction for AnchoringMessage {
             AnchoringMessage::UpdateLatest(ref msg) => msg.execute(view),
         }
     }
+}
+
+fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
+                                 anchoring_cfg: &AnchoringConfig,
+                                 anchoring_schema: &AnchoringSchema)
+                                 -> Result<bool, StorageError> {
+    let count = anchoring_cfg.validators.len() as u32;
+    let prev_txid = tx.prev_hash();
+    let prev_lects_count = {
+        let mut prev_lects_count = 0;
+        for id in 0..count {
+            if let Some(prev_lect_idx) = anchoring_schema.find_lect_position(id, &prev_txid)? {
+                let prev_lect = anchoring_schema
+                    .lects(id)
+                    .get(prev_lect_idx)?
+                    .expect(&format!("Lect with index {} is absent in lects table for validator {}",
+                                    prev_lect_idx,
+                                    id));
+                assert_eq!(prev_txid,
+                           prev_lect.id(),
+                           "Inconsistent reference to previous lect in Exonum");
+
+                prev_lects_count += 1;
+            }
+        }
+        prev_lects_count
+    };
+    Ok(prev_lects_count >= ::majority_count(count as u8))
 }
 
 fn verify_anchoring_tx_payload(tx: &AnchoringTx, schema: &Schema) -> Result<bool, StorageError> {

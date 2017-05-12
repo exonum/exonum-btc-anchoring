@@ -115,10 +115,7 @@ fn main() {
             let dir = GenerateCommand::output_dir(matches);
             let start_port = GenerateCommand::start_port(matches).unwrap_or(2000);
 
-            let host = matches
-                .value_of("ANCHORING_RPC_HOST")
-                .unwrap()
-                .to_string();
+            let host = matches.value_of("ANCHORING_RPC_HOST").unwrap().to_string();
             let user = matches
                 .value_of("ANCHORING_RPC_USER")
                 .map(|x| x.to_string());
@@ -163,11 +160,9 @@ fn main() {
             let cfg: ServicesConfig = ConfigFile::load(&path).unwrap();
 
             let anchoring_cfg = cfg.anchoring_service;
-            let client = AnchoringRpc::new(anchoring_cfg.node.rpc.clone());
-            let services: Vec<Box<Service>> = vec![Box::new(AnchoringService::new(client,
-                                                    anchoring_cfg.common,
-                                                    anchoring_cfg.node)),
-                     Box::new(ConfigurationService::new())];
+            let anchoring = AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node);
+            let services: Vec<Box<Service>> = vec![Box::new(anchoring),
+                                                   Box::new(ConfigurationService::new())];
             let blockchain = Blockchain::new(db, services);
             run_node(blockchain, cfg.node, port)
         }

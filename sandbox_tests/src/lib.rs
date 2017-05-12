@@ -39,6 +39,7 @@ use anchoring_btc_service::details::btc;
 use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
 use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
 use anchoring_btc_service::handler::{AnchoringHandler, collect_signatures};
+use anchoring_btc_service::error::HandlerError;
 
 #[macro_use]
 mod macros;
@@ -62,6 +63,12 @@ pub struct AnchoringSandboxState {
 impl AnchoringSandboxState {
     pub fn handler(&self) -> MutexGuard<AnchoringHandler> {
         self.handler.lock().unwrap()
+    }
+
+    pub fn take_errors(&self) -> Vec<HandlerError> {
+        let mut handler = self.handler();
+        let v = handler.errors.drain(..).collect::<Vec<_>>();
+        v
     }
 
     pub fn latest_anchored_tx(&self) -> &AnchoringTx {
@@ -147,6 +154,26 @@ impl AnchoringSandboxState {
     pub fn current_priv_keys(&self) -> Vec<btc::PrivateKey> {
         self.priv_keys(&self.common.redeem_script().1)
     }
+
+    pub fn current_addr(&self) -> btc::Address {
+        self.common.redeem_script().1
+    }
+
+    pub fn current_redeem_script(&self) -> btc::RedeemScript {
+        self.common.redeem_script().0
+    }
+
+    pub fn next_check_lect_height(&self, sandbox: &Sandbox) -> u64 {
+        let height = sandbox.current_height();
+        let frequency = self.nodes[0].check_lect_frequency as u64;
+        height - height % frequency + frequency
+    }
+
+    pub fn next_anchoring_height(&self, sandbox: &Sandbox) -> u64 {
+        let height = sandbox.current_height();
+        let frequency = self.common.frequency as u64;
+        height - height % frequency + frequency
+    }
 }
 
 /// Generates config for 4 validators and 10000 funds
@@ -186,7 +213,9 @@ pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
                                           &mut rng)
 }
 
-pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, AnchoringSandboxState)
+/// Initialize sandbox for anchoring node
+pub fn initialize_anchoring_sandbox<'a, I>(priv_keys: I)
+                                           -> (Sandbox, AnchoringRpc, AnchoringSandboxState)
     where I: IntoIterator<Item = &'a (&'a str, Vec<&'a str>)>
 {
     let mut client = AnchoringRpc(SandboxClient::default());
@@ -212,9 +241,9 @@ pub fn anchoring_sandbox<'a, I>(priv_keys: I) -> (Sandbox, AnchoringRpc, Anchori
             method: "importaddress",
             params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
         }]);
-    let service = AnchoringService::new(AnchoringRpc(client.clone()),
-                                        common.clone(),
-                                        nodes[ANCHORING_VALIDATOR as usize].clone());
+    let service = AnchoringService::new_with_client(AnchoringRpc(client.clone()),
+                                                    common.clone(),
+                                                    nodes[ANCHORING_VALIDATOR as usize].clone());
     let service_handler = service.handler();
     let sandbox = sandbox_with_services(vec![Box::new(service),
                                              Box::new(TimestampingService::new()),

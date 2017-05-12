@@ -401,9 +401,7 @@ fn test_redeem_script_pubkey() {
         f08e756ae")
             .unwrap();
 
-    assert_eq!(redeem_script
-                   .script_pubkey(btc::Network::Testnet)
-                   .to_hex(),
+    assert_eq!(redeem_script.script_pubkey(btc::Network::Testnet).to_hex(),
                "a914544fa2db1f36b091bbee603c0bc7675fe34655ff87");
 }
 
@@ -453,7 +451,7 @@ fn test_anchoring_tx_sign() {
     let tx = TransactionBuilder::with_prev_tx(&prev_tx, 0)
         .add_funds(&funding_tx, 0)
         .payload(10,
-                 Hash::from_hex("164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9")
+                 Hash::from_hex("164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9",)
                      .unwrap())
         .fee(1000)
         .send_to(btc::Address::from_script(&redeem_script, Network::Testnet))

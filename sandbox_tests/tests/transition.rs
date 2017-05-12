@@ -24,7 +24,7 @@ use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::details::btc::transactions::{FundingTx, TransactionBuilder};
 use anchoring_btc_service::AnchoringConfig;
 
-use anchoring_btc_sandbox::{AnchoringSandboxState, anchoring_sandbox};
+use anchoring_btc_sandbox::{AnchoringSandboxState, initialize_anchoring_sandbox};
 use anchoring_btc_sandbox::helpers::*;
 
 fn gen_following_cfg(sandbox: &Sandbox,
@@ -88,7 +88,7 @@ fn test_anchoring_transit_config_normal() {
     let cfg_change_height = 16;
 
     init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -228,7 +228,7 @@ fn test_anchoring_transit_config_unchanged_self_key() {
     let cfg_change_height = 16;
 
     init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -371,7 +371,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
     let cfg_change_height = 16;
 
     init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -545,7 +545,7 @@ fn test_anchoring_transit_config_lost_lect_recover_before_cfg_change() {
     let cfg_change_height = 16;
 
     init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -621,7 +621,7 @@ fn test_anchoring_transit_config_lost_lect_recover_after_cfg_change() {
     let cfg_change_height = 16;
 
     init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -735,7 +735,7 @@ fn test_anchoring_transit_config_lost_lect_new_tx_chain() {
     let cfg_change_height = 11;
 
     init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -860,7 +860,7 @@ fn test_anchoring_transit_config_lost_lect_new_tx_chain() {
 #[test]
 fn test_anchoring_transit_msg_signature_incorrect_output_address() {
     init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
@@ -917,7 +917,7 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
         .map(|tx| tx.raw().clone())
         .collect::<Vec<_>>();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &different_signatures);
-    // Ensure that service ignore tx
+    // Ensure that service ignores tx
     let signs_after = dump_signatures(&sandbox, &txid);
     assert_eq!(signs_before, signs_after);
 
@@ -933,7 +933,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
     let cfg_change_height = 16;
 
     init_logger();
-    let (sandbox, client, mut anchoring_state) = anchoring_sandbox(&[]);
+    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
     let sandbox_state = SandboxState::new();
 
     let funding_tx = anchoring_state.common.funding_tx.clone();

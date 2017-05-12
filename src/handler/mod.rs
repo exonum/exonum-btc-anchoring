@@ -1,6 +1,8 @@
 mod anchoring;
+mod auditing;
 mod transition;
 mod basic;
+pub mod error;
 
 use std::collections::HashMap;
 
@@ -14,11 +16,14 @@ use blockchain::dto::MsgAnchoringSignature;
 /// An internal anchoring service handler. Can be used to manage the service.
 pub struct AnchoringHandler {
     #[doc(hidden)]
-    pub client: AnchoringRpc,
+    pub client: Option<AnchoringRpc>,
     #[doc(hidden)]
     pub node: AnchoringNodeConfig,
     #[doc(hidden)]
     pub proposal_tx: Option<AnchoringTx>,
+    #[cfg(feature="sandbox_tests")]
+    #[doc(hidden)]
+    pub errors: Vec<error::Error>,
 }
 
 #[doc(hidden)]
@@ -43,6 +48,7 @@ pub enum AnchoringState {
         lect: BitcoinTx,
         confirmations: Option<u64>,
     },
+    Auditing { cfg: AnchoringConfig },
     Broken,
 }
 

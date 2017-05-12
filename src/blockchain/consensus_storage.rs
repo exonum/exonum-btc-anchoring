@@ -55,8 +55,8 @@ impl AnchoringConfig {
     }
 
     #[doc(hidden)]
-    /// Returns the nearest height below the given `height` which needs to be anchored
-    pub fn nearest_anchoring_height(&self, height: u64) -> u64 {
+    /// Returns the latest height below the given `height` which needs to be anchored
+    pub fn latest_anchoring_height(&self, height: u64) -> u64 {
         height - height % self.frequency as u64
     }
 

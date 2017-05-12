@@ -18,6 +18,7 @@ use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 use blockchain::dto::AnchoringMessage;
 use error::Error as ServiceError;
+use handler::error::Error as HandlerError;
 
 pub use blockchain::ANCHORING_SERVICE_ID;
 
@@ -28,13 +29,23 @@ pub struct AnchoringService {
 }
 
 impl AnchoringService {
-    pub fn new(client: AnchoringRpc,
-               genesis: AnchoringConfig,
-               cfg: AnchoringNodeConfig)
-               -> AnchoringService {
+    /// Creates a new service instance with the given `consensus` and `local` configurations.
+    pub fn new(consensus_cfg: AnchoringConfig, local_cfg: AnchoringNodeConfig) -> AnchoringService {
+        let client = local_cfg.rpc.clone().map(AnchoringRpc::new);
+        AnchoringService {
+            genesis: consensus_cfg,
+            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local_cfg))),
+        }
+    }
+
+    #[doc(hidden)]
+    pub fn new_with_client(client: AnchoringRpc,
+                           genesis: AnchoringConfig,
+                           local_cfg: AnchoringNodeConfig)
+                           -> AnchoringService {
         AnchoringService {
             genesis: genesis,
-            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, cfg))),
+            handler: Arc::new(Mutex::new(AnchoringHandler::new(Some(client), local_cfg))),
         }
     }
 
@@ -61,20 +72,35 @@ impl Service for AnchoringService {
         let handler = self.handler.lock().unwrap();
         let cfg = self.genesis.clone();
         let (_, addr) = cfg.redeem_script();
-        handler
-            .client
-            .importaddress(&addr.to_base58check(), "multisig", false, false)
-            .unwrap();
-
+        if let Some(ref client) = handler.client {
+            client
+                .importaddress(&addr.to_base58check(), "multisig", false, false)
+                .unwrap();
+        }
         AnchoringSchema::new(view).create_genesis_config(&cfg)?;
         Ok(cfg.to_json())
     }
 
     fn handle_commit(&self, state: &mut NodeState) -> Result<(), StorageError> {
-        match self.handler.lock().unwrap().handle_commit(state) {
+        let mut handler = self.handler.lock().unwrap();
+        match handler.handle_commit(state) {
             Err(ServiceError::Storage(e)) => Err(e),
+            #[cfg(feature="sandbox_tests")]
+            Err(ServiceError::Handler(e)) => {
+                error!("An error occured: {}", e);
+                handler.errors.push(e);
+                Ok(())
+            }
+            #[cfg(not(feature="sandbox_tests"))]
+            Err(ServiceError::Handler(e)) => {
+                if let HandlerError::IncorrectLect { .. } = e {
+                    panic!("A critical error occured: {}", e);
+                }
+                error!("An error occured: {}", e);
+                Ok(())
+            }
             Err(e) => {
-                error!("An error occured: {:?}", e);
+                error!("An error occured: {}", e);
                 Ok(())
             }
             Ok(()) => Ok(()),
@@ -110,7 +136,7 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
         let (pub_key, priv_key) = btc::gen_btc_keypair_with_rng(network, rng);
 
         pub_keys.push(pub_key.clone());
-        node_cfgs.push(AnchoringNodeConfig::new(rpc.clone()));
+        node_cfgs.push(AnchoringNodeConfig::new(Some(rpc.clone())));
         priv_keys.push(priv_key.clone());
     }
 

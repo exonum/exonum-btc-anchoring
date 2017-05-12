@@ -11,7 +11,8 @@ use exonum::storage::{List, StorageValue};
 use blockchain_explorer::helpers;
 
 use sandbox::sandbox::Sandbox;
-use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions};
+use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions,
+                                    add_one_height_with_transactions_from_other_validator};
 use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
@@ -55,6 +56,10 @@ pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
     let v = b.view();
     let s = AnchoringSchema::new(&v);
     s.lects(id).values().unwrap()
+}
+
+pub fn lects_count(sandbox: &Sandbox, id: u32) -> u64 {
+    dump_lects(sandbox, id).len() as u64
 }
 
 pub fn dump_signatures(sandbox: &Sandbox, txid: &btc::TxId) -> Vec<MsgAnchoringSignature> {
@@ -215,10 +220,7 @@ pub fn anchor_first_block(sandbox: &Sandbox,
                            params: [anchored_tx.to_hex()]
                        }]);
 
-    let signatures = signatures
-        .into_iter()
-        .map(|tx| tx.raw().clone())
-        .collect::<Vec<_>>();
+    let signatures = signatures.into_iter().map(|tx| tx).collect::<Vec<_>>();
     add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
 
     let txs = (0..4)
@@ -233,8 +235,9 @@ pub fn anchor_first_block_lect_normal(sandbox: &Sandbox,
                                       sandbox_state: &SandboxState,
                                       anchoring_state: &mut AnchoringSandboxState) {
     // Just add few heights
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_check_lect_height(&sandbox));
 
     let anchored_tx = anchoring_state.latest_anchored_tx();
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
@@ -270,9 +273,9 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
                                     anchoring_state: &mut AnchoringSandboxState) {
     anchor_first_block(sandbox, client, sandbox_state, anchoring_state);
     // Just add few heights
-    for _ in 0..2 {
-        add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    }
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_check_lect_height(&sandbox));
 
     let other_lect = anchoring_state.common.funding_tx.clone();
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
@@ -329,14 +332,14 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
     {
         let anchored_tx = anchoring_state.latest_anchored_tx();
 
-        client.expect(vec![gen_confirmations_request(anchoring_state.common.funding_tx.clone(),
-                                                     50),
-                           request! {
+        client
+            .expect(vec![gen_confirmations_request(anchoring_state.common.funding_tx.clone(), 50),
+                         request! {
                                method: "getrawtransaction",
                                params: [&anchored_tx.txid(), 1],
                                error: RpcError::NoInformation("Unable to find tx".to_string())
                            },
-                           request! {
+                         request! {
                                 method: "sendrawtransaction",
                                 params: [anchored_tx.to_hex()]
                             }]);
@@ -352,8 +355,9 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
                                          anchoring_state: &mut AnchoringSandboxState) {
     anchor_first_block(sandbox, client, sandbox_state, anchoring_state);
     // Just add few heights
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_check_lect_height(&sandbox));
 
     let (other_lect, other_signatures) = {
         let anchored_tx = anchoring_state.latest_anchored_tx();
@@ -363,8 +367,8 @@ pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
             .filter(|tx| tx.validator() != 0)
             .cloned()
             .collect::<Vec<_>>();
-        let other_lect = anchoring_state.finalize_tx(anchored_tx.clone(),
-                                                     other_signatures.as_ref());
+        let other_lect = anchoring_state
+            .finalize_tx(anchored_tx.clone(), other_signatures.as_ref());
         (other_lect, other_signatures)
     };
 
@@ -406,9 +410,9 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
                                   client: &SandboxClient,
                                   sandbox_state: &SandboxState,
                                   anchoring_state: &mut AnchoringSandboxState) {
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+    fast_forward_to_height(&sandbox,
+                           &sandbox_state,
+                           anchoring_state.next_anchoring_height(&sandbox));
 
     let (_, anchoring_addr) = anchoring_state.common.redeem_script();
     client.expect(vec![request! {
@@ -470,6 +474,20 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
             response: &anchored_tx.to_hex()
         }]);
     add_one_height_with_transactions(sandbox, sandbox_state, &txs);
+}
+
+pub fn fast_forward_to_height(sandox: &Sandbox, state: &SandboxState, height: u64) {
+    for _ in sandox.current_height()..height {
+        add_one_height_with_transactions(sandox, state, &[]);
+    }
+}
+
+pub fn fast_forward_to_height_from_other_validator(sandox: &Sandbox,
+                                                   state: &SandboxState,
+                                                   height: u64) {
+    for _ in sandox.current_height()..height {
+        add_one_height_with_transactions_from_other_validator(sandox, state, &[]);
+    }
 }
 
 pub fn init_logger() {

@@ -75,8 +75,7 @@
 //!         let mut node_threads = Vec::new();
 //!         for idx in 0..count as usize {
 //!             // Create anchoring service for node[idx]
-//!             let service = AnchoringService::new(AnchoringRpc::new(rpc_config.clone()),
-//!                                                 anchoring_common.clone(),
+//!             let service = AnchoringService::new(anchoring_common.clone(),
 //!                                                 anchoring_nodes[idx].clone());
 //!             // Create database for node[idx]
 //!             let db = {
