@@ -64,6 +64,26 @@ impl PayloadV1 {
         }
     }
 
+    fn write(&self, buf: &mut [u8]) {
+        let kind = self.kind();        
+        buf[0] = kind as u8;
+
+        let mut buf = &mut buf[1..];
+        debug_assert_eq!(buf.len(), self.len());
+        // Serialize data
+        match *self {
+            PayloadV1::Regular(height, hash) => {
+                LittleEndian::write_u64(&mut buf[0..8], height);
+                buf[8..40].copy_from_slice(hash.as_ref());
+            }
+            PayloadV1::Recover(height, hash, txid) => {
+                LittleEndian::write_u64(&mut buf[0..8], height);
+                buf[8..40].copy_from_slice(hash.as_ref());
+                buf[40..72].copy_from_slice(txid.as_ref());
+            }
+        };
+    }
+
     fn len(&self) -> usize {
         match *self {
             PayloadV1::Regular(..) => 40,
@@ -79,25 +99,12 @@ impl PayloadV1 {
     }
 
     fn into_script(self) -> Script {
-        let kind = self.kind();
         let len = self.len() + PAYLOAD_HEADER_LEN;
         let mut buf = vec![0; len];
         // Serialize header
         buf[0..6].copy_from_slice(PAYLOAD_PREFIX);
         buf[6] = PAYLOAD_V1;
-        buf[7] = kind as u8;
-        // Serialize data
-        match self {
-            PayloadV1::Regular(height, hash) => {
-                LittleEndian::write_u64(&mut buf[8..16], height);
-                buf[16..48].copy_from_slice(hash.as_ref());
-            }
-            PayloadV1::Recover(height, hash, txid) => {
-                LittleEndian::write_u64(&mut buf[8..16], height);
-                buf[16..48].copy_from_slice(hash.as_ref());
-                buf[48..80].copy_from_slice(txid.as_ref());
-            }
-        };
+        self.write(&mut buf[7..]);
         // Build script
         Builder::new()
             .push_opcode(All::OP_RETURN)
@@ -163,10 +170,7 @@ impl Payload {
                     // Parse metadata
                     let version = bytes[6];
                     match version {
-                        PAYLOAD_V1 => {
-                            let payload_v1 = PayloadV1::read(&bytes[7..]);
-                            payload_v1.map(Payload::from)
-                        }
+                        PAYLOAD_V1 => PayloadV1::read(&bytes[7..]).map(Payload::from),
                         _ => None,
                     }
                 } else {
