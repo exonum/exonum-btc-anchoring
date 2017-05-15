@@ -65,7 +65,7 @@ impl PayloadV1 {
     }
 
     fn write(&self, buf: &mut [u8]) {
-        let kind = self.kind();        
+        let kind = self.kind();
         buf[0] = kind as u8;
 
         let mut buf = &mut buf[1..];
