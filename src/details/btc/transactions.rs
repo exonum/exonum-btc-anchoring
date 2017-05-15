@@ -320,7 +320,7 @@ impl TransactionBuilder {
         }
         let total_funds = available_funds - fee;
 
-        let tx = create_anchoring_transaction(addr,
+        let tx = create_anchoring_transaction(&addr,
                                               height,
                                               block_hash,
                                               self.inputs.iter(),
@@ -330,7 +330,7 @@ impl TransactionBuilder {
     }
 }
 
-fn create_anchoring_transaction<'a, I>(addr: btc::Address,
+fn create_anchoring_transaction<'a, I>(addr: &btc::Address,
                                        block_height: Height,
                                        block_hash: Hash,
                                        inputs: I,

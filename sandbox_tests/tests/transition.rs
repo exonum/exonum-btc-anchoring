@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate exonum;
 extern crate sandbox;
 extern crate anchoring_btc_service;
@@ -9,9 +8,6 @@ extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;
 extern crate secp256k1;
-extern crate blockchain_explorer;
-#[macro_use]
-extern crate log;
 
 use bitcoin::util::base58::ToBase58;
 
