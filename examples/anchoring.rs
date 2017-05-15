@@ -1,14 +1,11 @@
 extern crate clap;
 #[macro_use]
-extern crate log;
-#[macro_use]
 extern crate serde_derive;
 extern crate iron;
 extern crate router;
 extern crate bitcoin;
 
 extern crate exonum;
-extern crate blockchain_explorer;
 extern crate anchoring_btc_service;
 extern crate configuration_service;
 
@@ -24,8 +21,10 @@ use exonum::blockchain::{Blockchain, Service};
 use exonum::node::{Node, NodeConfig};
 use exonum::config::ConfigFile;
 use exonum::crypto::HexValue;
-use blockchain_explorer::helpers::{GenerateCommand, RunCommand, generate_testnet_config};
-use blockchain_explorer::api::Api;
+use exonum::helpers::clap::{GenerateCommand, RunCommand};
+use exonum::helpers::generate_testnet_config;
+use exonum::helpers;
+use exonum::api::Api;
 use configuration_service::ConfigurationService;
 use configuration_service::config_api::PrivateConfigApi;
 use anchoring_btc_service::AnchoringService;
@@ -71,7 +70,7 @@ fn run_node(blockchain: Blockchain, node_cfg: NodeConfig, port: Option<u16>) {
 
 fn main() {
     exonum::crypto::init();
-    blockchain_explorer::helpers::init_logger().unwrap();
+    helpers::init_logger().unwrap();
 
     let app = App::new("Simple anchoring service demo program")
         .version(env!("CARGO_PKG_VERSION"))

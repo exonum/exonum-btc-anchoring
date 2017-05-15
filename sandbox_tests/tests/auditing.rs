@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate exonum;
 extern crate sandbox;
 extern crate anchoring_btc_service;
@@ -9,9 +8,6 @@ extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;
 extern crate secp256k1;
-extern crate blockchain_explorer;
-#[macro_use]
-extern crate log;
 
 use serde_json::value::ToJson;
 use bitcoin::util::base58::ToBase58;
@@ -147,7 +143,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
 // result: success
 #[test]
 fn test_auditing_exclude_node_from_validators() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    let _ = exonum::helpers::init_logger();
 
     let sandbox = AnchoringSandbox::initialize(&[]);
 
@@ -160,7 +156,7 @@ fn test_auditing_exclude_node_from_validators() {
 // result: Error LectNotFound occured
 #[test]
 fn test_auditing_no_consensus_in_lect() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    let _ = exonum::helpers::init_logger();
 
     let sandbox = AnchoringSandbox::initialize(&[]);
 
@@ -186,7 +182,7 @@ fn test_auditing_no_consensus_in_lect() {
 // result: Error IncorrectLect occured
 #[test]
 fn test_auditing_lect_lost_funding_tx() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    let _ = exonum::helpers::init_logger();
 
     let sandbox = AnchoringSandbox::initialize(&[]);
     let client = sandbox.client();
@@ -228,7 +224,7 @@ fn test_auditing_lect_lost_funding_tx() {
 // result: Error IncorrectLect occured
 #[test]
 fn test_auditing_lect_incorrect_funding_tx() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    let _ = exonum::helpers::init_logger();
 
     let sandbox = AnchoringSandbox::initialize(&[]);
 
@@ -271,7 +267,7 @@ fn test_auditing_lect_incorrect_funding_tx() {
 // result: Error IncorrectLect occured
 #[test]
 fn test_auditing_lect_lost_current_lect() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    let _ = exonum::helpers::init_logger();
 
     let sandbox = AnchoringSandbox::initialize(&[]);
     let client = sandbox.client();

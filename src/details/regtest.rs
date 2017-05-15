@@ -106,13 +106,13 @@ pub fn temporary_regtest_node() -> io::Result<(TempDir, RegTestNode)> {
 
 #[cfg(test)]
 mod tests {
-    extern crate blockchain_explorer;
+    use exonum::helpers;
 
     use super::temporary_regtest_node;
 
     #[test]
     fn test_regtest_generate_blocks() {
-        let _ = blockchain_explorer::helpers::init_logger();
+        let _ = helpers::init_logger();
 
         let (_, regtest) = temporary_regtest_node().unwrap();
         regtest.generate_blocks(100).expect("Generate 100 blocks");

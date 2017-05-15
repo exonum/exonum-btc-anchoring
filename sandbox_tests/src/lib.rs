@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate exonum;
 extern crate sandbox;
 extern crate anchoring_btc_service;
@@ -8,9 +7,6 @@ extern crate bitcoin;
 extern crate bitcoinrpc;
 extern crate byteorder;
 extern crate secp256k1;
-extern crate blockchain_explorer;
-#[macro_use]
-extern crate log;
 extern crate rand;
 extern crate libc;
 
