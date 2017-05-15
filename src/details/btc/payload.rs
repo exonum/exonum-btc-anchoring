@@ -8,41 +8,137 @@ use exonum::crypto::Hash;
 
 use details::btc;
 
-const PAYLOAD_VERSION: u8 = 1;
 const PAYLOAD_PREFIX: &'static [u8] = b"EXONUM";
 const PAYLOAD_HEADER_LEN: usize = 8;
-const PAYLOAD_LEN_REGULAR: usize = 48;
-const PAYLOAD_LEN_RECOVER: usize = 80;
-
-#[derive(Debug, Copy, Clone, PartialEq, Eq)]
-#[repr(u8)]
-pub enum PayloadKind {
-    Regular = 0,
-    Recover = 1,
-}
+const PAYLOAD_V1: u8 = 1;
+const PAYLOAD_V1_KIND_REGULAR: u8 = 0;
+const PAYLOAD_V1_KIND_RECOVER: u8 = 1;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct Payload {
-    pub version: u8,
     pub block_height: u64,
     pub block_hash: Hash,
     pub prev_tx_chain: Option<btc::TxId>,
 }
 
+enum PayloadV1 {
+    Regular(u64, Hash),
+    Recover(u64, Hash, btc::TxId),
+}
+
 #[derive(Default)]
-pub struct PayloadBuilder {
+pub struct PayloadV1Builder {
     block_hash: Option<Hash>,
     block_height: Option<u64>,
     prev_tx_chain: Option<btc::TxId>,
 }
 
+pub type PayloadBuilder = PayloadV1Builder;
+
 #[cfg_attr(feature = "cargo-clippy", allow(len_without_is_empty))]
-impl PayloadKind {
-    pub fn len(&self) -> usize {
-        match *self {
-            PayloadKind::Regular => PAYLOAD_LEN_REGULAR,
-            PayloadKind::Recover => PAYLOAD_LEN_RECOVER,
+impl PayloadV1 {
+    fn read(bytes: &[u8]) -> Option<PayloadV1> {
+        let kind = bytes[0];
+        let data = &bytes[1..];
+        match kind {
+            PAYLOAD_V1_KIND_REGULAR => {
+                if data.len() != 40 {
+                    return None;
+                }
+
+                let block_height = LittleEndian::read_u64(&data[0..8]);
+                let block_hash = Hash::from_slice(&data[8..40]).unwrap();
+                Some(PayloadV1::Regular(block_height, block_hash))
+            }
+            PAYLOAD_V1_KIND_RECOVER => {
+                if data.len() != 72 {
+                    return None;
+                }
+
+                let block_height = LittleEndian::read_u64(&data[0..8]);
+                let block_hash = Hash::from_slice(&data[8..40]).unwrap();
+                let txid = btc::TxId::from_slice(&data[40..72]).unwrap();
+                Some(PayloadV1::Recover(block_height, block_hash, txid))
+            }
+            _ => None,
         }
+    }
+
+    fn len(&self) -> usize {
+        match *self {
+            PayloadV1::Regular(..) => 40,
+            PayloadV1::Recover(..) => 72,
+        }
+    }
+
+    fn kind(&self) -> u8 {
+        match *self {
+            PayloadV1::Regular(..) => PAYLOAD_V1_KIND_REGULAR,
+            PayloadV1::Recover(..) => PAYLOAD_V1_KIND_RECOVER,
+        }
+    }
+
+    fn into_script(self) -> Script {
+        let kind = self.kind();
+        let len = self.len() + PAYLOAD_HEADER_LEN;
+        let mut buf = vec![0; len];
+        // Serialize header
+        buf[0..6].copy_from_slice(PAYLOAD_PREFIX);
+        buf[6] = PAYLOAD_V1;
+        buf[7] = kind as u8;
+        // Serialize data
+        match self {
+            PayloadV1::Regular(height, hash) => {
+                LittleEndian::write_u64(&mut buf[8..16], height);
+                buf[16..48].copy_from_slice(hash.as_ref());
+            }
+            PayloadV1::Recover(height, hash, txid) => {
+                LittleEndian::write_u64(&mut buf[8..16], height);
+                buf[16..48].copy_from_slice(hash.as_ref());
+                buf[48..80].copy_from_slice(txid.as_ref());
+            }
+        };
+        // Build script
+        Builder::new()
+            .push_opcode(All::OP_RETURN)
+            .push_slice(buf.as_ref())
+            .into_script()
+    }
+}
+
+impl PayloadV1Builder {
+    pub fn new() -> PayloadV1Builder {
+        PayloadV1Builder {
+            block_hash: None,
+            block_height: None,
+            prev_tx_chain: None,
+        }
+    }
+
+    pub fn block_height(mut self, height: u64) -> PayloadV1Builder {
+        self.block_height = Some(height);
+        self
+    }
+
+    pub fn block_hash(mut self, hash: Hash) -> PayloadV1Builder {
+        self.block_hash = Some(hash);
+        self
+    }
+
+    pub fn prev_tx_chain(mut self, txid: Option<btc::TxId>) -> PayloadV1Builder {
+        self.prev_tx_chain = txid;
+        self
+    }
+
+    pub fn into_script(self) -> Script {
+        let block_height = self.block_height.expect("Block height is not set");
+        let block_hash = self.block_hash.expect("Block hash is not set");
+
+        let payload = match self.prev_tx_chain {
+            Some(txid) => PayloadV1::Recover(block_height, block_hash, txid),
+            None => PayloadV1::Regular(block_height, block_hash),
+        };
+        payload.into_script()
     }
 }
 
@@ -66,108 +162,40 @@ impl Payload {
                     }
                     // Parse metadata
                     let version = bytes[6];
-                    if version != PAYLOAD_VERSION {
-                        return None;
+                    match version {
+                        PAYLOAD_V1 => {
+                            let payload_v1 = PayloadV1::read(&bytes[7..]);
+                            payload_v1.map(Payload::from)
+                        }
+                        _ => None,
                     }
-                    let kind = match bytes[7] {
-                        0 => PayloadKind::Regular,
-                        1 => PayloadKind::Recover,
-                        _ => return None,
-                    };
-                    // Check body len
-                    if bytes.len() != kind.len() {
-                        return None;
-                    }
-                    // Get payload data
-                    let block_height = LittleEndian::read_u64(&bytes[8..16]);
-                    let block_hash = Hash::from_slice(&bytes[16..48]).unwrap();
-                    let prev_tx_chain = if kind == PayloadKind::Recover {
-                        let txid = btc::TxId::from_slice(&bytes[48..80]).unwrap();
-                        Some(txid)
-                    } else {
-                        None
-                    };
-
-                    let payload = Payload {
-                        version: PAYLOAD_VERSION,
-                        block_hash: block_hash,
-                        block_height: block_height,
-                        prev_tx_chain: prev_tx_chain,
-                    };
-                    Some(payload)
                 } else {
                     None
                 }
             })
     }
+}
 
-    pub fn into_script(self) -> Script {
-        let version = PAYLOAD_VERSION;
-        let kind = self.kind();
-        // Serialize data
-        let mut buf = vec![0; kind.len()];
-        buf[0..6].copy_from_slice(PAYLOAD_PREFIX);
-        buf[6] = version;
-        buf[7] = kind as u8;
-        LittleEndian::write_u64(&mut buf[8..16], self.block_height);
-        buf[16..48].copy_from_slice(self.block_hash.as_ref());
-        if let Some(prev_tx) = self.prev_tx_chain {
-            buf[48..80].copy_from_slice(prev_tx.as_ref());
-        }
-        // Build script
-        Builder::new()
-            .push_opcode(All::OP_RETURN)
-            .push_slice(buf.as_ref())
-            .into_script()
-    }
-
-    pub fn kind(&self) -> PayloadKind {
-        if self.prev_tx_chain.is_some() {
-            PayloadKind::Recover
-        } else {
-            PayloadKind::Regular
+impl From<PayloadV1> for Payload {
+    fn from(v1: PayloadV1) -> Payload {
+        match v1 {
+            PayloadV1::Regular(height, hash) => {
+                Payload {
+                    block_height: height,
+                    block_hash: hash,
+                    prev_tx_chain: None,
+                }
+            }
+            PayloadV1::Recover(height, hash, txid) => {
+                Payload {
+                    block_height: height,
+                    block_hash: hash,
+                    prev_tx_chain: Some(txid),
+                }
+            }
         }
     }
 }
-
-impl PayloadBuilder {
-    pub fn new() -> PayloadBuilder {
-        PayloadBuilder {
-            block_hash: None,
-            block_height: None,
-            prev_tx_chain: None,
-        }
-    }
-
-    pub fn block_height(mut self, height: u64) -> PayloadBuilder {
-        self.block_height = Some(height);
-        self
-    }
-
-    pub fn block_hash(mut self, hash: Hash) -> PayloadBuilder {
-        self.block_hash = Some(hash);
-        self
-    }
-
-    pub fn prev_tx_chain(mut self, txid: Option<btc::TxId>) -> PayloadBuilder {
-        self.prev_tx_chain = txid;
-        self
-    }
-
-    pub fn into_payload(self) -> Payload {
-        Payload {
-            version: PAYLOAD_VERSION,
-            block_height: self.block_height.expect("Block height is not set"),
-            block_hash: self.block_hash.expect("Block hash is not set"),
-            prev_tx_chain: self.prev_tx_chain,
-        }
-    }
-
-    pub fn into_script(self) -> Script {
-        self.into_payload().into_script()
-    }
-}
-
 
 #[cfg(test)]
 mod tests {
@@ -178,7 +206,7 @@ mod tests {
     use details::btc;
     use details::btc::HexValueEx;
 
-    use super::{Payload, PayloadBuilder, PayloadKind};
+    use super::{Payload, PayloadBuilder};
 
     #[test]
     fn test_payload_regular_serialize() {
@@ -204,7 +232,6 @@ mod tests {
         assert_eq!(payload.block_hash, block_hash);
         assert_eq!(payload.block_height, 1234);
         assert_eq!(payload.prev_tx_chain, None);
-        assert_eq!(payload.kind(), PayloadKind::Regular);
     }
 
     #[test]
@@ -237,7 +264,6 @@ mod tests {
         assert_eq!(payload.block_hash, block_hash);
         assert_eq!(payload.block_height, 1234);
         assert_eq!(payload.prev_tx_chain, Some(prev_txid));
-        assert_eq!(payload.kind(), PayloadKind::Recover);
     }
 
     #[test]
