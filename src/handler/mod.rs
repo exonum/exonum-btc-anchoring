@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use details::rpc::AnchoringRpc;
 use details::btc;
-use details::btc::transactions::{AnchoringTx, FundingTx, BitcoinTx};
+use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx};
 use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::MsgAnchoringSignature;

@@ -6,24 +6,24 @@ use byteorder::{ByteOrder, LittleEndian};
 use bitcoin::blockdata::script::Instruction;
 use bitcoin::blockdata::opcodes::All;
 use bitcoin::util::hash::Hash160;
-use bitcoin::network::serialize::{BitcoinHash, serialize_hex, deserialize, serialize};
+use bitcoin::network::serialize::{BitcoinHash, deserialize, serialize, serialize_hex};
 use bitcoin::blockdata::transaction::{TxIn, TxOut};
-use bitcoin::blockdata::script::{Script, Builder};
+use bitcoin::blockdata::script::{Builder, Script};
 use bitcoin::util::base58::ToBase58;
 use bitcoin::util::address::{Address, Privkey, Type};
 use bitcoin::network::constants::Network;
 use bitcoin::blockdata::transaction::SigHashType;
 use secp256k1::key::{PublicKey, SecretKey};
-use secp256k1::{Secp256k1, Message, Signature};
+use secp256k1::{Message, Secp256k1, Signature};
 use bitcoinrpc;
 
-use exonum::crypto::{hash, Hash, FromHexError, HexValue};
+use exonum::crypto::{FromHexError, Hash, HexValue, hash};
 use exonum::node::Height;
 use exonum::storage::StorageValue;
 
-use details::rpc::{AnchoringRpc, RpcClient, Error as RpcError};
+use details::rpc::{AnchoringRpc, Error as RpcError, RpcClient};
 use details::btc;
-use details::btc::{TxId, RedeemScript, HexValueEx};
+use details::btc::{HexValueEx, RedeemScript, TxId};
 use details::error::Error as InternalError;
 
 pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
@@ -370,14 +370,16 @@ fn create_anchoring_transaction<'a, I>(addr: btc::Address,
             .push_slice(data.as_ref())
             .into_script()
     };
-    let mut outputs = vec![TxOut {
-                               value: out_funds,
-                               script_pubkey: addr.script_pubkey(),
-                           },
-                           TxOut {
-                               value: 0,
-                               script_pubkey: metadata_script,
-                           }];
+    let mut outputs = vec![
+        TxOut {
+            value: out_funds,
+            script_pubkey: addr.script_pubkey(),
+        },
+        TxOut {
+            value: 0,
+            script_pubkey: metadata_script,
+        },
+    ];
 
     if let Some(prev_chain_txid) = prev_chain_txid {
         let txout = TxOut {

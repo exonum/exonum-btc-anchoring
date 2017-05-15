@@ -12,7 +12,7 @@ use exonum::blockchain::Blockchain;
 use exonum::node::Node;
 use exonum::storage::{LevelDB, LevelDBOptions};
 use blockchain_explorer::helpers::generate_testnet_config;
-use anchoring_btc_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
+use anchoring_btc_service::{AnchoringRpc, AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
                             gen_anchoring_testnet_config};
 
 fn main() {

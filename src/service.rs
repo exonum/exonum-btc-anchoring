@@ -2,12 +2,12 @@ use std::sync::{Arc, Mutex};
 
 use bitcoin::util::base58::ToBase58;
 use serde_json::value::{ToJson, Value};
-use rand::{thread_rng, Rng};
+use rand::{Rng, thread_rng};
 
-use exonum::blockchain::{Service, Transaction, NodeState};
+use exonum::blockchain::{NodeState, Service, Transaction};
 use exonum::crypto::Hash;
-use exonum::messages::{RawTransaction, FromRaw, Error as MessageError};
-use exonum::storage::{View, Error as StorageError};
+use exonum::messages::{Error as MessageError, FromRaw, RawTransaction};
+use exonum::storage::{Error as StorageError, View};
 
 use details::btc;
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};

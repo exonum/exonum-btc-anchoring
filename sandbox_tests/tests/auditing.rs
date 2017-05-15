@@ -18,14 +18,14 @@ use bitcoin::util::base58::ToBase58;
 
 use exonum::crypto::HexValue;
 use exonum::messages::{Message, RawTransaction};
-use exonum::storage::{StorageValue, Fork};
+use exonum::storage::{Fork, StorageValue};
 use sandbox::sandbox::Sandbox;
 use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
 use anchoring_btc_service::blockchain::schema::AnchoringSchema;
-use anchoring_btc_service::{AnchoringConfig, ANCHORING_SERVICE_ID};
+use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
 use anchoring_btc_service::error::HandlerError;
 use anchoring_btc_service::details::btc::transactions::BitcoinTx;
 use anchoring_btc_sandbox::AnchoringSandbox;
@@ -85,11 +85,13 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     let anchored_tx = sandbox.latest_anchored_tx();
 
     let client = sandbox.client();
-    client.expect(vec![request! {
-                            method: "importaddress",
-                            params: [&following_addr, "multisig", false, false]
-                       },
-                       gen_confirmations_request(anchored_tx.clone(), 10)]);
+    client.expect(vec![
+        request! {
+            method: "importaddress",
+            params: [&following_addr, "multisig", false, false]
+        },
+        gen_confirmations_request(anchored_tx.clone(), 10),
+    ]);
     sandbox.add_height(&[cfg_tx]);
 
     let following_multisig = following_cfg.redeem_script();
@@ -101,12 +103,14 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
                                                  &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
-    client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 100),
-                       request! {
-                            method: "listunspent",
-                            params: [0, 9999999, [following_addr]],
-                            response: []
-                       }]);
+    client.expect(vec![
+        gen_confirmations_request(anchored_tx.clone(), 100),
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [following_addr]],
+            response: []
+        },
+    ]);
     sandbox.add_height(&[]);
     sandbox.broadcast(signatures[0].clone());
 
@@ -126,11 +130,13 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.fast_forward_to_height(cfg_change_height);
 
     sandbox.set_anchoring_cfg(following_cfg);
-    client.expect(vec![request! {
-                            method: "getrawtransaction",
-                            params: [&transition_tx.txid(), 0],
-                            response: transition_tx.to_hex()
-                        }]);
+    client.expect(vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&transition_tx.txid(), 0],
+            response: transition_tx.to_hex()
+        },
+    ]);
     sandbox.add_height_as_auditor(&[]);
 
     assert_eq!(sandbox.handler().errors, Vec::new());
@@ -202,11 +208,13 @@ fn test_auditing_lect_lost_funding_tx() {
         .collect::<Vec<_>>();
     force_commit_lects(&sandbox, lects);
 
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
             method: "getrawtransaction",
             params: [&lect_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
-        }]);
+        },
+    ]);
     sandbox.add_height_as_auditor(&[]);
 
     assert_eq!(sandbox.take_errors()[0],
@@ -274,11 +282,13 @@ fn test_auditing_lect_lost_current_lect() {
     sandbox.fast_forward_to_height_as_auditor(sandbox.next_check_lect_height());
 
     let lect_tx = sandbox.latest_anchored_tx();
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
             method: "getrawtransaction",
             params: [&lect_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
-        }]);
+        },
+    ]);
     sandbox.add_height_as_auditor(&[]);
 
     assert_eq!(sandbox.take_errors()[0],

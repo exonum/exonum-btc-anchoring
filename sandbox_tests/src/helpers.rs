@@ -2,7 +2,7 @@ pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
 use serde_json::value::ToJson;
-use bitcoin::util::base58::{ToBase58, FromBase58};
+use bitcoin::util::base58::{FromBase58, ToBase58};
 
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{Hash, HexValue};
@@ -15,7 +15,7 @@ use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
 use anchoring_btc_service::details::btc;
-use anchoring_btc_service::details::btc::transactions::{RawBitcoinTx, BitcoinTx};
+use anchoring_btc_service::details::btc::transactions::{BitcoinTx, RawBitcoinTx};
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use anchoring_btc_service::blockchain::schema::AnchoringSchema;
@@ -136,8 +136,9 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
 
     sandbox
         .client()
-        .expect(vec![gen_confirmations_request(sandbox.current_funding_tx().clone(), 50),
-                     request! {
+        .expect(vec![
+            gen_confirmations_request(sandbox.current_funding_tx().clone(), 50),
+            request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -153,7 +154,8 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
                     "solvable": false
                 }
             ]
-        }]);
+        },
+        ]);
 
     let hash = sandbox.last_hash();
     let (_, signatures) =
@@ -164,16 +166,18 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
     sandbox.broadcast(signatures[0].clone());
     sandbox
         .client()
-        .expect(vec![gen_confirmations_request(sandbox.current_funding_tx().clone(), 50),
-                     request! {
+        .expect(vec![
+            gen_confirmations_request(sandbox.current_funding_tx().clone(), 50),
+            request! {
                            method: "getrawtransaction",
                            params: [&anchored_tx.txid(), 1],
                            error: RpcError::NoInformation("Unable to find tx".to_string())
                        },
-                     request! {
+            request! {
                            method: "sendrawtransaction",
                            params: [anchored_tx.to_hex()]
-                       }]);
+                       },
+        ]);
 
     let signatures = signatures.into_iter().map(|tx| tx).collect::<Vec<_>>();
     sandbox.add_height(&signatures);
@@ -194,7 +198,8 @@ pub fn anchor_first_block_lect_normal(sandbox: &AnchoringSandbox) {
 
     sandbox
         .client()
-        .expect(vec![request! {
+        .expect(vec![
+            request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -211,11 +216,12 @@ pub fn anchor_first_block_lect_normal(sandbox: &AnchoringSandbox) {
                 }
             ]
         },
-                     request! {
+            request! {
             method: "getrawtransaction",
             params: [&anchored_tx.txid(), 0],
             response: &anchored_tx.to_hex()
-        }]);
+        },
+        ]);
     sandbox.add_height(&[]);
 }
 
@@ -239,7 +245,8 @@ pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
     };
 
     let anchoring_addr = sandbox.current_addr();
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -256,11 +263,12 @@ pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
                 }
             ]
         },
-                       request! {
+        request! {
             method: "getrawtransaction",
             params: [&other_lect.txid(), 0],
             response: &other_lect.to_hex()
-        }]);
+        },
+    ]);
     sandbox.add_height(&[]);
 
     let txs = (0..4)
@@ -282,7 +290,8 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
     let other_lect = sandbox.current_funding_tx();
     let anchoring_addr = sandbox.current_addr();
 
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -299,11 +308,12 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
                 }
             ]
         },
-                       request! {
+        request! {
             method: "getrawtransaction",
             params: [&other_lect.txid(), 0],
             response: &other_lect.to_hex()
-        }]);
+        },
+    ]);
     sandbox.add_height(&[]);
 
     let txs = (0..4)
@@ -311,8 +321,9 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
 
-    client.expect(vec![gen_confirmations_request(sandbox.current_funding_tx(), 50),
-                       request! {
+    client.expect(vec![
+        gen_confirmations_request(sandbox.current_funding_tx(), 50),
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -328,20 +339,23 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
                     "solvable": false
                 }
             ]
-        }]);
+        },
+    ]);
     sandbox.add_height(&txs);
 
     let anchored_tx = sandbox.latest_anchored_tx();
-    client.expect(vec![gen_confirmations_request(sandbox.current_funding_tx(), 50),
-                       request! {
+    client.expect(vec![
+        gen_confirmations_request(sandbox.current_funding_tx(), 50),
+        request! {
                                method: "getrawtransaction",
                                params: [&anchored_tx.txid(), 1],
                                error: RpcError::NoInformation("Unable to find tx".to_string())
                            },
-                       request! {
+        request! {
                                 method: "sendrawtransaction",
                                 params: [anchored_tx.to_hex()]
-                            }]);
+                            },
+    ]);
     sandbox.add_height(&[]);
     sandbox.broadcast(gen_service_tx_lect(sandbox, 0, &anchored_tx, 3));
     sandbox.set_latest_anchored_tx(None);
@@ -352,7 +366,8 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     sandbox.fast_forward_to_height(sandbox.next_anchoring_height());
 
     let anchoring_addr = sandbox.current_addr();
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -368,7 +383,8 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
                     "solvable": false
                 }
             ]
-        }]);
+        },
+    ]);
     sandbox.add_height(&[]);
 
     let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
@@ -388,7 +404,8 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
         .map(|idx| gen_service_tx_lect(sandbox, idx, &anchored_tx, 2))
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -405,11 +422,12 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
                 }
             ]
         },
-                       request! {
+        request! {
             method: "getrawtransaction",
             params: [&anchored_tx.txid(), 0],
             response: &anchored_tx.to_hex()
-        }]);
+        },
+    ]);
     sandbox.add_height(&txs);
 }
 
@@ -418,8 +436,9 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
     let client = sandbox.client();
     let anchoring_addr = sandbox.current_addr();
 
-    client.expect(vec![gen_confirmations_request(sandbox.current_funding_tx(), 50),
-                       request! {
+    client.expect(vec![
+        gen_confirmations_request(sandbox.current_funding_tx(), 50),
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -435,7 +454,8 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
                     "solvable": false
                 }
             ]
-        }]);
+        },
+    ]);
 
     let (_, signatures) =
         sandbox

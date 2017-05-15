@@ -20,14 +20,14 @@ use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::constants::Network;
 
-use exonum::crypto::{HexValue, Hash};
+use exonum::crypto::{Hash, HexValue};
 use exonum::messages::Message;
 
 use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx,
-                                                        FundingTx, verify_tx_input};
+use anchoring_btc_service::details::btc::transactions::{AnchoringTx, FundingTx,
+                                                        TransactionBuilder, verify_tx_input};
 use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
-use anchoring_btc_sandbox::{RpcError, AnchoringSandbox};
+use anchoring_btc_sandbox::{AnchoringSandbox, RpcError};
 use anchoring_btc_sandbox::helpers::*;
 use anchoring_btc_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
 
@@ -56,15 +56,17 @@ fn test_anchoring_funding_tx_waiting() {
     client.expect(vec![gen_confirmations_request(funding_tx.clone(), 0)]);
     sandbox.add_height(&[]);
     // Resend funding_tx if we lost it
-    client.expect(vec![request! {
-                           method: "getrawtransaction",
-                           params: [&funding_tx.txid(), 1],
-                           error: RpcError::NoInformation("Unable to find tx".to_string()),
-                       },
-                       request! {
-                           method: "sendrawtransaction",
-                           params: [&funding_tx.to_hex()]
-                       }]);
+    client.expect(vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&funding_tx.txid(), 1],
+            error: RpcError::NoInformation("Unable to find tx".to_string()),
+        },
+        request! {
+            method: "sendrawtransaction",
+            params: [&funding_tx.to_hex()]
+        },
+    ]);
     sandbox.add_height(&[]);
 
     client.expect(vec![gen_confirmations_request(funding_tx.clone(), 0)]);
@@ -135,7 +137,8 @@ fn test_anchoring_second_block_additional_funds() {
     sandbox.fast_forward_to_height(sandbox.next_anchoring_height());
 
     let funds = sandbox.current_funding_tx();
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
         method: "listunspent",
         params: [0, 9999999, [&anchoring_addr.to_base58check()]],
         response: [
@@ -162,7 +165,8 @@ fn test_anchoring_second_block_additional_funds() {
                 "solvable": false
             }
         ]
-    }]);
+    },
+    ]);
     sandbox.add_height(&[]);
 
     let (_, signatures) =
@@ -176,15 +180,17 @@ fn test_anchoring_second_block_additional_funds() {
     sandbox.broadcast(signatures[1].clone());
 
     let anchored_tx = &sandbox.latest_anchored_tx();
-    client.expect(vec![request! {
-                           method: "getrawtransaction",
-                           params: [&anchored_tx.txid(), 1],
-                           error: RpcError::NoInformation("Unable to find tx".to_string()),
-                       },
-                       request! {
-                           method: "sendrawtransaction",
-                           params: [&anchored_tx.to_hex()]
-                       }]);
+    client.expect(vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&anchored_tx.txid(), 1],
+            error: RpcError::NoInformation("Unable to find tx".to_string()),
+        },
+        request! {
+            method: "sendrawtransaction",
+            params: [&anchored_tx.to_hex()]
+        },
+    ]);
 
     sandbox.add_height(&signatures);
     sandbox.broadcast(gen_service_tx_lect(&sandbox, 0, &anchored_tx, 2));
@@ -210,7 +216,8 @@ fn test_anchoring_second_block_lect_lost() {
     anchor_second_block_normal(&sandbox);
     sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
 
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
         method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -227,11 +234,12 @@ fn test_anchoring_second_block_lect_lost() {
                 }
             ]
         },
-                       request! {
+        request! {
              method: "getrawtransaction",
              params: [&prev_anchored_tx.txid(), 0],
              response: &prev_anchored_tx.to_hex()
-        }]);
+        },
+    ]);
 
     sandbox.add_height(&[]);
 
@@ -241,23 +249,25 @@ fn test_anchoring_second_block_lect_lost() {
     sandbox.broadcast(txs[0].clone());
 
     // Trying to resend lost lect tx
-    client.expect(vec![request! {
-                        method: "listunspent",
-                        params: [0, 9999999, [&anchoring_addr.to_base58check()]],
-                        response: [
-                            {
-                                "txid": &prev_anchored_tx.txid(),
-                                "vout": 0,
-                                "address": &anchoring_addr.to_base58check(),
-                                "account": "multisig",
-                                "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                                "amount": 0.00010000,
-                                "confirmations": 0,
-                                "spendable": false,
-                                "solvable": false
-                            }
-                        ]
-                    }]);
+    client.expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            response: [
+                {
+                    "txid": &prev_anchored_tx.txid(),
+                    "vout": 0,
+                    "address": &anchoring_addr.to_base58check(),
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 0,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        },
+    ]);
     sandbox.add_height(&txs);
     sandbox.set_latest_anchored_tx(Some((prev_anchored_tx, prev_tx_signatures)));
 }

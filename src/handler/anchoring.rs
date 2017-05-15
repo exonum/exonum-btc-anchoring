@@ -10,9 +10,9 @@ use details::btc::HexValueEx;
 use details::btc::transactions::{AnchoringTx, TransactionBuilder};
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
-use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest, MsgAnchoringSignature};
+use blockchain::dto::{AnchoringMessage, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 
-use super::{AnchoringHandler, MultisigAddress, LectKind, collect_signatures};
+use super::{AnchoringHandler, LectKind, MultisigAddress, collect_signatures};
 
 #[doc(hidden)]
 impl AnchoringHandler {

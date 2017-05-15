@@ -1,7 +1,7 @@
 use std::fmt;
 
-use exonum::crypto::{PublicKey, Hash};
-use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
+use exonum::crypto::{Hash, PublicKey};
+use exonum::messages::{Error as MessageError, FromRaw, Message, RawTransaction};
 
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
 

@@ -16,13 +16,13 @@ extern crate libc;
 
 use std::ops::Deref;
 use std::sync::{Arc, Mutex, MutexGuard};
-use std::cell::{RefCell, Ref, RefMut};
+use std::cell::{Ref, RefCell, RefMut};
 
 pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
 use rand::{SeedableRng, StdRng};
-use bitcoin::util::base58::{ToBase58, FromBase58};
+use bitcoin::util::base58::{FromBase58, ToBase58};
 
 use exonum::crypto::Hash;
 use exonum::messages::{Message, RawTransaction};
@@ -30,15 +30,15 @@ use exonum::messages::{Message, RawTransaction};
 use sandbox::sandbox_with_services;
 use sandbox::sandbox::Sandbox;
 use sandbox::timestamping::TimestampingService;
-use sandbox::sandbox_tests_helper::{VALIDATOR_0, SandboxState, add_one_height_with_transactions,
+use sandbox::sandbox_tests_helper::{SandboxState, VALIDATOR_0, add_one_height_with_transactions,
                                     add_one_height_with_transactions_from_other_validator};
 use sandbox::config_updater::ConfigUpdateService;
 
-use anchoring_btc_service::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
-                            AnchoringNodeConfig, AnchoringRpc, AnchoringService};
-use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
+use anchoring_btc_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpc, AnchoringService,
+                            gen_anchoring_testnet_config_with_rng};
+use anchoring_btc_service::details::sandbox::{Request, SandboxClient};
 use anchoring_btc_service::details::btc;
-use anchoring_btc_service::details::btc::transactions::{TransactionBuilder, AnchoringTx, FundingTx};
+use anchoring_btc_service::details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
 use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
 use anchoring_btc_service::handler::{AnchoringHandler, collect_signatures};
 use anchoring_btc_service::error::HandlerError;
@@ -72,11 +72,12 @@ pub struct AnchoringSandbox {
 /// Generates config for 4 validators and 10000 funds
 pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
                                     -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
-    let requests = vec![request! {
+    let requests = vec![
+        request! {
             method: "importaddress",
             params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
         },
-                        request! {
+        request! {
             method: "sendtoaddress",
             params: [
                 "2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA",
@@ -84,7 +85,7 @@ pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
             ],
             response: "a788a2f0a369f3985c5f713d985bb1e7bd3dfb8b35f194b39a5f3ae7d709af9a"
         },
-                        request! {
+        request! {
             method: "getrawtransaction",
             params: [
                 "a788a2f0a369f3985c5f713d985bb1e7bd3dfb8b35f194b39a5f3ae7d709af9a",
@@ -96,7 +97,8 @@ pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
                 6efcc7e842b522b9d95d84a4f0e4663861124150860d0f728c2cc7d56feffffff02a00f00000000000\
                 017a914f18eb74087f751109cc9052befd4177a52c9a30a870313d70b000000001976a914eed3fc59a\
                 211ef5cbf1986971cae80bcc983d23a88ac35ae1000"
-        }];
+        },
+    ];
     client.expect(requests);
     let mut rng: StdRng = SeedableRng::from_seed([1, 2, 3, 4].as_ref());
     gen_anchoring_testnet_config_with_rng(client,
@@ -129,18 +131,22 @@ impl AnchoringSandbox {
             node.check_lect_frequency = CHECK_LECT_FREQUENCY;
         }
 
-        client.expect(vec![request! {
+        client.expect(vec![
+            request! {
             method: "importaddress",
             params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
-        }]);
+        },
+        ]);
         let service = AnchoringService::new_with_client(AnchoringRpc(client.clone()),
                                                         common.clone(),
                                                         nodes[ANCHORING_VALIDATOR as usize]
                                                             .clone());
         let service_handler = service.handler();
-        let sandbox = sandbox_with_services(vec![Box::new(service),
-                                                 Box::new(TimestampingService::new()),
-                                                 Box::new(ConfigUpdateService::new())]);
+        let sandbox = sandbox_with_services(vec![
+            Box::new(service),
+            Box::new(TimestampingService::new()),
+            Box::new(ConfigUpdateService::new()),
+        ]);
 
         let state = AnchoringSandboxState {
             sandbox_state: SandboxState::new(),

@@ -2,7 +2,7 @@ use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
 use exonum::blockchain::{Schema, StoredConfiguration};
-use exonum::storage::{ListTable, MerkleTable, List, MapTable, View, Map, Error as StorageError};
+use exonum::storage::{Error as StorageError, List, ListTable, Map, MapTable, MerkleTable, View};
 use exonum::crypto::Hash;
 
 use bitcoin::util::base58::ToBase58;

@@ -1,21 +1,21 @@
-use std::collections::hash_map::{HashMap, Entry};
+use std::collections::hash_map::{Entry, HashMap};
 
 use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::NodeState;
-use exonum::storage::{List, Error as StorageError};
+use exonum::storage::{Error as StorageError, List};
 
 use error::Error as ServiceError;
 use handler::error::Error as HandlerError;
 use details::rpc::AnchoringRpc;
 use details::btc;
-use details::btc::transactions::{TxKind, BitcoinTx, FundingTx};
+use details::btc::transactions::{BitcoinTx, FundingTx, TxKind};
 use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest};
 
-use super::{AnchoringHandler, MultisigAddress, AnchoringState, LectKind};
+use super::{AnchoringHandler, AnchoringState, LectKind, MultisigAddress};
 
 const FIND_LECT_MAX_DEPTH: u64 = 10000;
 

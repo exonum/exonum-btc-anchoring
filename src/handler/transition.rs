@@ -7,7 +7,7 @@ use details::btc::transactions::BitcoinTx;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 
-use super::{AnchoringHandler, MultisigAddress, LectKind};
+use super::{AnchoringHandler, LectKind, MultisigAddress};
 
 #[doc(hidden)]
 impl AnchoringHandler {

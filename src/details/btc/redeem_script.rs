@@ -1,4 +1,4 @@
-use bitcoin::blockdata::script::{Script, Builder};
+use bitcoin::blockdata::script::{Builder, Script};
 use bitcoin::blockdata::opcodes::All;
 use bitcoin::blockdata::script::Instruction;
 use bitcoin::util::base58::{FromBase58, ToBase58};
@@ -7,7 +7,7 @@ use bitcoin::network::constants::Network;
 use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
 
-use super::{RedeemScript, PublicKey};
+use super::{PublicKey, RedeemScript};
 
 // TODO implement errors
 
