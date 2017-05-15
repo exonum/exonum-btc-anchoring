@@ -1,7 +1,7 @@
 use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
 use anchoring_btc_service::AnchoringRpc;
 
-use {initialize_anchoring_sandbox, gen_sandbox_anchoring_config};
+use {gen_sandbox_anchoring_config, AnchoringSandbox};
 
 #[test]
 fn test_rpc_getnewaddress() {
@@ -90,5 +90,5 @@ fn test_generate_anchoring_config() {
 
 #[test]
 fn test_anchoring_sandbox() {
-    initialize_anchoring_sandbox(&[]);
+    let _ = AnchoringSandbox::initialize(&[]);
 }

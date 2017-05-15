@@ -19,34 +19,31 @@ use bitcoin::util::base58::ToBase58;
 use exonum::crypto::HexValue;
 use exonum::messages::{Message, RawTransaction};
 use exonum::storage::{StorageValue, Fork};
-use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions,
-                                    add_one_height_with_transactions_from_other_validator};
 use sandbox::sandbox::Sandbox;
 use sandbox::config_updater::TxConfig;
 
-use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
+use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
 use anchoring_btc_service::blockchain::schema::AnchoringSchema;
 use anchoring_btc_service::{AnchoringConfig, ANCHORING_SERVICE_ID};
 use anchoring_btc_service::error::HandlerError;
 use anchoring_btc_service::details::btc::transactions::BitcoinTx;
-use anchoring_btc_sandbox::{AnchoringSandboxState, initialize_anchoring_sandbox};
+use anchoring_btc_sandbox::AnchoringSandbox;
 use anchoring_btc_sandbox::helpers::*;
 
 /// Generates a configuration that excludes `sandbox node` from consensus.
 /// Then it continues to work as auditor.
-fn gen_following_cfg(sandbox: &Sandbox,
-                     anchoring_state: &mut AnchoringSandboxState,
+fn gen_following_cfg(sandbox: &AnchoringSandbox,
                      from_height: u64)
                      -> (RawTransaction, AnchoringConfig) {
-    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
+    let anchoring_addr = sandbox.current_addr();
 
-    let mut service_cfg = anchoring_state.common.clone();
-    let priv_keys = anchoring_state.priv_keys(&anchoring_addr);
+    let mut service_cfg = sandbox.current_cfg().clone();
+    let priv_keys = sandbox.priv_keys(&anchoring_addr);
     service_cfg.validators.swap_remove(0);
 
     let following_addr = service_cfg.redeem_script().1;
-    for (id, ref mut node) in anchoring_state.nodes.iter_mut().enumerate() {
+    for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
         node.private_keys
             .insert(following_addr.to_base58check(), priv_keys[id].clone());
     }
@@ -79,32 +76,30 @@ pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
 }
 
 // Invoke this method after anchor_first_block_lect_normal
-pub fn exclude_node_from_validators(sandbox: &Sandbox,
-                                    client: &SandboxClient,
-                                    sandbox_state: &mut SandboxState,
-                                    anchoring_state: &mut AnchoringSandboxState) {
+pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     let cfg_change_height = 12;
-    let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, anchoring_state, cfg_change_height);
+    let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, cfg_change_height);
     let (_, following_addr) = following_cfg.redeem_script();
 
     // Tx has not enough confirmations.
-    let anchored_tx = anchoring_state.latest_anchored_tx().clone();
+    let anchored_tx = sandbox.latest_anchored_tx();
+
+    let client = sandbox.client();
     client.expect(vec![request! {
                             method: "importaddress",
                             params: [&following_addr, "multisig", false, false]
                        },
                        gen_confirmations_request(anchored_tx.clone(), 10)]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[cfg_tx]);
+    sandbox.add_height(&[cfg_tx]);
 
     let following_multisig = following_cfg.redeem_script();
     let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
-                                                         0,
-                                                         anchored_tx.payload().1,
-                                                         &[],
-                                                         None,
-                                                         &following_multisig.1);
-    let transition_tx = anchoring_state.latest_anchored_tx().clone();
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().1,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
+    let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
     client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 100),
                        request! {
@@ -112,11 +107,11 @@ pub fn exclude_node_from_validators(sandbox: &Sandbox,
                             params: [0, 9999999, [following_addr]],
                             response: []
                        }]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+    sandbox.add_height(&[]);
     sandbox.broadcast(signatures[0].clone());
 
     client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
+    sandbox.add_height(&signatures);
 
     let lects = (0..4)
         .map(|id| {
@@ -127,18 +122,18 @@ pub fn exclude_node_from_validators(sandbox: &Sandbox,
         .collect::<Vec<_>>();
     sandbox.broadcast(lects[0].clone());
     client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &lects);
-    fast_forward_to_height(sandbox, sandbox_state, cfg_change_height);
+    sandbox.add_height(&lects);
+    sandbox.fast_forward_to_height(cfg_change_height);
 
-    anchoring_state.common = following_cfg;
+    sandbox.set_anchoring_cfg(following_cfg);
     client.expect(vec![request! {
                             method: "getrawtransaction",
                             params: [&transition_tx.txid(), 0],
                             response: transition_tx.to_hex()
                         }]);
-    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+    sandbox.add_height_as_auditor(&[]);
 
-    assert_eq!(anchoring_state.handler().errors, Vec::new());
+    assert_eq!(sandbox.handler().errors, Vec::new());
 }
 
 // We exclude sandbox node from validators
@@ -148,12 +143,11 @@ pub fn exclude_node_from_validators(sandbox: &Sandbox,
 fn test_auditing_exclude_node_from_validators() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
-    let mut sandbox_state = SandboxState::new();
+    let sandbox = AnchoringSandbox::initialize(&[]);
 
-    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+    exclude_node_from_validators(&sandbox);
 }
 
 // There is no consensus in `exonum` about current `lect`.
@@ -162,28 +156,23 @@ fn test_auditing_exclude_node_from_validators() {
 fn test_auditing_no_consensus_in_lect() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
-    let mut sandbox_state = SandboxState::new();
+    let sandbox = AnchoringSandbox::initialize(&[]);
 
-    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    let next_anchoring_height = anchoring_state.next_anchoring_height(&sandbox);
-    exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-    fast_forward_to_height_from_other_validator(&sandbox,
-                                                &sandbox_state,
-                                                anchoring_state.next_check_lect_height(&sandbox));
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+    let next_anchoring_height = sandbox.next_anchoring_height();
+    exclude_node_from_validators(&sandbox);
+    sandbox.fast_forward_to_height_as_auditor(sandbox.next_check_lect_height());
 
-    let lect_tx = BitcoinTx::from(anchoring_state.common.funding_tx.clone().0);
+    let lect_tx = BitcoinTx::from(sandbox.current_funding_tx().0);
     let lect = MsgAnchoringUpdateLatest::new(&sandbox.p(0),
                                              0,
                                              lect_tx,
                                              lects_count(&sandbox, 0),
                                              sandbox.s(0));
-    add_one_height_with_transactions_from_other_validator(&sandbox,
-                                                          &sandbox_state,
-                                                          &[lect.raw().clone()]);
+    sandbox.add_height_as_auditor(&[lect.raw().clone()]);
 
-    assert_eq!(anchoring_state.take_errors()[0],
+    assert_eq!(sandbox.take_errors()[0],
                HandlerError::LectNotFound { height: next_anchoring_height });
 }
 
@@ -193,17 +182,15 @@ fn test_auditing_no_consensus_in_lect() {
 fn test_auditing_lect_lost_funding_tx() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
-    let mut sandbox_state = SandboxState::new();
+    let sandbox = AnchoringSandbox::initialize(&[]);
+    let client = sandbox.client();
 
-    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-    fast_forward_to_height_from_other_validator(&sandbox,
-                                                &sandbox_state,
-                                                anchoring_state.next_check_lect_height(&sandbox));
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+    exclude_node_from_validators(&sandbox);
+    sandbox.fast_forward_to_height_as_auditor(sandbox.next_check_lect_height());
 
-    let lect_tx = BitcoinTx::from(anchoring_state.common.funding_tx.clone().0);
+    let lect_tx = BitcoinTx::from(sandbox.current_funding_tx().0);
     let lects = (0..3)
         .map(|id| {
                  MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),
@@ -220,9 +207,9 @@ fn test_auditing_lect_lost_funding_tx() {
             params: [&lect_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         }]);
-    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+    sandbox.add_height_as_auditor(&[]);
 
-    assert_eq!(anchoring_state.take_errors()[0],
+    assert_eq!(sandbox.take_errors()[0],
                HandlerError::IncorrectLect {
                    reason: String::from("Initial funding_tx not found in the bitcoin blockchain"),
                    tx: lect_tx.into(),
@@ -235,15 +222,12 @@ fn test_auditing_lect_lost_funding_tx() {
 fn test_auditing_lect_incorrect_funding_tx() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
-    let mut sandbox_state = SandboxState::new();
+    let sandbox = AnchoringSandbox::initialize(&[]);
 
-    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-    fast_forward_to_height_from_other_validator(&sandbox,
-                                                &sandbox_state,
-                                                anchoring_state.next_check_lect_height(&sandbox));
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+    exclude_node_from_validators(&sandbox);
+    sandbox.fast_forward_to_height_as_auditor(sandbox.next_check_lect_height());
 
     let lect_tx = BitcoinTx::from_hex("020000000152f2e44424d6cc16ce29566b54468084d1d15329b28e\
                                        8fc7cb9d9d783b8a76d3010000006b4830450221009e5ae44ba558\
@@ -266,9 +250,9 @@ fn test_auditing_lect_incorrect_funding_tx() {
         .collect::<Vec<_>>();
     force_commit_lects(&sandbox, lects);
 
-    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+    sandbox.add_height_as_auditor(&[]);
 
-    assert_eq!(anchoring_state.take_errors()[0],
+    assert_eq!(sandbox.take_errors()[0],
                HandlerError::IncorrectLect {
                    reason: String::from("Initial funding_tx from cfg is different than in lect"),
                    tx: lect_tx.into(),
@@ -281,25 +265,23 @@ fn test_auditing_lect_incorrect_funding_tx() {
 fn test_auditing_lect_lost_current_lect() {
     let _ = ::blockchain_explorer::helpers::init_logger();
 
-    let (sandbox, client, mut anchoring_state) = initialize_anchoring_sandbox(&[]);
-    let mut sandbox_state = SandboxState::new();
+    let sandbox = AnchoringSandbox::initialize(&[]);
+    let client = sandbox.client();
 
-    anchor_first_block(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    anchor_first_block_lect_normal(&sandbox, &client, &sandbox_state, &mut anchoring_state);
-    exclude_node_from_validators(&sandbox, &client, &mut sandbox_state, &mut anchoring_state);
-    fast_forward_to_height_from_other_validator(&sandbox,
-                                                &sandbox_state,
-                                                anchoring_state.next_check_lect_height(&sandbox));
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+    exclude_node_from_validators(&sandbox);
+    sandbox.fast_forward_to_height_as_auditor(sandbox.next_check_lect_height());
 
-    let lect_tx = anchoring_state.latest_anchored_tx().clone();
+    let lect_tx = sandbox.latest_anchored_tx();
     client.expect(vec![request! {
             method: "getrawtransaction",
             params: [&lect_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         }]);
-    add_one_height_with_transactions_from_other_validator(&sandbox, &sandbox_state, &[]);
+    sandbox.add_height_as_auditor(&[]);
 
-    assert_eq!(anchoring_state.take_errors()[0],
+    assert_eq!(sandbox.take_errors()[0],
                HandlerError::IncorrectLect {
                    reason: String::from("Lect not found in the bitcoin blockchain"),
                    tx: lect_tx.into(),
