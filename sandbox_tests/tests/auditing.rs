@@ -93,13 +93,13 @@ pub fn exclude_node_from_validators(sandbox: &Sandbox,
     add_one_height_with_transactions(&sandbox, &sandbox_state, &[cfg_tx]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(&sandbox,
-                                                         0,
-                                                         anchored_tx.payload().1,
-                                                         &[],
-                                                         None,
-                                                         &following_multisig.1);
+    let (_, signatures) = anchoring_state
+        .gen_anchoring_tx_with_signatures(&sandbox,
+                                          0,
+                                          anchored_tx.payload().block_hash,
+                                          &[],
+                                          None,
+                                          &following_multisig.1);
     let transition_tx = anchoring_state.latest_anchored_tx().clone();
     // Tx gets enough confirmations.
     client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 100),

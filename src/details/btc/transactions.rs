@@ -2,7 +2,6 @@ use std::fmt;
 use std::collections::HashMap;
 use std::ops::Deref;
 
-use byteorder::{ByteOrder, LittleEndian};
 use bitcoin::blockdata::script::Instruction;
 use bitcoin::blockdata::opcodes::All;
 use bitcoin::util::hash::Hash160;
@@ -25,18 +24,17 @@ use details::rpc::{AnchoringRpc, RpcClient, Error as RpcError};
 use details::btc;
 use details::btc::{TxId, RedeemScript, HexValueEx};
 use details::error::Error as InternalError;
+use details::btc::payload::{Payload, PayloadBuilder};
 
 pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
 const ANCHORING_TX_FUNDS_OUTPUT: u32 = 0;
 const ANCHORING_TX_DATA_OUTPUT: u32 = 1;
-const ANCHORING_TX_PREV_CHAIN_OUTPUT: u32 = 2;
 
 /// Anchoring transaction struct is strict:
 /// - Zero input is previous anchoring tx or initial funding tx
 /// - Zero output is next anchoring tx
 /// - First output is anchored metadata
-/// - Second output is optional and contains previous tx chain's tail
 #[derive(Clone, PartialEq, Eq, Hash)]
 pub struct AnchoringTx(pub RawBitcoinTx);
 /// Funding transaction always has an output to `p2sh` address
@@ -152,12 +150,8 @@ impl AnchoringTx {
         0..self.0.input.len() as u32
     }
 
-    pub fn payload(&self) -> (Height, Hash) {
+    pub fn payload(&self) -> Payload {
         find_payload(&self.0).expect("Unable to find payload")
-    }
-
-    pub fn prev_tx_chain(&self) -> Option<TxId> {
-        find_prev_txchain(self)
     }
 
     pub fn prev_hash(&self) -> TxId {
@@ -212,8 +206,8 @@ impl fmt::Debug for AnchoringTx {
             .field("txid", &self.txid())
             .field("txhex", &self.to_hex())
             .field("content", &self.0)
-            .field("height", &payload.0)
-            .field("hash", &payload.1.to_hex())
+            .field("height", &payload.block_height)
+            .field("hash", &payload.block_hash.to_hex())
             .finish()
     }
 }
@@ -356,48 +350,19 @@ fn create_anchoring_transaction<'a, I>(addr: btc::Address,
              })
         .collect::<Vec<_>>();
 
-    let metadata_script = {
-        let data = {
-            let mut data = [0u8; 42];
-            data[0] = 1; // version
-            data[1] = 40; // data len
-            LittleEndian::write_u64(&mut data[2..10], block_height);
-            data[10..42].copy_from_slice(block_hash.as_ref());
-            data
-        };
-        Builder::new()
-            .push_opcode(All::OP_RETURN)
-            .push_slice(data.as_ref())
-            .into_script()
-    };
-    let mut outputs = vec![TxOut {
-                               value: out_funds,
-                               script_pubkey: addr.script_pubkey(),
-                           },
-                           TxOut {
-                               value: 0,
-                               script_pubkey: metadata_script,
-                           }];
-
-    if let Some(prev_chain_txid) = prev_chain_txid {
-        let txout = TxOut {
-            value: 0,
-            script_pubkey: {
-                let data = {
-                    let mut data = [0u8; 34];
-                    data[0] = 1; // version
-                    data[1] = 32; // data len
-                    data[2..34].copy_from_slice(prev_chain_txid.as_ref());
-                    data
-                };
-                Builder::new()
-                    .push_opcode(All::OP_RETURN)
-                    .push_slice(data.as_ref())
-                    .into_script()
-            },
-        };
-        outputs.push(txout);
-    }
+    let metadata_script = PayloadBuilder::new()
+        .block_hash(block_hash)
+        .block_height(block_height)
+        .prev_tx_chain(prev_chain_txid)
+        .into_script();
+    let outputs = vec![TxOut {
+                           value: out_funds,
+                           script_pubkey: addr.script_pubkey(),
+                       },
+                       TxOut {
+                           value: 0,
+                           script_pubkey: metadata_script,
+                       }];
 
     let tx = RawBitcoinTx {
         version: 1,
@@ -461,49 +426,9 @@ fn finalize_anchoring_transaction(mut anchoring_tx: AnchoringTx,
     anchoring_tx
 }
 
-fn find_payload(tx: &RawBitcoinTx) -> Option<(Height, Hash)> {
+
+fn find_payload(tx: &RawBitcoinTx) -> Option<Payload> {
     tx.output
         .get(ANCHORING_TX_DATA_OUTPUT as usize)
-        .and_then(|output| {
-            output
-                .script_pubkey
-                .into_iter()
-                .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
-                                Some(bytes)
-                            } else {
-                                None
-                            })
-                .next()
-        })
-        .and_then(|bytes| if bytes.len() == 42 && bytes[0] == 1 {
-                      // TODO check len
-                      let height = LittleEndian::read_u64(&bytes[2..10]);
-                      let block_hash = Hash::from_slice(&bytes[10..42]).unwrap();
-                      Some((height, block_hash))
-                  } else {
-                      None
-                  })
-}
-
-fn find_prev_txchain(tx: &RawBitcoinTx) -> Option<TxId> {
-    tx.output
-        .get(ANCHORING_TX_PREV_CHAIN_OUTPUT as usize)
-        .and_then(|output| {
-            output
-                .script_pubkey
-                .into_iter()
-                .filter_map(|instruction| if let Instruction::PushBytes(bytes) = instruction {
-                                Some(bytes)
-                            } else {
-                                None
-                            })
-                .next()
-        })
-        .and_then(|bytes| if bytes.len() == 34 && bytes[0] == 1 {
-                      // TODO check len
-                      let prev_tx_id = TxId::from_slice(&bytes[2..34]).unwrap();
-                      Some(prev_tx_id)
-                  } else {
-                      None
-                  })
+        .and_then(|output| Payload::from_script(&output.script_pubkey))
 }

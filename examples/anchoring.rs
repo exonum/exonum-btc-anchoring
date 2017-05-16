@@ -157,7 +157,7 @@ fn main() {
             let port: Option<u16> = matches.value_of("HTTP_PORT").map(|x| x.parse().unwrap());
             let path = RunCommand::node_config_path(matches);
             let db = RunCommand::db(matches);
-            let cfg: ServicesConfig = ConfigFile::load(&path).unwrap();
+            let cfg: ServicesConfig = ConfigFile::load(path).unwrap();
 
             let anchoring_cfg = cfg.anchoring_service;
             let anchoring = AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node);
