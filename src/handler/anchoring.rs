@@ -45,7 +45,7 @@ impl AnchoringHandler {
         match self.collect_lects_for_validator(self.validator_id(state), state)? {
             LectKind::Funding(_) => self.try_create_anchoring_tx_chain(multisig, None, state),
             LectKind::Anchoring(tx) => {
-                let anchored_height = tx.payload().0;
+                let anchored_height = tx.payload().block_height;
                 let latest_anchored_height =
                     multisig.common.latest_anchoring_height(state.height());
                 if latest_anchored_height > anchored_height {
@@ -160,7 +160,7 @@ impl AnchoringHandler {
         trace!("Try finalize proposal tx");
         let txid = proposal.id();
 
-        let proposal_height = proposal.payload().0;
+        let proposal_height = proposal.payload().block_height;
         if multisig.common.latest_anchoring_height(state.height()) !=
            multisig.common.latest_anchoring_height(proposal_height) {
             warn!("Unable to finalize anchoring tx for height={}",
@@ -187,7 +187,7 @@ impl AnchoringHandler {
             }
 
             info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
-                  new_lect.payload().0,
+                  new_lect.payload().block_height,
                   new_lect.txid(),
                   new_lect.amount());
 

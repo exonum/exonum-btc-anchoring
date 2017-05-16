@@ -95,12 +95,12 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[cfg_tx]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) =
-        sandbox.gen_anchoring_tx_with_signatures(0,
-                                                 anchored_tx.payload().1,
-                                                 &[],
-                                                 None,
-                                                 &following_multisig.1);
+    let (_, signatures) = sandbox
+        .gen_anchoring_tx_with_signatures(0,
+                                          anchored_tx.payload().block_hash,
+                                          &[],
+                                          None,
+                                          &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
     client.expect(vec![

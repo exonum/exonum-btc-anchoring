@@ -1,4 +1,6 @@
 language: rust
+rust:
+  - stable
 cache: cargo
 sudo: required
 dist: trusty
@@ -8,9 +10,14 @@ env:
   - ANCHORING_USER=travis
   - ANCHORING_PASSWORD=travis
   - RUST_LOG=off
+  - NIGHTLY_RUST=nightly-2017-01-08
+  - CLIPPY_VERS=0.0.107
+  - RUSTFMT_VERS=0.8.4
+  
 before_install:
-- which rustfmt || cargo install rustfmt --vers 0.8.4
-- rustup override set nightly-2017-01-08
+- rustfmt -V | grep $RUSTFMT_VERS || cargo install rustfmt --vers $RUSTFMT_VERS --force
+- rustup override set $NIGHTLY_RUST
+- cargo +$NIGHTLY_RUST clippy -V | grep $CLIPPY_VERS || cargo +$NIGHTLY_RUST install clippy --vers $CLIPPY_VERS --force
 - rustc --version
 - cargo --version
 - sudo add-apt-repository -y ppa:chris-lea/libsodium
@@ -26,7 +33,7 @@ before_script:
 script:
 - cargo fmt -- --write-mode=diff
 - cargo fmt -p anchoring_btc_sandbox -- --write-mode=diff
-- cargo check --features clippy
+- cargo clippy -- -D warnings
 - cargo test --release
 - cargo test --manifest-path sandbox_tests/Cargo.toml
 after_script:

@@ -126,7 +126,10 @@ fn send_anchoring_tx(client: &AnchoringRpc,
     let inputs = tx.inputs().collect::<Vec<_>>();
     let signatures = make_signatures(redeem_script, &tx, inputs.as_slice(), priv_keys);
     let tx = tx.send(client, redeem_script, signatures).unwrap();
-    assert_eq!(tx.payload(), (block_height, block_hash));
+
+    let payload = tx.payload();
+    assert_eq!(payload.block_height, block_height);
+    assert_eq!(payload.block_hash, block_hash);
 
     debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
     let lect_tx = client
@@ -196,10 +199,10 @@ fn test_anchoring_tx_storage_value() {
 
 #[test]
 fn test_anchoring_tx_message_field_rw_correct() {
-    let hex = "01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f369a3f0a288a7000000000\
-        0ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9a30a87000000000000000\
-        02c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6e03f742abac0b3108134d\
-        900000000";
+    let hex = "010000000141d7585a6cb11e78c27fab0e8f8f8ede9285d6601fd4c4ab72cdadbb3b7af8030000000000\
+               ffffffff02000000000000000017a914e084a290cf26998909b4fa5b42088918eeefee97870000000000\
+               000000326a3045584f4e554d0100020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef0\
+               3baf0603fd4b0cd004cd1e7500000000";
     let dat = Vec::<u8>::from_hex(hex).unwrap();
 
     let mut buf = vec![255; 8];
@@ -276,7 +279,7 @@ fn test_anchoring_tx_message_field_rw_without_payload_check() {
 
 #[test]
 #[should_panic(expected = "Result::unwrap()` on an `Err`")]
-fn test_anchoring_tx_message_field_rw_wrong_tx_kind_check() {
+fn test_anchoring_tx_message_field_rw_wrong_check() {
     /// Correct non-anchoring tx, created by command:
     /// `bitcoin-cli sendtoaddress "mynkNvvoysgzn3CX51KwyKyNVbEJEHs8Cw" 0.1`
     let hex = "02000000011b8ac5ff25dfe2b4675e86d77dda493ade980206ee6a7833729f07a2f1f49982000000004\
@@ -535,7 +538,8 @@ fn test_anchoring_tx_prev_chain() {
         .into_transaction()
         .unwrap();
 
-    assert_eq!(tx.prev_tx_chain(), Some(prev_tx.id()));
+
+    assert_eq!(tx.payload().prev_tx_chain, Some(prev_tx.id()));
 }
 
 #[test]
@@ -555,18 +559,11 @@ fn test_tx_kind_funding() {
 
 #[test]
 fn test_tx_kind_anchoring() {
-    let tx = BitcoinTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8c8\
-        7fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378bd\
-        6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e198520147304402\
-        203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d0f\
-        89538304d3f358da12b02dab2b4d74f2981c8177b69601473044022052ad0d6c56aa6e971708f0790732608564\
-        81aeee6a48b231bc07f43d6b02c77002203a957608e4fbb42b239dd99db4e243776cc55ed8644af21fa80fd9be\
-        77a59a60014c8b532103475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c2102a6\
-        3948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0210230cb2805476bf984d2236b56\
-        ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e\
-        5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca10d\
-        6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e2d\
-        3ea82f7f841c308d830a9600000000")
+    let tx = BitcoinTx::from_hex("010000000141d7585a6cb11e78c27fab0e8f8f8ede9285d6601fd4c4ab72cdadb\
+                                  b3b7af8030000000000ffffffff02000000000000000017a914e084a290cf2699\
+                                  8909b4fa5b42088918eeefee97870000000000000000326a3045584f4e554d010\
+                                  0020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603\
+                                  fd4b0cd004cd1e7500000000")
             .unwrap();
     match TxKind::from(tx) {
         TxKind::Anchoring(_) => {}
@@ -699,6 +696,7 @@ fn test_rpc_anchoring_tx_chain() {
             .payload(block_height, block_hash)
             .send_to(addr.clone())
             .fee(fee)
+            .prev_tx_chain(Some(funding_tx.id()))
             .into_transaction()
             .unwrap();
         trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
@@ -739,7 +737,10 @@ fn test_rpc_anchoring_tx_chain() {
                                     utxo_tx,
                                     &[],
                                     fee);
-        assert_eq!(utxo_tx.payload(), (block_height, block_hash));
+
+        let payload = utxo_tx.payload();
+        assert_eq!(payload.block_height, block_height);
+        assert_eq!(payload.block_hash, block_hash);
         out_funds -= fee;
     }
 
@@ -853,7 +854,10 @@ fn test_rpc_anchoring_tx_chain_insufficient_funds() {
                                     utxo_tx,
                                     &[],
                                     fee);
-        assert_eq!(utxo_tx.payload(), (block_height, block_hash));
+
+        let payload = utxo_tx.payload();
+        assert_eq!(payload.block_height, block_height);
+        assert_eq!(payload.block_hash, block_hash);
         out_funds -= fee;
     }
 

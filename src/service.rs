@@ -18,6 +18,7 @@ use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 use blockchain::dto::AnchoringMessage;
 use error::Error as ServiceError;
+#[cfg(not(feature="sandbox_tests"))]
 use handler::error::Error as HandlerError;
 
 pub use blockchain::ANCHORING_SERVICE_ID;
