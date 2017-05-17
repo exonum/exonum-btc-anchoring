@@ -2,12 +2,12 @@ use bitcoin::blockdata::transaction::SigHashType;
 
 use exonum::blockchain::{Schema, Transaction};
 use exonum::messages::Message;
-use exonum::storage::{View, List, Error as StorageError};
+use exonum::storage::{Error as StorageError, List, View};
 
 use blockchain::dto::{AnchoringMessage, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use blockchain::schema::AnchoringSchema;
 use blockchain::consensus_storage::AnchoringConfig;
-use details::btc::transactions::{TxKind, FundingTx, AnchoringTx};
+use details::btc::transactions::{AnchoringTx, FundingTx, TxKind};
 
 impl MsgAnchoringSignature {
     pub fn verify_content(&self) -> bool {
@@ -55,7 +55,7 @@ impl MsgAnchoringSignature {
             let tx_addr = tx.output_address(anchoring_cfg.network);
             // Use following address if it exists
             let addr = if let Some(following) = anchoring_schema.following_anchoring_config()? {
-                following.config.redeem_script().1
+                following.redeem_script().1
             } else {
                 addr
             };
@@ -163,7 +163,8 @@ fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
                 let prev_lect = anchoring_schema
                     .lects(id)
                     .get(prev_lect_idx)?
-                    .expect(&format!("Lect with index {} is absent in lects table for validator {}",
+                    .expect(&format!("Lect with index {} is absent in lects table for validator \
+                                     {}",
                                     prev_lect_idx,
                                     id));
                 assert_eq!(prev_txid,

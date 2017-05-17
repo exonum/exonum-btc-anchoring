@@ -1,7 +1,7 @@
 use std::mem;
 
 use libc::c_void;
-use byteorder::{LittleEndian, ByteOrder};
+use byteorder::{ByteOrder, LittleEndian};
 use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::SigHashType;
 use secp256k1::ffi;

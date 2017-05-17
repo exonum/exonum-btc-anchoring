@@ -137,6 +137,10 @@ macro_rules! implement_tx_wrapper {
             self.0.bitcoin_hash().be_hex_string()
         }
 
+        pub fn ntxid(&self) -> String {
+            self.0.ntxid().be_hex_string()
+        }
+
         pub fn confirmations(&self, client: &AnchoringRpc)
              -> ::std::result::Result<Option<u64>, ::bitcoinrpc::Error> {
             let confirmations = client.get_transaction_info(&self.txid())?

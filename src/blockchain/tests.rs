@@ -1,4 +1,4 @@
-use exonum::crypto::{PublicKey, Signature, HexValue};
+use exonum::crypto::{HexValue, PublicKey, Signature};
 
 use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::constants::Network;

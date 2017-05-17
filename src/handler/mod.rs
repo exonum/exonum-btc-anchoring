@@ -8,7 +8,7 @@ use std::collections::HashMap;
 
 use details::rpc::AnchoringRpc;
 use details::btc;
-use details::btc::transactions::{AnchoringTx, FundingTx};
+use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx};
 use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::MsgAnchoringSignature;
@@ -44,6 +44,10 @@ pub enum AnchoringState {
         to: AnchoringConfig,
     },
     Recovering { cfg: AnchoringConfig },
+    Waiting {
+        lect: BitcoinTx,
+        confirmations: Option<u64>,
+    },
     Auditing { cfg: AnchoringConfig },
     Broken,
 }

@@ -2,7 +2,7 @@ use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
 use exonum::blockchain::{Schema, StoredConfiguration};
-use exonum::storage::{ListTable, MerkleTable, List, MapTable, View, Map, Error as StorageError};
+use exonum::storage::{Error as StorageError, List, ListTable, Map, MapTable, MerkleTable, View};
 use exonum::crypto::Hash;
 
 use bitcoin::util::base58::ToBase58;
@@ -11,13 +11,6 @@ use blockchain::ANCHORING_SERVICE_ID;
 use blockchain::dto::MsgAnchoringSignature;
 use details::btc;
 use details::btc::transactions::BitcoinTx;
-
-#[doc(hidden)]
-#[derive(Clone, Debug, PartialEq)]
-pub struct FollowingConfig {
-    pub actual_from: u64,
-    pub config: AnchoringConfig,
-}
 
 #[doc(hidden)]
 pub struct AnchoringSchema<'a> {
@@ -67,14 +60,10 @@ impl<'a> AnchoringSchema<'a> {
         Ok(self.parse_config(&actual))
     }
 
-    pub fn following_anchoring_config(&self) -> Result<Option<FollowingConfig>, StorageError> {
+    pub fn following_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
         let schema = Schema::new(self.view);
         if let Some(stored) = schema.following_configuration()? {
-            let following_cfg = FollowingConfig {
-                actual_from: stored.actual_from,
-                config: self.parse_config(&stored),
-            };
-            Ok(Some(following_cfg))
+            Ok(Some(self.parse_config(&stored)))
         } else {
             Ok(None)
         }

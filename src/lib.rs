@@ -117,6 +117,8 @@ extern crate byteorder;
 extern crate log;
 #[macro_use]
 extern crate derive_error;
+#[cfg(test)]
+extern crate blockchain_explorer;
 
 extern crate rand;
 extern crate tempdir;
@@ -138,7 +140,7 @@ pub use details::btc::{Network as BitcoinNetwork, gen_btc_keypair, gen_btc_keypa
 pub use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
 pub use blockchain::consensus_storage::AnchoringConfig;
 pub use local_storage::AnchoringNodeConfig;
-pub use service::{AnchoringService, ANCHORING_SERVICE_ID, gen_anchoring_testnet_config,
+pub use service::{ANCHORING_SERVICE_ID, AnchoringService, gen_anchoring_testnet_config,
                   gen_anchoring_testnet_config_with_rng};
 pub use handler::AnchoringHandler;
 pub use error::Error;

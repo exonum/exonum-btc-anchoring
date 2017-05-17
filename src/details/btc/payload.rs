@@ -1,7 +1,7 @@
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use bitcoin::blockdata::script::{Script, Instruction, Builder};
+use bitcoin::blockdata::script::{Builder, Instruction, Script};
 use bitcoin::blockdata::opcodes::All;
 
 use exonum::crypto::Hash;

@@ -30,8 +30,8 @@ use configuration_service::ConfigurationService;
 use configuration_service::config_api::PrivateConfigApi;
 use anchoring_btc_service::AnchoringService;
 use anchoring_btc_service::AnchoringRpc;
-use anchoring_btc_service::{AnchoringNodeConfig, AnchoringConfig, AnchoringRpcConfig,
-                            gen_anchoring_testnet_config, gen_btc_keypair, BitcoinNetwork};
+use anchoring_btc_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
+                            BitcoinNetwork, gen_anchoring_testnet_config, gen_btc_keypair};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {
@@ -161,8 +161,8 @@ fn main() {
 
             let anchoring_cfg = cfg.anchoring_service;
             let anchoring = AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node);
-            let services: Vec<Box<Service>> = vec![Box::new(anchoring),
-                                                   Box::new(ConfigurationService::new())];
+            let services: Vec<Box<Service>> =
+                vec![Box::new(anchoring), Box::new(ConfigurationService::new())];
             let blockchain = Blockchain::new(db, services);
             run_node(blockchain, cfg.node, port)
         }

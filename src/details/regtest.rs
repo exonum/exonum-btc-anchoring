@@ -1,5 +1,5 @@
 use std::ops::Drop;
-use std::process::{Command, Child, Stdio};
+use std::process::{Child, Command, Stdio};
 use std::path::Path;
 use std::fs;
 use std::fs::File;

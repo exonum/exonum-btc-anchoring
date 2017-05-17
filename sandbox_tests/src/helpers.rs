@@ -2,26 +2,25 @@ pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
 use serde_json::value::ToJson;
-use bitcoin::util::base58::{ToBase58, FromBase58};
+use bitcoin::util::base58::{FromBase58, ToBase58};
 
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{Hash, HexValue};
 use exonum::blockchain::Schema;
 use exonum::storage::{List, StorageValue};
+use blockchain_explorer::helpers;
 
 use sandbox::sandbox::Sandbox;
-use sandbox::sandbox_tests_helper::{SandboxState, add_one_height_with_transactions,
-                                    add_one_height_with_transactions_from_other_validator};
 use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
 use anchoring_btc_service::details::btc;
-use anchoring_btc_service::details::btc::transactions::{RawBitcoinTx, BitcoinTx};
-use anchoring_btc_service::details::sandbox::{SandboxClient, Request};
+use anchoring_btc_service::details::btc::transactions::{BitcoinTx, RawBitcoinTx};
+use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use anchoring_btc_service::blockchain::schema::AnchoringSchema;
 
-use AnchoringSandboxState;
+use AnchoringSandbox;
 
 pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            validator: u32,
@@ -132,18 +131,19 @@ pub fn block_hash_on_height(sandbox: &Sandbox, height: u64) -> Hash {
 }
 
 /// Anchor genesis block using funding tx
-pub fn anchor_first_block_without_other_signatures(sandbox: &Sandbox,
-                                                   client: &SandboxClient,
-                                                   sandbox_state: &SandboxState,
-                                                   anchoring_state: &mut AnchoringSandboxState) {
-    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
+pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
+    let anchoring_addr = sandbox.current_addr();
 
-    client.expect(vec![request! {
+    sandbox
+        .client()
+        .expect(vec![
+            gen_confirmations_request(sandbox.current_funding_tx().clone(), 50),
+            request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
                 {
-                    "txid": &anchoring_state.common.funding_tx.txid(),
+                    "txid": &sandbox.current_funding_tx().txid(),
                     "vout": 0,
                     "address": &anchoring_addr.to_base58check(),
                     "account": "multisig",
@@ -154,90 +154,52 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &Sandbox,
                     "solvable": false
                 }
             ]
-        }]);
+        },
+        ]);
 
+    let hash = sandbox.last_hash();
     let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
-                                                         0,
-                                                         sandbox.last_hash(),
-                                                         &[],
-                                                         None,
-                                                         &anchoring_addr);
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
+        sandbox.gen_anchoring_tx_with_signatures(0, hash, &[], None, &anchoring_addr);
+    let anchored_tx = sandbox.latest_anchored_tx();
+    sandbox.add_height(&[]);
 
     sandbox.broadcast(signatures[0].clone());
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures[0..1]);
-}
-
-/// Anchor genesis block using funding tx
-pub fn anchor_first_block(sandbox: &Sandbox,
-                          client: &SandboxClient,
-                          sandbox_state: &SandboxState,
-                          anchoring_state: &mut AnchoringSandboxState) {
-    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
-
-    client.expect(vec![request! {
-            method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
-            response: [
-                {
-                    "txid": &anchoring_state.common.funding_tx.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 50,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
-        }]);
-
-    let (_, signatures) =
-        anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
-                                                         0,
-                                                         sandbox.last_hash(),
-                                                         &[],
-                                                         None,
-                                                         &anchoring_addr);
-    let anchored_tx = anchoring_state.latest_anchored_tx();
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-
-    sandbox.broadcast(signatures[0].clone());
-    client.expect(vec![request! {
+    sandbox
+        .client()
+        .expect(vec![
+            gen_confirmations_request(sandbox.current_funding_tx().clone(), 50),
+            request! {
                            method: "getrawtransaction",
                            params: [&anchored_tx.txid(), 1],
                            error: RpcError::NoInformation("Unable to find tx".to_string())
                        },
-                       request! {
+            request! {
                            method: "sendrawtransaction",
                            params: [anchored_tx.to_hex()]
-                       }]);
+                       },
+        ]);
 
     let signatures = signatures.into_iter().map(|tx| tx).collect::<Vec<_>>();
-    add_one_height_with_transactions(&sandbox, &sandbox_state, &signatures);
+    sandbox.add_height(&signatures);
 
     let txs = (0..4)
         .map(|idx| gen_service_tx_lect(sandbox, idx, &anchored_tx, 1))
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
-    add_one_height_with_transactions(sandbox, sandbox_state, &txs);
+    sandbox.add_height(&txs);
 }
 
-pub fn anchor_first_block_lect_normal(sandbox: &Sandbox,
-                                      client: &SandboxClient,
-                                      sandbox_state: &SandboxState,
-                                      anchoring_state: &mut AnchoringSandboxState) {
+pub fn anchor_first_block_lect_normal(sandbox: &AnchoringSandbox) {
     // Just add few heights
-    fast_forward_to_height(&sandbox,
-                           &sandbox_state,
-                           anchoring_state.next_check_lect_height(&sandbox));
+    sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
 
-    let anchored_tx = anchoring_state.latest_anchored_tx();
-    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
+    let anchored_tx = sandbox.latest_anchored_tx();
+    let anchoring_addr = sandbox.current_addr();
 
-    client.expect(vec![request! {
+    sandbox
+        .client()
+        .expect(vec![
+            request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -254,28 +216,37 @@ pub fn anchor_first_block_lect_normal(sandbox: &Sandbox,
                 }
             ]
         },
-                       request! {
+            request! {
             method: "getrawtransaction",
             params: [&anchored_tx.txid(), 0],
             response: &anchored_tx.to_hex()
-        }]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+        },
+        ]);
+    sandbox.add_height(&[]);
 }
 
-pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
-                                    client: &SandboxClient,
-                                    sandbox_state: &SandboxState,
-                                    anchoring_state: &mut AnchoringSandboxState) {
-    anchor_first_block(sandbox, client, sandbox_state, anchoring_state);
+pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
+    let client = sandbox.client();
+
+    anchor_first_block(sandbox);
     // Just add few heights
-    fast_forward_to_height(&sandbox,
-                           &sandbox_state,
-                           anchoring_state.next_check_lect_height(&sandbox));
+    sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
 
-    let other_lect = anchoring_state.common.funding_tx.clone();
-    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
+    let (other_lect, other_signatures) = {
+        let anchored_tx = sandbox.latest_anchored_tx();
+        let other_signatures = sandbox
+            .latest_anchored_tx_signatures()
+            .iter()
+            .filter(|tx| tx.validator() != 0)
+            .cloned()
+            .collect::<Vec<_>>();
+        let other_lect = sandbox.finalize_tx(anchored_tx.clone(), other_signatures.as_ref());
+        (other_lect, other_signatures)
+    };
 
-    client.expect(vec![request! {
+    let anchoring_addr = sandbox.current_addr();
+    client.expect(vec![
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -292,19 +263,67 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
                 }
             ]
         },
-                       request! {
+        request! {
             method: "getrawtransaction",
             params: [&other_lect.txid(), 0],
             response: &other_lect.to_hex()
-        }]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+        },
+    ]);
+    sandbox.add_height(&[]);
 
     let txs = (0..4)
         .map(|idx| gen_service_tx_lect(sandbox, idx, &other_lect, 2))
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
 
-    client.expect(vec![request! {
+    sandbox.add_height(&txs);
+    sandbox.set_latest_anchored_tx(Some((other_lect.clone(), other_signatures.clone())));
+}
+
+pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
+    let client = sandbox.client();
+
+    anchor_first_block(sandbox);
+    // Just add few heights
+    sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
+
+    let other_lect = sandbox.current_funding_tx();
+    let anchoring_addr = sandbox.current_addr();
+
+    client.expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            response: [
+                {
+                    "txid": &other_lect.txid(),
+                    "vout": 0,
+                    "address": &anchoring_addr.to_base58check(),
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 0,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        },
+        request! {
+            method: "getrawtransaction",
+            params: [&other_lect.txid(), 0],
+            response: &other_lect.to_hex()
+        },
+    ]);
+    sandbox.add_height(&[]);
+
+    let txs = (0..4)
+        .map(|idx| gen_service_tx_lect(sandbox, idx, &other_lect, 2))
+        .collect::<Vec<_>>();
+    sandbox.broadcast(txs[0].clone());
+
+    client.expect(vec![
+        gen_confirmations_request(sandbox.current_funding_tx(), 50),
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -320,94 +339,35 @@ pub fn anchor_first_block_lect_lost(sandbox: &Sandbox,
                     "solvable": false
                 }
             ]
-        }]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &txs);
+        },
+    ]);
+    sandbox.add_height(&txs);
 
-    {
-        let anchored_tx = anchoring_state.latest_anchored_tx();
-
-        client.expect(vec![request! {
+    let anchored_tx = sandbox.latest_anchored_tx();
+    client.expect(vec![
+        gen_confirmations_request(sandbox.current_funding_tx(), 50),
+        request! {
                                method: "getrawtransaction",
                                params: [&anchored_tx.txid(), 1],
                                error: RpcError::NoInformation("Unable to find tx".to_string())
                            },
-                           request! {
+        request! {
                                 method: "sendrawtransaction",
                                 params: [anchored_tx.to_hex()]
-                            }]);
-        add_one_height_with_transactions(&sandbox, &sandbox_state, &[]);
-        sandbox.broadcast(gen_service_tx_lect(sandbox, 0, &anchored_tx, 3))
-    }
-    anchoring_state.latest_anchored_tx = None;
+                            },
+    ]);
+    sandbox.add_height(&[]);
+    sandbox.broadcast(gen_service_tx_lect(sandbox, 0, &anchored_tx, 3));
+    sandbox.set_latest_anchored_tx(None);
 }
 
-pub fn anchor_first_block_lect_different(sandbox: &Sandbox,
-                                         client: &SandboxClient,
-                                         sandbox_state: &SandboxState,
-                                         anchoring_state: &mut AnchoringSandboxState) {
-    anchor_first_block(sandbox, client, sandbox_state, anchoring_state);
-    // Just add few heights
-    fast_forward_to_height(&sandbox,
-                           &sandbox_state,
-                           anchoring_state.next_check_lect_height(&sandbox));
+pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
+    let client = sandbox.client();
+    sandbox.fast_forward_to_height(sandbox.next_anchoring_height());
 
-    let (other_lect, other_signatures) = {
-        let anchored_tx = anchoring_state.latest_anchored_tx();
-        let other_signatures = anchoring_state
-            .latest_anchored_tx_signatures()
-            .iter()
-            .filter(|tx| tx.validator() != 0)
-            .cloned()
-            .collect::<Vec<_>>();
-        let other_lect = anchoring_state
-            .finalize_tx(anchored_tx.clone(), other_signatures.as_ref());
-        (other_lect, other_signatures)
-    };
-
-    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
-    client.expect(vec![request! {
-            method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
-            response: [
-                {
-                    "txid": &other_lect.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
-            ]
-        },
-                       request! {
-            method: "getrawtransaction",
-            params: [&other_lect.txid(), 0],
-            response: &other_lect.to_hex()
-        }]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
-
-    let txs = (0..4)
-        .map(|idx| gen_service_tx_lect(sandbox, idx, &other_lect, 2))
-        .collect::<Vec<_>>();
-    sandbox.broadcast(txs[0].clone());
-
-    add_one_height_with_transactions(sandbox, sandbox_state, &txs);
-    anchoring_state.latest_anchored_tx = Some((other_lect.clone(), other_signatures.clone()));
-}
-
-pub fn anchor_second_block_normal(sandbox: &Sandbox,
-                                  client: &SandboxClient,
-                                  sandbox_state: &SandboxState,
-                                  anchoring_state: &mut AnchoringSandboxState) {
-    fast_forward_to_height(&sandbox,
-                           &sandbox_state,
-                           anchoring_state.next_anchoring_height(&sandbox));
-
-    let (_, anchoring_addr) = anchoring_state.common.redeem_script();
-    client.expect(vec![request! {
+    let anchoring_addr = sandbox.current_addr();
+    client.expect(vec![
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -423,58 +383,29 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
                     "solvable": false
                 }
             ]
-        }]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &[]);
+        },
+    ]);
+    sandbox.add_height(&[]);
 
-    let (_, signatures) = anchoring_state.gen_anchoring_tx_with_signatures(sandbox,
+    let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
         10,
         sandbox.last_hash(),
         &[],
         None,
         &btc::Address::from_base58check(&anchoring_addr.to_base58check()).unwrap()
     );
-    let anchored_tx = anchoring_state.latest_anchored_tx();
+    let anchored_tx = sandbox.latest_anchored_tx();
 
     sandbox.broadcast(signatures[0].clone());
-    client.expect(vec![request! {
-            method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 1],
-            response: {
-                "hash":&anchored_tx.txid(),"hex":&anchored_tx.to_hex(),
-                "locktime":1088682,
-                "size":223,
-                "txid":"4ae2de1782b19ddab252d88d570f60bc821bd745d031029a8b28f7427c8d0e93",
-                "version":1,
-                "vin":[{"scriptSig":{
-                    "asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f738\
-                        00220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a[ALL]\
-                         02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876",
-                    "hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd28f7\
-                    3800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012102c\
-                    5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"
-                },
-                "sequence":429496729,
-                "txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645",
-                "vout":0}],
-                "vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],
-                "asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL",
-                "hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87",
-                "reqSigs":1,"type":"scripthash"},"value":0.00004},
-                {"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],
-                "asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERIFY \
-                    OP_CHECKSIG",
-                "hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
-                "reqSigs":1,"type":"pubkeyhash"},
-                "value":1.00768693}],"vsize":223
-                }
-        }]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &signatures);
+    client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 0)]);
+    sandbox.add_height(&signatures);
 
     let txs = (0..4)
         .map(|idx| gen_service_tx_lect(sandbox, idx, &anchored_tx, 2))
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
-    client.expect(vec![request! {
+    client.expect(vec![
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -491,24 +422,51 @@ pub fn anchor_second_block_normal(sandbox: &Sandbox,
                 }
             ]
         },
-                       request! {
+        request! {
             method: "getrawtransaction",
             params: [&anchored_tx.txid(), 0],
             response: &anchored_tx.to_hex()
-        }]);
-    add_one_height_with_transactions(sandbox, sandbox_state, &txs);
+        },
+    ]);
+    sandbox.add_height(&txs);
 }
 
-pub fn fast_forward_to_height(sandox: &Sandbox, state: &SandboxState, height: u64) {
-    for _ in sandox.current_height()..height {
-        add_one_height_with_transactions(sandox, state, &[]);
-    }
+/// Anchor genesis block using funding tx
+pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
+    let client = sandbox.client();
+    let anchoring_addr = sandbox.current_addr();
+
+    client.expect(vec![
+        gen_confirmations_request(sandbox.current_funding_tx(), 50),
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            response: [
+                {
+                    "txid": &sandbox.current_funding_tx().txid(),
+                    "vout": 0,
+                    "address": &anchoring_addr.to_base58check(),
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 50,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        },
+    ]);
+
+    let (_, signatures) =
+        sandbox
+            .gen_anchoring_tx_with_signatures(0, sandbox.last_hash(), &[], None, &anchoring_addr);
+    sandbox.add_height(&[]);
+
+    sandbox.broadcast(signatures[0].clone());
+    client.expect(vec![gen_confirmations_request(sandbox.current_funding_tx(), 50)]);
+    sandbox.add_height(&signatures[0..1]);
 }
 
-pub fn fast_forward_to_height_from_other_validator(sandox: &Sandbox,
-                                                   state: &SandboxState,
-                                                   height: u64) {
-    for _ in sandox.current_height()..height {
-        add_one_height_with_transactions_from_other_validator(sandox, state, &[]);
-    }
+pub fn init_logger() {
+    let _ = helpers::init_logger();
 }

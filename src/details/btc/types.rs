@@ -2,16 +2,16 @@ use std::ops::Deref;
 use std::fmt;
 
 pub use bitcoin::blockdata::transaction::Transaction as RawTransaction;
-pub use bitcoin::util::address::{Privkey as RawPrivkey, Address as RawAddress};
+pub use bitcoin::util::address::{Address as RawAddress, Privkey as RawPrivkey};
 pub use bitcoin::blockdata::script::Script as RawScript;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::util::hash::Sha256dHash;
-use bitcoin::util::base58::{FromBase58, ToBase58, Error as FromBase58Error};
+use bitcoin::util::base58::{Error as FromBase58Error, FromBase58, ToBase58};
 
 pub use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
 
-use exonum::crypto::{HexValue, FromHexError, hash, Hash};
+use exonum::crypto::{FromHexError, Hash, HexValue, hash};
 use exonum::messages::Field;
 use exonum::storage::StorageValue;
 

@@ -3,11 +3,11 @@ use bitcoin::util::base58::ToBase58;
 use exonum::blockchain::NodeState;
 
 use error::Error as ServiceError;
-use details::btc::transactions::AnchoringTx;
+use details::btc::transactions::BitcoinTx;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 
-use super::{AnchoringHandler, MultisigAddress, LectKind};
+use super::{AnchoringHandler, LectKind, MultisigAddress};
 
 #[doc(hidden)]
 impl AnchoringHandler {
@@ -62,36 +62,34 @@ impl AnchoringHandler {
         Ok(())
     }
 
+    pub fn handle_waiting_state(&mut self,
+                                lect: BitcoinTx,
+                                confirmations: Option<u64>)
+                                -> Result<(), ServiceError> {
+        trace!("Waiting for enough confirmations for the lect={:#?}, current={:?}",
+               lect,
+               confirmations);
+        if confirmations.is_none() {
+            trace!("Resend transition transaction, txid={}", lect.txid());
+            self.client().send_transaction(lect)?;
+        }
+        Ok(())
+    }
+
     pub fn handle_recovering_state(&mut self,
                                    cfg: AnchoringConfig,
                                    state: &mut NodeState)
                                    -> Result<(), ServiceError> {
         let multisig: MultisigAddress = self.multisig_address(&cfg);
-        trace!("Trying to recover tx chain after transition to addr={}",
+
+        trace!("Starting a new tx chain to addr={} from scratch",
                multisig.addr.to_base58check());
 
-        if state.height() % self.node.check_lect_frequency == 0 {
-            // First of all we try to update our lect and actual configuration
-            let lect = self.update_our_lect(&multisig, state)?;
-            if lect.is_none() {
-                // Check prev lect
-                let prev_lect: AnchoringTx = AnchoringSchema::new(state.view())
-                    .prev_lect(self.validator_id(state))?
-                    .unwrap()
-                    .into();
-                let network = multisig.common.network;
-                if prev_lect.output_address(network) == multisig.addr {
-                    trace!("Resend transition transaction, txid={}", prev_lect.txid());
-                    self.client().send_transaction(prev_lect.into())?;
-                } else {
-                    // Start a new anchoring chain from scratch
-                    let lect_id = AnchoringSchema::new(state.view())
-                        .lect(self.validator_id(state))?
-                        .id();
-                    self.try_create_anchoring_tx_chain(&multisig, Some(lect_id), state)?;
-                }
-            }
-        }
+        let lect_id = AnchoringSchema::new(state.view())
+            .lect(self.validator_id(state))?
+            .id();
+        self.try_create_anchoring_tx_chain(&multisig, Some(lect_id), state)?;
+
         // Try to finalize new tx chain propose if it exist
         if let Some(proposal) = self.proposal_tx.clone() {
             self.try_finalize_proposal_tx(proposal, &multisig, state)?;

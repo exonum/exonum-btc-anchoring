@@ -1,7 +1,7 @@
 use serde_json;
 
 use exonum::storage::StorageValue;
-use exonum::crypto::{hash, Hash};
+use exonum::crypto::{Hash, hash};
 
 use details::btc;
 use details::btc::transactions::FundingTx;
@@ -39,7 +39,7 @@ impl AnchoringConfig {
             funding_tx: tx,
             fee: 1000,
             frequency: 500,
-            utxo_confirmations: 24,
+            utxo_confirmations: 5,
             network: network,
         }
     }
