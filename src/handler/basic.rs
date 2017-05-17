@@ -483,6 +483,9 @@ fn get_confirmations(client: &AnchoringRpc, txid: &str) -> Result<Option<u64>, S
 }
 
 fn is_enough_confirmations(cfg: &AnchoringConfig, confirmations: Option<u64>) -> bool {
-    let confirmations = confirmations.unwrap_or_else(|| 0);
-    confirmations >= cfg.utxo_confirmations
+    if let Some(confirmations) = confirmations {
+        confirmations >= cfg.utxo_confirmations
+    } else {
+        false
+    }
 }
