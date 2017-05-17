@@ -1,7 +1,7 @@
 use std::fmt;
 
-use exonum::crypto::{Hash, PublicKey};
-use exonum::messages::{Error as MessageError, FromRaw, Message, RawTransaction};
+use exonum::crypto::{PublicKey, Hash, hash};
+use exonum::messages::{RawTransaction, Message, FromRaw, Error as MessageError};
 
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
 
@@ -34,6 +34,15 @@ message! {
         validator:      u32          [32 => 36]
         tx:             BitcoinTx    [36 => 44]
         lect_count:     u64          [44 => 52]
+    }
+}
+
+storage_value! {
+    LectContent {
+        const SIZE = 40;
+
+        msg_hash:       &Hash       [00 => 32]
+        tx:             BitcoinTx   [32 => 40]
     }
 }
 

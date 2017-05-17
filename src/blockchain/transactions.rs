@@ -123,7 +123,7 @@ impl MsgAnchoringUpdateLatest {
             warn!("Received lect with wrong count, content={:#?}", self);
             return Ok(());
         }
-        anchoring_schema.add_lect(id, tx)
+        anchoring_schema.add_lect(id, tx, self.hash())
     }
 }
 
@@ -168,7 +168,7 @@ fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
                                     prev_lect_idx,
                                     id));
                 assert_eq!(prev_txid,
-                           prev_lect.id(),
+                           prev_lect.tx().id(),
                            "Inconsistent reference to previous lect in Exonum");
 
                 prev_lects_count += 1;

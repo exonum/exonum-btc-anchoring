@@ -67,7 +67,9 @@ pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
         let anchoring_schema = AnchoringSchema::new(&view);
         for lect_msg in lects {
             anchoring_schema
-                .add_lect(lect_msg.validator(), lect_msg.tx().clone())
+                .add_lect(lect_msg.validator(),
+                          lect_msg.tx().clone(),
+                          Message::hash(&lect_msg))
                 .unwrap();
         }
         view.changes()

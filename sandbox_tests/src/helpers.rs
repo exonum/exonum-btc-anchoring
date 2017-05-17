@@ -53,7 +53,12 @@ pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
     let b = sandbox.blockchain_ref().clone();
     let v = b.view();
     let s = AnchoringSchema::new(&v);
-    s.lects(id).values().unwrap()
+    s.lects(id)
+        .values()
+        .unwrap()
+        .into_iter()
+        .map(|x| x.tx())
+        .collect::<Vec<_>>()
 }
 
 pub fn lects_count(sandbox: &Sandbox, id: u32) -> u64 {

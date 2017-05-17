@@ -248,8 +248,7 @@ impl AnchoringHandler {
 
         let validators_count = state.validators().len() as u32;
         for id in 0..validators_count {
-            let lects = anchoring_schema.lects(id);
-            if Some(&our_lect) == lects.last()?.as_ref() {
+            if our_lect == anchoring_schema.lect(id)? {
                 count += 1;
             }
         }
@@ -275,15 +274,13 @@ impl AnchoringHandler {
 
         let mut lects = HashMap::new();
         for validator_id in 0..validators_count {
-            if let Some(last_lect) = anchoring_schema.lects(validator_id).last()? {
-                // TODO implement hash and eq for transaction
-                match lects.entry(last_lect.0) {
-                    Entry::Occupied(mut v) => {
-                        *v.get_mut() += 1;
-                    }
-                    Entry::Vacant(v) => {
-                        v.insert(1);
-                    }
+            let last_lect = anchoring_schema.lect(validator_id)?;
+            match lects.entry(last_lect.0) {
+                Entry::Occupied(mut v) => {
+                    *v.get_mut() += 1;
+                }
+                Entry::Vacant(v) => {
+                    v.insert(1);
                 }
             }
         }
@@ -381,7 +378,7 @@ impl AnchoringHandler {
                       -> Result<Option<BitcoinTx>, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let id = self.validator_id(state);
-        let first_funding_tx = schema.lects(id).get(0)?.unwrap();
+        let first_funding_tx = schema.lects(id).get(0)?.unwrap().tx();
 
         // Check that we know tx
         if schema.find_lect_position(id, &lect.id())?.is_some() {
