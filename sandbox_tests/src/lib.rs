@@ -52,6 +52,7 @@ pub mod secp256k1_hack;
 
 pub const ANCHORING_VALIDATOR: u32 = VALIDATOR_0;
 pub const ANCHORING_FREQUENCY: u64 = 10;
+pub const ANCHORING_UTXO_CONFIRMATIONS: u64 = 24;
 pub const ANCHORING_FUNDS: u64 = 4000;
 pub const CHECK_LECT_FREQUENCY: u64 = 6;
 
@@ -118,6 +119,7 @@ impl AnchoringSandbox {
         let priv_keys = priv_keys.into_iter().collect::<Vec<_>>();
         // Change default anchoring configs
         common.frequency = ANCHORING_FREQUENCY;
+        common.utxo_confirmations = ANCHORING_UTXO_CONFIRMATIONS;
         for &&(ref addr, ref keys) in &priv_keys {
             for (id, key) in keys.iter().enumerate() {
                 nodes[id]
