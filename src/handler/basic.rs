@@ -1,5 +1,3 @@
-use std::collections::hash_map::{Entry, HashMap};
-
 use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::NodeState;
@@ -265,41 +263,19 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn collect_lects(&self,
-                         cfg: &AnchoringConfig,
-                         state: &NodeState)
-                         -> Result<LectKind, ServiceError> {
+    pub fn collect_lects(&self, state: &NodeState) -> Result<LectKind, ServiceError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
-        let validators_count = cfg.validators.len() as u32;
-
-        let mut lects = HashMap::new();
-        for validator_id in 0..validators_count {
-            let last_lect = anchoring_schema.lect(validator_id)?;
-            match lects.entry(last_lect.0) {
-                Entry::Occupied(mut v) => {
-                    *v.get_mut() += 1;
+        let kind = if let Some(lect) = anchoring_schema.collect_lects()? {
+            match TxKind::from(lect) {
+                TxKind::Anchoring(tx) => LectKind::Anchoring(tx),
+                TxKind::FundingTx(tx) => LectKind::Funding(tx),
+                TxKind::Other(tx) => {
+                    let e = HandlerError::IncorrectLect {
+                        reason: "Incorrect lect transaction".to_string(),
+                        tx: tx.into(),
+                    };
+                    return Err(e.into());
                 }
-                Entry::Vacant(v) => {
-                    v.insert(1);
-                }
-            }
-        }
-
-        let kind = if let Some((lect, count)) = lects.iter().max_by_key(|&(_, v)| v) {
-            if *count >= ::majority_count(validators_count as u8) {
-                match TxKind::from(lect.clone()) {
-                    TxKind::Anchoring(tx) => LectKind::Anchoring(tx),
-                    TxKind::FundingTx(tx) => LectKind::Funding(tx),
-                    TxKind::Other(tx) => {
-                        let e = HandlerError::IncorrectLect {
-                            reason: "Incorrect lect transaction".to_string(),
-                            tx: tx.into(),
-                        };
-                        return Err(e.into());
-                    }
-                }
-            } else {
-                LectKind::None
             }
         } else {
             LectKind::None

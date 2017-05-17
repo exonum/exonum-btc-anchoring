@@ -1,3 +1,5 @@
+use std::collections::hash_map::{Entry, HashMap};
+
 use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
@@ -8,7 +10,7 @@ use exonum::crypto::Hash;
 use bitcoin::util::base58::ToBase58;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::ANCHORING_SERVICE_ID;
-use blockchain::dto::{MsgAnchoringSignature, LectContent};
+use blockchain::dto::{LectContent, MsgAnchoringSignature};
 use details::btc;
 use details::btc::transactions::BitcoinTx;
 
@@ -110,6 +112,35 @@ impl<'a> AnchoringSchema<'a> {
         } else {
             Ok(None)
         }
+    }
+
+    pub fn collect_lects(&self) -> Result<Option<BitcoinTx>, StorageError> {
+        let cfg = self.current_anchoring_config()?;
+        let validators_count = cfg.validators.len() as u32;
+
+        let mut lects = HashMap::new();
+        for validator_id in 0..validators_count {
+            let last_lect = self.lect(validator_id)?;
+            match lects.entry(last_lect.0) {
+                Entry::Occupied(mut v) => {
+                    *v.get_mut() += 1;
+                }
+                Entry::Vacant(v) => {
+                    v.insert(1);
+                }
+            }
+        }
+
+        let lect = if let Some((lect, count)) = lects.iter().max_by_key(|&(_, v)| v) {
+            if *count >= ::majority_count(validators_count as u8) {
+                Some(BitcoinTx::from(lect.clone()))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        Ok(lect)
     }
 
     pub fn find_lect_position(&self,

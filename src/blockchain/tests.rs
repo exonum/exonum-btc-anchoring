@@ -1,4 +1,4 @@
-use exonum::crypto::{PublicKey, Signature, HexValue, hash};
+use exonum::crypto::{HexValue, PublicKey, Signature, hash};
 use exonum::storage::StorageValue;
 
 use bitcoin::blockdata::transaction::SigHashType;
@@ -6,7 +6,7 @@ use bitcoin::network::constants::Network;
 
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
-use blockchain::dto::{MsgAnchoringSignature, LectContent};
+use blockchain::dto::{LectContent, MsgAnchoringSignature};
 use details::tests::{dummy_anchoring_tx, gen_anchoring_keys, make_signatures};
 
 #[test]

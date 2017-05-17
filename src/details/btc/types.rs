@@ -17,7 +17,7 @@ use exonum::storage::StorageValue;
 
 use super::HexValueEx;
 
-#[derive(Debug, Clone, Copy, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash)]
 pub struct TxId(Sha256dHash);
 #[derive(Clone, PartialEq)]
 pub struct PrivateKey(pub RawPrivkey);
@@ -41,6 +41,7 @@ implement_base58_wrapper! {RawPrivkey, PrivateKey}
 
 implement_serde_hex! {PublicKey}
 implement_serde_hex! {RedeemScript}
+implement_serde_hex! {TxId}
 implement_serde_base58check! {Address}
 implement_serde_base58check! {PrivateKey}
 
