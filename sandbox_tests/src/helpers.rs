@@ -7,7 +7,7 @@ use bitcoin::util::base58::{FromBase58, ToBase58};
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{Hash, HexValue};
 use exonum::blockchain::Schema;
-use exonum::storage::{List, StorageValue};
+use exonum::storage::{List, StorageValue, Fork};
 use blockchain_explorer::helpers;
 
 use sandbox::sandbox::Sandbox;
@@ -26,13 +26,13 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            validator: u32,
                            tx: &RawBitcoinTx,
                            count: u64)
-                           -> RawTransaction {
+                           -> MsgAnchoringUpdateLatest {
     let tx = MsgAnchoringUpdateLatest::new(&sandbox.p(validator as usize),
                                            validator,
                                            BitcoinTx::from(tx.clone()),
                                            count,
                                            sandbox.s(validator as usize));
-    tx.raw().clone()
+    tx
 }
 
 pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
@@ -40,13 +40,13 @@ pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
                                  fake_id: u32,
                                  tx: &RawBitcoinTx,
                                  count: u64)
-                                 -> RawTransaction {
+                                 -> MsgAnchoringUpdateLatest {
     let tx = MsgAnchoringUpdateLatest::new(&sandbox.p(real_id as usize),
                                            fake_id,
                                            BitcoinTx::from(tx.clone()),
                                            count,
                                            sandbox.s(real_id as usize));
-    tx.raw().clone()
+    tx
 }
 
 pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
@@ -63,6 +63,25 @@ pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
 
 pub fn lects_count(sandbox: &Sandbox, id: u32) -> u64 {
     dump_lects(sandbox, id).len() as u64
+}
+
+pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
+    where I: IntoIterator<Item = MsgAnchoringUpdateLatest>
+{
+    let blockchain = sandbox.blockchain_ref();
+    let changes = {
+        let view = blockchain.view();
+        let anchoring_schema = AnchoringSchema::new(&view);
+        for lect_msg in lects {
+            anchoring_schema
+                .add_lect(lect_msg.validator(),
+                          lect_msg.tx().clone(),
+                          Message::hash(&lect_msg))
+                .unwrap();
+        }
+        view.changes()
+    };
+    blockchain.merge(&changes).unwrap();
 }
 
 pub fn dump_signatures(sandbox: &Sandbox, txid: &btc::TxId) -> Vec<MsgAnchoringSignature> {
@@ -188,7 +207,11 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&signatures);
 
     let txs = (0..4)
-        .map(|idx| gen_service_tx_lect(sandbox, idx, &anchored_tx, 1))
+        .map(|idx| {
+                 gen_service_tx_lect(sandbox, idx, &anchored_tx, 1)
+                     .raw()
+                     .clone()
+             })
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
     sandbox.add_height(&txs);
@@ -277,7 +300,11 @@ pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[]);
 
     let txs = (0..4)
-        .map(|idx| gen_service_tx_lect(sandbox, idx, &other_lect, 2))
+        .map(|idx| {
+                 gen_service_tx_lect(sandbox, idx, &other_lect, 2)
+                     .raw()
+                     .clone()
+             })
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
 
@@ -322,7 +349,11 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[]);
 
     let txs = (0..4)
-        .map(|idx| gen_service_tx_lect(sandbox, idx, &other_lect, 2))
+        .map(|idx| {
+                 gen_service_tx_lect(sandbox, idx, &other_lect, 2)
+                     .raw()
+                     .clone()
+             })
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
 
@@ -406,7 +437,11 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&signatures);
 
     let txs = (0..4)
-        .map(|idx| gen_service_tx_lect(sandbox, idx, &anchored_tx, 2))
+        .map(|idx| {
+                 gen_service_tx_lect(sandbox, idx, &anchored_tx, 2)
+                     .raw()
+                     .clone()
+             })
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
     client.expect(vec![

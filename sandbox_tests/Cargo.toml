@@ -17,6 +17,9 @@ byteorder = "1.0.0"
 log = "0.3.0"
 rand = "0.3.0"
 libc = "0.2.21"
+router = "0.5.1"
+iron = "0.5.1"
+iron-test = "0.5.0"
 
 [dependencies.exonum]
 git = "ssh://git@github.com/exonum/exonum-core.git"

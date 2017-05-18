@@ -2,17 +2,18 @@ use router::Router;
 use iron::prelude::*;
 use serde_json::value::ToJson;
 
+
 use exonum::blockchain::Blockchain;
 use exonum::crypto::Hash;
-use exonum::messages::utils::U64;
 use exonum::storage::List;
 use blockchain_explorer::api::{Api, ApiError};
 
 use details::btc::TxId;
 use details::btc::transactions::{BitcoinTx, TxKind};
-use details::btc::payload::Payload;
 use blockchain::schema::AnchoringSchema;
 use blockchain::dto::LectContent;
+
+pub use details::btc::payload::Payload;
 
 mod error;
 
@@ -22,43 +23,22 @@ pub struct PublicApi {
     pub blockchain: Blockchain,
 }
 
-/// Serialize helper for `AnchoringTx` payload
-#[derive(Serialize)]
-pub struct PayloadSerdeHelper {
-    /// Anchored block hash
-    pub block_hash: Hash,
-    /// Anchored block height
-    pub block_height: U64,
-    /// `Txid` of previous transactions chain if it have been lost.
-    pub prev_tx_chain: Option<TxId>,
-}
-
 /// Public information about the anchoring transaction in `bitcoin`
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct AnchoringInfo {
     /// `Txid` of anchoring transaction.
     pub txid: TxId,
     /// Anchoring transaction payload
-    pub payload: Option<PayloadSerdeHelper>,
+    pub payload: Option<Payload>,
 }
 
 /// Public information about the `lect` transaction in `exonum`
-#[derive(Serialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct LectInfo {
     /// `Exonum` transaction hash
     pub hash: Hash,
     /// Information about anchoring transaction
     pub content: AnchoringInfo,
-}
-
-impl From<Payload> for PayloadSerdeHelper {
-    fn from(p: Payload) -> PayloadSerdeHelper {
-        PayloadSerdeHelper {
-            block_hash: p.block_hash,
-            block_height: U64(p.block_height),
-            prev_tx_chain: p.prev_tx_chain,
-        }
-    }
 }
 
 impl From<BitcoinTx> for AnchoringInfo {
@@ -67,7 +47,7 @@ impl From<BitcoinTx> for AnchoringInfo {
             TxKind::Anchoring(tx) => {
                 AnchoringInfo {
                     txid: tx.id(),
-                    payload: Some(tx.payload().into()),
+                    payload: Some(tx.payload()),
                 }
             }
             TxKind::FundingTx(tx) => {

@@ -192,7 +192,11 @@ fn test_anchoring_transit_config_normal() {
     sandbox.add_height(&signatures[1..]);
 
     let lects = (0..4)
-        .map(|id| gen_service_tx_lect(&sandbox, id, &anchored_tx, 3))
+        .map(|id| {
+                 gen_service_tx_lect(&sandbox, id, &anchored_tx, 3)
+                     .raw()
+                     .clone()
+             })
         .collect::<Vec<_>>();
     sandbox.broadcast(lects[0].clone());
 
@@ -340,7 +344,11 @@ fn test_anchoring_transit_config_unchanged_self_key() {
     sandbox.add_height(&signatures[1..]);
 
     let lects = (0..4)
-        .map(|id| gen_service_tx_lect(&sandbox, id, &anchored_tx, 3))
+        .map(|id| {
+                 gen_service_tx_lect(&sandbox, id, &anchored_tx, 3)
+                     .raw()
+                     .clone()
+             })
         .collect::<Vec<_>>();
     sandbox.broadcast(lects[0].clone());
 
@@ -519,7 +527,11 @@ fn test_anchoring_transit_config_with_funding_tx() {
     sandbox.add_height(&signatures[2..]);
 
     let lects = (0..4)
-        .map(|id| gen_service_tx_lect(&sandbox, id, &anchored_tx, 3))
+        .map(|id| {
+                 gen_service_tx_lect(&sandbox, id, &anchored_tx, 3)
+                     .raw()
+                     .clone()
+             })
         .collect::<Vec<_>>();
     sandbox.broadcast(lects[0].clone());
 
@@ -1088,7 +1100,11 @@ fn test_anchoring_transit_config_after_funding_tx() {
     sandbox.add_height(&signatures[1..]);
 
     let lects = (0..4)
-        .map(|id| gen_service_tx_lect(&sandbox, id, &anchored_tx, 3))
+        .map(|id| {
+                 gen_service_tx_lect(&sandbox, id, &anchored_tx, 3)
+                     .raw()
+                     .clone()
+             })
         .collect::<Vec<_>>();
     sandbox.broadcast(lects[0].clone());
 

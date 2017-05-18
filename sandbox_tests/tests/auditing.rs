@@ -18,13 +18,11 @@ use bitcoin::util::base58::ToBase58;
 
 use exonum::crypto::HexValue;
 use exonum::messages::{Message, RawTransaction};
-use exonum::storage::{Fork, StorageValue};
-use sandbox::sandbox::Sandbox;
+use exonum::storage::StorageValue;
 use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
-use anchoring_btc_service::blockchain::schema::AnchoringSchema;
 use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
 use anchoring_btc_service::error::HandlerError;
 use anchoring_btc_service::details::btc::transactions::BitcoinTx;
@@ -56,25 +54,6 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
          .unwrap() = service_cfg.to_json();
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), from_height, sandbox.s(0));
     (tx.raw().clone(), service_cfg)
-}
-
-pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
-    where I: IntoIterator<Item = MsgAnchoringUpdateLatest>
-{
-    let blockchain = sandbox.blockchain_ref();
-    let changes = {
-        let view = blockchain.view();
-        let anchoring_schema = AnchoringSchema::new(&view);
-        for lect_msg in lects {
-            anchoring_schema
-                .add_lect(lect_msg.validator(),
-                          lect_msg.tx().clone(),
-                          Message::hash(&lect_msg))
-                .unwrap();
-        }
-        view.changes()
-    };
-    blockchain.merge(&changes).unwrap();
 }
 
 // Invoke this method after anchor_first_block_lect_normal
