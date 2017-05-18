@@ -85,7 +85,7 @@ impl PublicApi {
         if let Some(lect) = schema.lects(id).last()? {
             Ok(LectInfo::from(lect))
         } else {
-            Err(error::Error::UnknownValidatorId.into())
+            Err(error::Error::UnknownValidatorId(id).into())
         }
     }
 }

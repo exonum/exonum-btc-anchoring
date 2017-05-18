@@ -7,7 +7,7 @@ use bitcoin::util::base58::{FromBase58, ToBase58};
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{Hash, HexValue};
 use exonum::blockchain::Schema;
-use exonum::storage::{List, StorageValue, Fork};
+use exonum::storage::{Fork, List, StorageValue};
 use blockchain_explorer::helpers;
 
 use sandbox::sandbox::Sandbox;
