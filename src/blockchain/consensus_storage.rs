@@ -13,7 +13,7 @@ pub struct AnchoringConfig {
     pub validators: Vec<btc::PublicKey>,
     /// The transaction that funds `anchoring` address.
     /// If the chain of transaction is empty it will be a first transaction in the chain.
-    pub funding_tx: FundingTx,
+    pub funding_tx: Option<FundingTx>,
     /// A fee for each transaction in chain
     pub fee: u64,
     /// The frequency in blocks with which occurs the generation of a new `anchoring`
@@ -32,7 +32,7 @@ impl AnchoringConfig {
     /// which were created earlier by other way.
     pub fn new(network: btc::Network,
                validators: Vec<btc::PublicKey>,
-               tx: FundingTx)
+               tx: Option<FundingTx>)
                -> AnchoringConfig {
         AnchoringConfig {
             validators: validators,
@@ -64,6 +64,12 @@ impl AnchoringConfig {
     /// For test purpose only
     pub fn majority_count(&self) -> u8 {
         ::majority_count(self.validators.len() as u8)
+    }
+
+    pub fn funding_tx(&self) -> &FundingTx {
+        self.funding_tx
+            .as_ref()
+            .expect("You need to specify suitable funding_tx")
     }
 }
 

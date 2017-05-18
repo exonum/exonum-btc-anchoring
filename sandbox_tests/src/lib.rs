@@ -213,7 +213,7 @@ impl AnchoringSandbox {
     }
 
     pub fn current_funding_tx(&self) -> FundingTx {
-        self.current_cfg().funding_tx.clone()
+        self.current_cfg().funding_tx().clone()
     }
 
     pub fn next_check_lect_height(&self) -> u64 {
@@ -265,7 +265,7 @@ impl AnchoringSandbox {
                 .latest_anchored_tx
                 .clone()
                 .map(|x| (x.0).0)
-                .unwrap_or(self.current_cfg().funding_tx.0.clone());
+                .unwrap_or(self.current_cfg().funding_tx().0.clone());
 
             let mut builder = TransactionBuilder::with_prev_tx(&prev_tx, 0)
                 .payload(height, block_hash)

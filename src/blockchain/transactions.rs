@@ -187,5 +187,5 @@ fn verify_anchoring_tx_payload(tx: &AnchoringTx, schema: &Schema) -> Result<bool
 fn verify_funding_tx(tx: &FundingTx,
                      anchoring_cfg: &AnchoringConfig)
                      -> Result<bool, StorageError> {
-    Ok(tx == &anchoring_cfg.funding_tx)
+    Ok(tx == anchoring_cfg.funding_tx())
 }
