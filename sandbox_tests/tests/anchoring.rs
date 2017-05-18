@@ -22,7 +22,7 @@ use exonum::messages::Message;
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::details::btc::transactions::{AnchoringTx, FundingTx,
                                                         TransactionBuilder, verify_tx_input};
-use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
+use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use anchoring_btc_sandbox::{AnchoringSandbox, RpcError};
 use anchoring_btc_sandbox::helpers::*;
 use anchoring_btc_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
@@ -287,22 +287,36 @@ fn test_anchoring_find_lect_chain_normal() {
     sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
 
     let anchoring_addr = sandbox.current_addr();
-    let anchored_txs = (1..3)
-        .map(|height| {
-                 sandbox.gen_anchoring_tx_with_signatures(height,
-                                                          block_hash_on_height(&sandbox, height),
-                                                          &[],
-                                                          None,
-                                                          &anchoring_addr);
-                 sandbox.latest_anchored_tx().clone()
-             })
-        .collect::<Vec<_>>();
-    let current_anchored_tx = anchored_txs.last().unwrap();
 
-    let request = {
-        let mut request = Vec::new();
+    let prev_anchored_tx = {
+        let mut txs = Vec::new();
+        for height in 0..3 {
+            sandbox.gen_anchoring_tx_with_signatures(height,
+                                                     block_hash_on_height(&sandbox, height),
+                                                     &[],
+                                                     None,
+                                                     &anchoring_addr);
+            let tx = sandbox.latest_anchored_tx().clone();
+            let lects = (1..4)
+                .map(|id| {
+                         MsgAnchoringUpdateLatest::new(&sandbox.p(id),
+                                                       id as u32,
+                                                       tx.clone().into(),
+                                                       lects_count(&sandbox, id as u32),
+                                                       sandbox.s(id))
+                     })
+                .collect::<Vec<_>>();
+            force_commit_lects(&sandbox, lects);
+            txs.push(tx);
+        }
+        // Get n - 1 transaction
+        txs.into_iter().rev().nth(1).unwrap()
+    };
+    let current_anchored_tx = sandbox.latest_anchored_tx();
+    assert_eq!(current_anchored_tx.prev_hash(), prev_anchored_tx.id());
 
-        request.push(request! {
+    let request = vec![
+        request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
@@ -318,23 +332,23 @@ fn test_anchoring_find_lect_chain_normal() {
                     "solvable": false
                 }
             ]
-        });
-        for tx in anchored_txs.iter().rev() {
-            request.push(request! {
-                method: "getrawtransaction",
-                params: [&tx.txid(), 0],
-                response: &tx.to_hex()
-            });
-        }
-        request
-    };
+        },
+        request! {
+            method: "getrawtransaction",
+            params: [&current_anchored_tx.txid(), 0],
+            response: &current_anchored_tx.to_hex()
+        },
+        request! {
+            method: "getrawtransaction",
+            params: [&prev_anchored_tx.txid(), 0],
+            response: &prev_anchored_tx.to_hex()
+        },
+    ];
     client.expect(request);
     sandbox.add_height(&[]);
 
-    let txs = (0..4)
-        .map(|idx| gen_service_tx_lect(&sandbox, idx, &current_anchored_tx, 2))
-        .collect::<Vec<_>>();
-    sandbox.broadcast(txs[0].clone());
+    let lect = gen_service_tx_lect(&sandbox, 0, &current_anchored_tx, 2);
+    sandbox.broadcast(lect);
 }
 
 // We find lect, whose prev_hash is not known
@@ -372,7 +386,7 @@ fn test_anchoring_find_lect_chain_wrong() {
             txs.push(tx.clone());
         }
         sandbox.set_latest_anchored_tx(Some((tx, vec![])));
-        txs
+        txs.into_iter().take(2).collect::<Vec<_>>()
     };
     let current_anchored_tx = anchored_txs.last().unwrap();
 

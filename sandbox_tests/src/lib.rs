@@ -66,7 +66,7 @@ pub struct AnchoringSandbox {
     pub handler: Arc<Mutex<AnchoringHandler>>,
 }
 
-/// Generates config for 4 validators and 10000 funds
+/// Generates config for 4 validators and 4000 funds
 pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
                                     -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let requests = vec![

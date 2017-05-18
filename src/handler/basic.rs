@@ -15,8 +15,6 @@ use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest};
 
 use super::{AnchoringHandler, AnchoringState, LectKind, MultisigAddress};
 
-const FIND_LECT_MAX_DEPTH: u64 = 10000;
-
 impl AnchoringHandler {
     #[cfg(not(feature="sandbox_tests"))]
     #[doc(hidden)]
@@ -361,40 +359,57 @@ impl AnchoringHandler {
             return Ok(Some(lect.into()));
         }
 
-        let mut times = FIND_LECT_MAX_DEPTH;
-        let mut current_tx = lect.clone();
-        while times > 0 {
-            let kind = TxKind::from(current_tx.clone());
-            match kind {
-                TxKind::FundingTx(tx) => {
-                    if tx == first_funding_tx {
-                        return Ok(Some(lect.into()));
+        let kind = TxKind::from(lect.clone());
+        match kind {
+            TxKind::FundingTx(tx) => {
+                if tx == first_funding_tx {
+                    return Ok(Some(lect.into()));
+                } else {
+                    return Ok(None);
+                }
+            }
+            TxKind::Anchoring(tx) => {
+                let lect_addr = tx.output_address(multisig.common.network);
+                if !schema.is_address_known(&lect_addr)? {
+                    return Ok(None);
+                }
+
+                if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
+                    return Ok(Some(lect.into()));
+                } else {
+                    let txid = tx.prev_hash();
+                    let prev_lect = if let Some(tx) =
+                        self.client().get_transaction(&txid.be_hex_string())? {
+                        tx
                     } else {
                         return Ok(None);
+                    };
+
+                    trace!("Check prev lect={:#?}", prev_lect);
+
+                    let lect_height = match TxKind::from(prev_lect) {
+                        TxKind::FundingTx(_) => 0,
+                        TxKind::Anchoring(tx) => tx.payload().block_height,
+                        TxKind::Other(_) => return Ok(None),
+                    };
+                    let cfg = schema.anchoring_config_by_height(lect_height)?;
+
+                    let mut prev_lect_count = 0;
+                    for id in 0..cfg.validators.len() as u32 {
+                        if schema.find_lect_position(id, &txid)?.is_some() {
+                            prev_lect_count += 1;
+                        }
                     }
-                }
-                TxKind::Anchoring(tx) => {
-                    let lect_addr = tx.output_address(multisig.common.network);
-                    if !schema.is_address_known(&lect_addr)? {
-                        break;
-                    }
-                    if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
-                        return Ok(Some(lect.into()));
+
+                    if prev_lect_count >= cfg.majority_count() {
+                        Ok(lect.into())
                     } else {
-                        times -= 1;
-                        let txid = tx.prev_hash().be_hex_string();
-                        current_tx = if let Some(tx) = self.client().get_transaction(&txid)? {
-                            tx
-                        } else {
-                            return Ok(None);
-                        };
-                        trace!("Check prev lect={:#?}", current_tx);
+                        Ok(None)
                     }
                 }
-                TxKind::Other(_) => return Ok(None),
             }
+            TxKind::Other(_) => return Ok(None),
         }
-        Ok(None)
     }
 
     #[doc(hidden)]
