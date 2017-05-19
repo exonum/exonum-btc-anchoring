@@ -13,6 +13,7 @@ pub struct AnchoringConfig {
     pub validators: Vec<btc::PublicKey>,
     /// The transaction that funds `anchoring` address.
     /// If the chain of transaction is empty it will be a first transaction in the chain.
+    /// Note: you must specify a suitable transaction before the network launching.
     pub funding_tx: Option<FundingTx>,
     /// A fee for each transaction in chain
     pub fee: u64,
@@ -27,20 +28,44 @@ pub struct AnchoringConfig {
     pub network: btc::Network,
 }
 
-impl AnchoringConfig {
-    /// Creates default anchoring configuration from given public keys and funding transaction
-    /// which were created earlier by other way.
-    pub fn new(network: btc::Network,
-               validators: Vec<btc::PublicKey>,
-               tx: Option<FundingTx>)
-               -> AnchoringConfig {
+impl Default for AnchoringConfig {
+    fn default() -> AnchoringConfig {
         AnchoringConfig {
-            validators: validators,
-            funding_tx: tx,
+            validators: vec![],
+            funding_tx: None,
             fee: 1000,
             frequency: 500,
             utxo_confirmations: 5,
+            network: btc::Network::Testnet,
+        }
+    }
+}
+
+impl AnchoringConfig {
+    /// Creates anchoring configuration for the given keypair without funding transaction.
+    /// This is usable for deploying procedure when the network participants exchanges
+    /// the public configuration before launching.
+    /// Do not forget to send funding transaction to final multisig address
+    /// add it to final configuration.
+    pub fn new(network: btc::Network, public_key: btc::PublicKey) -> AnchoringConfig {
+        AnchoringConfig {
+            validators: vec![public_key],
             network: network,
+            ..Default::default()
+        }
+    }
+
+    /// Creates default anchoring configuration from given public keys and funding transaction
+    /// which were created earlier by other way.
+    pub fn new_with_funding_tx(network: btc::Network,
+                               validators: Vec<btc::PublicKey>,
+                               tx: FundingTx)
+                               -> AnchoringConfig {
+        AnchoringConfig {
+            validators: validators,
+            funding_tx: Some(tx),
+            network: network,
+            ..Default::default()
         }
     }
 
