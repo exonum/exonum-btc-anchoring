@@ -373,39 +373,38 @@ impl AnchoringHandler {
                 if !schema.is_address_known(&lect_addr)? {
                     return Ok(None);
                 }
-
                 if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
-                    Ok(Some(lect.into()))
+                    return Ok(Some(lect.into()));
+                }
+
+                let txid = tx.prev_hash();
+                let prev_lect = if let Some(tx) = self.client()
+                       .get_transaction(&txid.be_hex_string())? {
+                    tx
                 } else {
-                    let txid = tx.prev_hash();
-                    let prev_lect = if let Some(tx) =
-                        self.client().get_transaction(&txid.be_hex_string())? {
-                        tx
-                    } else {
-                        return Ok(None);
-                    };
+                    return Ok(None);
+                };
 
-                    trace!("Check prev lect={:#?}", prev_lect);
+                trace!("Check prev lect={:#?}", prev_lect);
 
-                    let lect_height = match TxKind::from(prev_lect) {
-                        TxKind::FundingTx(_) => 0,
-                        TxKind::Anchoring(tx) => tx.payload().block_height,
-                        TxKind::Other(_) => return Ok(None),
-                    };
-                    let cfg = schema.anchoring_config_by_height(lect_height)?;
+                let lect_height = match TxKind::from(prev_lect) {
+                    TxKind::FundingTx(_) => 0,
+                    TxKind::Anchoring(tx) => tx.payload().block_height,
+                    TxKind::Other(_) => return Ok(None),
+                };
+                let cfg = schema.anchoring_config_by_height(lect_height)?;
 
-                    let mut prev_lect_count = 0;
-                    for id in 0..cfg.validators.len() as u32 {
-                        if schema.find_lect_position(id, &txid)?.is_some() {
-                            prev_lect_count += 1;
-                        }
+                let mut prev_lect_count = 0;
+                for id in 0..cfg.validators.len() as u32 {
+                    if schema.find_lect_position(id, &txid)?.is_some() {
+                        prev_lect_count += 1;
                     }
+                }
 
-                    if prev_lect_count >= cfg.majority_count() {
-                        Ok(lect.into())
-                    } else {
-                        Ok(None)
-                    }
+                if prev_lect_count >= cfg.majority_count() {
+                    Ok(lect.into())
+                } else {
+                    Ok(None)
                 }
             }
             TxKind::Other(_) => Ok(None),
