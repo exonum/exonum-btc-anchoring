@@ -2,7 +2,7 @@ use std::error;
 use std::fmt;
 
 use exonum::storage::Error as StorageError;
-use blockchain_explorer::api::ApiError;
+use exonum::api::ApiError;
 
 #[derive(Debug)]
 pub enum Error {

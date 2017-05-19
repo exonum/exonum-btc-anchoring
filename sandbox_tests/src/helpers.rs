@@ -8,7 +8,7 @@ use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{Hash, HexValue};
 use exonum::blockchain::Schema;
 use exonum::storage::{Fork, List, StorageValue};
-use blockchain_explorer::helpers;
+use exonum::helpers;
 
 use sandbox::sandbox::Sandbox;
 use sandbox::config_updater::TxConfig;

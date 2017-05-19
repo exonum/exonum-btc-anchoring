@@ -26,7 +26,6 @@
 //! ```rust,no_run
 //! extern crate exonum;
 //! extern crate anchoring_btc_service;
-//! extern crate blockchain_explorer;
 //! extern crate tempdir;
 //!
 //! use std::thread;
@@ -37,14 +36,14 @@
 //! use exonum::blockchain::Blockchain;
 //! use exonum::node::Node;
 //! use exonum::storage::{LevelDB, LevelDBOptions};
-//! use blockchain_explorer::helpers::generate_testnet_config;
+//! use exonum::helpers::{generate_testnet_config, init_logger};
 //! use anchoring_btc_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
 //!                             gen_anchoring_testnet_config};
 //!
 //! fn main() {
 //!     // Init crypto engine and pretty logger.
 //!     exonum::crypto::init();
-//!     blockchain_explorer::helpers::init_logger().unwrap();
+//!     init_logger().unwrap();
 //!
 //!     // Get rpc config from env variables
 //!     let rpc_config = AnchoringRpcConfig {
@@ -115,6 +114,7 @@ extern crate byteorder;
 extern crate log;
 #[macro_use]
 extern crate derive_error;
+
 extern crate rand;
 extern crate tempdir;
 extern crate iron;
@@ -123,7 +123,6 @@ extern crate params;
 extern crate bodyparser;
 #[macro_use]
 extern crate exonum;
-extern crate blockchain_explorer;
 
 #[doc(hidden)]
 pub mod details;

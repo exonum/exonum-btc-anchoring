@@ -6,7 +6,7 @@ use serde_json::value::ToJson;
 use exonum::blockchain::Blockchain;
 use exonum::crypto::Hash;
 use exonum::storage::List;
-use blockchain_explorer::api::{Api, ApiError};
+use exonum::api::{Api, ApiError};
 
 use details::btc::TxId;
 use details::btc::transactions::{BitcoinTx, TxKind};

@@ -1,15 +1,12 @@
-#[macro_use]
 extern crate exonum;
 extern crate sandbox;
 extern crate anchoring_btc_service;
-#[macro_use]
 extern crate anchoring_btc_sandbox;
 extern crate serde;
 extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;
 extern crate secp256k1;
-extern crate blockchain_explorer;
 #[macro_use]
 extern crate log;
 extern crate iron;
@@ -22,7 +19,7 @@ use iron::prelude::*;
 
 use exonum::crypto::HexValue;
 use exonum::messages::Message;
-use blockchain_explorer::api::Api;
+use exonum::api::Api;
 
 use anchoring_btc_service::api::{AnchoringInfo, LectInfo, PublicApi};
 use anchoring_btc_service::details::btc::transactions::BitcoinTx;

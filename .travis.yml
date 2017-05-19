@@ -10,16 +10,13 @@ env:
   - ANCHORING_USER=travis
   - ANCHORING_PASSWORD=travis
   - RUST_LOG=off
-  - NIGHTLY_RUST=nightly-2017-01-08
-  - CLIPPY_VERS=0.0.107
+  - NIGHTLY_RUST=nightly-2017-05-10
+  - CLIPPY_VERS=0.0.131
   - RUSTFMT_VERS=0.8.4
-  
 before_install:
 - rustfmt -V | grep $RUSTFMT_VERS || cargo install rustfmt --vers $RUSTFMT_VERS --force
-- rustup override set $NIGHTLY_RUST
+- rustup toolchain install $NIGHTLY_RUST
 - cargo +$NIGHTLY_RUST clippy -V | grep $CLIPPY_VERS || cargo +$NIGHTLY_RUST install clippy --vers $CLIPPY_VERS --force
-- rustc --version
-- cargo --version
 - sudo add-apt-repository -y ppa:chris-lea/libsodium
 - sudo apt-add-repository -y ppa:bitcoin/bitcoin
 - sudo apt-get -qq update
@@ -33,7 +30,7 @@ before_script:
 script:
 - cargo fmt -- --write-mode=diff
 - cargo fmt -p anchoring_btc_sandbox -- --write-mode=diff
-- cargo clippy -- -D warnings
+- cargo +$NIGHTLY_RUST clippy -- -D warnings
 - cargo test --release
 - cargo test --manifest-path sandbox_tests/Cargo.toml
 after_script:

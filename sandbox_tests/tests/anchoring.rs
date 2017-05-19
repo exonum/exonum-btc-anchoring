@@ -1,4 +1,3 @@
-#[macro_use]
 extern crate exonum;
 extern crate sandbox;
 extern crate anchoring_btc_service;
@@ -9,9 +8,6 @@ extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;
 extern crate secp256k1;
-extern crate blockchain_explorer;
-#[macro_use]
-extern crate log;
 
 use std::ops::Deref;
 
@@ -677,7 +673,7 @@ fn test_anchoring_lect_incorrect_anchoring_payload() {
 // result: we ignore it
 #[test]
 fn test_anchoring_lect_unknown_prev_tx() {
-    let _ = ::blockchain_explorer::helpers::init_logger();
+    let _ = exonum::helpers::init_logger();
 
     let sandbox = AnchoringSandbox::initialize(&[]);
 

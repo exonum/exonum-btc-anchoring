@@ -1,3 +1,5 @@
+#![cfg_attr(feature="cargo-clippy", allow(large_enum_variant))]
+
 mod anchoring;
 mod auditing;
 mod transition;

@@ -17,7 +17,7 @@ use secp256k1::Secp256k1;
 use exonum::crypto::{Hash, HexValue, hash};
 use exonum::storage::StorageValue;
 use exonum::messages::Field;
-use blockchain_explorer::helpers;
+use exonum::helpers;
 
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
 use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, TransactionBuilder, TxKind,
