@@ -363,9 +363,9 @@ impl AnchoringHandler {
         match kind {
             TxKind::FundingTx(tx) => {
                 if tx == first_funding_tx {
-                    return Ok(Some(lect.into()));
+                    Ok(Some(lect.into()))
                 } else {
-                    return Ok(None);
+                    Ok(None)
                 }
             }
             TxKind::Anchoring(tx) => {
@@ -375,7 +375,7 @@ impl AnchoringHandler {
                 }
 
                 if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
-                    return Ok(Some(lect.into()));
+                    Ok(Some(lect.into()))
                 } else {
                     let txid = tx.prev_hash();
                     let prev_lect = if let Some(tx) =
@@ -408,7 +408,7 @@ impl AnchoringHandler {
                     }
                 }
             }
-            TxKind::Other(_) => return Ok(None),
+            TxKind::Other(_) => Ok(None),
         }
     }
 
