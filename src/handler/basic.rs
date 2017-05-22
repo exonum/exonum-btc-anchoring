@@ -176,7 +176,7 @@ impl AnchoringHandler {
             match TxKind::from(current_lect) {
                 TxKind::FundingTx(tx) => {
                     if tx.find_out(&actual_addr).is_some() {
-                        debug!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
+                        trace!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
                         /// Wait until funding_tx got enough confirmation
                         let confirmations = get_confirmations(self.client(), &tx.txid())?;
                         if !is_enough_confirmations(&actual, confirmations) {
@@ -358,7 +358,7 @@ impl AnchoringHandler {
                                 multisig: &MultisigAddress)
                                 -> Result<Option<FundingTx>, ServiceError> {
         let funding_tx = multisig.common.funding_tx();
-        debug!("Checking funding_tx={:#?}, addr={}",
+        trace!("Checking funding_tx={:#?}, addr={}",
                funding_tx,
                multisig.addr.to_base58check());
         if let Some(info) = funding_tx.has_unspent_info(self.client(), &multisig.addr)? {
