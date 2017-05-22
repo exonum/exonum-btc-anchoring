@@ -43,10 +43,10 @@ impl Default for AnchoringConfig {
 
 impl AnchoringConfig {
     /// Creates anchoring configuration for the given keypair without funding transaction.
-    /// This is usable for deploying procedure when the network participants exchanges
+    /// This is usable for deploying procedure when the network participants exchange
     /// the public configuration before launching.
     /// Do not forget to send funding transaction to final multisig address
-    /// add it to final configuration.
+    /// and add it to the final configuration.
     pub fn new(network: btc::Network, public_key: btc::PublicKey) -> AnchoringConfig {
         AnchoringConfig {
             validators: vec![public_key],
