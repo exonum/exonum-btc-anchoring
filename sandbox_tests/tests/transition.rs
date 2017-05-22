@@ -32,7 +32,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
     cfg.validators.swap(0, 3);
     priv_keys.swap(0, 3);
     if let Some(funds) = funds {
-        cfg.funding_tx = funds;
+        cfg.funding_tx = Some(funds);
     }
 
     let following_addr = cfg.redeem_script().1;
@@ -58,7 +58,7 @@ fn gen_following_cfg_unchanged_self_key(sandbox: &AnchoringSandbox,
     cfg.validators.swap(1, 2);
     priv_keys.swap(1, 2);
     if let Some(funds) = funds {
-        cfg.funding_tx = funds;
+        cfg.funding_tx = Some(funds);
     }
 
     let following_addr = cfg.redeem_script().1;

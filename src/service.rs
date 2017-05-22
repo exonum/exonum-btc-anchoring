@@ -88,7 +88,7 @@ impl Service for AnchoringService {
             Err(ServiceError::Storage(e)) => Err(e),
             #[cfg(feature="sandbox_tests")]
             Err(ServiceError::Handler(e)) => {
-                error!("An error occured: {}", e);
+                error!("An error occured: {:?}", e);
                 handler.errors.push(e);
                 Ok(())
             }
@@ -97,11 +97,11 @@ impl Service for AnchoringService {
                 if let HandlerError::IncorrectLect { .. } = e {
                     panic!("A critical error occured: {}", e);
                 }
-                error!("An error occured: {}", e);
+                error!("An error in handler occured: {}", e);
                 Ok(())
             }
             Err(e) => {
-                error!("An error occured: {}", e);
+                error!("An error occured: {:?}", e);
                 Ok(())
             }
             Ok(()) => Ok(()),
@@ -147,7 +147,7 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
         .unwrap();
     let tx = FundingTx::create(client, &address, total_funds).unwrap();
 
-    let genesis_cfg = AnchoringConfig::new(network, pub_keys, tx);
+    let genesis_cfg = AnchoringConfig::new_with_funding_tx(network, pub_keys, tx);
     for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
         node_cfg
             .private_keys
