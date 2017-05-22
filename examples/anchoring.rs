@@ -9,11 +9,7 @@ extern crate exonum;
 extern crate anchoring_btc_service;
 extern crate configuration_service;
 
-use std::net::SocketAddr;
-use std::thread;
-
 use clap::{App, Arg, SubCommand};
-use router::Router;
 use bitcoin::network::constants::Network;
 use bitcoin::util::base58::ToBase58;
 
@@ -24,9 +20,7 @@ use exonum::crypto::HexValue;
 use exonum::helpers::clap::{GenerateCommand, RunCommand};
 use exonum::helpers::generate_testnet_config;
 use exonum::helpers;
-use exonum::api::Api;
 use configuration_service::ConfigurationService;
-use configuration_service::config_api::PrivateConfigApi;
 use anchoring_btc_service::AnchoringService;
 use anchoring_btc_service::AnchoringRpc;
 use anchoring_btc_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
@@ -42,30 +36,6 @@ pub struct AnchoringServiceConfig {
 pub struct ServicesConfig {
     pub node: NodeConfig,
     pub anchoring_service: AnchoringServiceConfig,
-}
-
-fn run_node(blockchain: Blockchain, node_cfg: NodeConfig, port: Option<u16>) {
-    if let Some(port) = port {
-        let mut node = Node::new(blockchain.clone(), node_cfg.clone());
-        let channel = node.channel();
-        let api_thread = thread::spawn(move || {
-            let keys = (node_cfg.public_key, node_cfg.secret_key);
-            let config_api = PrivateConfigApi {
-                channel: channel.clone(),
-                config: keys.clone(),
-            };
-            let listen_address: SocketAddr = format!("127.0.0.1:{}", port).parse().unwrap();
-            println!("Anchoring node server started on {}", listen_address);
-            let mut router = Router::new();
-            config_api.wire(&mut router);
-            let chain = iron::Chain::new(router);
-            iron::Iron::new(chain).http(listen_address).unwrap();
-        });
-        node.run().unwrap();
-        api_thread.join().unwrap();
-    } else {
-        Node::new(blockchain, node_cfg).run().unwrap();
-    }
 }
 
 fn main() {
@@ -153,17 +123,18 @@ fn main() {
             }
         }
         ("run", Some(matches)) => {
-            let port: Option<u16> = matches.value_of("HTTP_PORT").map(|x| x.parse().unwrap());
             let path = RunCommand::node_config_path(matches);
             let db = RunCommand::db(matches);
             let cfg: ServicesConfig = ConfigFile::load(path).unwrap();
 
             let anchoring_cfg = cfg.anchoring_service;
-            let anchoring = AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node);
-            let services: Vec<Box<Service>> =
-                vec![Box::new(anchoring), Box::new(ConfigurationService::new())];
+            let services: Vec<Box<Service>> = vec![
+                    Box::new(AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node)),
+                    Box::new(ConfigurationService::new()),
+                ];
             let blockchain = Blockchain::new(db, services);
-            run_node(blockchain, cfg.node, port)
+            let mut node = Node::new(blockchain, cfg.node);
+            node.run().unwrap();
         }
         ("keypair", Some(matches)) => {
             let network = match matches.value_of("NETWORK").unwrap() {

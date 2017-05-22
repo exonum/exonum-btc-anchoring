@@ -61,6 +61,10 @@ impl Service for AnchoringService {
         ANCHORING_SERVICE_ID
     }
 
+    fn service_name(&self) -> &'static str {
+        "btc_anchoring"
+    }
+
     fn state_hash(&self, view: &View) -> Result<Vec<Hash>, StorageError> {
         AnchoringSchema::new(view).state_hash()
     }

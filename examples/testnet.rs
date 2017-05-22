@@ -60,10 +60,11 @@ fn main() {
             };
             // Create node[idx]
             let blockchain = Blockchain::new(db, vec![Box::new(service)]);
-            let mut node = Node::new(blockchain, node_cfgs[idx].clone());
+            let node_cfg = node_cfgs[idx].clone();
             let node_thread = thread::spawn(move || {
                                                 // Run it in separate thread
-                                                node.run().expect("Unable to run node");
+                                                let mut node = Node::new(blockchain, node_cfg);
+                                                node.run_handler().expect("Unable to run node");
                                             });
             node_threads.push(node_thread);
         }
