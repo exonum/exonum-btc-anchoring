@@ -37,7 +37,7 @@ impl AnchoringHandler {
         let cfg = AnchoringSchema::new(context.view())
             .anchoring_config_by_height(0)?;
         let (_, addr) = cfg.redeem_script();
-        if tx != cfg.funding_tx {
+        if &tx != cfg.funding_tx() {
             let e = HandlerError::IncorrectLect {
                 reason: "Initial funding_tx from cfg is different than in lect".to_string(),
                 tx: tx.into(),

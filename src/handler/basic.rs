@@ -161,7 +161,7 @@ impl AnchoringHandler {
                     }
                 }
                 TxKind::FundingTx(lect) => {
-                    debug_assert_eq!(lect, actual.funding_tx);
+                    debug_assert_eq!(&lect, actual.funding_tx());
                     AnchoringState::Transition {
                         from: actual,
                         to: following,
@@ -357,7 +357,7 @@ impl AnchoringHandler {
     pub fn avaliable_funding_tx(&self,
                                 multisig: &MultisigAddress)
                                 -> Result<Option<FundingTx>, ServiceError> {
-        let funding_tx = &multisig.common.funding_tx;
+        let funding_tx = multisig.common.funding_tx();
         debug!("Checking funding_tx={:#?}, addr={}",
                funding_tx,
                multisig.addr.to_base58check());
@@ -462,7 +462,7 @@ fn current_lect_is_transition(actual: &AnchoringConfig,
             }
             TxKind::FundingTx(tx) => {
                 let genesis_cfg = schema.anchoring_config_by_height(0)?;
-                if tx == genesis_cfg.funding_tx {
+                if &tx == genesis_cfg.funding_tx() {
                     let prev_lect_addr = genesis_cfg.redeem_script().1;
                     &prev_lect_addr != current_lect_addr
                 } else {

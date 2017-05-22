@@ -79,7 +79,7 @@ impl<'a> AnchoringSchema<'a> {
         let (_, addr) = cfg.redeem_script();
         self.add_known_address(&addr)?;
         for idx in 0..cfg.validators.len() {
-            self.add_lect(idx as u32, cfg.funding_tx.clone())?;
+            self.add_lect(idx as u32, cfg.funding_tx().clone())?;
         }
         Ok(())
     }
