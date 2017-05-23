@@ -1,4 +1,5 @@
 use serde_json;
+use serde::{Deserialize, Deserializer};
 
 use exonum::storage::StorageValue;
 use exonum::crypto::{Hash, hash};
@@ -107,10 +108,10 @@ fn btc_network_to_str<S>(network: &btc::Network, ser: &mut S) -> Result<(), S::E
     }
 }
 
-fn btc_network_from_str<D>(deserializer: &mut D) -> Result<btc::Network, D::Error>
-    where D: ::serde::Deserializer
+fn btc_network_from_str<'de, D>(deserializer: &mut D) -> Result<btc::Network, D::Error>
+    where D: Deserializer<'de>
 {
-    let s: String = ::serde::Deserialize::deserialize(deserializer)?;
+    let s: String = Deserialize::deserialize(deserializer)?;
     match s.as_str() {
         "bitcoin" => Ok(btc::Network::Bitcoin),
         "testnet" => Ok(btc::Network::Testnet),

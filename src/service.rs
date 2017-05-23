@@ -1,12 +1,10 @@
-use std::sync::{Arc, Mutex};
-
 use bitcoin::util::base58::ToBase58;
-use iron::Handler;
-use router::Router;
-use serde_json::value::{ToJson, Value};
+use serde_json::value::Value;
 use rand::{Rng, thread_rng};
 
-use exonum::blockchain::{ApiContext, NodeState, Service, Transaction};
+use std::sync::{Arc, Mutex};
+
+use exonum::blockchain::{NodeState, Service, Transaction};
 use exonum::crypto::Hash;
 use exonum::messages::{Error as MessageError, FromRaw, RawTransaction};
 use exonum::storage::{Error as StorageError, View};

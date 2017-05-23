@@ -10,9 +10,9 @@ anchoring_btc_service = {version="0.1", path="../", features=["sandbox_tests"]}
 bitcoinrpc = {version="0.1", path="../3rdparty/bitcoinrpc"}
 bitcoin="0.9.0"
 secp256k1 = "0.6.0"
-serde = "0.8.0"
-serde_derive = "0.8.0"
-serde_json = "0.8.0"
+serde = "1.0.0"
+serde_derive = "1.0.0"
+serde_json = "1.0.0"
 byteorder = "1.0.0"
 log = "0.3.0"
 rand = "0.3.0"
@@ -24,9 +24,9 @@ iron-test = "0.5.0"
 [dependencies.exonum]
 git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
-rev = "61dd294"
+rev = "ee50943c20f8802af630adb5152d67d763e18fd0"
 
 [dependencies.sandbox]
-git = "ssh://git@github.com/exonum/exonum-core.git"
+git = "ssh://git@github.com/vldm/exonum-core.git"
 version = "0.1.0"
-rev = "61dd294"
+rev = "eb025edb3aac74d4bb930e639c5f8682f7bef0ee"

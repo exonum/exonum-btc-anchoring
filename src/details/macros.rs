@@ -53,28 +53,32 @@ macro_rules! implement_base58_wrapper {
 macro_rules! implement_serde_hex {
 ($name:ident) => (
     impl ::serde::Serialize for $name {
-        fn serialize<S>(&self, ser: &mut S) -> ::std::result::Result<(), S::Error>
+        fn serialize<S>(&self, ser: S) -> ::std::result::Result<S::Ok, S::Error>
             where S: ::serde::Serializer
         {
             ser.serialize_str(&self.to_hex())
         }
     }
 
-    impl ::serde::Deserialize for $name {
-        fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
-            where D: ::serde::Deserializer
+    impl<'de> ::serde::Deserialize<'de> for $name {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where D: ::serde::Deserializer<'de>
         {
             struct HexVisitor;
 
-            impl ::serde::de::Visitor for HexVisitor {
+            impl<'v> ::serde::de::Visitor<'v> for HexVisitor {
                 type Value = $name;
 
-                fn visit_str<E>(&mut self, hex: &str) -> Result<$name, E>
-                    where E: ::serde::Error
+                fn expecting(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+                    write!(fmt, "Expected hex represented string")
+                }
+
+                fn visit_str<E>(self, hex: &str) -> Result<$name, E>
+                    where E: ::serde::de::Error
                 {
                     match $name::from_hex(hex) {
                         Ok(value) => Ok(value),
-                        Err(_) => Err(::serde::de::Error::invalid_value("Wrong hex")),
+                        Err(_) => Err(::serde::de::Error::custom("Wrong hex")),
                     }
                 }
             }
@@ -88,28 +92,32 @@ macro_rules! implement_serde_hex {
 macro_rules! implement_serde_base58check {
 ($name:ident) => (
     impl ::serde::Serialize for $name {
-        fn serialize<S>(&self, ser: &mut S) -> ::std::result::Result<(), S::Error>
+        fn serialize<S>(&self, ser: S) -> ::std::result::Result<S::Ok, S::Error>
             where S: ::serde::Serializer
         {
             ser.serialize_str(&self.to_base58check())
         }
     }
 
-    impl ::serde::Deserialize for $name {
-        fn deserialize<D>(deserializer: &mut D) -> Result<Self, D::Error>
-            where D: ::serde::Deserializer
+    impl<'de> ::serde::Deserialize<'de> for $name {
+        fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where D: ::serde::Deserializer<'de>
         {
             struct Base58Visitor;
 
-            impl ::serde::de::Visitor for Base58Visitor {
+            impl<'v> ::serde::de::Visitor<'v> for Base58Visitor {
                 type Value = $name;
 
-                fn visit_str<E>(&mut self, hex: &str) -> Result<$name, E>
-                    where E: ::serde::Error
+                fn expecting(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+                    write!(fmt, "Expected base58 represented string")
+                }
+
+                fn visit_str<E>(self, hex: &str) -> Result<$name, E>
+                    where E: ::serde::de::Error
                 {
                     match $name::from_base58check(hex) {
                         Ok(value) => Ok(value),
-                        Err(_) => Err(::serde::Error::invalid_value("Wrong base58")),
+                        Err(_) => Err(::serde::de::Error::custom("Wrong base58")),
                     }
                 }
             }

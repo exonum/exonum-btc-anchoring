@@ -11,29 +11,29 @@ const ANCHORING_MESSAGE_SIGNATURE: u16 = 0;
 const ANCHORING_MESSAGE_LATEST: u16 = 1;
 
 message! {
-    MsgAnchoringSignature {
+    struct MsgAnchoringSignature {
         const TYPE = ANCHORING_SERVICE_ID;
         const ID = ANCHORING_MESSAGE_SIGNATURE;
         const SIZE = 56;
 
-        from:           &PublicKey   [00 => 32]
-        validator:      u32          [32 => 36]
-        tx:             AnchoringTx  [36 => 44]
-        input:          u32          [44 => 48]
-        signature:      &[u8]        [48 => 56]
+        field from:           &PublicKey   [00 => 32]
+        field validator:      u32          [32 => 36]
+        field tx:             AnchoringTx  [36 => 44]
+        field input:          u32          [44 => 48]
+        field signature:      &[u8]        [48 => 56]
     }
 }
 
 message! {
-    MsgAnchoringUpdateLatest {
+    struct MsgAnchoringUpdateLatest {
         const TYPE = ANCHORING_SERVICE_ID;
         const ID = ANCHORING_MESSAGE_LATEST;
         const SIZE = 52;
 
-        from:           &PublicKey   [00 => 32]
-        validator:      u32          [32 => 36]
-        tx:             BitcoinTx    [36 => 44]
-        lect_count:     u64          [44 => 52]
+        field from:           &PublicKey   [00 => 32]
+        field validator:      u32          [32 => 36]
+        field tx:             BitcoinTx    [36 => 44]
+        field lect_count:     u64          [44 => 52]
     }
 }
 

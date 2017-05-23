@@ -7,7 +7,7 @@ use std::ops::{Deref, Drop};
 
 use bitcoinrpc::*;
 
-use serde_json::value::{ToJson, Value, from_value};
+use serde_json::value::{Value, from_value};
 use serde::Deserialize;
 
 use details::rpc::AnchoringRpcConfig;
@@ -49,10 +49,10 @@ impl SandboxClient {
         &self.rpc.username
     }
 
-    fn request<T: Deserialize + ::std::fmt::Debug>(&self,
-                                                   method: &str,
-                                                   params: Params)
-                                                   -> Result<T> {
+    fn request<'de, T: Deserialize<'de> + ::std::fmt::Debug>(&self,
+                                                             method: &str,
+                                                             params: Params)
+                                                             -> Result<T> {
         let expected = self.requests
             .lock()
             .unwrap()
