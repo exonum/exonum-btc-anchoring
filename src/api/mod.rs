@@ -17,7 +17,7 @@ pub use details::btc::payload::Payload;
 
 mod error;
 
-/// Public api implementation
+/// Public api implementation.
 #[derive(Clone)]
 pub struct PublicApi {
     pub blockchain: Blockchain,
@@ -72,6 +72,8 @@ impl From<LectContent> for LectInfo {
 
 impl PublicApi {
     /// Returns information about the lect agreed by +2/3 validators if there is one.
+    ///
+    /// `GET /{api_prefix}/v1/current_lect/`
     pub fn current_lect(&self) -> Result<Option<AnchoringInfo>, ApiError> {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
@@ -79,6 +81,8 @@ impl PublicApi {
     }
 
     /// Returns current lect for validator with given `id`.
+    ///
+    /// `GET /{api_prefix}/v1/current_lect/:id`
     pub fn current_lect_of_validator(&self, id: u32) -> Result<LectInfo, ApiError> {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
@@ -112,10 +116,8 @@ impl Api for PublicApi {
             }
         };
 
-        router.get("/api/v1/anchoring/current_lect/",
-                   current_lect,
-                   "current_lect");
-        router.get("/api/v1/anchoring/current_lect/:id",
+        router.get("/v1/current_lect/", current_lect, "current_lect");
+        router.get("/v1/current_lect/:id",
                    current_lect_of_validator,
                    "current_lect_of_validator");
     }

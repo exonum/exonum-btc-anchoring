@@ -1,14 +1,18 @@
 use std::sync::{Arc, Mutex};
 
 use bitcoin::util::base58::ToBase58;
+use iron::Handler;
+use router::Router;
 use serde_json::value::{ToJson, Value};
 use rand::{Rng, thread_rng};
 
-use exonum::blockchain::{NodeState, Service, Transaction};
+use exonum::blockchain::{ApiContext, NodeState, Service, Transaction};
 use exonum::crypto::Hash;
 use exonum::messages::{Error as MessageError, FromRaw, RawTransaction};
 use exonum::storage::{Error as StorageError, View};
+use exonum::api::Api;
 
+use api::PublicApi;
 use details::btc;
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
 use details::btc::transactions::FundingTx;
@@ -110,6 +114,15 @@ impl Service for AnchoringService {
             }
             Ok(()) => Ok(()),
         }
+    }
+
+    /// Public api implementation.
+    /// See [`PublicApi`](api/struct.PublicApi.html) for details.
+    fn public_api_handler(&self, context: &ApiContext) -> Option<Box<Handler>> {
+        let mut router = Router::new();
+        let api = PublicApi { blockchain: context.blockchain().clone() };
+        api.wire(&mut router);
+        Some(Box::new(router))
     }
 }
 
