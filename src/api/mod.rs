@@ -71,12 +71,13 @@ impl From<LectContent> for LectInfo {
 }
 
 impl PublicApi {
-    /// Returns information about `+2/3` lects if such are presents.
+    /// Returns information about the lect agreed by +2/3 validators if there is one.
     pub fn current_lect(&self) -> Result<Option<AnchoringInfo>, ApiError> {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
         Ok(schema.collect_lects()?.map(AnchoringInfo::from))
     }
+    
     /// Returns current lect for validator with given `id`.
     pub fn current_lect_of_validator(&self, id: u32) -> Result<LectInfo, ApiError> {
         let view = self.blockchain.view();

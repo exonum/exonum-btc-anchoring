@@ -112,7 +112,7 @@ fn test_api_public_get_lect_nonexistent_validator() {
     api_sandbox.get_current_lect_of_validator(100);
 }
 
-// Try to get current lect when lects is different.
+// Try to get current lect when there is no agreed [or consensus] lect.
 // result: Returns null
 #[test]
 fn test_api_public_get_lect_unavailable() {
