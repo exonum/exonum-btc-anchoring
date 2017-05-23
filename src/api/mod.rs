@@ -77,7 +77,7 @@ impl PublicApi {
         let schema = AnchoringSchema::new(&view);
         Ok(schema.collect_lects()?.map(AnchoringInfo::from))
     }
-    
+
     /// Returns current lect for validator with given `id`.
     pub fn current_lect_of_validator(&self, id: u32) -> Result<LectInfo, ApiError> {
         let view = self.blockchain.view();
