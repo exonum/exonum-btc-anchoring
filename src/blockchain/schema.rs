@@ -32,16 +32,14 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn lects(&self,
-                 validator: u32)
+                 validator_key: &btc::PublicKey)
                  -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, LectContent> {
-        let mut prefix = vec![ANCHORING_SERVICE_ID as u8, 3, 0, 0, 0, 0];
-        BigEndian::write_u32(&mut prefix[2..6], validator);
+        let prefix = [&[ANCHORING_SERVICE_ID as u8, 3], validator_key.to_vec().as_ref()].concat();
         MerkleTable::new(MapTable::new(prefix, self.view))
     }
 
-    pub fn lect_indexes(&self, validator: u32) -> MapTable<View, btc::TxId, u64> {
-        let mut prefix = vec![ANCHORING_SERVICE_ID as u8, 4, 0, 0, 0, 0];
-        BigEndian::write_u32(&mut prefix[2..6], validator);
+    pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapTable<View, btc::TxId, u64> {
+        let prefix = [&[ANCHORING_SERVICE_ID as u8, 4], validator_key.to_vec().as_ref()].concat();
         MapTable::new(prefix, self.view)
     }
 
@@ -80,30 +78,36 @@ impl<'a> AnchoringSchema<'a> {
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
         let (_, addr) = cfg.redeem_script();
         self.add_known_address(&addr)?;
-        for idx in 0..cfg.validators.len() {
-            self.add_lect(idx as u32, cfg.funding_tx().clone(), Hash::zero())?;
+        for validator_key in &cfg.validators {
+            self.add_lect(validator_key, cfg.funding_tx().clone(), Hash::zero())?;
         }
         Ok(())
     }
 
-    pub fn add_lect<Tx>(&self, validator: u32, tx: Tx, msg_hash: Hash) -> Result<(), StorageError>
+    pub fn add_lect<Tx>(&self,
+                        validator_key: &btc::PublicKey,
+                        tx: Tx,
+                        msg_hash: Hash)
+                        -> Result<(), StorageError>
         where Tx: Into<BitcoinTx>
     {
-        let lects = self.lects(validator);
+        let lects = self.lects(validator_key);
 
         let tx = tx.into();
         let idx = lects.len()?;
         let txid = tx.id();
         lects.append(LectContent::new(&msg_hash, tx))?;
-        self.lect_indexes(validator).put(&txid, idx)
+        self.lect_indexes(validator_key).put(&txid, idx)
     }
 
-    pub fn lect(&self, validator: u32) -> Result<BitcoinTx, StorageError> {
-        self.lects(validator).last().map(|x| x.unwrap().tx())
+    pub fn lect(&self, validator_key: &btc::PublicKey) -> Result<BitcoinTx, StorageError> {
+        self.lects(validator_key).last().map(|x| x.unwrap().tx())
     }
 
-    pub fn prev_lect(&self, validator: u32) -> Result<Option<BitcoinTx>, StorageError> {
-        let lects = self.lects(validator);
+    pub fn prev_lect(&self,
+                     validator_key: &btc::PublicKey)
+                     -> Result<Option<BitcoinTx>, StorageError> {
+        let lects = self.lects(validator_key);
 
         let idx = lects.len()?;
         if idx > 1 {
@@ -119,8 +123,8 @@ impl<'a> AnchoringSchema<'a> {
         let validators_count = cfg.validators.len() as u32;
 
         let mut lects = HashMap::new();
-        for validator_id in 0..validators_count {
-            let last_lect = self.lect(validator_id)?;
+        for validator_key in &cfg.validators {
+            let last_lect = self.lect(validator_key)?;
             match lects.entry(last_lect.0) {
                 Entry::Occupied(mut v) => {
                     *v.get_mut() += 1;
@@ -144,10 +148,10 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn find_lect_position(&self,
-                              validator: u32,
+                              validator_key: &btc::PublicKey,
                               txid: &btc::TxId)
                               -> Result<Option<u64>, StorageError> {
-        self.lect_indexes(validator).get(txid)
+        self.lect_indexes(validator_key).get(txid)
     }
 
     pub fn add_known_address(&self, addr: &btc::Address) -> Result<(), StorageError> {
@@ -176,8 +180,8 @@ impl<'a> AnchoringSchema<'a> {
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
         let cfg = self.current_anchoring_config()?;
         let mut lect_hashes = Vec::new();
-        for id in 0..cfg.validators.len() as u32 {
-            lect_hashes.push(self.lects(id).root_hash()?);
+        for key in &cfg.validators {
+            lect_hashes.push(self.lects(key).root_hash()?);
         }
         Ok(lect_hashes)
     }

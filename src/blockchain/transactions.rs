@@ -3,6 +3,7 @@ use bitcoin::blockdata::transaction::SigHashType;
 use exonum::blockchain::{Schema, Transaction};
 use exonum::messages::Message;
 use exonum::storage::{Error as StorageError, List, View};
+use exonum::crypto::HexValue;
 
 use blockchain::dto::{AnchoringMessage, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use blockchain::schema::AnchoringSchema;
@@ -92,11 +93,12 @@ impl MsgAnchoringUpdateLatest {
         // Verify lect with actual cfg
         let schema = Schema::new(view);
         let actual_cfg = schema.actual_configuration()?;
-        if actual_cfg.validators.get(id as usize) != Some(self.from()) {
+        if actual_cfg.validators.get(self.validator() as usize) != Some(self.from()) {
             warn!("Received lect from non validator, content={:#?}", self);
             return Ok(());
         }
         let anchoring_cfg = anchoring_schema.current_anchoring_config()?;
+        let key = &anchoring_cfg.validators[id as usize];
         match TxKind::from(tx.clone()) {
             TxKind::Anchoring(tx) => {
                 if !verify_anchoring_tx_payload(&tx, &schema)? {
@@ -119,11 +121,11 @@ impl MsgAnchoringUpdateLatest {
             TxKind::Other(_) => panic!("Incorrect fields deserialization."),
         }
 
-        if anchoring_schema.lects(id).len()? != self.lect_count() {
+        if anchoring_schema.lects(&key).len()? != self.lect_count() {
             warn!("Received lect with wrong count, content={:#?}", self);
             return Ok(());
         }
-        anchoring_schema.add_lect(id, tx, self.hash())
+        anchoring_schema.add_lect(&key, tx, self.hash())
     }
 }
 
@@ -158,15 +160,15 @@ fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
     let prev_txid = tx.prev_hash();
     let prev_lects_count = {
         let mut prev_lects_count = 0;
-        for id in 0..count {
-            if let Some(prev_lect_idx) = anchoring_schema.find_lect_position(id, &prev_txid)? {
+        for key in &anchoring_cfg.validators {
+            if let Some(prev_lect_idx) = anchoring_schema.find_lect_position(key, &prev_txid)? {
                 let prev_lect = anchoring_schema
-                    .lects(id)
+                    .lects(key)
                     .get(prev_lect_idx)?
                     .expect(&format!("Lect with index {} is absent in lects table for validator \
                                      {}",
                                     prev_lect_idx,
-                                    id));
+                                    key.to_hex()));
                 assert_eq!(prev_txid,
                            prev_lect.tx().id(),
                            "Inconsistent reference to previous lect in Exonum");

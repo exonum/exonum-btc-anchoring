@@ -36,7 +36,9 @@ impl AnchoringHandler {
             self.try_finalize_proposal_tx(proposal, &multisig, state)?;
         } else {
             // Or try to create proposal
-            match self.collect_lects_for_validator(self.validator_id(state), state)? {
+            match self.collect_lects_for_validator(self.validator_key(multisig.common, state),
+                                                   multisig.common,
+                                                   state)? {
                 LectKind::Anchoring(lect) => {
                     if lect.output_address(multisig.common.network) == multisig.addr {
                         return Ok(());
@@ -86,7 +88,7 @@ impl AnchoringHandler {
                multisig.addr.to_base58check());
 
         let lect_id = AnchoringSchema::new(state.view())
-            .lect(self.validator_id(state))?
+            .lect(self.validator_key(multisig.common, state))?
             .id();
         self.try_create_anchoring_tx_chain(&multisig, Some(lect_id), state)?;
 

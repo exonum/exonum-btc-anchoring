@@ -87,11 +87,13 @@ impl PublicApi {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
 
-        if let Some(lect) = schema.lects(id).last()? {
-            Ok(LectInfo::from(lect))
-        } else {
-            Err(error::Error::UnknownValidatorId(id).into())
+        let actual_cfg = schema.current_anchoring_config()?;
+        if let Some(key) = actual_cfg.validators.get(id as usize) {
+            if let Some(lect) = schema.lects(key).last()? {
+                return Ok(LectInfo::from(lect));
+            }
         }
+        Err(error::Error::UnknownValidatorId(id).into())
     }
 }
 

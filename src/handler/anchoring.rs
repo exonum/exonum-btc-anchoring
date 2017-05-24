@@ -42,7 +42,9 @@ impl AnchoringHandler {
                                   multisig: &MultisigAddress,
                                   state: &mut NodeState)
                                   -> Result<(), ServiceError> {
-        match self.collect_lects_for_validator(self.validator_id(state), state)? {
+        match self.collect_lects_for_validator(self.validator_key(multisig.common, state),
+                                               multisig.common,
+                                               state)? {
             LectKind::Funding(_) => self.try_create_anchoring_tx_chain(multisig, None, state),
             LectKind::Anchoring(tx) => {
                 let anchored_height = tx.payload().block_height;
@@ -194,13 +196,13 @@ impl AnchoringHandler {
             info!("LECT ====== txid={}, total_count={}",
                   new_lect.txid(),
                   AnchoringSchema::new(state.view())
-                      .lects(self.validator_id(state))
+                      .lects(self.validator_key(multisig.common, state))
                       .len()?);
 
             self.proposal_tx = None;
 
             let lects_count = AnchoringSchema::new(state.view())
-                .lects(self.validator_id(state))
+                .lects(self.validator_key(multisig.common, state))
                 .len()?;
             let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
                                                          self.validator_id(state),

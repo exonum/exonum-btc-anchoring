@@ -53,7 +53,9 @@ pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
     let b = sandbox.blockchain_ref().clone();
     let v = b.view();
     let s = AnchoringSchema::new(&v);
-    s.lects(id)
+    let key = &s.current_anchoring_config().unwrap().validators[id as usize];
+
+    s.lects(key)
         .values()
         .unwrap()
         .into_iter()
@@ -72,11 +74,11 @@ pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
     let changes = {
         let view = blockchain.view();
         let anchoring_schema = AnchoringSchema::new(&view);
+        let anchoring_cfg = anchoring_schema.current_anchoring_config().unwrap();
         for lect_msg in lects {
+            let key = &anchoring_cfg.validators[lect_msg.validator() as usize];
             anchoring_schema
-                .add_lect(lect_msg.validator(),
-                          lect_msg.tx().clone(),
-                          Message::hash(&lect_msg))
+                .add_lect(key, lect_msg.tx().clone(), Message::hash(&lect_msg))
                 .unwrap();
         }
         view.changes()

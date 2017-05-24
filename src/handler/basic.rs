@@ -47,6 +47,16 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
+    pub fn validator_key<'a>(&self, cfg: &'a AnchoringConfig, state: &NodeState) -> &'a btc::PublicKey {
+        let validator_id = state
+            .validator_state()
+            .as_ref()
+            .expect("Request `validator_id` only from validator node.")
+            .id();
+        &cfg.validators[validator_id as usize]
+    }
+
+    #[doc(hidden)]
     pub fn client(&self) -> &AnchoringRpc {
         self.client
             .as_ref()
@@ -139,7 +149,7 @@ impl AnchoringHandler {
             // Ensure that bitcoind watching for following addr.
             self.import_address(&following_addr, state)?;
 
-            match TxKind::from(schema.lect(self.validator_id(state))?) {
+            match TxKind::from(schema.lect(self.validator_key(&actual, state))?) {
                 TxKind::Anchoring(lect) => {
                     let lect_addr = lect.output_address(actual.network);
                     if lect_addr == following_addr {
@@ -166,8 +176,8 @@ impl AnchoringHandler {
                 TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
             }
         } else {
-            let id = self.validator_id(state);
-            let current_lect = schema.lect(id)?;
+            let key = self.validator_key(&actual, state).clone();
+            let current_lect = schema.lect(&key)?;
 
             match TxKind::from(current_lect) {
                 TxKind::FundingTx(tx) => {
@@ -196,7 +206,7 @@ impl AnchoringHandler {
                     }
                     // If the lect encodes a transition to a new anchoring address,
                     // we need to wait until it reaches enough confirmations.
-                    if current_lect_is_transition(&actual, id, &current_lect_addr, &schema)? {
+                    if current_lect_is_transition(&actual, &key, &current_lect_addr, &schema)? {
                         let confirmations = get_confirmations(self.client(), &current_lect.txid())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
@@ -234,17 +244,18 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn collect_lects_for_validator(&self,
-                                       validator_id: u32,
+                                       validator_key: &btc::PublicKey,
+                                       anchoring_cfg: &AnchoringConfig,
                                        state: &NodeState)
                                        -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
-        let our_lect = anchoring_schema.lect(validator_id)?;
+        let our_lect = anchoring_schema.lect(validator_key)?;
         let mut count = 1;
 
         let validators_count = state.validators().len() as u32;
-        for id in 0..validators_count {
-            if our_lect == anchoring_schema.lect(id)? {
+        for key in &anchoring_cfg.validators {
+            if our_lect == anchoring_schema.lect(key)? {
                 count += 1;
             }
         }
@@ -303,14 +314,14 @@ impl AnchoringHandler {
                            multisig: &MultisigAddress,
                            state: &mut NodeState)
                            -> Result<Option<BitcoinTx>, ServiceError> {
-        let id = self.validator_id(state);
+        let key = self.validator_key(multisig.common, state);
         trace!("Update our lect");
         if let Some(lect) = self.find_lect(multisig, state)? {
             /// New lect with different signatures set.
             let (our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
-                let our_lect = schema.lect(id)?;
-                let count = schema.lects(id).len()?;
+                let our_lect = schema.lect(key)?;
+                let count = schema.lects(key).len()?;
                 (our_lect, count)
             };
 
@@ -351,11 +362,11 @@ impl AnchoringHandler {
                       state: &NodeState)
                       -> Result<Option<BitcoinTx>, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
-        let id = self.validator_id(state);
-        let first_funding_tx = schema.lects(id).get(0)?.unwrap().tx();
+        let key = self.validator_key(multisig.common, state);
+        let first_funding_tx = schema.lects(key).get(0)?.unwrap().tx();
 
         // Check that we know tx
-        if schema.find_lect_position(id, &lect.id())?.is_some() {
+        if schema.find_lect_position(key, &lect.id())?.is_some() {
             return Ok(Some(lect.into()));
         }
 
@@ -373,7 +384,7 @@ impl AnchoringHandler {
                 if !schema.is_address_known(&lect_addr)? {
                     return Ok(None);
                 }
-                if schema.find_lect_position(id, &tx.prev_hash())?.is_some() {
+                if schema.find_lect_position(key, &tx.prev_hash())?.is_some() {
                     return Ok(Some(lect.into()));
                 }
 
@@ -395,8 +406,8 @@ impl AnchoringHandler {
                 let cfg = schema.anchoring_config_by_height(lect_height)?;
 
                 let mut prev_lect_count = 0;
-                for id in 0..cfg.validators.len() as u32 {
-                    if schema.find_lect_position(id, &txid)?.is_some() {
+                for key in &cfg.validators {
+                    if schema.find_lect_position(key, &txid)?.is_some() {
                         prev_lect_count += 1;
                     }
                 }
@@ -437,11 +448,11 @@ impl AnchoringHandler {
 
 /// Transition lects cannot be recovered without breaking of current anchoring chain.
 fn current_lect_is_transition(actual: &AnchoringConfig,
-                              validator_id: u32,
+                              validator_key: &btc::PublicKey,
                               current_lect_addr: &btc::Address,
                               schema: &AnchoringSchema)
                               -> Result<bool, ServiceError> {
-    let r = if let Some(prev_lect) = schema.prev_lect(validator_id)? {
+    let r = if let Some(prev_lect) = schema.prev_lect(validator_key)? {
         match TxKind::from(prev_lect) {
             TxKind::Anchoring(prev_lect) => {
                 let prev_lect_addr = prev_lect.output_address(actual.network);
