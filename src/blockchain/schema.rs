@@ -1,3 +1,5 @@
+use std::collections::hash_map::{Entry, HashMap};
+
 use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
@@ -8,7 +10,7 @@ use exonum::crypto::Hash;
 use bitcoin::util::base58::ToBase58;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::ANCHORING_SERVICE_ID;
-use blockchain::dto::MsgAnchoringSignature;
+use blockchain::dto::{LectContent, MsgAnchoringSignature};
 use details::btc;
 use details::btc::transactions::BitcoinTx;
 
@@ -31,7 +33,7 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn lects(&self,
                  validator: u32)
-                 -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, BitcoinTx> {
+                 -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, LectContent> {
         let mut prefix = vec![ANCHORING_SERVICE_ID as u8, 3, 0, 0, 0, 0];
         BigEndian::write_u32(&mut prefix[2..6], validator);
         MerkleTable::new(MapTable::new(prefix, self.view))
@@ -79,12 +81,12 @@ impl<'a> AnchoringSchema<'a> {
         let (_, addr) = cfg.redeem_script();
         self.add_known_address(&addr)?;
         for idx in 0..cfg.validators.len() {
-            self.add_lect(idx as u32, cfg.funding_tx().clone())?;
+            self.add_lect(idx as u32, cfg.funding_tx().clone(), Hash::zero())?;
         }
         Ok(())
     }
 
-    pub fn add_lect<Tx>(&self, validator: u32, tx: Tx) -> Result<(), StorageError>
+    pub fn add_lect<Tx>(&self, validator: u32, tx: Tx, msg_hash: Hash) -> Result<(), StorageError>
         where Tx: Into<BitcoinTx>
     {
         let lects = self.lects(validator);
@@ -92,12 +94,12 @@ impl<'a> AnchoringSchema<'a> {
         let tx = tx.into();
         let idx = lects.len()?;
         let txid = tx.id();
-        lects.append(tx)?;
+        lects.append(LectContent::new(&msg_hash, tx))?;
         self.lect_indexes(validator).put(&txid, idx)
     }
 
     pub fn lect(&self, validator: u32) -> Result<BitcoinTx, StorageError> {
-        self.lects(validator).last().map(|x| x.unwrap())
+        self.lects(validator).last().map(|x| x.unwrap().tx())
     }
 
     pub fn prev_lect(&self, validator: u32) -> Result<Option<BitcoinTx>, StorageError> {
@@ -105,10 +107,40 @@ impl<'a> AnchoringSchema<'a> {
 
         let idx = lects.len()?;
         if idx > 1 {
-            lects.get(idx - 2)
+            let lect = lects.get(idx - 2)?.map(|content| content.tx());
+            Ok(lect)
         } else {
             Ok(None)
         }
+    }
+
+    pub fn collect_lects(&self) -> Result<Option<BitcoinTx>, StorageError> {
+        let cfg = self.current_anchoring_config()?;
+        let validators_count = cfg.validators.len() as u32;
+
+        let mut lects = HashMap::new();
+        for validator_id in 0..validators_count {
+            let last_lect = self.lect(validator_id)?;
+            match lects.entry(last_lect.0) {
+                Entry::Occupied(mut v) => {
+                    *v.get_mut() += 1;
+                }
+                Entry::Vacant(v) => {
+                    v.insert(1);
+                }
+            }
+        }
+
+        let lect = if let Some((lect, count)) = lects.iter().max_by_key(|&(_, v)| v) {
+            if *count >= ::majority_count(validators_count as u8) {
+                Some(BitcoinTx::from(lect.clone()))
+            } else {
+                None
+            }
+        } else {
+            None
+        };
+        Ok(lect)
     }
 
     pub fn find_lect_position(&self,

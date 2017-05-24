@@ -143,6 +143,17 @@ fn send_anchoring_tx(client: &AnchoringRpc,
 }
 
 #[test]
+fn txid_serde_hex() {
+    let txid_hex = "0e4167aeb4769de5ad8d64d1b2342330c2b6aadc0ed9ad0d26ae8eafb18d9c87";
+    let txid = btc::TxId::from_hex(txid_hex).unwrap();
+
+    let json = txid.to_json().to_string();
+    let txid2: btc::TxId = serde_json::from_str(&json).unwrap();
+    assert_eq!(json, format!("\"{}\"", txid_hex));
+    assert_eq!(txid2, txid);
+}
+
+#[test]
 fn test_anchoring_txid() {
     let tx = AnchoringTx::from_hex("010000000195a4472606ae658f1b9cbebd43f440def00c94341a3515024855\
         a1da8d80932800000000fd3d020047304402204e11d63db849f253095e1e0a400f2f0c01894083e97bfaef644b\

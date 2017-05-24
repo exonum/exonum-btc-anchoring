@@ -240,7 +240,11 @@ fn test_anchoring_second_block_lect_lost() {
     sandbox.add_height(&[]);
 
     let txs = (0..4)
-        .map(|id| gen_service_tx_lect(&sandbox, id, &prev_anchored_tx, 3))
+        .map(|id| {
+                 gen_service_tx_lect(&sandbox, id, &prev_anchored_tx, 3)
+                     .raw()
+                     .clone()
+             })
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
 
@@ -415,7 +419,9 @@ fn test_anchoring_lect_correct_validator() {
     let sandbox = AnchoringSandbox::initialize(&[]);
     anchor_first_block(&sandbox);
 
-    let msg_lect = gen_service_tx_lect_wrong(&sandbox, 0, 0, &sandbox.latest_anchored_tx(), 2);
+    let msg_lect = gen_service_tx_lect_wrong(&sandbox, 0, 0, &sandbox.latest_anchored_tx(), 2)
+        .raw()
+        .clone();
     // Commit `msg_lect` into blockchain
     sandbox.add_height(&[msg_lect]);
     // Ensure that service accepts it
@@ -435,7 +441,9 @@ fn test_anchoring_lect_wrong_validator() {
     anchor_first_block(&sandbox);
 
     let msg_lect_wrong =
-        gen_service_tx_lect_wrong(&sandbox, 2, 0, &sandbox.latest_anchored_tx(), 2);
+        gen_service_tx_lect_wrong(&sandbox, 2, 0, &sandbox.latest_anchored_tx(), 2)
+            .raw()
+            .clone();
 
     let lects_before = dump_lects(&sandbox, 0);
     // Commit `msg_lect_wrong` into blockchain
@@ -456,7 +464,9 @@ fn test_anchoring_lect_nonexistent_validator() {
     anchor_first_block(&sandbox);
 
     let msg_lect_wrong =
-        gen_service_tx_lect_wrong(&sandbox, 2, 1000, &sandbox.latest_anchored_tx(), 2);
+        gen_service_tx_lect_wrong(&sandbox, 2, 1000, &sandbox.latest_anchored_tx(), 2)
+            .raw()
+            .clone();
 
     let lects_before = dump_lects(&sandbox, 2);
     // Commit `msg_lect_wrong` into blockchain

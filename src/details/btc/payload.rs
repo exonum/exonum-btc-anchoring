@@ -14,10 +14,14 @@ const PAYLOAD_V1: u8 = 1;
 const PAYLOAD_V1_KIND_REGULAR: u8 = 0;
 const PAYLOAD_V1_KIND_RECOVER: u8 = 1;
 
-#[derive(Debug, Clone, PartialEq)]
+/// Anchoring transaction payload
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Payload {
+    /// Anchored block height
     pub block_height: u64,
+    /// Anchored block hash
     pub block_hash: Hash,
+    /// `Txid` of previous transactions chain if it have been lost.
     pub prev_tx_chain: Option<btc::TxId>,
 }
 

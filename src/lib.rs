@@ -109,8 +109,6 @@ extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
 extern crate bitcoinrpc;
-#[macro_use]
-extern crate exonum;
 extern crate bitcoin;
 extern crate secp256k1;
 extern crate byteorder;
@@ -121,6 +119,12 @@ extern crate derive_error;
 
 extern crate rand;
 extern crate tempdir;
+extern crate iron;
+extern crate router;
+extern crate params;
+extern crate bodyparser;
+#[macro_use]
+extern crate exonum;
 
 #[doc(hidden)]
 pub mod details;
@@ -134,6 +138,7 @@ pub mod service;
 pub mod handler;
 #[doc(hidden)]
 pub mod error;
+pub mod api;
 
 pub use details::btc::{Network as BitcoinNetwork, gen_btc_keypair, gen_btc_keypair_with_rng};
 pub use details::rpc::{AnchoringRpc, AnchoringRpcConfig};

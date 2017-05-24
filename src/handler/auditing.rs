@@ -18,7 +18,7 @@ impl AnchoringHandler {
                                  -> Result<(), ServiceError> {
         trace!("Auditing state");
         if state.height() % self.node.check_lect_frequency == 0 {
-            let r = match self.collect_lects(&cfg, state)? {
+            let r = match self.collect_lects(state)? {
                 LectKind::Funding(tx) => self.check_funding_lect(tx, state),
                 LectKind::Anchoring(tx) => self.check_anchoring_lect(tx),
                 LectKind::None => {

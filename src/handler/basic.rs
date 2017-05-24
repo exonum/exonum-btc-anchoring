@@ -1,5 +1,3 @@
-use std::collections::hash_map::{Entry, HashMap};
-
 use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::NodeState;
@@ -248,8 +246,7 @@ impl AnchoringHandler {
 
         let validators_count = state.validators().len() as u32;
         for id in 0..validators_count {
-            let lects = anchoring_schema.lects(id);
-            if Some(&our_lect) == lects.last()?.as_ref() {
+            if our_lect == anchoring_schema.lect(id)? {
                 count += 1;
             }
         }
@@ -266,43 +263,19 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn collect_lects(&self,
-                         cfg: &AnchoringConfig,
-                         state: &NodeState)
-                         -> Result<LectKind, ServiceError> {
+    pub fn collect_lects(&self, state: &NodeState) -> Result<LectKind, ServiceError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
-        let validators_count = cfg.validators.len() as u32;
-
-        let mut lects = HashMap::new();
-        for validator_id in 0..validators_count {
-            if let Some(last_lect) = anchoring_schema.lects(validator_id).last()? {
-                // TODO implement hash and eq for transaction
-                match lects.entry(last_lect.0) {
-                    Entry::Occupied(mut v) => {
-                        *v.get_mut() += 1;
-                    }
-                    Entry::Vacant(v) => {
-                        v.insert(1);
-                    }
+        let kind = if let Some(lect) = anchoring_schema.collect_lects()? {
+            match TxKind::from(lect) {
+                TxKind::Anchoring(tx) => LectKind::Anchoring(tx),
+                TxKind::FundingTx(tx) => LectKind::Funding(tx),
+                TxKind::Other(tx) => {
+                    let e = HandlerError::IncorrectLect {
+                        reason: "Incorrect lect transaction".to_string(),
+                        tx: tx.into(),
+                    };
+                    return Err(e.into());
                 }
-            }
-        }
-
-        let kind = if let Some((lect, count)) = lects.iter().max_by_key(|&(_, v)| v) {
-            if *count >= ::majority_count(validators_count as u8) {
-                match TxKind::from(lect.clone()) {
-                    TxKind::Anchoring(tx) => LectKind::Anchoring(tx),
-                    TxKind::FundingTx(tx) => LectKind::Funding(tx),
-                    TxKind::Other(tx) => {
-                        let e = HandlerError::IncorrectLect {
-                            reason: "Incorrect lect transaction".to_string(),
-                            tx: tx.into(),
-                        };
-                        return Err(e.into());
-                    }
-                }
-            } else {
-                LectKind::None
             }
         } else {
             LectKind::None
@@ -381,7 +354,7 @@ impl AnchoringHandler {
                       -> Result<Option<BitcoinTx>, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let id = self.validator_id(state);
-        let first_funding_tx = schema.lects(id).get(0)?.unwrap();
+        let first_funding_tx = schema.lects(id).get(0)?.unwrap().tx();
 
         // Check that we know tx
         if schema.find_lect_position(id, &lect.id())?.is_some() {
