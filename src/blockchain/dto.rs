@@ -47,7 +47,7 @@ storage_value! {
 }
 
 #[doc(hidden)]
-#[derive(Clone)]
+#[derive(Clone, Serialize)]
 pub enum AnchoringMessage {
     Signature(MsgAnchoringSignature),
     UpdateLatest(MsgAnchoringUpdateLatest),

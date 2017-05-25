@@ -3,10 +3,11 @@ use exonum::storage::StorageValue;
 
 use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::constants::Network;
+use serde_json;
 
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
-use blockchain::dto::{LectContent, MsgAnchoringSignature};
+use blockchain::dto::{LectContent, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use details::tests::{dummy_anchoring_tx, gen_anchoring_keys, make_signatures};
 
 #[test]
@@ -21,6 +22,24 @@ fn test_lect_content_storage_value() {
     let content = LectContent::new(&hash, tx);
     let lect_value = content.clone().serialize();
     assert_eq!(LectContent::deserialize(lect_value), content);
+}
+
+#[test]
+fn test_msg_update_latest_json_serde() {
+    let tx = BitcoinTx::from_hex("01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f3\
+        69a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9\
+        a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6\
+        e03f742abac0b3108134d900000000")
+            .unwrap();
+
+    let msg = MsgAnchoringUpdateLatest::new_with_signature(&PublicKey::zero(),
+                                                           0,
+                                                           tx,
+                                                           0,
+                                                           &Signature::zero());
+    let json = serde_json::to_value(&msg).unwrap();
+    let msg2: MsgAnchoringUpdateLatest = serde_json::from_value(json).unwrap();
+    assert_eq!(msg2, msg);
 }
 
 #[test]
