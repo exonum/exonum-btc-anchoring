@@ -200,7 +200,7 @@ impl SandboxClient {
         match r {
             Ok(_) => Ok(()),
             Err(Error::Other(RpcError::NoErrorOrResult)) => Ok(()),
-            Err(e) => Err(e), 
+            Err(e) => Err(e),
         }
     }
 

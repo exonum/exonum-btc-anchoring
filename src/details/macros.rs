@@ -229,7 +229,7 @@ macro_rules! implement_tx_wrapper {
                                 buffer: &mut B,
                                 from: usize,
                                 to: usize)
-                                -> Result<(), Box<::std::error::Error>> 
+                                -> Result<(), Box<::std::error::Error>>
             where B: ::exonum::serialize::json::WriteBufferWrapper
         {
             let tx = ::serde_json::from_value(value.clone())?;
