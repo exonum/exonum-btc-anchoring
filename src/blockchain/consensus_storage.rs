@@ -99,7 +99,7 @@ impl AnchoringConfig {
     }
 }
 
-fn btc_network_to_str<S>(network: &btc::Network, ser: &mut S) -> Result<(), S::Error>
+fn btc_network_to_str<S>(network: &btc::Network, ser: S) -> Result<S::Ok, S::Error>
     where S: ::serde::Serializer
 {
     match *network {
@@ -108,14 +108,16 @@ fn btc_network_to_str<S>(network: &btc::Network, ser: &mut S) -> Result<(), S::E
     }
 }
 
-fn btc_network_from_str<'de, D>(deserializer: &mut D) -> Result<btc::Network, D::Error>
+fn btc_network_from_str<'de, D>(deserializer: D) -> Result<btc::Network, D::Error>
     where D: Deserializer<'de>
 {
     let s: String = Deserialize::deserialize(deserializer)?;
+
+    const VARIANTS: &[&str] = &["bitcoin", "testnet"];
     match s.as_str() {
         "bitcoin" => Ok(btc::Network::Bitcoin),
         "testnet" => Ok(btc::Network::Testnet),
-        _ => Err(::serde::de::Error::invalid_value("Wrong network")),
+        other => Err(::serde::de::Error::unknown_variant(other, VARIANTS)),
     }
 }
 

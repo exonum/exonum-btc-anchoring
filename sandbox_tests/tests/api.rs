@@ -3,6 +3,7 @@ extern crate sandbox;
 extern crate anchoring_btc_service;
 extern crate anchoring_btc_sandbox;
 extern crate serde;
+#[macro_use]
 extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;

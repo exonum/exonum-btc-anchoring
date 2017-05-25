@@ -4,12 +4,12 @@ extern crate anchoring_btc_service;
 #[macro_use]
 extern crate anchoring_btc_sandbox;
 extern crate serde;
+#[macro_use]
 extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;
 extern crate secp256k1;
 
-use serde_json::value::ToJson;
 use bitcoin::util::base58::ToBase58;
 
 use exonum::crypto::HexValue;
@@ -47,7 +47,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
     cfg.validators.swap_remove(0);
     *cfg.services
          .get_mut(&ANCHORING_SERVICE_ID.to_string())
-         .unwrap() = service_cfg.to_json();
+         .unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), from_height, sandbox.s(0));
     (tx.raw().clone(), service_cfg)
 }

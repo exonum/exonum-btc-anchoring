@@ -1,6 +1,6 @@
 use std::fmt;
 
-use exonum::crypto::{Hash, PublicKey, hash};
+use exonum::crypto::{Hash, PublicKey};
 use exonum::messages::{Error as MessageError, FromRaw, Message, RawTransaction};
 
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
@@ -38,11 +38,11 @@ message! {
 }
 
 storage_value! {
-    LectContent {
+    struct LectContent {
         const SIZE = 40;
 
-        msg_hash:       &Hash       [00 => 32]
-        tx:             BitcoinTx   [32 => 40]
+        field msg_hash:       &Hash       [00 => 32]
+        field tx:             BitcoinTx   [32 => 40]
     }
 }
 

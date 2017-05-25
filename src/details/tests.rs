@@ -5,7 +5,6 @@ use std::env;
 use std::collections::HashMap;
 
 use serde_json;
-use serde_json::value::ToJson;
 use rand::Rng;
 use bitcoin::network::constants::Network;
 use bitcoin::util::base58::{FromBase58, ToBase58};
@@ -147,7 +146,7 @@ fn txid_serde_hex() {
     let txid_hex = "0e4167aeb4769de5ad8d64d1b2342330c2b6aadc0ed9ad0d26ae8eafb18d9c87";
     let txid = btc::TxId::from_hex(txid_hex).unwrap();
 
-    let json = txid.to_json().to_string();
+    let json = serde_json::to_value(txid).unwrap().to_string();
     let txid2: btc::TxId = serde_json::from_str(&json).unwrap();
     assert_eq!(json, format!("\"{}\"", txid_hex));
     assert_eq!(txid2, txid);
@@ -189,7 +188,7 @@ fn anchoring_tx_serde() {
         000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd\
         004cd1e7500000000";
     let tx = AnchoringTx::from_hex(hex).unwrap();
-    let json = tx.to_json().to_string();
+    let json = serde_json::to_value(tx.clone()).unwrap().to_string();
     let tx2: AnchoringTx = serde_json::from_str(&json).unwrap();
 
     assert_eq!(tx2, tx);

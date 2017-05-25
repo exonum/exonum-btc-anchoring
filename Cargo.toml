@@ -27,14 +27,14 @@ bodyparser = "0.5.0"
 params = "0.6.0"
 
 [dependencies.exonum]
-git = "ssh://git@github.com/exonum-core/exonum-core.git"
+git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
 rev = "ee50943c20f8802af630adb5152d67d763e18fd0"
 
-[dependencies.configuration_service]
-git = "ssh://git@github.com/darkeld3r/exonum-configuration.git"
-version = "0.1.0"
-rev = "9e226ba505aa670405167ed64ab7d87c29fbeeba"
+# [dependencies.configuration_service]
+# git = "ssh://git@github.com/darkeld3r/exonum-configuration.git"
+# version = "0.1.0"
+# rev = "9e226ba505aa670405167ed64ab7d87c29fbeeba"
 
 [features]
 default = []

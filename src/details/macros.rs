@@ -217,6 +217,26 @@ macro_rules! implement_tx_wrapper {
             }
         }
     }
+
+    impl<'a> ::exonum::serialize::json::ExonumJsonSerialize for $name {
+        fn serialize<S: ::serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
+            ser.serialize_str(&self.to_hex())
+        }
+    }
+
+    impl ::exonum::serialize::json::ExonumJsonDeserializeField for $name {
+        fn deserialize_field<B>(value: &::serde_json::Value,
+                                buffer: &mut B,
+                                from: usize,
+                                to: usize)
+                                -> Result<(), Box<::std::error::Error>> 
+            where B: ::exonum::serialize::json::WriteBufferWrapper
+        {
+            let tx = ::serde_json::from_value(value.clone())?;
+            buffer.write(from, to, <$name as StorageValue>::serialize(tx));
+            Ok(())
+        }
+    }
 )
 }
 

@@ -1,10 +1,13 @@
-use bitcoin::util::base58::ToBase58;
-use serde_json::value::Value;
-use rand::{Rng, thread_rng};
-
 use std::sync::{Arc, Mutex};
 
-use exonum::blockchain::{NodeState, Service, Transaction};
+use bitcoin::util::base58::ToBase58;
+use iron::Handler;
+use serde_json;
+use serde_json::value::Value;
+use rand::{Rng, thread_rng};
+use router::Router;
+
+use exonum::blockchain::{ApiContext, NodeState, Service, Transaction};
 use exonum::crypto::Hash;
 use exonum::messages::{Error as MessageError, FromRaw, RawTransaction};
 use exonum::storage::{Error as StorageError, View};
@@ -85,7 +88,7 @@ impl Service for AnchoringService {
                 .unwrap();
         }
         AnchoringSchema::new(view).create_genesis_config(&cfg)?;
-        Ok(cfg.to_json())
+        Ok(serde_json::to_value(cfg).unwrap())
     }
 
     fn handle_commit(&self, state: &mut NodeState) -> Result<(), StorageError> {

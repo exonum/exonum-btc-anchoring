@@ -1,7 +1,6 @@
 use router::Router;
 use iron::prelude::*;
-use serde_json::value::ToJson;
-
+use serde_json;
 
 use exonum::blockchain::Blockchain;
 use exonum::crypto::Hash;
@@ -100,7 +99,7 @@ impl Api for PublicApi {
         let _self = self.clone();
         let current_lect = move |_: &mut Request| -> IronResult<Response> {
             let lect = _self.current_lect()?;
-            _self.ok_response(&lect.to_json())
+            _self.ok_response(&serde_json::to_value(&lect).unwrap())
         };
 
         let _self = self.clone();
@@ -110,7 +109,7 @@ impl Api for PublicApi {
                 Some(id_str) => {
                     let id: u32 = id_str.parse().map_err(|_| ApiError::IncorrectRequest)?;
                     let info = _self.current_lect_of_validator(id)?;
-                    _self.ok_response(&info.to_json())
+                    _self.ok_response(&serde_json::to_value(&info).unwrap())
                 }
                 None => Err(ApiError::IncorrectRequest)?,
             }

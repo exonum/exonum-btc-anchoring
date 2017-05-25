@@ -27,6 +27,6 @@ version = "0.1.0"
 rev = "ee50943c20f8802af630adb5152d67d763e18fd0"
 
 [dependencies.sandbox]
-git = "ssh://git@github.com/vldm/exonum-core.git"
+git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
-rev = "eb025edb3aac74d4bb930e639c5f8682f7bef0ee"
+rev = "ee50943c20f8802af630adb5152d67d763e18fd0"

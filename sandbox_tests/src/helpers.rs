@@ -1,7 +1,3 @@
-pub use bitcoinrpc::RpcError as JsonRpcError;
-pub use bitcoinrpc::Error as RpcError;
-
-use serde_json::value::ToJson;
 use bitcoin::util::base58::{FromBase58, ToBase58};
 
 use exonum::messages::{Message, RawTransaction};
@@ -21,6 +17,9 @@ use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoring
 use anchoring_btc_service::blockchain::schema::AnchoringSchema;
 
 use AnchoringSandbox;
+
+pub use bitcoinrpc::RpcError as JsonRpcError;
+pub use bitcoinrpc::Error as RpcError;
 
 pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            validator: u32,
@@ -99,7 +98,7 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
     cfg.actual_from = actual_from;
     *cfg.services
          .get_mut(&ANCHORING_SERVICE_ID.to_string())
-         .unwrap() = service_cfg.to_json();
+         .unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
     tx.raw().clone()
 }
@@ -193,14 +192,15 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
         .expect(vec![
             gen_confirmations_request(sandbox.current_funding_tx().clone(), 50),
             request! {
-                           method: "getrawtransaction",
-                           params: [&anchored_tx.txid(), 1],
-                           error: RpcError::NoInformation("Unable to find tx".to_string())
-                       },
+                method: "getrawtransaction",
+                params: [&anchored_tx.txid(), 1],
+                error: RpcError::NoInformation("Unable to find tx".to_string())
+            },
             request! {
-                           method: "sendrawtransaction",
-                           params: [anchored_tx.to_hex()]
-                       },
+                method: "sendrawtransaction",
+                params: [anchored_tx.to_hex()],
+                response: anchored_tx.to_hex()
+            },
         ]);
 
     let signatures = signatures.into_iter().map(|tx| tx).collect::<Vec<_>>();
@@ -383,14 +383,15 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
     client.expect(vec![
         gen_confirmations_request(sandbox.current_funding_tx(), 50),
         request! {
-                               method: "getrawtransaction",
-                               params: [&anchored_tx.txid(), 1],
-                               error: RpcError::NoInformation("Unable to find tx".to_string())
-                           },
+            method: "getrawtransaction",
+            params: [&anchored_tx.txid(), 1],
+            error: RpcError::NoInformation("Unable to find tx".to_string())
+        },
         request! {
-                                method: "sendrawtransaction",
-                                params: [anchored_tx.to_hex()]
-                            },
+            method: "sendrawtransaction",
+            params: [anchored_tx.to_hex()],
+            response: anchored_tx.to_hex()
+        },
     ]);
     sandbox.add_height(&[]);
     sandbox.broadcast(gen_service_tx_lect(sandbox, 0, &anchored_tx, 3));
