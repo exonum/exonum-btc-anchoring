@@ -9,8 +9,6 @@ extern crate bitcoin;
 extern crate bitcoinrpc;
 extern crate secp256k1;
 extern crate rand;
-#[macro_use]
-extern crate log;
 
 use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;
@@ -1170,7 +1168,6 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         service_cfg.validators.swap(0, 3);
 
         let following_addr = service_cfg.redeem_script().1;
-        debug!("following_addr={}", following_addr.to_base58check());
         for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
             node.private_keys
                 .insert(following_addr.to_base58check(), priv_keys[id].clone());

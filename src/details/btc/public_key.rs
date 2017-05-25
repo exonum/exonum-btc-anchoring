@@ -1,4 +1,3 @@
-use arrayvec::ArrayVec;
 use secp256k1::Secp256k1;
 use secp256k1::key;
 use secp256k1::Error;
@@ -11,8 +10,11 @@ impl PublicKey {
         Ok(PublicKey::from(raw))
     }
 
-    pub fn to_vec(&self) -> ArrayVec<[u8; 72]> {
+    pub fn to_bytes(&self) -> [u8; 33] {
         let ctx = Secp256k1::without_caps();
-        self.0.serialize_vec(&ctx, true)
+        let vec = self.0.serialize_vec(&ctx, true);
+        let mut bytes = [0; 33];
+        bytes.copy_from_slice(&vec);
+        bytes
     }
 }

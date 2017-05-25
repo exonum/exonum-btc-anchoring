@@ -34,12 +34,12 @@ impl<'a> AnchoringSchema<'a> {
     pub fn lects(&self,
                  validator_key: &btc::PublicKey)
                  -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, LectContent> {
-        let prefix = [&[ANCHORING_SERVICE_ID as u8, 3], validator_key.to_vec().as_ref()].concat();
+        let prefix = [&[ANCHORING_SERVICE_ID as u8, 3], validator_key.to_bytes().as_ref()].concat();
         MerkleTable::new(MapTable::new(prefix, self.view))
     }
 
     pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapTable<View, btc::TxId, u64> {
-        let prefix = [&[ANCHORING_SERVICE_ID as u8, 4], validator_key.to_vec().as_ref()].concat();
+        let prefix = [&[ANCHORING_SERVICE_ID as u8, 4], validator_key.to_bytes().as_ref()].concat();
         MapTable::new(prefix, self.view)
     }
 

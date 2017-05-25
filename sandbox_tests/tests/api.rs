@@ -67,7 +67,7 @@ fn response_body(response: Response) -> serde_json::Value {
         let mut buf = Vec::new();
         body.write_body(&mut buf).unwrap();
         let s = String::from_utf8(buf).unwrap();
-        debug!("Received response body:'{}'", &s);
+        trace!("Received response body:'{}'", &s);
         serde_json::from_str(&s).unwrap()
     } else {
         serde_json::Value::Null

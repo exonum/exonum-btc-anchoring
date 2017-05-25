@@ -152,7 +152,8 @@ impl AnchoringHandler {
 
         let key = self.validator_key(&actual, state).clone();
 
-        // If we do not have any 'lect', then we have been added later and can only be in the anchoring state.
+        // If we do not have any 'lect', then we have been added
+        // later and can only be in the anchoring state.
         let current_lect = if let Some(lect) = anchoring_schema.lect(&key)? {
             lect
         } else {
@@ -400,7 +401,6 @@ impl AnchoringHandler {
             return Ok(Some(lect.into()));
         }
 
-        debug!("find_lect_deep, propose={:#?}", lect);
         let kind = TxKind::from(lect.clone());
         match kind {
             TxKind::FundingTx(tx) => {
@@ -414,7 +414,6 @@ impl AnchoringHandler {
             TxKind::Anchoring(tx) => {
                 let lect_addr = tx.output_address(multisig.common.network);
                 if !schema.is_address_known(&lect_addr)? {
-                    debug!("Addr={} in unknown", lect_addr.to_base58check());
                     return Ok(None);
                 }
                 if schema.find_lect_position(key, &tx.prev_hash())?.is_some() {

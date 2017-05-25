@@ -9,7 +9,6 @@ readme	= "README.md"
 members = ["sandbox_tests"]
 
 [dependencies]
-arrayvec = "0.3.23"
 bitcoinrpc = {version="0.1", path="3rdparty/bitcoinrpc"}
 bitcoin="0.9.0"
 secp256k1 = "0.6.0"
