@@ -9,115 +9,16 @@ extern crate bitcoin;
 extern crate bitcoinrpc;
 extern crate secp256k1;
 
-use serde_json::value::ToJson;
-use bitcoin::util::base58::ToBase58;
-
 use exonum::crypto::HexValue;
-use exonum::messages::{Message, RawTransaction};
-use exonum::storage::StorageValue;
-use sandbox::config_updater::TxConfig;
+use exonum::messages::Message;
 
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
-use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
+use anchoring_btc_service::AnchoringConfig;
 use anchoring_btc_service::error::HandlerError;
 use anchoring_btc_service::details::btc::transactions::BitcoinTx;
 use anchoring_btc_sandbox::AnchoringSandbox;
 use anchoring_btc_sandbox::helpers::*;
-
-/// Generates a configuration that excludes `sandbox node` from consensus.
-/// Then it continues to work as auditor.
-fn gen_following_cfg(sandbox: &AnchoringSandbox,
-                     from_height: u64)
-                     -> (RawTransaction, AnchoringConfig) {
-    let anchoring_addr = sandbox.current_addr();
-
-    let mut service_cfg = sandbox.current_cfg().clone();
-    let priv_keys = sandbox.priv_keys(&anchoring_addr);
-    service_cfg.validators.swap_remove(0);
-
-    let following_addr = service_cfg.redeem_script().1;
-    for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
-        node.private_keys
-            .insert(following_addr.to_base58check(), priv_keys[id].clone());
-    }
-
-    let mut cfg = sandbox.cfg();
-    cfg.actual_from = from_height;
-    cfg.validators.swap_remove(0);
-    *cfg.services
-         .get_mut(&ANCHORING_SERVICE_ID.to_string())
-         .unwrap() = service_cfg.to_json();
-    let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), from_height, sandbox.s(0));
-    (tx.raw().clone(), service_cfg)
-}
-
-// Invoke this method after anchor_first_block_lect_normal
-pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
-    let cfg_change_height = 12;
-    let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, cfg_change_height);
-    let (_, following_addr) = following_cfg.redeem_script();
-
-    // Tx has not enough confirmations.
-    let anchored_tx = sandbox.latest_anchored_tx();
-
-    let client = sandbox.client();
-    client.expect(vec![
-        request! {
-            method: "importaddress",
-            params: [&following_addr, "multisig", false, false]
-        },
-        gen_confirmations_request(anchored_tx.clone(), 10),
-    ]);
-    sandbox.add_height(&[cfg_tx]);
-
-    let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
-    let transition_tx = sandbox.latest_anchored_tx();
-    // Tx gets enough confirmations.
-    client.expect(vec![
-        gen_confirmations_request(anchored_tx.clone(), 100),
-        request! {
-            method: "listunspent",
-            params: [0, 9999999, [following_addr]],
-            response: []
-        },
-    ]);
-    sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
-
-    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
-    sandbox.add_height(&signatures);
-
-    let lects = (0..4)
-        .map(|id| {
-                 gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
-                     .raw()
-                     .clone()
-             })
-        .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
-    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
-    sandbox.add_height(&lects);
-    sandbox.fast_forward_to_height(cfg_change_height);
-
-    sandbox.set_anchoring_cfg(following_cfg);
-    client.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&transition_tx.txid(), 0],
-            response: transition_tx.to_hex()
-        },
-    ]);
-    sandbox.add_height_as_auditor(&[]);
-
-    assert_eq!(sandbox.handler().errors, Vec::new());
-}
 
 // We exclude sandbox node from validators
 // problems: None

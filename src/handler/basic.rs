@@ -69,10 +69,11 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn multisig_address<'a>(&self, common: &'a AnchoringConfig) -> MultisigAddress<'a> {
         let (redeem_script, addr) = common.redeem_script();
+        let addr_str = addr.to_base58check();
         let priv_key = self.node
             .private_keys
-            .get(&addr.to_base58check())
-            .expect("Expected private key for address")
+            .get(&addr_str)
+            .expect(&format!("Expected private key for address={}", addr_str))
             .clone();
         MultisigAddress {
             common: common,
@@ -141,6 +142,9 @@ impl AnchoringHandler {
         let actual = self.actual_config(state)?;
         let actual_addr = actual.redeem_script().1;
         let anchoring_schema = AnchoringSchema::new(state.view());
+
+        // Ensure that bitcoind watching for the current addr
+        self.import_address(&actual_addr, state)?;
 
         if state.validator_state().is_none() {
             return Ok(AnchoringState::Auditing { cfg: actual });
@@ -367,7 +371,7 @@ impl AnchoringHandler {
                                 multisig: &MultisigAddress)
                                 -> Result<Option<FundingTx>, ServiceError> {
         let funding_tx = multisig.common.funding_tx();
-        trace!("Checking funding_tx={:#?}, addr={}",
+        trace!("Checking funding_tx={:#?}, addr={} availability",
                funding_tx,
                multisig.addr.to_base58check());
         if let Some(info) = funding_tx.has_unspent_info(self.client(), &multisig.addr)? {
@@ -390,16 +394,17 @@ impl AnchoringHandler {
                       -> Result<Option<BitcoinTx>, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let key = self.validator_key(multisig.common, state);
-        let first_funding_tx = schema.lects(key).get(0)?.unwrap().tx();
 
         // Check that we know tx
         if schema.find_lect_position(key, &lect.id())?.is_some() {
             return Ok(Some(lect.into()));
         }
 
+        debug!("find_lect_deep, propose={:#?}", lect);
         let kind = TxKind::from(lect.clone());
         match kind {
             TxKind::FundingTx(tx) => {
+                let first_funding_tx = schema.lects(key).get(0)?.unwrap().tx();
                 if tx == first_funding_tx {
                     Ok(Some(lect.into()))
                 } else {
@@ -409,6 +414,7 @@ impl AnchoringHandler {
             TxKind::Anchoring(tx) => {
                 let lect_addr = tx.output_address(multisig.common.network);
                 if !schema.is_address_known(&lect_addr)? {
+                    debug!("Addr={} in unknown", lect_addr.to_base58check());
                     return Ok(None);
                 }
                 if schema.find_lect_position(key, &tx.prev_hash())?.is_some() {

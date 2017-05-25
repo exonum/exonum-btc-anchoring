@@ -8,15 +8,24 @@ extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;
 extern crate secp256k1;
+extern crate rand;
+#[macro_use]
+extern crate log;
 
 use bitcoin::util::base58::ToBase58;
+use bitcoin::network::constants::Network;
+use rand::{SeedableRng, StdRng};
+use serde_json::value::ToJson;
 
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::HexValue;
+use exonum::storage::StorageValue;
+use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::details::btc::transactions::{FundingTx, TransactionBuilder};
-use anchoring_btc_service::AnchoringConfig;
+use anchoring_btc_service::details::btc;
+use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
 
 use anchoring_btc_sandbox::AnchoringSandbox;
 use anchoring_btc_sandbox::helpers::*;
@@ -94,9 +103,9 @@ fn test_anchoring_transit_config_normal() {
     let anchored_tx = sandbox.latest_anchored_tx();
     client.expect(vec![
         request! {
-                            method: "importaddress",
-                            params: [&following_addr, "multisig", false, false]
-                       },
+            method: "importaddress",
+            params: [&following_addr, "multisig", false, false]
+        },
         gen_confirmations_request(anchored_tx.clone(), 10),
     ]);
     sandbox.add_height(&[cfg_tx]);
@@ -1129,4 +1138,196 @@ fn test_anchoring_transit_config_after_funding_tx() {
         },
     ]);
     sandbox.add_height(&lects);
+}
+
+// We exclude sandbox node from consensus and after add it as validator
+// problems:
+// - none
+// result: we continues anchoring as validator
+#[test]
+fn test_anchoring_transit_after_exclude_from_validator() {
+    let cfg_change_height = 16;
+
+    let _ = exonum::helpers::init_logger();
+
+    let sandbox = AnchoringSandbox::initialize(&[]);
+    let client = sandbox.client();
+
+    let sandbox_node_pubkey = sandbox.cfg().validators[0].clone();
+
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+    exclude_node_from_validators(&sandbox);
+
+    let (cfg_tx, cfg, node_cfg, following_addr) = {
+        let mut rng: StdRng = SeedableRng::from_seed([3, 12, 3, 117].as_ref());
+        let keypair = btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng);
+
+        let mut service_cfg = sandbox.current_cfg().clone();
+        let priv_keys = sandbox.current_priv_keys();
+
+        service_cfg.validators.push(keypair.0.clone());
+        service_cfg.validators.swap(0, 3);
+
+        let following_addr = service_cfg.redeem_script().1;
+        debug!("following_addr={}", following_addr.to_base58check());
+        for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
+            node.private_keys
+                .insert(following_addr.to_base58check(), priv_keys[id].clone());
+        }
+
+        // Add NodeConfig for previosly excluded sandbox_node
+        let mut node_cfg = sandbox.nodes()[0].clone();
+        node_cfg
+            .private_keys
+            .insert(following_addr.to_base58check(), keypair.1.clone());
+        sandbox
+            .handler()
+            .add_private_key(&following_addr, keypair.1);
+
+        let mut cfg = sandbox.cfg();
+        cfg.actual_from = cfg_change_height;
+        cfg.validators.push(sandbox_node_pubkey);
+        cfg.validators.swap(0, 3);
+
+        *cfg.services
+             .get_mut(&ANCHORING_SERVICE_ID.to_string())
+             .unwrap() = service_cfg.to_json();
+        let tx = TxConfig::new(&sandbox.p(1),
+                               &cfg.serialize(),
+                               cfg_change_height,
+                               sandbox.s(1));
+        (tx.raw().clone(), service_cfg, node_cfg, following_addr)
+    };
+    let prev_tx = sandbox.latest_anchored_tx();
+
+    let signatures = {
+        let height = sandbox.latest_anchoring_height();
+        sandbox
+            .gen_anchoring_tx_with_signatures(height,
+                                              block_hash_on_height(&sandbox, height),
+                                              &[],
+                                              None,
+                                              &following_addr)
+            .1
+    };
+
+    let transition_tx = sandbox.latest_anchored_tx();
+    let lects = (0..3)
+        .map(|id| {
+                 gen_service_tx_lect(&sandbox, id, &transition_tx, lects_count(&sandbox, id))
+                     .raw()
+                     .clone()
+             })
+        .collect::<Vec<_>>();
+
+    let txs = [&[cfg_tx], signatures.as_slice(), lects.as_slice()].concat();
+    // Push following cfg
+    sandbox.add_height_as_auditor(&txs);
+    // Apply following cfg
+    sandbox.fast_forward_to_height_as_auditor(cfg_change_height - 1);
+    client.expect(vec![
+        request! {
+            method: "importaddress",
+            params: [&following_addr, "multisig", false, false]
+        },
+    ]);
+    sandbox.add_height_as_auditor(&[]);
+    sandbox.set_anchoring_cfg(cfg);
+    {
+        let mut nodes = sandbox.nodes_mut();
+        nodes.push(node_cfg);
+        nodes.swap(0, 3);
+    }
+    // Check transition tx
+    sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
+
+    let lect = gen_service_tx_lect(&sandbox, 0, &transition_tx, lects_count(&sandbox, 0))
+        .raw()
+        .clone();
+
+    client.expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&following_addr.to_base58check()]],
+            response: [
+                {
+                    "txid": &transition_tx.txid(),
+                    "vout": 0,
+                    "address": &following_addr.to_base58check(),
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 0,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        },
+        request! {
+            method: "getrawtransaction",
+            params: [&transition_tx.txid(), 0],
+            response: &transition_tx.to_hex()
+        },
+        request! {
+            method: "getrawtransaction",
+            params: [&prev_tx.txid(), 0],
+            response: &prev_tx.to_hex()
+        },
+    ]);
+    sandbox.add_height(&[]);
+
+    sandbox.broadcast(lect.clone());
+    sandbox.add_height(&[lect]);
+
+    // Create next anchoring tx proposal
+    client.expect(vec![
+        // Check for the `funding_tx` availability
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&following_addr.to_base58check()]],
+            response: [
+                {
+                    "txid": &transition_tx.txid(),
+                    "vout": 0,
+                    "address": &following_addr.to_base58check(),
+                    "account": "multisig",
+                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+                    "amount": 0.00010000,
+                    "confirmations": 0,
+                    "spendable": false,
+                    "solvable": false
+                }
+            ]
+        },
+    ]);
+    sandbox.add_height(&[]);
+    let signatures = {
+        let height = sandbox.latest_anchoring_height();
+        sandbox
+            .gen_anchoring_tx_with_signatures(height,
+                                              block_hash_on_height(&sandbox, height),
+                                              &[],
+                                              None,
+                                              &following_addr)
+            .1
+    };
+    let anchored_tx = sandbox.latest_anchored_tx();
+    sandbox.broadcast(signatures[0].clone());
+    // Commit anchoring transaction to bitcoin blockchain
+    client.expect(vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&anchored_tx.txid(), 1],
+            error: RpcError::NoInformation("Unable to find tx".to_string()),
+        },
+        request! {
+            method: "sendrawtransaction",
+            params: [&anchored_tx.to_hex()]
+        },
+    ]);
+    sandbox.add_height(&signatures);
+
+    let lect = gen_service_tx_lect(&sandbox, 0, &anchored_tx, lects_count(&sandbox, 0));
+    sandbox.broadcast(lect);
 }

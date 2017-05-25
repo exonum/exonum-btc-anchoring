@@ -228,6 +228,11 @@ impl AnchoringSandbox {
         height - height % frequency + frequency
     }
 
+    pub fn latest_anchoring_height(&self) -> u64 {
+        let height = self.sandbox.current_height();
+        self.current_cfg().latest_anchoring_height(height)
+    }
+
     pub fn latest_anchored_tx(&self) -> AnchoringTx {
         self.state
             .borrow()
