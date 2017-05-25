@@ -45,7 +45,8 @@ pub enum AnchoringState {
         from: AnchoringConfig,
         to: AnchoringConfig,
     },
-    Recovering { cfg: AnchoringConfig },
+    Recovering { prev_cfg: AnchoringConfig,
+        actual_cfg: AnchoringConfig },
     Waiting {
         lect: BitcoinTx,
         confirmations: Option<u64>,

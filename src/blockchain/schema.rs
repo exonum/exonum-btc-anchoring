@@ -69,6 +69,15 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
+    pub fn previous_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
+        let schema = Schema::new(self.view);
+        if let Some(stored) = schema.previous_configuration()? {
+            Ok(Some(self.parse_config(&stored)))
+        } else {
+            Ok(None)
+        }
+    }
+
     pub fn anchoring_config_by_height(&self, height: u64) -> Result<AnchoringConfig, StorageError> {
         let schema = Schema::new(self.view);
         let stored = schema.configuration_by_height(height)?;
@@ -100,8 +109,8 @@ impl<'a> AnchoringSchema<'a> {
         self.lect_indexes(validator_key).put(&txid, idx)
     }
 
-    pub fn lect(&self, validator_key: &btc::PublicKey) -> Result<BitcoinTx, StorageError> {
-        self.lects(validator_key).last().map(|x| x.unwrap().tx())
+    pub fn lect(&self, validator_key: &btc::PublicKey) -> Result<Option<BitcoinTx>, StorageError> {
+        self.lects(validator_key).last().map(|x| x.map(|x| x.tx()))
     }
 
     pub fn prev_lect(&self,
@@ -118,19 +127,19 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
-    pub fn collect_lects(&self) -> Result<Option<BitcoinTx>, StorageError> {
-        let cfg = self.current_anchoring_config()?;
+    pub fn collect_lects(&self, cfg: &AnchoringConfig) -> Result<Option<BitcoinTx>, StorageError> {
         let validators_count = cfg.validators.len() as u32;
 
         let mut lects = HashMap::new();
         for validator_key in &cfg.validators {
-            let last_lect = self.lect(validator_key)?;
-            match lects.entry(last_lect.0) {
-                Entry::Occupied(mut v) => {
-                    *v.get_mut() += 1;
-                }
-                Entry::Vacant(v) => {
-                    v.insert(1);
+            if let Some(last_lect) = self.lect(validator_key)? {
+                match lects.entry(last_lect.0) {
+                    Entry::Occupied(mut v) => {
+                        *v.get_mut() += 1;
+                    }
+                    Entry::Vacant(v) => {
+                        v.insert(1);
+                    }
                 }
             }
         }
