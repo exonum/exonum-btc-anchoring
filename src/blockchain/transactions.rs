@@ -1,4 +1,5 @@
 use bitcoin::blockdata::transaction::SigHashType;
+use serde_json::{Value, to_value};
 
 use exonum::blockchain::{Schema, Transaction};
 use exonum::messages::Message;
@@ -147,6 +148,10 @@ impl Transaction for AnchoringMessage {
             AnchoringMessage::Signature(ref msg) => msg.execute(view),
             AnchoringMessage::UpdateLatest(ref msg) => msg.execute(view),
         }
+    }
+
+    fn info(&self) -> Value {
+        to_value(self).unwrap()
     }
 }
 

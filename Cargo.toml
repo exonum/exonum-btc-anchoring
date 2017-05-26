@@ -12,9 +12,9 @@ members = ["sandbox_tests"]
 bitcoinrpc = {version="0.1", path="3rdparty/bitcoinrpc"}
 bitcoin="0.9.0"
 secp256k1 = "0.6.0"
-serde = "0.8.0"
-serde_derive = "0.8.0"
-serde_json = "0.8.0"
+serde = "1.0.0"
+serde_derive = "1.0.0"
+serde_json = "1.0.0"
 byteorder = "1.0.0"
 log = "0.3.0"
 clap = "2.22.1"
@@ -29,12 +29,12 @@ params = "0.6.0"
 [dependencies.exonum]
 git = "ssh://git@github.com/exonum/exonum-core.git"
 version = "0.1.0"
-rev = "61dd294"
+rev = "3a4c74df9f9fe0787b60612018190fa0f0a6f7ad"
 
 [dependencies.configuration_service]
 git = "ssh://git@github.com/exonum/exonum-configuration.git"
 version = "0.1.0"
-rev = "fd75320"
+rev = "daf0e0a6dfb3067fbc6ad7e2078b56c89745c550"
 
 [features]
 default = []

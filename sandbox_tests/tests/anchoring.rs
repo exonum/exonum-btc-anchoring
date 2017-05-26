@@ -4,6 +4,7 @@ extern crate anchoring_btc_service;
 #[macro_use]
 extern crate anchoring_btc_sandbox;
 extern crate serde;
+#[macro_use]
 extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;
@@ -60,7 +61,8 @@ fn test_anchoring_funding_tx_waiting() {
         },
         request! {
             method: "sendrawtransaction",
-            params: [&funding_tx.to_hex()]
+            params: [&funding_tx.to_hex()],
+            response: funding_tx.to_hex()
         },
     ]);
     sandbox.add_height(&[]);
@@ -184,7 +186,8 @@ fn test_anchoring_second_block_additional_funds() {
         },
         request! {
             method: "sendrawtransaction",
-            params: [&anchored_tx.to_hex()]
+            params: [&anchored_tx.to_hex()],
+            response: anchored_tx.to_hex()
         },
     ]);
 
