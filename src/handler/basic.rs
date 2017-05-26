@@ -282,11 +282,12 @@ impl AnchoringHandler {
             return Ok(LectKind::None);
         };
 
-        let mut count = 1;
+        let mut count = 0;
 
         let validators_count = state.validators().len() as u32;
         for key in &anchoring_cfg.validators {
-            if Some(&our_lect) == anchoring_schema.lect(key)?.as_ref() {
+            let validators_lect = anchoring_schema.lect(key)?;
+            if Some(&our_lect) == validators_lect.as_ref() {
                 count += 1;
             }
         }
@@ -375,7 +376,8 @@ impl AnchoringHandler {
         trace!("Checking funding_tx={:#?}, addr={} availability",
                funding_tx,
                multisig.addr.to_base58check());
-        if let Some(info) = funding_tx.has_unspent_info(self.client(), &multisig.addr)? {
+        if let Some(info) = funding_tx
+               .has_unspent_info(self.client(), &multisig.addr)? {
             trace!("avaliable_funding_tx={:#?}, confirmations={}",
                    funding_tx,
                    info.confirmations);
@@ -416,7 +418,9 @@ impl AnchoringHandler {
                 if !schema.is_address_known(&lect_addr)? {
                     return Ok(None);
                 }
-                if schema.find_lect_position(key, &tx.prev_hash())?.is_some() {
+                if schema
+                       .find_lect_position(key, &tx.prev_hash())?
+                       .is_some() {
                     return Ok(Some(lect.into()));
                 }
 

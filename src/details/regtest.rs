@@ -115,6 +115,8 @@ mod tests {
         let _ = helpers::init_logger();
 
         let (_, regtest) = temporary_regtest_node().unwrap();
-        regtest.generate_blocks(100).expect("Generate 100 blocks");
+        regtest
+            .generate_blocks(100)
+            .expect("Generate 100 blocks");
     }
 }

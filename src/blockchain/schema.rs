@@ -55,6 +55,11 @@ impl<'a> AnchoringSchema<'a> {
         MapTable::new(prefix, self.view)
     }
 
+    pub fn known_txs(&self) -> MapTable<View, btc::TxId, BitcoinTx> {
+        let prefix = vec![ANCHORING_SERVICE_ID as u8, 7];
+        MapTable::new(prefix, self.view)
+    }
+
     pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
         let actual = Schema::new(self.view).actual_configuration()?;
         Ok(self.parse_config(&actual))
@@ -105,12 +110,15 @@ impl<'a> AnchoringSchema<'a> {
         let tx = tx.into();
         let idx = lects.len()?;
         let txid = tx.id();
-        lects.append(LectContent::new(&msg_hash, tx))?;
+        lects.append(LectContent::new(&msg_hash, tx.clone()))?;
+        self.known_txs().put(&txid, tx.clone())?;
         self.lect_indexes(validator_key).put(&txid, idx)
     }
 
     pub fn lect(&self, validator_key: &btc::PublicKey) -> Result<Option<BitcoinTx>, StorageError> {
-        self.lects(validator_key).last().map(|x| x.map(|x| x.tx()))
+        self.lects(validator_key)
+            .last()
+            .map(|x| x.map(|x| x.tx()))
     }
 
     pub fn prev_lect(&self,
@@ -164,7 +172,8 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn add_known_address(&self, addr: &btc::Address) -> Result<(), StorageError> {
-        self.known_addresses().put(&addr.to_base58check(), vec![])
+        self.known_addresses()
+            .put(&addr.to_base58check(), vec![])
     }
 
     pub fn is_address_known(&self, addr: &btc::Address) -> Result<bool, StorageError> {

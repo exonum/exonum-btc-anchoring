@@ -10,8 +10,6 @@ extern crate byteorder;
 extern crate secp256k1;
 extern crate rand;
 extern crate libc;
-#[macro_use]
-extern crate log;
 
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -284,9 +282,7 @@ impl AnchoringSandbox {
             }
 
             let tx = builder.into_transaction().unwrap();
-            debug!("Gen signs");
             let signs = self.gen_anchoring_signatures(&tx);
-            debug!("signs generated");
             let signed_tx = self.finalize_tx(tx.clone(), signs.as_ref());
             (tx, signed_tx, signs)
         };
@@ -308,7 +304,6 @@ impl AnchoringSandbox {
         let (redeem_script, addr) = self.current_cfg().redeem_script();
 
         let priv_keys = self.priv_keys(&addr);
-        debug!("priv keys len={}", priv_keys.len());
         let mut signs = Vec::new();
         for (validator, priv_key) in priv_keys.iter().enumerate() {
             for input in tx.inputs() {

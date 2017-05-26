@@ -501,8 +501,11 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
     ]);
 
     let (_, signatures) =
-        sandbox
-            .gen_anchoring_tx_with_signatures(0, sandbox.last_hash(), &[], None, &anchoring_addr);
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 sandbox.last_hash(),
+                                                 &[],
+                                                 None,
+                                                 &anchoring_addr);
     sandbox.add_height(&[]);
 
     sandbox.broadcast(signatures[0].clone());

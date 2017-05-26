@@ -76,7 +76,9 @@ impl PublicApi {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
         let actual_cfg = &schema.current_anchoring_config()?;
-        Ok(schema.collect_lects(actual_cfg)?.map(AnchoringInfo::from))
+        Ok(schema
+               .collect_lects(actual_cfg)?
+               .map(AnchoringInfo::from))
     }
 
     /// Returns current lect for validator with given `id`.
