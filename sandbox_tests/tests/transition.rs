@@ -10,13 +10,15 @@ extern crate bitcoin;
 extern crate bitcoinrpc;
 extern crate secp256k1;
 extern crate rand;
+#[macro_use]
+extern crate log;
 
 use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;
 use rand::{SeedableRng, StdRng};
 
 use exonum::messages::{Message, RawTransaction};
-use exonum::crypto::HexValue;
+use exonum::crypto::{HexValue, Seed, gen_keypair_from_seed};
 use exonum::storage::StorageValue;
 use sandbox::config_updater::TxConfig;
 
@@ -1141,6 +1143,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
 }
 
 // We exclude sandbox node from consensus and after add it as validator
+// with another validator
 // problems:
 // - none
 // result: we continues anchoring as validator
@@ -1150,8 +1153,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
 
     let _ = exonum::helpers::init_logger();
 
-    let sandbox = AnchoringSandbox::initialize(&[]);
-    let client = sandbox.client();
+    let mut sandbox = AnchoringSandbox::initialize(&[]);
 
     let sandbox_node_pubkey = sandbox.cfg().validators[0].clone();
 
@@ -1159,14 +1161,20 @@ fn test_anchoring_transit_after_exclude_from_validator() {
     anchor_first_block_lect_normal(&sandbox);
     exclude_node_from_validators(&sandbox);
 
-    let (cfg_tx, cfg, node_cfg, following_addr) = {
+    // Add two validators
+    let (cfg_tx, cfg, node_cfgs, following_addr) = {
         let mut rng: StdRng = SeedableRng::from_seed([3, 12, 3, 117].as_ref());
-        let keypair = btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng);
+        let anchoring_keypairs = [
+            btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng),
+            btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng),
+        ];
+        let validator_keypair = gen_keypair_from_seed(&Seed::new([115; 32]));
 
         let mut service_cfg = sandbox.current_cfg().clone();
         let priv_keys = sandbox.current_priv_keys();
 
-        service_cfg.validators.push(keypair.0.clone());
+        service_cfg.validators.push(anchoring_keypairs[0].0.clone());
+        service_cfg.validators.push(anchoring_keypairs[1].0.clone());
         service_cfg.validators.swap(0, 3);
 
         let following_addr = service_cfg.redeem_script().1;
@@ -1175,31 +1183,51 @@ fn test_anchoring_transit_after_exclude_from_validator() {
                 .insert(following_addr.to_base58check(), priv_keys[id].clone());
         }
 
-        // Add NodeConfig for previosly excluded sandbox_node
+        // Add private_key for previosly excluded sandbox_node
         let mut node_cfg = sandbox.nodes()[0].clone();
         node_cfg
             .private_keys
-            .insert(following_addr.to_base58check(), keypair.1.clone());
+            .insert(following_addr.to_base58check(),
+                    anchoring_keypairs[0].1.clone());
+        // Add a new node
+        let mut new_node_cfg = node_cfg.clone();
+        new_node_cfg.private_keys.clear();
+        new_node_cfg
+            .private_keys
+            .insert(following_addr.to_base58check(),
+                    anchoring_keypairs[1].1.clone());
+        // Add private key for service handler
         sandbox
             .handler()
-            .add_private_key(&following_addr, keypair.1);
+            .add_private_key(&following_addr, anchoring_keypairs[0].1.clone());
+        // Update consensus config
+        let cfg = {
+            let mut cfg = sandbox.cfg();
+            cfg.actual_from = cfg_change_height;
+            cfg.validators.push(sandbox_node_pubkey);
+            cfg.validators.push(validator_keypair.0);
+            cfg.validators.swap(0, 3);
+            // Generate cfg change tx
+            *cfg.services
+                 .get_mut(&ANCHORING_SERVICE_ID.to_string())
+                 .unwrap() = json!(service_cfg);
+            cfg
+        };
 
-        let mut cfg = sandbox.cfg();
-        cfg.actual_from = cfg_change_height;
-        cfg.validators.push(sandbox_node_pubkey);
-        cfg.validators.swap(0, 3);
-
-        *cfg.services
-             .get_mut(&ANCHORING_SERVICE_ID.to_string())
-             .unwrap() = json!(service_cfg);
         let tx = TxConfig::new(&sandbox.p(1),
                                &cfg.serialize(),
                                cfg_change_height,
                                sandbox.s(1));
-        (tx.raw().clone(), service_cfg, node_cfg, following_addr)
+        // Add validator to exonum sandbox validators map
+        sandbox
+            .validators_map
+            .insert(validator_keypair.0, validator_keypair.1);
+        (tx.raw().clone(), service_cfg, [node_cfg, new_node_cfg], following_addr)
     };
-    let prev_tx = sandbox.latest_anchored_tx();
 
+    let client = sandbox.client();
+
+    let prev_tx = sandbox.latest_anchored_tx();
     let signatures = {
         let height = sandbox.latest_anchoring_height();
         sandbox
@@ -1235,8 +1263,10 @@ fn test_anchoring_transit_after_exclude_from_validator() {
     sandbox.set_anchoring_cfg(cfg);
     {
         let mut nodes = sandbox.nodes_mut();
-        nodes.push(node_cfg);
+        debug!("nodes_before={:#?}", nodes);
+        nodes.extend_from_slice(&node_cfgs);
         nodes.swap(0, 3);
+        debug!("nodes_after={:#?}", nodes);
     }
     // Check transition tx
     sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
@@ -1329,5 +1359,9 @@ fn test_anchoring_transit_after_exclude_from_validator() {
     sandbox.add_height(&signatures);
 
     let lect = gen_service_tx_lect(&sandbox, 0, &anchored_tx, lects_count(&sandbox, 0));
-    sandbox.broadcast(lect);
+    sandbox.broadcast(lect.clone());
+    sandbox.add_height(&[lect.raw().clone()]);
+
+    let lects = dump_lects(&sandbox, 0);
+    assert_eq!(lects.last().unwrap(), &lect.tx());
 }
