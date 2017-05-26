@@ -660,6 +660,17 @@ fn test_tx_verify_sighash_type_wrong() {
 // See the `anchoring_client` method on top of this file.
 
 #[test]
+fn test_rpc_nonexistent_transaction_get_info() {
+    let _ = helpers::init_logger();
+
+    let client = anchoring_client();
+
+    let txid = "21972c3e2b7047c41c0ece2f18223775e62a24822923c846b3a7cabfd8585d73";
+    assert!(client.get_transaction_info(txid).unwrap().is_none());
+    assert!(client.get_transaction(txid).unwrap().is_none());
+}
+
+#[test]
 fn test_rpc_unspent_funding_tx() {
     let _ = helpers::init_logger();
 

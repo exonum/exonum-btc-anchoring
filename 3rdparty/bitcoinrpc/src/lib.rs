@@ -39,9 +39,9 @@ impl From<RpcError> for Error {
     fn from(e: RpcError) -> Error {
         match e {
             jsonrpc_v1::Error::Rpc(value) => {
-                if let Some(code) = value.pointer("/error/code").and_then(Value::as_i64) {
+                if let Some(code) = value.pointer("/code").and_then(Value::as_i64) {
                     let msg = value
-                        .pointer("/error/message")
+                        .pointer("/message")
                         .and_then(Value::as_str)
                         .unwrap_or_else(|| "")
                         .into();
