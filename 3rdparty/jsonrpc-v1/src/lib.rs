@@ -42,6 +42,7 @@ extern crate hyper;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;
+#[macro_use]
 extern crate serde_json;
 
 pub mod client;
@@ -79,7 +80,9 @@ pub struct Response {
 
 impl Response {
     /// Extract the result from a response
-    pub fn result<T: serde::Deserialize>(&self) -> Result<T, Error> {
+    pub fn result<T>(&self) -> Result<T, Error>
+        where for<'de> T: serde::Deserialize<'de>
+    {
         if let Some(ref e) = self.error {
             return Err(Error::Rpc(e.clone()));
         }
@@ -90,7 +93,9 @@ impl Response {
     }
 
     /// Extract the result from a response, consuming the response
-    pub fn into_result<T: serde::Deserialize>(self) -> Result<T, Error> {
+    pub fn into_result<T>(self) -> Result<T, Error>
+        where for<'de> T: serde::Deserialize<'de>
+    {
         if let Some(e) = self.error {
             return Err(Error::Rpc(e));
         }
@@ -120,15 +125,14 @@ mod tests {
     use super::{Request, Response};
     use super::serde_json::ser;
     use super::serde_json::de;
-    use super::serde_json::value::ToJson;
     use super::serde_json::Value;
 
     #[test]
     fn request_serialize_round_trip() {
         let original = Request {
             method: "test".to_owned(),
-            params: vec![().to_json(), false.to_json(), true.to_json(), "test2".to_json()],
-            id: "69".to_json(),
+            params: json!([(), false, true, "test2"]).as_array().cloned().unwrap(),
+            id: json!("69"),
         };
 
         let s = ser::to_vec(&original).unwrap();
@@ -140,15 +144,15 @@ mod tests {
     #[test]
     fn response_is_none() {
         let joanna = Response {
-            result: Some(true.to_json()),
+            result: Some(json!(true)),
             error: None,
-            id: 81.to_json(),
+            id: json!(81),
         };
 
         let bill = Response {
             result: None,
             error: None,
-            id: 66.to_json(),
+            id: json!(66),
         };
 
         assert!(!joanna.is_none());
@@ -159,7 +163,7 @@ mod tests {
     fn response_extract() {
         let obj = vec!["Mary", "had", "a", "little", "lamb"];
         let response = Response {
-            result: Some(obj.to_json()),
+            result: Some(json!(obj)),
             error: None,
             id: Value::Null,
         };

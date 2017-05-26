@@ -4,6 +4,7 @@ extern crate anchoring_btc_service;
 #[macro_use]
 extern crate anchoring_btc_sandbox;
 extern crate serde;
+#[macro_use]
 extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;
@@ -13,7 +14,6 @@ extern crate rand;
 use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;
 use rand::{SeedableRng, StdRng};
-use serde_json::value::ToJson;
 
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::HexValue;
@@ -641,7 +641,8 @@ fn test_anchoring_transit_config_lost_lect_recover_before_cfg_change() {
         },
         request! {
             method: "sendrawtransaction",
-            params: [&transition_tx.to_hex()]
+            params: [&transition_tx.to_hex()],
+            response: transition_tx.to_hex()
         },
     ]);
     sandbox.add_height(&[]);
@@ -729,7 +730,8 @@ fn test_anchoring_transit_config_lost_lect_recover_after_cfg_change() {
         },
         request! {
             method: "sendrawtransaction",
-            params: [&transition_tx.to_hex()]
+            params: [&transition_tx.to_hex()],
+            response: transition_tx.to_hex()
         },
     ]);
     sandbox.add_height(&[]);
@@ -1189,7 +1191,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
 
         *cfg.services
              .get_mut(&ANCHORING_SERVICE_ID.to_string())
-             .unwrap() = service_cfg.to_json();
+             .unwrap() = json!(service_cfg);
         let tx = TxConfig::new(&sandbox.p(1),
                                &cfg.serialize(),
                                cfg_change_height,
@@ -1320,7 +1322,8 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         },
         request! {
             method: "sendrawtransaction",
-            params: [&anchored_tx.to_hex()]
+            params: [&anchored_tx.to_hex()],
+            response: json!(&anchored_tx.to_hex())
         },
     ]);
     sandbox.add_height(&signatures);

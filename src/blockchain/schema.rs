@@ -26,14 +26,14 @@ impl<'a> AnchoringSchema<'a> {
 
     pub fn signatures(&self,
                       txid: &btc::TxId)
-                      -> ListTable<MapTable<View, [u8], Vec<u8>>, u64, MsgAnchoringSignature> {
+                      -> ListTable<MapTable<View, [u8], Vec<u8>>, MsgAnchoringSignature> {
         let prefix = [&[ANCHORING_SERVICE_ID as u8, 2], txid.as_ref()].concat();
         ListTable::new(MapTable::new(prefix, self.view))
     }
 
     pub fn lects(&self,
                  validator_key: &btc::PublicKey)
-                 -> MerkleTable<MapTable<View, [u8], Vec<u8>>, u64, LectContent> {
+                 -> MerkleTable<MapTable<View, [u8], Vec<u8>>, LectContent> {
         let prefix = [&[ANCHORING_SERVICE_ID as u8, 3], validator_key.to_bytes().as_ref()].concat();
         MerkleTable::new(MapTable::new(prefix, self.view))
     }

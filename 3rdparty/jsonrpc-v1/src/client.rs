@@ -135,7 +135,7 @@ impl Client {
         Request {
             method: name,
             params: params,
-            id: Value::U64(*nonce),
+            id: json!(*nonce),
         }
     }
 

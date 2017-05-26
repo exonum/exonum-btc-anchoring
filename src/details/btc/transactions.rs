@@ -86,6 +86,7 @@ implement_tx_from_raw! {FundingTx}
 
 implement_serde_hex! {AnchoringTx}
 implement_serde_hex! {FundingTx}
+implement_serde_hex! {BitcoinTx}
 
 impl FundingTx {
     pub fn create(client: &AnchoringRpc,
