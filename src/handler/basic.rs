@@ -406,9 +406,12 @@ impl AnchoringHandler {
         let kind = TxKind::from(lect.clone());
         match kind {
             TxKind::FundingTx(tx) => {
-                let first_funding_tx = schema.lects(key).get(0)?.unwrap().tx();
-                if tx == first_funding_tx {
-                    Ok(Some(lect.into()))
+                if let Some(first_funding_tx) = schema.lects(key).get(0)? {
+                    if tx == first_funding_tx.tx() {
+                        Ok(Some(lect.into()))
+                    } else {
+                        Ok(None)
+                    }
                 } else {
                     Ok(None)
                 }
