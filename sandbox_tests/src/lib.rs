@@ -264,14 +264,23 @@ impl AnchoringSandbox {
                                             addr: &btc::Address)
                                             -> (AnchoringTx, Vec<RawTransaction>) {
         let (propose_tx, signed_tx, signs) = {
-            let prev_tx = self.state
+            let (prev_tx, prev_tx_input) = self.state
                 .borrow()
                 .latest_anchored_tx
                 .clone()
-                .map(|x| (x.0).0)
-                .unwrap_or(self.current_cfg().funding_tx().0.clone());
+                .map(|x| {
+                         let tx = (x.0).0;
+                         let input = 0;
+                         (tx, input)
+                     })
+                .unwrap_or_else(|| {
+                                    let cfg = self.current_cfg();
+                                    let tx = cfg.funding_tx().clone();
+                                    let input = tx.find_out(&cfg.redeem_script().1).unwrap();
+                                    (tx.0.clone(), input)
+                                });
 
-            let mut builder = TransactionBuilder::with_prev_tx(&prev_tx, 0)
+            let mut builder = TransactionBuilder::with_prev_tx(&prev_tx, prev_tx_input)
                 .payload(height, block_hash)
                 .prev_tx_chain(prev_tx_chain)
                 .send_to(addr.clone())

@@ -207,15 +207,14 @@ impl fmt::Debug for AnchoringTx {
             .field("txid", &self.txid())
             .field("txhex", &self.to_hex())
             .field("content", &self.0)
-            .field("height", &payload.block_height)
-            .field("hash", &payload.block_hash.to_hex())
+            .field("payload", &payload)
             .finish()
     }
 }
 
 impl fmt::Debug for FundingTx {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct(stringify!(AnchoringTx))
+        f.debug_struct(stringify!(FundingTx))
             .field("txid", &self.txid())
             .field("txhex", &self.to_hex())
             .field("content", &self.0)

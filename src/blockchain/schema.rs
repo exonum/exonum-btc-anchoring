@@ -116,9 +116,7 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn lect(&self, validator_key: &btc::PublicKey) -> Result<Option<BitcoinTx>, StorageError> {
-        self.lects(validator_key)
-            .last()
-            .map(|x| x.map(|x| x.tx()))
+        self.lects(validator_key).last().map(|x| x.map(|x| x.tx()))
     }
 
     pub fn prev_lect(&self,
@@ -136,8 +134,6 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn collect_lects(&self, cfg: &AnchoringConfig) -> Result<Option<BitcoinTx>, StorageError> {
-        let validators_count = cfg.validators.len() as u32;
-
         let mut lects = HashMap::new();
         for validator_key in &cfg.validators {
             if let Some(last_lect) = self.lect(validator_key)? {
@@ -153,7 +149,7 @@ impl<'a> AnchoringSchema<'a> {
         }
 
         let lect = if let Some((lect, count)) = lects.iter().max_by_key(|&(_, v)| v) {
-            if *count >= ::majority_count(validators_count as u8) {
+            if *count >= cfg.majority_count() {
                 Some(BitcoinTx::from(lect.clone()))
             } else {
                 None
@@ -172,8 +168,7 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn add_known_address(&self, addr: &btc::Address) -> Result<(), StorageError> {
-        self.known_addresses()
-            .put(&addr.to_base58check(), vec![])
+        self.known_addresses().put(&addr.to_base58check(), vec![])
     }
 
     pub fn is_address_known(&self, addr: &btc::Address) -> Result<bool, StorageError> {

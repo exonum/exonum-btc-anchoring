@@ -1,4 +1,5 @@
 use bitcoin::util::base58::{FromBase58, ToBase58};
+use serde_json::Value;
 
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{Hash, HexValue};
@@ -11,7 +12,7 @@ use sandbox::config_updater::TxConfig;
 
 use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
 use anchoring_btc_service::details::btc;
-use anchoring_btc_service::details::btc::transactions::{BitcoinTx, RawBitcoinTx};
+use anchoring_btc_service::details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use anchoring_btc_service::blockchain::schema::AnchoringSchema;
@@ -105,8 +106,8 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
     tx.raw().clone()
 }
 
-pub fn gen_confirmations_request<T: Into<BitcoinTx>>(tx: T, confirmations: u64) -> Request {
-    let tx = tx.into();
+pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> Request {
+    let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     request! {
             method: "getrawtransaction",
             params: [&tx.txid(), 1],
@@ -144,6 +145,30 @@ pub fn gen_confirmations_request<T: Into<BitcoinTx>>(tx: T, confirmations: u64) 
         }
 }
 
+pub fn get_transaction_request(raw: &RawBitcoinTx) -> Request {
+    let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
+    request! {
+        method: "getrawtransaction",
+        params: [&tx.txid(), 0],
+        response: &tx.to_hex()
+    }
+}
+
+pub fn listunspent_entry(raw: &RawBitcoinTx, addr: &btc::Address, confirmations: u64) -> Value {
+    let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
+    json!({
+        "txid": &tx.txid(),
+        "address": &addr.to_base58check(),
+        "confirmations": confirmations,
+        "vout": 0,
+        "account": "multisig",
+        "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
+        "amount": 0.00010000,
+        "spendable": false,
+        "solvable": false
+    })
+}
+
 pub fn block_hash_on_height(sandbox: &Sandbox, height: u64) -> Hash {
     let blockchain = sandbox.blockchain_ref();
     let view = blockchain.view();
@@ -162,7 +187,7 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
     sandbox
         .client()
         .expect(vec![
-            gen_confirmations_request(sandbox.current_funding_tx().clone(), 50),
+            confirmations_request(&sandbox.current_funding_tx(), 50),
             request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
@@ -192,7 +217,7 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
     sandbox
         .client()
         .expect(vec![
-            gen_confirmations_request(sandbox.current_funding_tx().clone(), 50),
+            confirmations_request(&sandbox.current_funding_tx(), 50),
             request! {
                 method: "getrawtransaction",
                 params: [&anchored_tx.txid(), 1],
@@ -360,7 +385,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
     sandbox.broadcast(txs[0].clone());
 
     client.expect(vec![
-        gen_confirmations_request(sandbox.current_funding_tx(), 50),
+        confirmations_request(&sandbox.current_funding_tx(), 50),
         request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
@@ -383,7 +408,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
 
     let anchored_tx = sandbox.latest_anchored_tx();
     client.expect(vec![
-        gen_confirmations_request(sandbox.current_funding_tx(), 50),
+        confirmations_request(&sandbox.current_funding_tx(), 50),
         request! {
             method: "getrawtransaction",
             params: [&anchored_tx.txid(), 1],
@@ -436,7 +461,7 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     let anchored_tx = sandbox.latest_anchored_tx();
 
     sandbox.broadcast(signatures[0].clone());
-    client.expect(vec![gen_confirmations_request(anchored_tx.clone(), 0)]);
+    client.expect(vec![confirmations_request(&anchored_tx.clone(), 0)]);
     sandbox.add_height(&signatures);
 
     let txs = (0..4)
@@ -480,7 +505,7 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
     let anchoring_addr = sandbox.current_addr();
 
     client.expect(vec![
-        gen_confirmations_request(sandbox.current_funding_tx(), 50),
+        confirmations_request(&sandbox.current_funding_tx(), 50),
         request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
@@ -501,15 +526,12 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
     ]);
 
     let (_, signatures) =
-        sandbox.gen_anchoring_tx_with_signatures(0,
-                                                 sandbox.last_hash(),
-                                                 &[],
-                                                 None,
-                                                 &anchoring_addr);
+        sandbox
+            .gen_anchoring_tx_with_signatures(0, sandbox.last_hash(), &[], None, &anchoring_addr);
     sandbox.add_height(&[]);
 
     sandbox.broadcast(signatures[0].clone());
-    client.expect(vec![gen_confirmations_request(sandbox.current_funding_tx(), 50)]);
+    client.expect(vec![confirmations_request(&sandbox.current_funding_tx(), 50)]);
     sandbox.add_height(&signatures[0..1]);
 }
 
@@ -528,7 +550,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
             method: "importaddress",
             params: [&following_addr, "multisig", false, false]
         },
-        gen_confirmations_request(anchored_tx.clone(), 10),
+        confirmations_request(&anchored_tx, 10),
     ]);
     sandbox.add_height(&[cfg_tx]);
 
@@ -542,7 +564,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
     client.expect(vec![
-        gen_confirmations_request(anchored_tx.clone(), 100),
+        confirmations_request(&anchored_tx, 100),
         request! {
             method: "listunspent",
             params: [0, 9999999, [following_addr]],
@@ -552,7 +574,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[]);
     sandbox.broadcast(signatures[0].clone());
 
-    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
+    client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
@@ -563,7 +585,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
              })
         .collect::<Vec<_>>();
     sandbox.broadcast(lects[0].clone());
-    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
+    client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&lects);
     sandbox.fast_forward_to_height(cfg_change_height);
 

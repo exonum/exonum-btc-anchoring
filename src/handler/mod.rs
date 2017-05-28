@@ -58,6 +58,7 @@ pub enum AnchoringState {
 }
 
 #[doc(hidden)]
+#[derive(Debug)]
 pub enum LectKind {
     Anchoring(AnchoringTx),
     Funding(FundingTx),

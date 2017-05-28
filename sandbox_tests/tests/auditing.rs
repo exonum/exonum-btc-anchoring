@@ -67,7 +67,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
             method: "importaddress",
             params: [&following_addr, "multisig", false, false]
         },
-        gen_confirmations_request(anchored_tx.clone(), 10),
+        confirmations_request(&anchored_tx, 10),
     ]);
     sandbox.add_height(&[cfg_tx]);
 
@@ -81,7 +81,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
     client.expect(vec![
-        gen_confirmations_request(anchored_tx.clone(), 100),
+        confirmations_request(&anchored_tx, 100),
         request! {
             method: "listunspent",
             params: [0, 9999999, [following_addr]],
@@ -91,7 +91,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[]);
     sandbox.broadcast(signatures[0].clone());
 
-    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
+    client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
@@ -102,7 +102,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
              })
         .collect::<Vec<_>>();
     sandbox.broadcast(lects[0].clone());
-    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
+    client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&lects);
     sandbox.fast_forward_to_height(cfg_change_height);
 
