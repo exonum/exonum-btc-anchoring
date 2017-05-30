@@ -73,8 +73,8 @@ impl From<LectContent> for LectInfo {
 impl PublicApi {
     /// Returns information about the lect agreed by +2/3 validators if there is one.
     ///
-    /// `GET /{api_prefix}/v1/current_lect/`
-    pub fn current_lect(&self) -> Result<Option<AnchoringInfo>, ApiError> {
+    /// `GET /{api_prefix}/v1/actual_lect/`
+    pub fn actual_lect(&self) -> Result<Option<AnchoringInfo>, ApiError> {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
         Ok(schema.collect_lects()?.map(AnchoringInfo::from))
@@ -82,7 +82,7 @@ impl PublicApi {
 
     /// Returns current lect for validator with given `id`.
     ///
-    /// `GET /{api_prefix}/v1/current_lect/:id`
+    /// `GET /{api_prefix}/v1/actual_lect/:id`
     pub fn current_lect_of_validator(&self, id: u32) -> Result<LectInfo, ApiError> {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
@@ -119,8 +119,8 @@ impl PublicApi {
 impl Api for PublicApi {
     fn wire(&self, router: &mut Router) {
         let _self = self.clone();
-        let current_lect = move |_: &mut Request| -> IronResult<Response> {
-            let lect = _self.current_lect()?;
+        let actual_lect = move |_: &mut Request| -> IronResult<Response> {
+            let lect = _self.actual_lect()?;
             _self.ok_response(&json!(lect))
         };
 
@@ -139,8 +139,8 @@ impl Api for PublicApi {
 
         let _self = self.clone();
         let actual_address = move |_: &mut Request| -> IronResult<Response> {
-            let addr = _self.actual_address()?;
-            _self.ok_response(&json!(addr.to_base58check()))
+            let addr = _self.actual_address()?.to_base58check();
+            _self.ok_response(&json!(addr))
         };
 
         let _self = self.clone();
@@ -153,8 +153,8 @@ impl Api for PublicApi {
         router.get("/v1/address/following",
                    following_address,
                    "following_address");
-        router.get("/v1/current_lect/", current_lect, "current_lect");
-        router.get("/v1/current_lect/:id",
+        router.get("/v1/actual_lect/", actual_lect, "actual_lect");
+        router.get("/v1/actual_lect/:id",
                    current_lect_of_validator,
                    "current_lect_of_validator");
     }

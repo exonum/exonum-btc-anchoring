@@ -68,13 +68,13 @@ impl ApiSandbox {
     }
 
     fn get_current_lect(&self) -> Option<AnchoringInfo> {
-        let response = self.request_get("/v1/current_lect/").unwrap();
+        let response = self.request_get("/v1/actual_lect/").unwrap();
         let body = response_body(response);
         serde_json::from_value(body).unwrap()
     }
 
     pub fn get_current_lect_of_validator(&self, validator_id: u32) -> LectInfo {
-        let response = self.request_get(format!("/v1/current_lect/{}", validator_id))
+        let response = self.request_get(format!("/v1/actual_lect/{}", validator_id))
             .unwrap();
         let body = response_body(response);
         serde_json::from_value(body).unwrap()
