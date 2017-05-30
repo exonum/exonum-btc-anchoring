@@ -3,7 +3,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
-use exonum::blockchain::{Schema, StoredConfiguration};
+use exonum::blockchain::{Schema, StoredConfiguration, gen_prefix};
 use exonum::storage::{Error as StorageError, List, ListTable, Map, MapTable, MerkleTable, View};
 use exonum::crypto::Hash;
 
@@ -19,45 +19,62 @@ pub struct AnchoringSchema<'a> {
     view: &'a View,
 }
 
+// Define tables
 impl<'a> AnchoringSchema<'a> {
-    pub fn new(view: &'a View) -> AnchoringSchema {
-        AnchoringSchema { view: view }
-    }
-
     pub fn signatures(&self,
                       txid: &btc::TxId)
                       -> ListTable<MapTable<View, [u8], Vec<u8>>, MsgAnchoringSignature> {
-        let prefix = [&[ANCHORING_SERVICE_ID as u8, 2], txid.as_ref()].concat();
+        let prefix = self.gen_table_prefix(2, Some(txid.as_ref()));
         ListTable::new(MapTable::new(prefix, self.view))
     }
 
     pub fn lects(&self,
                  validator_key: &btc::PublicKey)
                  -> MerkleTable<MapTable<View, [u8], Vec<u8>>, LectContent> {
-        let prefix = [&[ANCHORING_SERVICE_ID as u8, 3], validator_key.to_bytes().as_ref()].concat();
+        let prefix = self.gen_table_prefix(3, Some(validator_key.to_bytes().as_ref()));
         MerkleTable::new(MapTable::new(prefix, self.view))
     }
 
     pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapTable<View, btc::TxId, u64> {
-        let prefix = [&[ANCHORING_SERVICE_ID as u8, 4], validator_key.to_bytes().as_ref()].concat();
+        let prefix = self.gen_table_prefix(4, Some(validator_key.to_bytes().as_ref()));
         MapTable::new(prefix, self.view)
     }
 
     // List of known anchoring addresses
     pub fn known_addresses(&self) -> MapTable<View, str, Vec<u8>> {
-        let prefix = vec![ANCHORING_SERVICE_ID as u8, 5];
+        let prefix = self.gen_table_prefix(5, None);
         MapTable::new(prefix, self.view)
     }
 
     // Key is tuple (txid, validator_id, input), see `known_signature_id`.
     pub fn known_signatures(&self) -> MapTable<View, [u8], MsgAnchoringSignature> {
-        let prefix = vec![ANCHORING_SERVICE_ID as u8, 6];
+        let prefix = self.gen_table_prefix(6, None);
         MapTable::new(prefix, self.view)
     }
 
     pub fn known_txs(&self) -> MapTable<View, btc::TxId, BitcoinTx> {
-        let prefix = vec![ANCHORING_SERVICE_ID as u8, 7];
+        let prefix = self.gen_table_prefix(7, None);
         MapTable::new(prefix, self.view)
+    }
+
+    fn gen_table_prefix(&self, ord: u8, suf: Option<&[u8]>) -> Vec<u8> {
+        gen_prefix(ANCHORING_SERVICE_ID, ord, suf)
+    }
+
+    fn known_signature_id(msg: &MsgAnchoringSignature) -> Vec<u8> {
+        let txid = msg.tx().id();
+
+        let mut id = vec![txid.as_ref(), [0; 8].as_ref()].concat();
+        BigEndian::write_u32(&mut id[32..36], msg.validator());
+        BigEndian::write_u32(&mut id[36..40], msg.input());
+        id
+    }
+}
+
+// Define operations
+impl<'a> AnchoringSchema<'a> {
+    pub fn new(view: &'a View) -> AnchoringSchema {
+        AnchoringSchema { view: view }
     }
 
     pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
@@ -197,15 +214,6 @@ impl<'a> AnchoringSchema<'a> {
             lect_hashes.push(self.lects(key).root_hash()?);
         }
         Ok(lect_hashes)
-    }
-
-    fn known_signature_id(msg: &MsgAnchoringSignature) -> Vec<u8> {
-        let txid = msg.tx().id();
-
-        let mut id = vec![txid.as_ref(), [0; 8].as_ref()].concat();
-        BigEndian::write_u32(&mut id[32..36], msg.validator());
-        BigEndian::write_u32(&mut id[36..40], msg.input());
-        id
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {

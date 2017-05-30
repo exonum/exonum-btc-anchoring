@@ -229,7 +229,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
 // - none
 // result: success
 #[test]
-fn test_anchoring_transit_unchanged_self_key() {
+fn test_anchoring_transit_unchanged_self_key_normal() {
     let cfg_change_height = 16;
 
     init_logger();
@@ -665,7 +665,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
 //  - We have no time to create transition transaction
 // result: we create a new anchoring tx chain from scratch
 #[test]
-fn test_anchoring_transit_unchanged_self_key_lost_lect_new_tx_chain() {
+fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
     let cfg_change_height = 11;
 
     init_logger();
@@ -775,7 +775,7 @@ fn test_anchoring_transit_unchanged_self_key_lost_lect_new_tx_chain() {
 //  - We have no time to create transition transaction
 // result: we create a new anchoring tx chain from scratch
 #[test]
-fn test_anchoring_transit_changed_self_key_lost_lect_new_tx_chain() {
+fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
     let cfg_change_height = 11;
 
     init_logger();
@@ -870,6 +870,132 @@ fn test_anchoring_transit_changed_self_key_lost_lect_new_tx_chain() {
         confirmations_request(&new_chain_tx, 0),
     ]);
     sandbox.add_height(&signatures[1..]);
+    let lects = (0..4)
+        .map(|id| {
+                 gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id))
+                     .raw()
+                     .clone()
+             })
+        .collect::<Vec<_>>();
+    sandbox.broadcast(lects[0].clone());
+}
+
+// We commit a new configuration and take actions to transit tx chain to the new address
+// problems:
+//  - We have no time to create transition transaction
+// and we have no suitable `funding_tx` for a new address.
+// result: we create a new anchoring tx chain from scratch
+#[test]
+fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
+    let first_cfg_change_height = 11;
+    let second_cfg_change_height = 13;
+
+    init_logger();
+    let sandbox = AnchoringSandbox::initialize(&[]);
+    let client = sandbox.client();
+
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+
+    let funding_tx = FundingTx::from_hex("0200000001b658a16511311568670756f3912f890441d5ea069eadf50\
+                                          f73bcaeaf6fa91ac4000000006b483045022100da8016735aa4a31e34\
+                                          e9a52876491952d5bcbc53dba6ee86501ad6665806d5fe02204b0df7d\
+                                          5678c53ba0507a588ffd239d3ec1150ea218323534bd65feab3067886\
+                                          012102da41e6c40a472b97a09dea858d8bc69c805ecc180d0955132c9\
+                                          8a2ad04111401feffffff02213c8f07000000001976a914dfd62142b0\
+                                          5559d396b2e036b4916e9873cfb79188aca08601000000000017a914e\
+                                          e6737f9c8f5a73bece543883a670ff3056d3533877b2e1100")
+            .unwrap();
+    let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, first_cfg_change_height, None);
+    let (_, following_addr) = following_cfg.redeem_script();
+
+    // Check insufficient confirmations case
+    let anchored_tx = sandbox.latest_anchored_tx();
+    client.expect(vec![
+        request! {
+            method: "importaddress",
+            params: [&following_addr, "multisig", false, false]
+        },
+        confirmations_request(&anchored_tx, 10),
+    ]);
+    sandbox.add_height(&[cfg_tx]);
+
+    for _ in sandbox.current_height()..(first_cfg_change_height - 1) {
+        client.expect(vec![confirmations_request(&anchored_tx, 10)]);
+        sandbox.add_height(&[]);
+    }
+
+    // First config update
+    sandbox.add_height(&[]);
+    sandbox.set_anchoring_cfg(following_cfg.clone());
+    sandbox.set_latest_anchored_tx(None);
+
+    // Add funding tx
+    let (cfg_tx, following_cfg) = {
+        let mut cfg = following_cfg;
+        cfg.funding_tx = Some(funding_tx.clone());
+        let cfg_tx = gen_update_config_tx(&sandbox, second_cfg_change_height, cfg.clone());
+        (cfg_tx, cfg)
+    };
+    let (_, following_addr) = following_cfg.redeem_script();
+    sandbox.add_height(&[cfg_tx]);
+
+    sandbox.fast_forward_to_height(second_cfg_change_height - 1);
+
+    // Apply new configuration
+    client.expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&following_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&funding_tx, &following_addr, 200)
+            ]
+        },
+        get_transaction_request(&funding_tx),
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&following_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&funding_tx, &following_addr, 200)
+            ]
+        },
+    ]);
+    sandbox.add_height(&[]);
+    sandbox.set_anchoring_cfg(following_cfg.clone());
+
+    // Generate new chain
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(10,
+                                                 block_hash_on_height(&sandbox, 10),
+                                                 &[],
+                                                 Some(anchored_tx.id()),
+                                                 &following_addr);
+    let new_chain_tx = sandbox.latest_anchored_tx();
+
+    sandbox.broadcast(signatures[0].clone());
+    client.expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&following_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&funding_tx, &following_addr, 200)
+            ]
+        },
+    ]);
+    sandbox.add_height(&signatures[0..1]);
+
+    client.expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&following_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&funding_tx, &following_addr, 200)
+            ]
+        },
+        confirmations_request(&new_chain_tx, 0),
+    ]);
+    sandbox.add_height(&signatures[1..]);
+
     let lects = (0..4)
         .map(|id| {
                  gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id))
