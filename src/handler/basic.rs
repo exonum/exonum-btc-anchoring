@@ -390,6 +390,11 @@ impl AnchoringHandler {
                                 multisig: &MultisigAddress)
                                 -> Result<Option<FundingTx>, ServiceError> {
         let funding_tx = multisig.common.funding_tx();
+        // Do not need to check funding_tx to the different address.
+        if funding_tx.find_out(&multisig.addr).is_none() {
+            return Ok(None);
+        }
+
         trace!("Checking funding_tx={:#?}, addr={} availability",
                funding_tx,
                multisig.addr.to_base58check());

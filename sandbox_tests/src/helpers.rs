@@ -486,14 +486,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
                                           &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
-    client.expect(vec![
-        confirmations_request(&anchored_tx, 100),
-        request! {
-            method: "listunspent",
-            params: [0, 9999999, [following_addr]],
-            response: []
-        },
-    ]);
+    client.expect(vec![confirmations_request(&anchored_tx, 100)]);
     sandbox.add_height(&[]);
     sandbox.broadcast(signatures[0].clone());
 
