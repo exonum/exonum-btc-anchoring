@@ -327,17 +327,7 @@ fn test_anchoring_transit_unchanged_self_key() {
             method: "listunspent",
             params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: [
-                {
-                    "txid": &transition_tx.txid(),
-                    "vout": 0,
-                    "address": &following_multisig.1.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 30,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&transition_tx, &following_addr, 30)
             ]
         },
     ]);
@@ -379,24 +369,10 @@ fn test_anchoring_transit_unchanged_self_key() {
             method: "listunspent",
             params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: [
-                {
-                    "txid": &anchored_tx.txid(),
-                    "vout": 0,
-                    "address": &following_multisig.1.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&anchored_tx, &following_addr, 0)
             ]
-            },
-        request! {
-            method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 0],
-            response: &anchored_tx.to_hex()
         },
+        get_transaction_request(&anchored_tx),
     ]);
     sandbox.add_height(&lects);
 }
@@ -653,18 +629,7 @@ fn test_anchoring_transit_config_lost_lect_resend_before_cfg_change() {
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
 
-    client.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&transition_tx.txid(), 1],
-            error: RpcError::NoInformation("Unable to find tx".to_string()),
-        },
-        request! {
-            method: "sendrawtransaction",
-            params: [&transition_tx.to_hex()],
-            response: transition_tx.to_hex()
-        },
-    ]);
+    client.expect(send_raw_transaction_requests(&transition_tx));
     sandbox.add_height(&[]);
 }
 
@@ -743,18 +708,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
     // Update cfg
     sandbox.set_anchoring_cfg(following_cfg);
 
-    client.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&transition_tx.txid(), 1],
-            error: RpcError::NoInformation("Unable to find tx".to_string()),
-        },
-        request! {
-            method: "sendrawtransaction",
-            params: [&transition_tx.to_hex()],
-            response: transition_tx.to_hex()
-        },
-    ]);
+    client.expect(send_raw_transaction_requests(&transition_tx));
     sandbox.add_height(&[]);
 
     client.expect(vec![
@@ -763,17 +717,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
             method: "listunspent",
             params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: [
-                {
-                    "txid": &transition_tx.txid(),
-                    "vout": 0,
-                    "address": &following_multisig.1.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 30,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&transition_tx, &following_addr, 30)
             ]
         },
     ]);
@@ -1065,17 +1009,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
             method: "listunspent",
             params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: [
-                {
-                    "txid": &transition_tx.txid(),
-                    "vout": 0,
-                    "address": &following_multisig.1.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 30,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&transition_tx, &following_addr, 30)
             ]
         },
     ]);
@@ -1117,24 +1051,10 @@ fn test_anchoring_transit_config_after_funding_tx() {
             method: "listunspent",
             params: [0, 9999999, [&following_multisig.1.to_base58check()]],
             response: [
-                {
-                    "txid": &anchored_tx.txid(),
-                    "vout": 0,
-                    "address": &following_multisig.1.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&anchored_tx, &following_addr, 0)
             ]
         },
-        request! {
-            method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 0],
-            response: &anchored_tx.to_hex()
-        },
+        get_transaction_request(&anchored_tx),
     ]);
     sandbox.add_height(&lects);
 }
@@ -1270,17 +1190,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             method: "listunspent",
             params: [0, 9999999, [&following_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &transition_tx.txid(),
-                    "vout": 0,
-                    "address": &following_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&transition_tx, &following_addr, 0)
             ]
         },
         get_transaction_request(&transition_tx),
@@ -1300,17 +1210,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             method: "listunspent",
             params: [0, 9999999, [&following_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &transition_tx.txid(),
-                    "vout": 0,
-                    "address": &following_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&transition_tx, &following_addr, 0)
             ]
         },
     ]);

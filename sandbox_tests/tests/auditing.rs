@@ -107,13 +107,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.fast_forward_to_height(cfg_change_height);
 
     sandbox.set_anchoring_cfg(following_cfg);
-    client.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&transition_tx.txid(), 0],
-            response: transition_tx.to_hex()
-        },
-    ]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height_as_auditor(&[]);
 
     assert_eq!(sandbox.handler().errors, Vec::new());

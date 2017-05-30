@@ -24,7 +24,7 @@ use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::details::btc::transactions::{AnchoringTx, FundingTx,
                                                         TransactionBuilder, verify_tx_input};
 use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
-use anchoring_btc_sandbox::{AnchoringSandbox, RpcError};
+use anchoring_btc_sandbox::AnchoringSandbox;
 use anchoring_btc_sandbox::helpers::*;
 use anchoring_btc_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
 
@@ -53,18 +53,7 @@ fn test_anchoring_funding_tx_waiting() {
     client.expect(vec![confirmations_request(&funding_tx, 0)]);
     sandbox.add_height(&[]);
     // Resend funding_tx if we lost it
-    client.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&funding_tx.txid(), 1],
-            error: RpcError::NoInformation("Unable to find tx".to_string()),
-        },
-        request! {
-            method: "sendrawtransaction",
-            params: [&funding_tx.to_hex()],
-            response: funding_tx.to_hex()
-        },
-    ]);
+    client.expect(send_raw_transaction_requests(&funding_tx));
     sandbox.add_height(&[]);
 
     client.expect(vec![confirmations_request(&funding_tx, 0)]);
@@ -140,28 +129,8 @@ fn test_anchoring_second_block_additional_funds() {
         method: "listunspent",
         params: [0, 9999999, [&anchoring_addr.to_base58check()]],
         response: [
-            {
-                "txid": "fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491",
-                "vout": 0,
-                "address": &anchoring_addr.to_base58check(),
-                "account": "multisig",
-                "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                "amount": 0.00010000,
-                "confirmations": 1,
-                "spendable": false,
-                "solvable": false
-            },
-            {
-                "txid": &funds.txid(),
-                "vout": 0,
-                "address": &anchoring_addr.to_base58check(),
-                "account": "multisig",
-                "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                "amount": 0.00010000,
-                "confirmations": 75,
-                "spendable": false,
-                "solvable": false
-            }
+            listunspent_entry(&sandbox.latest_anchored_tx(), &anchoring_addr, 1),
+            listunspent_entry(&funds, &anchoring_addr, 75)
         ]
     },
     ]);
@@ -178,18 +147,7 @@ fn test_anchoring_second_block_additional_funds() {
     sandbox.broadcast(signatures[1].clone());
 
     let anchored_tx = &sandbox.latest_anchored_tx();
-    client.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 1],
-            error: RpcError::NoInformation("Unable to find tx".to_string()),
-        },
-        request! {
-            method: "sendrawtransaction",
-            params: [&anchored_tx.to_hex()],
-            response: anchored_tx.to_hex()
-        },
-    ]);
+    client.expect(send_raw_transaction_requests(&anchored_tx));
 
     sandbox.add_height(&signatures);
     sandbox.broadcast(gen_service_tx_lect(&sandbox, 0, &anchored_tx, 2));
@@ -220,24 +178,10 @@ fn test_anchoring_second_block_lect_lost() {
         method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &prev_anchored_tx.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&prev_anchored_tx, &anchoring_addr, 0)
             ]
         },
-        request! {
-             method: "getrawtransaction",
-             params: [&prev_anchored_tx.txid(), 0],
-             response: &prev_anchored_tx.to_hex()
-        },
+        get_transaction_request(&prev_anchored_tx),
     ]);
 
     sandbox.add_height(&[]);
@@ -257,17 +201,7 @@ fn test_anchoring_second_block_lect_lost() {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &prev_anchored_tx.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&prev_anchored_tx, &anchoring_addr, 0)
             ]
         },
     ]);
@@ -323,29 +257,11 @@ fn test_anchoring_find_lect_chain_normal() {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &current_anchored_tx.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&current_anchored_tx, &anchoring_addr, 0)
             ]
         },
-        request! {
-            method: "getrawtransaction",
-            params: [&current_anchored_tx.txid(), 0],
-            response: &current_anchored_tx.to_hex()
-        },
-        request! {
-            method: "getrawtransaction",
-            params: [&prev_anchored_tx.txid(), 0],
-            response: &prev_anchored_tx.to_hex()
-        },
+        get_transaction_request(&current_anchored_tx),
+        get_transaction_request(&prev_anchored_tx),
     ];
     client.expect(request);
     sandbox.add_height(&[]);
@@ -400,25 +316,11 @@ fn test_anchoring_find_lect_chain_wrong() {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &current_anchored_tx.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                },
+                listunspent_entry(&current_anchored_tx, &anchoring_addr, 0)
             ]
         });
         for tx in anchored_txs.iter().rev() {
-            request.push(request! {
-                method: "getrawtransaction",
-                params: [&tx.txid(), 0],
-                response: &tx.to_hex()
-            });
+            request.push(get_transaction_request(&tx));
         }
         request
     };

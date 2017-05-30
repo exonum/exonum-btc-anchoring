@@ -154,6 +154,22 @@ pub fn get_transaction_request(raw: &RawBitcoinTx) -> Request {
     }
 }
 
+pub fn send_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<Request> {
+    let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
+    vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&tx.txid(), 1],
+            error: RpcError::NoInformation("Unable to find tx".to_string())
+        },
+        request! {
+            method: "sendrawtransaction",
+            params: [tx.to_hex()],
+            response: tx.to_hex()
+        },
+    ]
+}
+
 pub fn listunspent_entry(raw: &RawBitcoinTx, addr: &btc::Address, confirmations: u64) -> Value {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     json!({
@@ -182,27 +198,18 @@ pub fn block_hash_on_height(sandbox: &Sandbox, height: u64) -> Hash {
 
 /// Anchor genesis block using funding tx
 pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
+    let client = sandbox.client();
+
     let anchoring_addr = sandbox.current_addr();
 
-    sandbox
-        .client()
-        .expect(vec![
+
+    client.expect(vec![
             confirmations_request(&sandbox.current_funding_tx(), 50),
             request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &sandbox.current_funding_tx().txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 50,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&sandbox.current_funding_tx(), &anchoring_addr, 50)
             ]
         },
         ]);
@@ -214,9 +221,7 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[]);
 
     sandbox.broadcast(signatures[0].clone());
-    sandbox
-        .client()
-        .expect(vec![
+    client.expect(vec![
             confirmations_request(&sandbox.current_funding_tx(), 50),
             request! {
                 method: "getrawtransaction",
@@ -258,17 +263,7 @@ pub fn anchor_first_block_lect_normal(sandbox: &AnchoringSandbox) {
                 method: "listunspent",
                 params: [0, 9999999, [&anchoring_addr.to_base58check()]],
                 response: [
-                    {
-                        "txid": &anchored_tx.txid(),
-                        "vout": 0,
-                        "address": &anchoring_addr.to_base58check(),
-                        "account": "multisig",
-                        "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                        "amount": 0.00010000,
-                        "confirmations": 0,
-                        "spendable": false,
-                        "solvable": false
-                    }
+                    listunspent_entry(&anchored_tx, &anchoring_addr, 0),
                 ]
             },
             request! {
@@ -305,24 +300,10 @@ pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &other_lect.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&other_lect, &anchoring_addr, 0)
             ]
         },
-        request! {
-            method: "getrawtransaction",
-            params: [&other_lect.txid(), 0],
-            response: &other_lect.to_hex()
-        },
+        get_transaction_request(&other_lect)
     ]);
     sandbox.add_height(&[]);
 
@@ -354,24 +335,10 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &other_lect.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 0,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&other_lect, &anchoring_addr, 0)
             ]
         },
-        request! {
-            method: "getrawtransaction",
-            params: [&other_lect.txid(), 0],
-            response: &other_lect.to_hex()
-        },
+        get_transaction_request(&other_lect)
     ]);
     sandbox.add_height(&[]);
 
@@ -390,17 +357,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &other_lect.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 100,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&other_lect, &anchoring_addr, 100)
             ]
         },
     ]);
@@ -435,17 +392,7 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": "fea0a60f7146e7facf5bb382b80dafb762175bf0d4b6ac4e59c09cd4214d1491",
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 1,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&sandbox.latest_anchored_tx(), &anchoring_addr, 1)
             ]
         },
     ]);
@@ -477,24 +424,10 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &anchored_tx.txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 100,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&anchored_tx, &anchoring_addr, 100)
             ]
         },
-        request! {
-            method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 0],
-            response: &anchored_tx.to_hex()
-        },
+        get_transaction_request(&anchored_tx)
     ]);
     sandbox.add_height(&txs);
 }
@@ -510,17 +443,7 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                {
-                    "txid": &sandbox.current_funding_tx().txid(),
-                    "vout": 0,
-                    "address": &anchoring_addr.to_base58check(),
-                    "account": "multisig",
-                    "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-                    "amount": 0.00010000,
-                    "confirmations": 50,
-                    "spendable": false,
-                    "solvable": false
-                }
+                listunspent_entry(&sandbox.current_funding_tx(), &anchoring_addr, 50)
             ]
         },
     ]);
@@ -592,11 +515,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.set_anchoring_cfg(following_cfg);
     sandbox.nodes_mut().swap_remove(0);
     client.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&transition_tx.txid(), 0],
-            response: transition_tx.to_hex()
-        },
+        get_transaction_request(&transition_tx)
     ]);
     sandbox.add_height_as_auditor(&[]);
 
