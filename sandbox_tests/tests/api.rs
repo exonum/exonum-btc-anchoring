@@ -1,8 +1,10 @@
 extern crate exonum;
 extern crate sandbox;
 extern crate anchoring_btc_service;
+#[macro_use]
 extern crate anchoring_btc_sandbox;
 extern crate serde;
+#[macro_use]
 extern crate serde_json;
 extern crate bitcoin;
 extern crate bitcoinrpc;
@@ -13,17 +15,20 @@ extern crate iron;
 extern crate router;
 extern crate iron_test;
 
+use bitcoin::util::base58::{FromBase58, ToBase58};
 use router::Router;
 use iron::Headers;
-use iron::prelude::*;
+use iron::prelude::{IronResult, Response as IronResponse};
 
 use exonum::crypto::HexValue;
 use exonum::messages::Message;
 use exonum::api::Api;
 
 use anchoring_btc_service::api::{AnchoringInfo, LectInfo, PublicApi};
+use anchoring_btc_service::details::btc;
 use anchoring_btc_service::details::btc::transactions::BitcoinTx;
 use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
+use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_sandbox::AnchoringSandbox;
 use anchoring_btc_sandbox::helpers::*;
 
@@ -40,12 +45,26 @@ impl ApiSandbox {
         ApiSandbox { router: router }
     }
 
-    fn request_get<A: AsRef<str>>(&self, route: A) -> IronResult<Response> {
+    fn request_get<A: AsRef<str>>(&self, route: A) -> IronResult<IronResponse> {
         info!("GET request:'{}'",
               format!("http://127.0.0.1:8000/{}", route.as_ref()));
         iron_test::request::get(&format!("http://127.0.0.1:8000/{}", route.as_ref()),
                                 Headers::new(),
                                 &self.router)
+    }
+
+    fn get_actual_address(&self) -> btc::Address {
+        let response = self.request_get("/v1/address/actual").unwrap();
+        let body = response_body(response);
+        let addr_str: String = serde_json::from_value(body).unwrap();
+        btc::Address::from_base58check(&addr_str).unwrap()
+    }
+
+    fn get_following_address(&self) -> Option<btc::Address> {
+        let response = self.request_get("/v1/address/following").unwrap();
+        let body = response_body(response);
+        let addr_str: Option<String> = serde_json::from_value(body).unwrap();
+        addr_str.map(|addr_str| btc::Address::from_base58check(&addr_str).unwrap())
     }
 
     fn get_current_lect(&self) -> Option<AnchoringInfo> {
@@ -62,7 +81,7 @@ impl ApiSandbox {
     }
 }
 
-fn response_body(response: Response) -> serde_json::Value {
+fn response_body(response: IronResponse) -> serde_json::Value {
     if let Some(mut body) = response.body {
         let mut buf = Vec::new();
         body.write_body(&mut buf).unwrap();
@@ -143,4 +162,53 @@ fn test_api_public_get_lect_unavailable() {
 
     let api_sandbox = ApiSandbox::new(&sandbox);
     assert_eq!(api_sandbox.get_current_lect(), None);
+}
+
+// Try to get actual anchoring address
+#[test]
+fn test_api_public_get_current_address() {
+    init_logger();
+
+    let sandbox = AnchoringSandbox::initialize(&[]);
+    let api_sandbox = ApiSandbox::new(&sandbox);
+    assert_eq!(api_sandbox.get_actual_address(), sandbox.current_addr());
+}
+
+// try to get following address
+#[test]
+fn test_api_public_get_following_address_existent() {
+    init_logger();
+
+    let sandbox = AnchoringSandbox::initialize(&[]);
+    let client = sandbox.client();
+
+    let mut cfg = sandbox.current_cfg().clone();
+    cfg.validators.swap_remove(1);
+    let cfg_tx = gen_update_config_tx(&sandbox, 12, cfg.clone());
+    let following_addr = cfg.redeem_script().1;
+
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+    client.expect(vec![
+        request! {
+            method: "importaddress",
+            params: [&following_addr.to_base58check(), "multisig", false, false]
+        },
+        gen_confirmations_request(sandbox.latest_anchored_tx(), 0),
+    ]);
+    sandbox.add_height(&[cfg_tx]);
+
+    let api_sandbox = ApiSandbox::new(&sandbox);
+    assert_eq!(api_sandbox.get_following_address(), Some(following_addr));
+}
+
+// try to get following address when it does not exists
+// result: Returns null
+#[test]
+fn test_api_public_get_following_address_nonexistent() {
+    init_logger();
+
+    let sandbox = AnchoringSandbox::initialize(&[]);
+    let api_sandbox = ApiSandbox::new(&sandbox);
+    assert_eq!(api_sandbox.get_following_address(), None);
 }
