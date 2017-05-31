@@ -194,7 +194,7 @@ fn test_api_public_get_following_address_existent() {
             method: "importaddress",
             params: [&following_addr.to_base58check(), "multisig", false, false]
         },
-        gen_confirmations_request(sandbox.latest_anchored_tx(), 0),
+        confirmations_request(&sandbox.latest_anchored_tx(), 0),
     ]);
     sandbox.add_height(&[cfg_tx]);
 
