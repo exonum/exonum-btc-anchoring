@@ -166,7 +166,7 @@ impl AnchoringHandler {
                     TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
                 }
             } else {
-                false
+                true
             };
 
             if is_recovering {
