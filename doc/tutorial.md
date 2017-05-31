@@ -125,9 +125,18 @@ See this [article][exonum:anchoring_transfering] for details.*
 * Change list of validators.
 * Initiate the config update procedure.
 * Make sure that config update procedure do not delayed.
-* Look at the new address of the `anchoring` and set private key for it.
+* Look at the new address of the `anchoring` and [set private key for it](#private-key-updating).
 
-***Note!** If `transferring transaction` have been lost you need to establish a new anchoring chain by a new `funding transaction`.*
+### Private key updating
+
+Each node stores in configuration file set of private keys for each `anchoring` address, where the key is the `anchoring` address and the value is the private key for it.
+```ini
+[anchoring_service.node.private_keys]
+2NCJYWui4LGNZguUw41xBANbcHoKxSVxyzr = "cRf74adxyQzJs7V8fHoyrMDazxzCmKAan63Cfhf9i4KL69zRkdS2"
+```
+If node public key is not changed you must use it for the new address otherwise use a new key. Then you need to restart node.
+
+***Note!** If `transfering transaction` have been lost you need to establish a new anchoring chain by a new `funding transaction`.*
 
 [bitcoin_wiki:configuration]: https://en.bitcoin.it/wiki/Running_Bitcoin#Bitcoin.conf_Configuration_File
 [exonum:node_api]: https://github.com/exonum/exonum-doc/blob/master/src/architecture/configuration.md#nodeapi
