@@ -25,12 +25,13 @@ pub struct Payload {
     pub prev_tx_chain: Option<btc::TxId>,
 }
 
+#[derive(Debug)]
 enum PayloadV1 {
     Regular(u64, Hash),
     Recover(u64, Hash, btc::TxId),
 }
 
-#[derive(Default)]
+#[derive(Debug, Default)]
 pub struct PayloadV1Builder {
     block_hash: Option<Hash>,
     block_height: Option<u64>,

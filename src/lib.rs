@@ -104,6 +104,9 @@
 //! ```
 //!
 
+// #![deny(missing_docs)]
+// #![deny(missing_debug_implementations)]
+
 extern crate serde;
 #[macro_use]
 extern crate serde_json;

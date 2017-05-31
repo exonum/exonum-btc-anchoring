@@ -29,6 +29,7 @@ use handler::error::Error as HandlerError;
 pub use blockchain::ANCHORING_SERVICE_ID;
 
 /// An anchoring service implementation for `Exonum` blockchain.
+#[derive(Debug)]
 pub struct AnchoringService {
     genesis: AnchoringConfig,
     handler: Arc<Mutex<AnchoringHandler>>,
