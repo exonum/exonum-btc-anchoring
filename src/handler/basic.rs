@@ -169,9 +169,9 @@ impl AnchoringHandler {
             }
         } else {
             let id = self.validator_id(state);
-            let current_lect = schema.lect(id)?;
+            let actual_lect = schema.lect(id)?;
 
-            match TxKind::from(current_lect) {
+            match TxKind::from(actual_lect) {
                 TxKind::FundingTx(tx) => {
                     if tx.find_out(&actual_addr).is_some() {
                         trace!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
@@ -189,8 +189,8 @@ impl AnchoringHandler {
                         AnchoringState::Recovering { cfg: actual }
                     }
                 }
-                TxKind::Anchoring(current_lect) => {
-                    let current_lect_addr = current_lect.output_address(actual.network);
+                TxKind::Anchoring(actual_lect) => {
+                    let current_lect_addr = actual_lect.output_address(actual.network);
                     // Ensure that we did not miss transition lect
                     if current_lect_addr != actual_addr {
                         let state = AnchoringState::Recovering { cfg: actual };
@@ -199,10 +199,10 @@ impl AnchoringHandler {
                     // If the lect encodes a transition to a new anchoring address,
                     // we need to wait until it reaches enough confirmations.
                     if current_lect_is_transition(&actual, id, &current_lect_addr, &schema)? {
-                        let confirmations = get_confirmations(self.client(), &current_lect.txid())?;
+                        let confirmations = get_confirmations(self.client(), &actual_lect.txid())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
-                                lect: current_lect.into(),
+                                lect: actual_lect.into(),
                                 confirmations: confirmations,
                             };
                             return Ok(state);
