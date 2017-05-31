@@ -87,7 +87,6 @@ impl AnchoringConfig {
     }
 
     #[doc(hidden)]
-    /// For test purpose only
     pub fn majority_count(&self) -> u8 {
         ::majority_count(self.validators.len() as u8)
     }

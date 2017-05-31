@@ -104,7 +104,7 @@
 //! ```
 //!
 
-// #![deny(missing_docs)]
+#![deny(missing_docs)]
 // #![deny(missing_debug_implementations)]
 
 extern crate serde;
@@ -153,6 +153,7 @@ pub use service::{ANCHORING_SERVICE_ID, AnchoringService, gen_anchoring_testnet_
 pub use handler::AnchoringHandler;
 pub use error::Error;
 
+#[doc(hidden)]
 pub fn majority_count(cnt: u8) -> u8 {
     cnt * 2 / 3 + 1
 }
