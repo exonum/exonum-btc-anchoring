@@ -51,7 +51,7 @@ impl MsgAnchoringSignature {
             return Ok(());
         }
         // Verify signature
-        let anchoring_cfg = anchoring_schema.current_anchoring_config()?;
+        let anchoring_cfg = anchoring_schema.actual_anchoring_config()?;
         if let Some(pub_key) = anchoring_cfg.validators.get(id as usize) {
             let (redeem_script, addr) = anchoring_cfg.redeem_script();
             let tx_addr = tx.output_address(anchoring_cfg.network);
@@ -98,7 +98,7 @@ impl MsgAnchoringUpdateLatest {
             warn!("Received lect from non validator, content={:#?}", self);
             return Ok(());
         }
-        let anchoring_cfg = anchoring_schema.current_anchoring_config()?;
+        let anchoring_cfg = anchoring_schema.actual_anchoring_config()?;
         let key = &anchoring_cfg.validators[id as usize];
         match TxKind::from(tx.clone()) {
             TxKind::Anchoring(tx) => {

@@ -1,11 +1,13 @@
 use router::Router;
 use iron::prelude::*;
+use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::Blockchain;
 use exonum::crypto::Hash;
 use exonum::storage::List;
 use exonum::api::{Api, ApiError};
 
+use details::btc;
 use details::btc::TxId;
 use details::btc::transactions::{BitcoinTx, TxKind};
 use blockchain::schema::AnchoringSchema;
@@ -71,22 +73,22 @@ impl From<LectContent> for LectInfo {
 impl PublicApi {
     /// Returns information about the lect agreed by +2/3 validators if there is one.
     ///
-    /// `GET /{api_prefix}/v1/current_lect/`
-    pub fn current_lect(&self) -> Result<Option<AnchoringInfo>, ApiError> {
+    /// `GET /{api_prefix}/v1/actual_lect/`
+    pub fn actual_lect(&self) -> Result<Option<AnchoringInfo>, ApiError> {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
-        let actual_cfg = &schema.current_anchoring_config()?;
+        let actual_cfg = &schema.actual_anchoring_config()?;
         Ok(schema.collect_lects(actual_cfg)?.map(AnchoringInfo::from))
     }
 
     /// Returns current lect for validator with given `id`.
     ///
-    /// `GET /{api_prefix}/v1/current_lect/:id`
+    /// `GET /{api_prefix}/v1/actual_lect/:id`
     pub fn current_lect_of_validator(&self, id: u32) -> Result<LectInfo, ApiError> {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
 
-        let actual_cfg = schema.current_anchoring_config()?;
+        let actual_cfg = schema.actual_anchoring_config()?;
         if let Some(key) = actual_cfg.validators.get(id as usize) {
             if let Some(lect) = schema.lects(key).last()? {
                 return Ok(LectInfo::from(lect));
@@ -94,13 +96,34 @@ impl PublicApi {
         }
         Err(error::Error::UnknownValidatorId(id).into())
     }
+
+    /// Returns actual anchoring address
+    ///
+    /// `GET /{api_prefix}/v1/address/actual`
+    pub fn actual_address(&self) -> Result<btc::Address, ApiError> {
+        let view = self.blockchain.view();
+        let schema = AnchoringSchema::new(&view);
+        Ok(schema.actual_anchoring_config()?.redeem_script().1)
+    }
+
+    /// Returns the following anchoring address if the node is in transition state.
+    ///
+    /// `GET /{api_prefix}/v1/address/actual`
+    pub fn following_address(&self) -> Result<Option<btc::Address>, ApiError> {
+        let view = self.blockchain.view();
+        let schema = AnchoringSchema::new(&view);
+        let following_addr = schema
+            .following_anchoring_config()?
+            .map(|cfg| cfg.redeem_script().1);
+        Ok(following_addr)
+    }
 }
 
 impl Api for PublicApi {
     fn wire(&self, router: &mut Router) {
         let _self = self.clone();
-        let current_lect = move |_: &mut Request| -> IronResult<Response> {
-            let lect = _self.current_lect()?;
+        let actual_lect = move |_: &mut Request| -> IronResult<Response> {
+            let lect = _self.actual_lect()?;
             _self.ok_response(&json!(lect))
         };
 
@@ -117,8 +140,24 @@ impl Api for PublicApi {
             }
         };
 
-        router.get("/v1/current_lect/", current_lect, "current_lect");
-        router.get("/v1/current_lect/:id",
+        let _self = self.clone();
+        let actual_address = move |_: &mut Request| -> IronResult<Response> {
+            let addr = _self.actual_address()?.to_base58check();
+            _self.ok_response(&json!(addr))
+        };
+
+        let _self = self.clone();
+        let following_address = move |_: &mut Request| -> IronResult<Response> {
+            let addr = _self.following_address()?.map(|addr| addr.to_base58check());
+            _self.ok_response(&json!(addr))
+        };
+
+        router.get("/v1/address/actual", actual_address, "actual_address");
+        router.get("/v1/address/following",
+                   following_address,
+                   "following_address");
+        router.get("/v1/actual_lect/", actual_lect, "actual_lect");
+        router.get("/v1/actual_lect/:id",
                    current_lect_of_validator,
                    "current_lect_of_validator");
     }

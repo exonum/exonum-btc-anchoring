@@ -77,7 +77,7 @@ impl<'a> AnchoringSchema<'a> {
         AnchoringSchema { view: view }
     }
 
-    pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
+    pub fn actual_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
         let actual = Schema::new(self.view).actual_configuration()?;
         Ok(self.parse_config(&actual))
     }
@@ -208,7 +208,7 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
-        let cfg = self.current_anchoring_config()?;
+        let cfg = self.actual_anchoring_config()?;
         let mut lect_hashes = Vec::new();
         for key in &cfg.validators {
             lect_hashes.push(self.lects(key).root_hash()?);
