@@ -48,21 +48,20 @@ fn main() {
         .subcommand(GenerateCommand::new()
                         .arg(Arg::with_name("ANCHORING_RPC_HOST")
                                  .long("anchoring-host")
-                                 .value_name("ANCHORING_RPC_HOST")
                                  .takes_value(true))
                         .arg(Arg::with_name("ANCHORING_RPC_USER")
                                  .long("anchoring-user")
-                                 .value_name("ANCHORING_RPC_USER")
                                  .required(false)
                                  .takes_value(true))
                         .arg(Arg::with_name("ANCHORING_RPC_PASSWD")
                                  .long("anchoring-password")
-                                 .value_name("ANCHORING_RPC_PASSWD")
                                  .required(false)
                                  .takes_value(true))
                         .arg(Arg::with_name("ANCHORING_FUNDS")
                                  .long("anchoring-funds")
-                                 .value_name("ANCHORING_FUNDS")
+                                 .takes_value(true))
+                        .arg(Arg::with_name("ANCHORING_FEE")
+                                 .long("anchoring-fee")
                                  .takes_value(true)))
         .subcommand(SubCommand::with_name("keypair")
                         .help("Generates a new bitcoin keypair")
@@ -73,7 +72,6 @@ fn main() {
         .subcommand(RunCommand::new().arg(Arg::with_name("HTTP_PORT")
                                               .short("p")
                                               .long("port")
-                                              .value_name("HTTP_PORT")
                                               .help("Run http server on given port")
                                               .takes_value(true)));
     let matches = app.get_matches();
@@ -96,17 +94,19 @@ fn main() {
                 .unwrap()
                 .parse()
                 .unwrap();
+            let fee: u64 = matches.value_of("ANCHORING_FEE").unwrap().parse().unwrap();
 
             let rpc = AnchoringRpcConfig {
                 host: host,
                 username: user,
                 password: passwd,
             };
-            let (anchoring_common, anchoring_nodes) =
+            let (mut anchoring_common, anchoring_nodes) =
                 gen_anchoring_testnet_config(&AnchoringRpc::new(rpc.clone()),
                                              BitcoinNetwork::Testnet,
                                              count,
                                              total_funds);
+            anchoring_common.fee = fee;
 
             let node_cfgs = generate_testnet_config(count, start_port);
             let dir = dir.join("validators");
