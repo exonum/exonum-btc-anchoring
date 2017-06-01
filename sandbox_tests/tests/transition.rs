@@ -23,7 +23,7 @@ use sandbox::config_updater::TxConfig;
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::details::btc::transactions::{FundingTx, TransactionBuilder};
 use anchoring_btc_service::details::btc;
-use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
+use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig, AnchoringNodeConfig};
 
 use anchoring_btc_sandbox::AnchoringSandbox;
 use anchoring_btc_sandbox::helpers::*;
@@ -83,6 +83,83 @@ fn gen_following_cfg_unchanged_self_key(sandbox: &AnchoringSandbox,
         .handler()
         .add_private_key(&following_addr, priv_keys[0].clone());
     (gen_update_config_tx(sandbox, from_height, cfg.clone()), cfg)
+}
+
+fn gen_following_cfg_add_two_validators_changed_self_key
+    (sandbox: &mut AnchoringSandbox,
+     from_height: u64,
+     funds: Option<FundingTx>)
+     -> (RawTransaction, AnchoringConfig, Vec<AnchoringNodeConfig>) {
+    // Create new keypair for sandbox node
+    let (self_keypair, anchoring_keypairs, exonum_keypairs) = {
+        let mut rng: StdRng = SeedableRng::from_seed([18, 252, 3, 117].as_ref());
+
+        let anchoring_keypairs = [
+            btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng),
+            btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng),
+        ];
+        let self_keypair = btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng);
+
+        let seed = Seed::new([212; 32]);
+        let exonum_keypairs = [gen_keypair_from_seed(&seed), gen_keypair_from_seed(&seed)];
+        (self_keypair, anchoring_keypairs, exonum_keypairs)
+    };
+
+    let mut anchoring_cfg = sandbox.current_cfg().clone();
+    let mut anchoring_priv_keys = sandbox.current_priv_keys();
+    let mut new_nodes = Vec::new();
+
+    anchoring_priv_keys[0] = self_keypair.1.clone();
+    anchoring_cfg.validators[0] = self_keypair.0;
+    if let Some(funds) = funds {
+        anchoring_cfg.funding_tx = Some(funds);
+    }
+
+    for keypair in &anchoring_keypairs {
+        anchoring_cfg.validators.push(keypair.0.clone());
+        anchoring_priv_keys.push(keypair.1.clone());
+    }
+
+    let following_addr = anchoring_cfg.redeem_script().1;
+    for keypair in &anchoring_keypairs {
+        let mut new_node = sandbox.nodes()[0].clone();
+        new_node
+            .private_keys
+            .insert(following_addr.to_base58check(), keypair.1.clone());
+        new_nodes.push(new_node);
+    }
+    for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
+        node.private_keys
+            .insert(following_addr.to_base58check(),
+                    anchoring_priv_keys[id].clone());
+    }
+    sandbox
+        .handler()
+        .add_private_key(&following_addr, anchoring_priv_keys[0].clone());
+
+    // Update consensus config
+    let consensus_cfg = {
+        let mut cfg = sandbox.cfg();
+        cfg.actual_from = from_height;
+
+        for keypair in &exonum_keypairs {
+            cfg.validators.push(keypair.0.clone());
+            // Add validator to exonum sandbox validators map
+            sandbox.validators_map.insert(keypair.0, keypair.1.clone());
+        }
+        // Generate cfg change tx
+        *cfg.services
+             .get_mut(&ANCHORING_SERVICE_ID.to_string())
+             .unwrap() = json!(anchoring_cfg);
+        cfg
+    };
+
+    let tx = TxConfig::new(&sandbox.p(0),
+                           &consensus_cfg.serialize(),
+                           from_height,
+                           sandbox.s(0));
+
+    (tx.raw().clone(), anchoring_cfg, new_nodes)
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -969,6 +1046,138 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
                                                  block_hash_on_height(&sandbox, 10),
                                                  &[],
                                                  Some(anchored_tx.id()),
+                                                 &following_addr);
+    let new_chain_tx = sandbox.latest_anchored_tx();
+
+    sandbox.broadcast(signatures[0].clone());
+    client.expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&following_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&funding_tx, &following_addr, 200)
+            ]
+        },
+    ]);
+    sandbox.add_height(&signatures[0..1]);
+
+    client.expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&following_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&funding_tx, &following_addr, 200)
+            ]
+        },
+        confirmations_request(&new_chain_tx, 0),
+    ]);
+    sandbox.add_height(&signatures[1..]);
+
+    let lects = (0..4)
+        .map(|id| {
+                 gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id))
+                     .raw()
+                     .clone()
+             })
+        .collect::<Vec<_>>();
+    sandbox.broadcast(lects[0].clone());
+}
+
+// We commit a new configuration and take actions to transit tx chain to the new address
+// problems:
+//  - We have no time to create transition transaction
+// and we have no suitable `funding_tx` for a new address.
+// result: we create a new anchoring tx chain from scratch
+#[test]
+fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
+    let first_cfg_change_height = 11;
+    let second_cfg_change_height = 13;
+
+    init_logger();
+    let mut sandbox = AnchoringSandbox::initialize(&[]);
+
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+
+    let funding_tx = FundingTx::from_hex("0200000001e4333634a7b42fb770802a219f175bca28e63bab7457a50\
+                                          77785cff95c411c0c010000006b483045022100b2a37136c2fd7f86da\
+                                          af62e824470d7e95a2083df9cb78a1afb04ad5e98f035202201886fdc\
+                                          78413f02baf99fce4bc00238911e25d959da95798349e16b1fb330e4c\
+                                          0121027f096c405b55de7746866dec411582c322c9875824d0545765e\
+                                          4635cb3581d82feffffff0231d58807000000001976a914ff2f437f7f\
+                                          71ca7af810013b05a52bbd17a9774088aca08601000000000017a914f\
+                                          975aeb4dffaf76ec07ef3dd5b8b778863feea3487542f1100")
+            .unwrap();
+    let initial_funding_tx = sandbox.current_funding_tx();
+
+    let (cfg_tx, following_cfg, new_nodes) =
+        gen_following_cfg_add_two_validators_changed_self_key(&mut sandbox,
+                                                              first_cfg_change_height,
+                                                              None);
+    let (_, following_addr) = following_cfg.redeem_script();
+
+    let client = sandbox.client();
+    // Check insufficient confirmations case
+    let anchored_tx = sandbox.latest_anchored_tx();
+    client.expect(vec![
+        request! {
+            method: "importaddress",
+            params: [&following_addr, "multisig", false, false]
+        },
+        confirmations_request(&anchored_tx, 10),
+    ]);
+    sandbox.add_height(&[cfg_tx]);
+
+    for _ in sandbox.current_height()..(first_cfg_change_height - 1) {
+        client.expect(vec![confirmations_request(&anchored_tx, 10)]);
+        sandbox.add_height(&[]);
+    }
+
+    // First config update
+    sandbox.add_height(&[]);
+    sandbox.set_anchoring_cfg(following_cfg.clone());
+    sandbox.nodes_mut().extend_from_slice(&new_nodes);
+    sandbox.set_latest_anchored_tx(None);
+
+    // Add funding tx
+    let (cfg_tx, following_cfg) = {
+        let mut cfg = following_cfg;
+        cfg.funding_tx = Some(funding_tx.clone());
+        let cfg_tx = gen_update_config_tx(&sandbox, second_cfg_change_height, cfg.clone());
+        (cfg_tx, cfg)
+    };
+    let (_, following_addr) = following_cfg.redeem_script();
+    sandbox.add_height(&[cfg_tx]);
+
+    sandbox.fast_forward_to_height(second_cfg_change_height - 1);
+
+    // Apply new configuration
+    client.expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&following_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&funding_tx, &following_addr, 200)
+            ]
+        },
+        get_transaction_request(&funding_tx),
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&following_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&funding_tx, &following_addr, 200)
+            ]
+        },
+    ]);
+    sandbox.add_height(&[]);
+    sandbox.set_anchoring_cfg(following_cfg.clone());
+
+    // Generate new chain
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(10,
+                                                 block_hash_on_height(&sandbox, 10),
+                                                 &[],
+                                                 Some(initial_funding_tx.id()),
                                                  &following_addr);
     let new_chain_tx = sandbox.latest_anchored_tx();
 
