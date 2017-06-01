@@ -1,4 +1,4 @@
-# Complete tutorial
+# Anchoring btc service deployment
 
 # Contents
 * [Bitcoind deploy](#bitcoind-node-deploy)

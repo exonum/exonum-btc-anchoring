@@ -7,7 +7,7 @@ This crate implements a protocol for blockchain anchoring onto the `Bitcoin` blo
 * [Specification](http://exonum.com/doc/anchoring-spec/)
 * [Implementation details](http://exonum.com/doc/anchoring-impl/)
 * [Example code](examples/anchoring.rs)
-* [Testnet tutorial](doc/tutorial.md)
+* [Deployment](DEPLOY.md)
 
 # Usage
 The anchoring service depends on bitcoind. For correct working of the service you need to launch bitcoind with specific configuration, see [tutorial](doc/tutorial.md) for details.
