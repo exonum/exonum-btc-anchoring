@@ -100,6 +100,10 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
+    pub fn genesis_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
+        self.anchoring_config_by_height(0)
+    }
+
     pub fn anchoring_config_by_height(&self, height: u64) -> Result<AnchoringConfig, StorageError> {
         let schema = Schema::new(self.view);
         let stored = schema.configuration_by_height(height)?;

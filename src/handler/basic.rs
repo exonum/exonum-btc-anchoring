@@ -427,14 +427,12 @@ impl AnchoringHandler {
         let kind = TxKind::from(lect.clone());
         match kind {
             TxKind::FundingTx(tx) => {
-                let result = schema
-                    .lects(key)
-                    .get(0)?
-                    .and_then(|first_funding_tx| if tx == first_funding_tx.tx() {
-                                  Some(lect.into())
-                              } else {
-                                  None
-                              });
+                let genesis_cfg = schema.genesis_anchoring_config()?;
+                let result = if &tx == genesis_cfg.funding_tx() {
+                    Some(lect.into())
+                } else {
+                    None
+                };
                 Ok(result)
             }
             TxKind::Anchoring(tx) => {
@@ -525,7 +523,7 @@ fn actual_lect_is_transition(actual: &AnchoringConfig,
                     prev_lect_addr != actual_lect_addr
                 }
                 TxKind::FundingTx(tx) => {
-                    let genesis_cfg = schema.anchoring_config_by_height(0)?;
+                    let genesis_cfg = schema.genesis_anchoring_config()?;
                     if &tx == genesis_cfg.funding_tx() {
                         let prev_lect_addr = genesis_cfg.redeem_script().1;
                         prev_lect_addr != actual_lect_addr

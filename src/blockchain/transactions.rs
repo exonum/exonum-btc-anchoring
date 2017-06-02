@@ -114,7 +114,7 @@ impl MsgAnchoringUpdateLatest {
                 }
             }
             TxKind::FundingTx(tx) => {
-                let anchoring_cfg = anchoring_schema.anchoring_config_by_height(0)?;
+                let anchoring_cfg = anchoring_schema.genesis_anchoring_config()?;
                 if !verify_funding_tx(&tx, &anchoring_cfg)? {
                     warn!("Received lect with incorrect funding_tx, content={:#?}",
                           self);

@@ -99,7 +99,7 @@ impl AnchoringHandler {
                 tx.id()
             } else {
                 // Use initial funding tx as prev chain
-                let genesis_cfg = anchoring_schema.anchoring_config_by_height(0)?;
+                let genesis_cfg = anchoring_schema.genesis_anchoring_config()?;
                 genesis_cfg.funding_tx().id()
             }
         };
