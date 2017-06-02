@@ -120,7 +120,7 @@ fn send_anchoring_tx(client: &AnchoringRpc,
         }
         builder.into_transaction().unwrap()
     };
-    debug!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
+    trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
     let inputs = tx.inputs().collect::<Vec<_>>();
     let signatures = make_signatures(redeem_script, &tx, inputs.as_slice(), priv_keys);
@@ -130,7 +130,7 @@ fn send_anchoring_tx(client: &AnchoringRpc,
     assert_eq!(payload.block_height, block_height);
     assert_eq!(payload.block_hash, block_hash);
 
-    debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
+    trace!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
     let lect_tx = client
         .unspent_transactions(to)
         .unwrap()
@@ -841,7 +841,7 @@ fn test_rpc_anchoring_tx_chain_insufficient_funds() {
 
         let signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
         let tx = tx.send(&client, &redeem_script, signatures).unwrap();
-        debug!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
+        trace!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
         assert!(funding_tx
                     .has_unspent_info(&client, &addr)

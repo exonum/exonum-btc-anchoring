@@ -3,7 +3,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
-use exonum::blockchain::{Schema, StoredConfiguration};
+use exonum::blockchain::{Schema, StoredConfiguration, gen_prefix};
 use exonum::storage::{Error as StorageError, List, ListTable, Map, MapTable, MerkleTable, View};
 use exonum::crypto::Hash;
 
@@ -19,43 +19,65 @@ pub struct AnchoringSchema<'a> {
     view: &'a View,
 }
 
+// Define tables
 impl<'a> AnchoringSchema<'a> {
-    pub fn new(view: &'a View) -> AnchoringSchema {
-        AnchoringSchema { view: view }
-    }
-
     pub fn signatures(&self,
                       txid: &btc::TxId)
                       -> ListTable<MapTable<View, [u8], Vec<u8>>, MsgAnchoringSignature> {
-        let prefix = [&[ANCHORING_SERVICE_ID as u8, 2], txid.as_ref()].concat();
+        let prefix = self.gen_table_prefix(2, Some(txid.as_ref()));
         ListTable::new(MapTable::new(prefix, self.view))
     }
 
-    pub fn lects(&self, validator: u32) -> MerkleTable<MapTable<View, [u8], Vec<u8>>, LectContent> {
-        let mut prefix = vec![ANCHORING_SERVICE_ID as u8, 3, 0, 0, 0, 0];
-        BigEndian::write_u32(&mut prefix[2..6], validator);
+    pub fn lects(&self,
+                 validator_key: &btc::PublicKey)
+                 -> MerkleTable<MapTable<View, [u8], Vec<u8>>, LectContent> {
+        let prefix = self.gen_table_prefix(3, Some(validator_key.to_bytes().as_ref()));
         MerkleTable::new(MapTable::new(prefix, self.view))
     }
 
-    pub fn lect_indexes(&self, validator: u32) -> MapTable<View, btc::TxId, u64> {
-        let mut prefix = vec![ANCHORING_SERVICE_ID as u8, 4, 0, 0, 0, 0];
-        BigEndian::write_u32(&mut prefix[2..6], validator);
+    pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapTable<View, btc::TxId, u64> {
+        let prefix = self.gen_table_prefix(4, Some(validator_key.to_bytes().as_ref()));
         MapTable::new(prefix, self.view)
     }
 
     // List of known anchoring addresses
     pub fn known_addresses(&self) -> MapTable<View, str, Vec<u8>> {
-        let prefix = vec![ANCHORING_SERVICE_ID as u8, 5];
+        let prefix = self.gen_table_prefix(5, None);
         MapTable::new(prefix, self.view)
     }
 
     // Key is tuple (txid, validator_id, input), see `known_signature_id`.
     pub fn known_signatures(&self) -> MapTable<View, [u8], MsgAnchoringSignature> {
-        let prefix = vec![ANCHORING_SERVICE_ID as u8, 6];
+        let prefix = self.gen_table_prefix(6, None);
         MapTable::new(prefix, self.view)
     }
 
-    pub fn current_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
+    pub fn known_txs(&self) -> MapTable<View, btc::TxId, BitcoinTx> {
+        let prefix = self.gen_table_prefix(7, None);
+        MapTable::new(prefix, self.view)
+    }
+
+    fn gen_table_prefix(&self, ord: u8, suf: Option<&[u8]>) -> Vec<u8> {
+        gen_prefix(ANCHORING_SERVICE_ID, ord, suf)
+    }
+
+    fn known_signature_id(msg: &MsgAnchoringSignature) -> Vec<u8> {
+        let txid = msg.tx().id();
+
+        let mut id = vec![txid.as_ref(), [0; 8].as_ref()].concat();
+        BigEndian::write_u32(&mut id[32..36], msg.validator());
+        BigEndian::write_u32(&mut id[36..40], msg.input());
+        id
+    }
+}
+
+// Define operations
+impl<'a> AnchoringSchema<'a> {
+    pub fn new(view: &'a View) -> AnchoringSchema {
+        AnchoringSchema { view: view }
+    }
+
+    pub fn actual_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
         let actual = Schema::new(self.view).actual_configuration()?;
         Ok(self.parse_config(&actual))
     }
@@ -69,6 +91,19 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
+    pub fn previous_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
+        let schema = Schema::new(self.view);
+        if let Some(stored) = schema.previous_configuration()? {
+            Ok(Some(self.parse_config(&stored)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    pub fn genesis_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
+        self.anchoring_config_by_height(0)
+    }
+
     pub fn anchoring_config_by_height(&self, height: u64) -> Result<AnchoringConfig, StorageError> {
         let schema = Schema::new(self.view);
         let stored = schema.configuration_by_height(height)?;
@@ -78,30 +113,37 @@ impl<'a> AnchoringSchema<'a> {
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
         let (_, addr) = cfg.redeem_script();
         self.add_known_address(&addr)?;
-        for idx in 0..cfg.validators.len() {
-            self.add_lect(idx as u32, cfg.funding_tx().clone(), Hash::zero())?;
+        for validator_key in &cfg.validators {
+            self.add_lect(validator_key, cfg.funding_tx().clone(), Hash::zero())?;
         }
         Ok(())
     }
 
-    pub fn add_lect<Tx>(&self, validator: u32, tx: Tx, msg_hash: Hash) -> Result<(), StorageError>
+    pub fn add_lect<Tx>(&self,
+                        validator_key: &btc::PublicKey,
+                        tx: Tx,
+                        msg_hash: Hash)
+                        -> Result<(), StorageError>
         where Tx: Into<BitcoinTx>
     {
-        let lects = self.lects(validator);
+        let lects = self.lects(validator_key);
 
         let tx = tx.into();
         let idx = lects.len()?;
         let txid = tx.id();
-        lects.append(LectContent::new(&msg_hash, tx))?;
-        self.lect_indexes(validator).put(&txid, idx)
+        lects.append(LectContent::new(&msg_hash, tx.clone()))?;
+        self.known_txs().put(&txid, tx.clone())?;
+        self.lect_indexes(validator_key).put(&txid, idx)
     }
 
-    pub fn lect(&self, validator: u32) -> Result<BitcoinTx, StorageError> {
-        self.lects(validator).last().map(|x| x.unwrap().tx())
+    pub fn lect(&self, validator_key: &btc::PublicKey) -> Result<Option<BitcoinTx>, StorageError> {
+        self.lects(validator_key).last().map(|x| x.map(|x| x.tx()))
     }
 
-    pub fn prev_lect(&self, validator: u32) -> Result<Option<BitcoinTx>, StorageError> {
-        let lects = self.lects(validator);
+    pub fn prev_lect(&self,
+                     validator_key: &btc::PublicKey)
+                     -> Result<Option<BitcoinTx>, StorageError> {
+        let lects = self.lects(validator_key);
 
         let idx = lects.len()?;
         if idx > 1 {
@@ -112,25 +154,23 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
-    pub fn collect_lects(&self) -> Result<Option<BitcoinTx>, StorageError> {
-        let cfg = self.current_anchoring_config()?;
-        let validators_count = cfg.validators.len() as u32;
-
+    pub fn collect_lects(&self, cfg: &AnchoringConfig) -> Result<Option<BitcoinTx>, StorageError> {
         let mut lects = HashMap::new();
-        for validator_id in 0..validators_count {
-            let last_lect = self.lect(validator_id)?;
-            match lects.entry(last_lect.0) {
-                Entry::Occupied(mut v) => {
-                    *v.get_mut() += 1;
-                }
-                Entry::Vacant(v) => {
-                    v.insert(1);
+        for validator_key in &cfg.validators {
+            if let Some(last_lect) = self.lect(validator_key)? {
+                match lects.entry(last_lect.0) {
+                    Entry::Occupied(mut v) => {
+                        *v.get_mut() += 1;
+                    }
+                    Entry::Vacant(v) => {
+                        v.insert(1);
+                    }
                 }
             }
         }
 
         let lect = if let Some((lect, count)) = lects.iter().max_by_key(|&(_, v)| v) {
-            if *count >= ::majority_count(validators_count as u8) {
+            if *count >= cfg.majority_count() {
                 Some(BitcoinTx::from(lect.clone()))
             } else {
                 None
@@ -142,10 +182,10 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn find_lect_position(&self,
-                              validator: u32,
+                              validator_key: &btc::PublicKey,
                               txid: &btc::TxId)
                               -> Result<Option<u64>, StorageError> {
-        self.lect_indexes(validator).get(txid)
+        self.lect_indexes(validator_key).get(txid)
     }
 
     pub fn add_known_address(&self, addr: &btc::Address) -> Result<(), StorageError> {
@@ -172,21 +212,12 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
-        let cfg = self.current_anchoring_config()?;
+        let cfg = self.actual_anchoring_config()?;
         let mut lect_hashes = Vec::new();
-        for id in 0..cfg.validators.len() as u32 {
-            lect_hashes.push(self.lects(id).root_hash()?);
+        for key in &cfg.validators {
+            lect_hashes.push(self.lects(key).root_hash()?);
         }
         Ok(lect_hashes)
-    }
-
-    fn known_signature_id(msg: &MsgAnchoringSignature) -> Vec<u8> {
-        let txid = msg.tx().id();
-
-        let mut id = vec![txid.as_ref(), [0; 8].as_ref()].concat();
-        BigEndian::write_u32(&mut id[32..36], msg.validator());
-        BigEndian::write_u32(&mut id[36..40], msg.input());
-        id
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {

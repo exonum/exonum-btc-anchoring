@@ -3,7 +3,8 @@ use serde_json::{Value, to_value};
 
 use exonum::blockchain::{Schema, Transaction};
 use exonum::messages::Message;
-use exonum::storage::{Error as StorageError, List, View};
+use exonum::storage::{Error as StorageError, List, Map, View};
+use exonum::crypto::HexValue;
 
 use blockchain::dto::{AnchoringMessage, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use blockchain::schema::AnchoringSchema;
@@ -50,7 +51,7 @@ impl MsgAnchoringSignature {
             return Ok(());
         }
         // Verify signature
-        let anchoring_cfg = anchoring_schema.current_anchoring_config()?;
+        let anchoring_cfg = anchoring_schema.actual_anchoring_config()?;
         if let Some(pub_key) = anchoring_cfg.validators.get(id as usize) {
             let (redeem_script, addr) = anchoring_cfg.redeem_script();
             let tx_addr = tx.output_address(anchoring_cfg.network);
@@ -93,24 +94,27 @@ impl MsgAnchoringUpdateLatest {
         // Verify lect with actual cfg
         let schema = Schema::new(view);
         let actual_cfg = schema.actual_configuration()?;
-        if actual_cfg.validators.get(id as usize) != Some(self.from()) {
+        if actual_cfg.validators.get(self.validator() as usize) != Some(self.from()) {
             warn!("Received lect from non validator, content={:#?}", self);
             return Ok(());
         }
-        let anchoring_cfg = anchoring_schema.current_anchoring_config()?;
+        let anchoring_cfg = anchoring_schema.actual_anchoring_config()?;
+        let key = &anchoring_cfg.validators[id as usize];
         match TxKind::from(tx.clone()) {
             TxKind::Anchoring(tx) => {
                 if !verify_anchoring_tx_payload(&tx, &schema)? {
                     warn!("Received lect with incorrect payload, content={:#?}", self);
                     return Ok(());
                 }
-                if !verify_anchoring_tx_prev_hash(&tx, &anchoring_cfg, &anchoring_schema)? {
-                    warn!("Received lect with prev_lect without 2/3+ confirmations, content={:#?}",
+                if !verify_anchoring_tx_prev_hash(&tx, &anchoring_schema)? {
+                    warn!("Received lect with prev_lect without 2/3+ confirmations, \
+                            content={:#?}",
                           self);
                     return Ok(());
                 }
             }
             TxKind::FundingTx(tx) => {
+                let anchoring_cfg = anchoring_schema.genesis_anchoring_config()?;
                 if !verify_funding_tx(&tx, &anchoring_cfg)? {
                     warn!("Received lect with incorrect funding_tx, content={:#?}",
                           self);
@@ -120,11 +124,11 @@ impl MsgAnchoringUpdateLatest {
             TxKind::Other(_) => panic!("Incorrect fields deserialization."),
         }
 
-        if anchoring_schema.lects(id).len()? != self.lect_count() {
+        if anchoring_schema.lects(key).len()? != self.lect_count() {
             warn!("Received lect with wrong count, content={:#?}", self);
             return Ok(());
         }
-        anchoring_schema.add_lect(id, tx, self.hash())
+        anchoring_schema.add_lect(key, tx, self.hash())
     }
 }
 
@@ -156,22 +160,43 @@ impl Transaction for AnchoringMessage {
 }
 
 fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
-                                 anchoring_cfg: &AnchoringConfig,
                                  anchoring_schema: &AnchoringSchema)
                                  -> Result<bool, StorageError> {
-    let count = anchoring_cfg.validators.len() as u32;
-    let prev_txid = tx.prev_hash();
+    // If tx has `prev_tx_chain` should be used it instead of `prev_hash`.
+    let prev_txid = tx.payload().prev_tx_chain.unwrap_or_else(|| tx.prev_hash());
+    // Get `AnchoringConfig` for prev_tx
+    let anchoring_cfg = {
+        let cfg_height = anchoring_schema
+            .known_txs()
+            .get(&prev_txid)?
+            .and_then(|tx| {
+                          let height = match TxKind::from(tx) {
+                              TxKind::Anchoring(tx) => tx.payload().block_height,
+                              TxKind::FundingTx(_) => 0,
+                              TxKind::Other(tx) => panic!("Incorrect lect content={:#?}", tx),
+                          };
+                          Some(height)
+                      });
+
+        if let Some(height) = cfg_height {
+            anchoring_schema.anchoring_config_by_height(height)?
+        } else {
+            warn!("Prev lect is unknown txid={:?}", prev_txid);
+            return Ok(false);
+        }
+    };
+
     let prev_lects_count = {
         let mut prev_lects_count = 0;
-        for id in 0..count {
-            if let Some(prev_lect_idx) = anchoring_schema.find_lect_position(id, &prev_txid)? {
+        for key in &anchoring_cfg.validators {
+            if let Some(prev_lect_idx) = anchoring_schema.find_lect_position(key, &prev_txid)? {
                 let prev_lect = anchoring_schema
-                    .lects(id)
+                    .lects(key)
                     .get(prev_lect_idx)?
                     .expect(&format!("Lect with index {} is absent in lects table for validator \
                                      {}",
                                     prev_lect_idx,
-                                    id));
+                                    key.to_hex()));
                 assert_eq!(prev_txid,
                            prev_lect.tx().id(),
                            "Inconsistent reference to previous lect in Exonum");
@@ -181,7 +206,7 @@ fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
         }
         prev_lects_count
     };
-    Ok(prev_lects_count >= ::majority_count(count as u8))
+    Ok(prev_lects_count >= anchoring_cfg.majority_count())
 }
 
 fn verify_anchoring_tx_payload(tx: &AnchoringTx, schema: &Schema) -> Result<bool, StorageError> {

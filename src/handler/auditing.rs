@@ -35,7 +35,7 @@ impl AnchoringHandler {
 
     fn check_funding_lect(&self, tx: FundingTx, context: &NodeState) -> Result<(), ServiceError> {
         let cfg = AnchoringSchema::new(context.view())
-            .anchoring_config_by_height(0)?;
+            .genesis_anchoring_config()?;
         let (_, addr) = cfg.redeem_script();
         if &tx != cfg.funding_tx() {
             let e = HandlerError::IncorrectLect {

@@ -11,7 +11,7 @@ extern crate secp256k1;
 extern crate rand;
 extern crate libc;
 
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::cell::{Ref, RefCell, RefMut};
 
@@ -67,7 +67,7 @@ pub struct AnchoringSandbox {
     pub handler: Arc<Mutex<AnchoringHandler>>,
 }
 
-/// Generates config for 4 validators and 10000 funds
+/// Generates config for 4 validators and 4000 funds
 pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
                                     -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let requests = vec![
@@ -177,9 +177,7 @@ impl AnchoringSandbox {
     }
 
     pub fn priv_keys(&self, addr: &btc::Address) -> Vec<btc::PrivateKey> {
-        self.state
-            .borrow()
-            .nodes
+        self.nodes()
             .iter()
             .map(|cfg| cfg.private_keys[&addr.to_base58check()].clone())
             .collect::<Vec<_>>()
@@ -229,6 +227,11 @@ impl AnchoringSandbox {
         height - height % frequency + frequency
     }
 
+    pub fn latest_anchoring_height(&self) -> u64 {
+        let height = self.sandbox.current_height();
+        self.current_cfg().latest_anchoring_height(height)
+    }
+
     pub fn latest_anchored_tx(&self) -> AnchoringTx {
         self.state
             .borrow()
@@ -261,14 +264,23 @@ impl AnchoringSandbox {
                                             addr: &btc::Address)
                                             -> (AnchoringTx, Vec<RawTransaction>) {
         let (propose_tx, signed_tx, signs) = {
-            let prev_tx = self.state
+            let (prev_tx, prev_tx_input) = self.state
                 .borrow()
                 .latest_anchored_tx
                 .clone()
-                .map(|x| (x.0).0)
-                .unwrap_or(self.current_cfg().funding_tx().0.clone());
+                .map(|x| {
+                         let tx = (x.0).0;
+                         let input = 0;
+                         (tx, input)
+                     })
+                .unwrap_or_else(|| {
+                                    let cfg = self.current_cfg();
+                                    let tx = cfg.funding_tx().clone();
+                                    let input = tx.find_out(&cfg.redeem_script().1).unwrap();
+                                    (tx.0.clone(), input)
+                                });
 
-            let mut builder = TransactionBuilder::with_prev_tx(&prev_tx, 0)
+            let mut builder = TransactionBuilder::with_prev_tx(&prev_tx, prev_tx_input)
                 .payload(height, block_hash)
                 .prev_tx_chain(prev_tx_chain)
                 .send_to(addr.clone())
@@ -346,5 +358,11 @@ impl Deref for AnchoringSandbox {
 
     fn deref(&self) -> &Sandbox {
         &self.sandbox
+    }
+}
+
+impl DerefMut for AnchoringSandbox {
+    fn deref_mut(&mut self) -> &mut Sandbox {
+        &mut self.sandbox
     }
 }

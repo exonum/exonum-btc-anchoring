@@ -77,7 +77,8 @@ impl PublicApi {
     pub fn actual_lect(&self) -> Result<Option<AnchoringInfo>, ApiError> {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
-        Ok(schema.collect_lects()?.map(AnchoringInfo::from))
+        let actual_cfg = &schema.actual_anchoring_config()?;
+        Ok(schema.collect_lects(actual_cfg)?.map(AnchoringInfo::from))
     }
 
     /// Returns current lect for validator with given `id`.
@@ -87,11 +88,13 @@ impl PublicApi {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
 
-        if let Some(lect) = schema.lects(id).last()? {
-            Ok(LectInfo::from(lect))
-        } else {
-            Err(error::Error::UnknownValidatorId(id).into())
+        let actual_cfg = schema.actual_anchoring_config()?;
+        if let Some(key) = actual_cfg.validators.get(id as usize) {
+            if let Some(lect) = schema.lects(key).last()? {
+                return Ok(LectInfo::from(lect));
+            }
         }
+        Err(error::Error::UnknownValidatorId(id).into())
     }
 
     /// Returns actual anchoring address
@@ -100,7 +103,7 @@ impl PublicApi {
     pub fn actual_address(&self) -> Result<btc::Address, ApiError> {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
-        Ok(schema.current_anchoring_config()?.redeem_script().1)
+        Ok(schema.actual_anchoring_config()?.redeem_script().1)
     }
 
     /// Returns the following anchoring address if the node is in transition state.

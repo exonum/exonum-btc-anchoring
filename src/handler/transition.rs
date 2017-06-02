@@ -36,7 +36,9 @@ impl AnchoringHandler {
             self.try_finalize_proposal_tx(proposal, &multisig, state)?;
         } else {
             // Or try to create proposal
-            match self.collect_lects_for_validator(self.validator_id(state), state)? {
+            match self.collect_lects_for_validator(self.validator_key(multisig.common, state),
+                                                   multisig.common,
+                                                   state)? {
                 LectKind::Anchoring(lect) => {
                     if lect.output_address(multisig.common.network) == multisig.addr {
                         return Ok(());
@@ -77,18 +79,31 @@ impl AnchoringHandler {
     }
 
     pub fn handle_recovering_state(&mut self,
-                                   cfg: AnchoringConfig,
+                                   prev_cfg: AnchoringConfig,
+                                   actual_cfg: AnchoringConfig,
                                    state: &mut NodeState)
                                    -> Result<(), ServiceError> {
-        let multisig: MultisigAddress = self.multisig_address(&cfg);
+        let multisig: MultisigAddress = self.multisig_address(&actual_cfg);
+
+        if state.height() % self.node.check_lect_frequency == 0 {
+            // First of all we try to update our lect and actual configuration
+            self.update_our_lect(&multisig, state)?;
+        }
 
         trace!("Starting a new tx chain to addr={} from scratch",
                multisig.addr.to_base58check());
 
-        let lect_id = AnchoringSchema::new(state.view())
-            .lect(self.validator_id(state))?
-            .id();
-        self.try_create_anchoring_tx_chain(&multisig, Some(lect_id), state)?;
+        let lect_txid = {
+            let anchoring_schema = AnchoringSchema::new(state.view());
+            if let Some(tx) = anchoring_schema.collect_lects(&prev_cfg)? {
+                tx.id()
+            } else {
+                // Use initial funding tx as prev chain
+                let genesis_cfg = anchoring_schema.genesis_anchoring_config()?;
+                genesis_cfg.funding_tx().id()
+            }
+        };
+        self.try_create_anchoring_tx_chain(&multisig, Some(lect_txid), state)?;
 
         // Try to finalize new tx chain propose if it exist
         if let Some(proposal) = self.proposal_tx.clone() {

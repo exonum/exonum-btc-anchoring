@@ -17,9 +17,9 @@ use exonum::messages::{Message, RawTransaction};
 use exonum::storage::StorageValue;
 use sandbox::config_updater::TxConfig;
 
+use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
-use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
 use anchoring_btc_service::error::HandlerError;
 use anchoring_btc_service::details::btc::transactions::BitcoinTx;
 use anchoring_btc_sandbox::AnchoringSandbox;
@@ -67,7 +67,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
             method: "importaddress",
             params: [&following_addr, "multisig", false, false]
         },
-        gen_confirmations_request(anchored_tx.clone(), 10),
+        confirmations_request(&anchored_tx, 10),
     ]);
     sandbox.add_height(&[cfg_tx]);
 
@@ -80,18 +80,11 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
                                           &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
-    client.expect(vec![
-        gen_confirmations_request(anchored_tx.clone(), 100),
-        request! {
-            method: "listunspent",
-            params: [0, 9999999, [following_addr]],
-            response: []
-        },
-    ]);
+    client.expect(vec![confirmations_request(&anchored_tx, 100)]);
     sandbox.add_height(&[]);
     sandbox.broadcast(signatures[0].clone());
 
-    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
+    client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
@@ -102,18 +95,12 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
              })
         .collect::<Vec<_>>();
     sandbox.broadcast(lects[0].clone());
-    client.expect(vec![gen_confirmations_request(transition_tx.clone(), 100)]);
+    client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&lects);
     sandbox.fast_forward_to_height(cfg_change_height);
 
     sandbox.set_anchoring_cfg(following_cfg);
-    client.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&transition_tx.txid(), 0],
-            response: transition_tx.to_hex()
-        },
-    ]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height_as_auditor(&[]);
 
     assert_eq!(sandbox.handler().errors, Vec::new());

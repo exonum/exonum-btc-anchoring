@@ -86,7 +86,7 @@ fn response_body(response: IronResponse) -> serde_json::Value {
         let mut buf = Vec::new();
         body.write_body(&mut buf).unwrap();
         let s = String::from_utf8(buf).unwrap();
-        debug!("Received response body:'{}'", &s);
+        trace!("Received response body:'{}'", &s);
         serde_json::from_str(&s).unwrap()
     } else {
         serde_json::Value::Null
@@ -194,7 +194,7 @@ fn test_api_public_get_following_address_existent() {
             method: "importaddress",
             params: [&following_addr.to_base58check(), "multisig", false, false]
         },
-        gen_confirmations_request(sandbox.latest_anchored_tx(), 0),
+        confirmations_request(&sandbox.latest_anchored_tx(), 0),
     ]);
     sandbox.add_height(&[cfg_tx]);
 
