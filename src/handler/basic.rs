@@ -352,8 +352,8 @@ impl AnchoringHandler {
                      -> Result<Option<BitcoinTx>, ServiceError> {
         let lects: Vec<_> = self.client().unspent_transactions(&multisig.addr)?;
         for lect in lects {
-            if let Some(tx) = self.find_lect_deep(lect, multisig, state)? {
-                return Ok(Some(tx));
+            if self.transaction_is_lect(&lect, multisig, state)? {
+                return Ok(Some(lect));
             }
         }
         Ok(None)
@@ -408,40 +408,32 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    /// Deep search that check entire previous transaction chain that we know.
-    /// Each transaction in chain must be anchoring and we must know its output address.
-    /// The first transaction in chain is initial `funding_tx`.
-    fn find_lect_deep(&self,
-                      lect: BitcoinTx,
-                      multisig: &MultisigAddress,
-                      state: &NodeState)
-                      -> Result<Option<BitcoinTx>, ServiceError> {
+    fn transaction_is_lect(&self,
+                           lect: &BitcoinTx,
+                           multisig: &MultisigAddress,
+                           state: &NodeState)
+                           -> Result<bool, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let key = self.validator_key(multisig.common, state);
 
         // Check that we know tx
         if schema.find_lect_position(key, &lect.id())?.is_some() {
-            return Ok(Some(lect.into()));
+            return Ok(true);
         }
 
         let kind = TxKind::from(lect.clone());
         match kind {
             TxKind::FundingTx(tx) => {
                 let genesis_cfg = schema.genesis_anchoring_config()?;
-                let result = if &tx == genesis_cfg.funding_tx() {
-                    Some(lect.into())
-                } else {
-                    None
-                };
-                Ok(result)
+                Ok(genesis_cfg.funding_tx() == &tx)
             }
             TxKind::Anchoring(tx) => {
                 let lect_addr = tx.output_address(multisig.common.network);
                 if !schema.is_address_known(&lect_addr)? {
-                    return Ok(None);
+                    return Ok(false);
                 }
                 if schema.find_lect_position(key, &tx.prev_hash())?.is_some() {
-                    return Ok(Some(lect.into()));
+                    return Ok(true);
                 }
 
                 let txid = tx.prev_hash();
@@ -449,7 +441,7 @@ impl AnchoringHandler {
                        .get_transaction(&txid.be_hex_string())? {
                     tx
                 } else {
-                    return Ok(None);
+                    return Ok(false);
                 };
 
                 trace!("Check prev lect={:#?}", prev_lect);
@@ -457,7 +449,7 @@ impl AnchoringHandler {
                 let lect_height = match TxKind::from(prev_lect) {
                     TxKind::FundingTx(_) => 0,
                     TxKind::Anchoring(tx) => tx.payload().block_height,
-                    TxKind::Other(_) => return Ok(None),
+                    TxKind::Other(_) => return Ok(false),
                 };
                 let cfg = schema.anchoring_config_by_height(lect_height)?;
 
@@ -468,13 +460,9 @@ impl AnchoringHandler {
                     }
                 }
 
-                if prev_lect_count >= cfg.majority_count() {
-                    Ok(lect.into())
-                } else {
-                    Ok(None)
-                }
+                Ok(prev_lect_count >= cfg.majority_count())
             }
-            TxKind::Other(_) => Ok(None),
+            TxKind::Other(_) => Ok(false),
         }
     }
 
