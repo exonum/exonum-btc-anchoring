@@ -41,7 +41,7 @@ fn main() {
     // Generate blockchain configuration
     let client = AnchoringRpc::new(rpc_config.clone());
     let (anchoring_common, anchoring_nodes) =
-        gen_anchoring_testnet_config(&client, BitcoinNetwork::Testnet, count, total_funds);
+        gen_anchoring_testnet_config(&client, BitcoinNetwork::Testnet, count, total_funds).unwrap();
     let node_cfgs = generate_testnet_config(count, start_port);
 
     // Create testnet threads

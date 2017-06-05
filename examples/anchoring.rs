@@ -9,6 +9,8 @@ extern crate exonum;
 extern crate anchoring_btc_service;
 extern crate configuration_service;
 
+use std::process::exit;
+
 use clap::{App, Arg, SubCommand};
 use bitcoin::network::constants::Network;
 use bitcoin::util::base58::ToBase58;
@@ -97,17 +99,24 @@ fn main() {
                 .parse()
                 .unwrap();
 
-            let rpc = AnchoringRpcConfig {
+            let rpc_config = AnchoringRpcConfig {
                 host: host,
                 username: user,
                 password: passwd,
             };
+
+            let anchoring_rpc = AnchoringRpc::new(rpc_config.clone());
             let (anchoring_common, anchoring_nodes) =
-                gen_anchoring_testnet_config(&AnchoringRpc::new(rpc.clone()),
+                match gen_anchoring_testnet_config(&anchoring_rpc,
                                              BitcoinNetwork::Testnet,
                                              count,
-                                             total_funds);
-
+                                             total_funds) {
+                    Ok((anchoring_common, anchoring_nodes)) => (anchoring_common, anchoring_nodes),
+                    Err(e) => {
+                        println!("Error while generating config: {}", e);
+                        exit(1);
+                    }
+                };
             let node_cfgs = generate_testnet_config(count, start_port);
             let dir = dir.join("validators");
             for (idx, node_cfg) in node_cfgs.into_iter().enumerate() {

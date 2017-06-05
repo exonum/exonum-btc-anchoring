@@ -6,6 +6,7 @@ use serde_json;
 use serde_json::value::Value;
 use rand::{Rng, thread_rng};
 use router::Router;
+use bitcoinrpc::Error as RpcError;
 
 use exonum::blockchain::{ApiContext, NodeState, Service, Transaction};
 use exonum::crypto::Hash;
@@ -138,7 +139,7 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
                                                 count: u8,
                                                 total_funds: u64,
                                                 rng: &mut R)
-                                                -> (AnchoringConfig, Vec<AnchoringNodeConfig>)
+                                                -> Result<(AnchoringConfig, Vec<AnchoringNodeConfig>), RpcError>
     where R: Rng
 {
     let network = network.into();
@@ -150,7 +151,6 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
     let mut pub_keys = Vec::new();
     let mut node_cfgs = Vec::new();
     let mut priv_keys = Vec::new();
-
     for _ in 0..count as usize {
         let (pub_key, priv_key) = btc::gen_btc_keypair_with_rng(network, rng);
 
@@ -158,21 +158,21 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
         node_cfgs.push(AnchoringNodeConfig::new(Some(rpc.clone())));
         priv_keys.push(priv_key.clone());
     }
-
     let majority_count = ::majority_count(count);
-    let (_, address) = client
-        .create_multisig_address(network.into(), majority_count, pub_keys.iter())
-        .unwrap();
-    let tx = FundingTx::create(client, &address, total_funds).unwrap();
-
-    let genesis_cfg = AnchoringConfig::new_with_funding_tx(network, pub_keys, tx);
-    for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
-        node_cfg
-            .private_keys
-            .insert(address.to_base58check(), priv_keys[idx].clone());
+    match client
+        .create_multisig_address(network.into(), majority_count, pub_keys.iter()) {
+        Ok((_, address)) => {
+            let tx = FundingTx::create(client, &address, total_funds).unwrap();
+            let genesis_cfg = AnchoringConfig::new_with_funding_tx(network, pub_keys, tx);
+            for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
+                node_cfg
+                    .private_keys
+                    .insert(address.to_base58check(), priv_keys[idx].clone());
+            }
+            Ok((genesis_cfg, node_cfgs))
+        },
+        Err(e) => return Err(e)
     }
-
-    (genesis_cfg, node_cfgs)
 }
 
 /// Same as [`gen_anchoring_testnet_config_with_rng`](fn.gen_anchoring_testnet_config_with_rng.html)
@@ -181,7 +181,7 @@ pub fn gen_anchoring_testnet_config(client: &AnchoringRpc,
                                     network: btc::Network,
                                     count: u8,
                                     total_funds: u64)
-                                    -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
+                                    -> Result<(AnchoringConfig, Vec<AnchoringNodeConfig>), RpcError> {
     let mut rng = thread_rng();
     gen_anchoring_testnet_config_with_rng(client, network, count, total_funds, &mut rng)
 }
