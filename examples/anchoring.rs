@@ -45,6 +45,10 @@ pub struct ServicesConfig {
     pub anchoring_service: AnchoringServiceConfig,
 }
 
+// if rpc node is in `test` mode,
+// and could send money for our purposes.
+static ANCHORING_NODE_TEST: bool = true;
+
 fn main() {
     exonum::crypto::init();
     helpers::init_logger().unwrap();
@@ -217,22 +221,21 @@ fn main() {
                             .try_into()
                             .unwrap();
 
-            let network: String = template.services.get("NETWORK")
-                            .unwrap()
+            let network: String = template.services.get("ANCHORING_NETWORK")
+                            .expect("Anchoring network not fount")
                             .clone()
                             .try_into()
                             .unwrap();
             let total_funds: u64 = template.services.get("ANCHORING_FUNDS")
-                            .unwrap()
+                            .expect("Anchoring funds not fount")
                             .clone()
                             .try_into()
                             .unwrap();
             let fee: u64 = template.services.get("ANCHORING_FEE")
-                            .unwrap()
+                            .expect("Anchoring fee not fount")
                             .clone()
                             .try_into()
                             .unwrap();
-            
 
             let network = match network.as_ref() {
                 "testnet" => Network::Testnet,
@@ -240,10 +243,9 @@ fn main() {
                 _ => panic!("Wrong network type"),
             };
 
-            let priv_key: PrivateKey = PrivateKey::from_base58(&sec_key).unwrap();
+            let priv_key: PrivateKey = PrivateKey::from_base58check(&sec_key).unwrap();
             //\TODO: validate config
             let _pub_key: PublicKey = HexValue::from_hex(&pub_key).unwrap();
-
             let pub_keys: Vec<PublicKey> = template.validators()
                 .iter()
                 .map(|(_, ref v)|{
@@ -267,9 +269,15 @@ fn main() {
             let (_, address) = client
                     .create_multisig_address(network, majority_count, pub_keys.iter())
                     .unwrap();
-            let tx = FundingTx::create(&client, &address, total_funds).unwrap();
+            
 
-            let mut genesis_cfg = AnchoringConfig::new_with_funding_tx(network, pub_keys, tx);
+            let mut genesis_cfg = if ANCHORING_NODE_TEST {
+                let tx = FundingTx::create(&client, &address, total_funds).unwrap();
+                AnchoringConfig::new_with_funding_tx(network, pub_keys, tx)
+            }
+            else {
+                AnchoringConfig::new(network, pub_keys)
+            };
 
             anchoring_config
                     .private_keys
@@ -302,7 +310,7 @@ fn main() {
                                 Value::try_from(s.to_base58check()).unwrap()),
                            ("anchoring_pub_key".to_owned(), 
                                 Value::try_from(p.to_hex()).unwrap())].into_iter().collect();
-            KeyGeneratorCommand::execute(matches, pub_map, sec_map );
+            KeyGeneratorCommand::execute(matches, sec_map, pub_map );
         }
         _ => {
             panic!("Wrong subcommand");
