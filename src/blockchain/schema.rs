@@ -14,13 +14,14 @@ use blockchain::dto::{LectContent, MsgAnchoringSignature};
 use details::btc;
 use details::btc::transactions::BitcoinTx;
 
-#[doc(hidden)]
+/// An anchoring information schema.
 pub struct AnchoringSchema<'a> {
     view: &'a View,
 }
 
-// Define tables
+// Data tables section.
 impl<'a> AnchoringSchema<'a> {
+    /// Returns table that contains signatures for the anchoring transaction with the given `normalized` `txid`. 
     pub fn signatures(&self,
                       txid: &btc::TxId)
                       -> ListTable<MapTable<View, [u8], Vec<u8>>, MsgAnchoringSignature> {
@@ -28,6 +29,7 @@ impl<'a> AnchoringSchema<'a> {
         ListTable::new(MapTable::new(prefix, self.view))
     }
 
+    /// Returns table that saves a list of `lects` for the validator with the given `public_key`.  
     pub fn lects(&self,
                  validator_key: &btc::PublicKey)
                  -> MerkleTable<MapTable<View, [u8], Vec<u8>>, LectContent> {
@@ -35,23 +37,27 @@ impl<'a> AnchoringSchema<'a> {
         MerkleTable::new(MapTable::new(prefix, self.view))
     }
 
+    /// Returns table that keeps the `lect` index for every anchoring `txid` for the validator.
+    /// with given `public_key`.
     pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapTable<View, btc::TxId, u64> {
         let prefix = self.gen_table_prefix(4, Some(validator_key.to_bytes().as_ref()));
         MapTable::new(prefix, self.view)
     }
 
-    // List of known anchoring addresses
+    /// Returns table that caches known anchoring addresses.
     pub fn known_addresses(&self) -> MapTable<View, str, Vec<u8>> {
         let prefix = self.gen_table_prefix(5, None);
         MapTable::new(prefix, self.view)
     }
 
-    // Key is tuple (txid, validator_id, input), see `known_signature_id`.
+    /// Returns the table of known signatures, where key is the tuple (txid, validator_id, input), 
+    /// see [`known_signature_id`](fn) for details.
     pub fn known_signatures(&self) -> MapTable<View, [u8], MsgAnchoringSignature> {
         let prefix = self.gen_table_prefix(6, None);
         MapTable::new(prefix, self.view)
     }
 
+    /// Returns the table that keeps the `anchoring transaction` for any known `txid`.
     pub fn known_txs(&self) -> MapTable<View, btc::TxId, BitcoinTx> {
         let prefix = self.gen_table_prefix(7, None);
         MapTable::new(prefix, self.view)
@@ -71,17 +77,20 @@ impl<'a> AnchoringSchema<'a> {
     }
 }
 
-// Define operations
+// Business-logic section.
 impl<'a> AnchoringSchema<'a> {
+    /// Creates information schema for the given `View`.
     pub fn new(view: &'a View) -> AnchoringSchema {
         AnchoringSchema { view: view }
     }
 
+    /// Returns an actual anchoring configuration.
     pub fn actual_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
         let actual = Schema::new(self.view).actual_configuration()?;
         Ok(self.parse_config(&actual))
     }
 
+    /// Returns the nearest following configuration if it exist.
     pub fn following_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
         let schema = Schema::new(self.view);
         if let Some(stored) = schema.following_configuration()? {
@@ -91,6 +100,7 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
+    /// Returns the previous anchoring configuration if it exist.
     pub fn previous_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
         let schema = Schema::new(self.view);
         if let Some(stored) = schema.previous_configuration()? {
@@ -100,16 +110,19 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
+    /// Returns the anchoring configuration from the `genesis` block.
     pub fn genesis_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
         self.anchoring_config_by_height(0)
     }
 
+    /// Returns the configuration that is the actual for the given height.
     pub fn anchoring_config_by_height(&self, height: u64) -> Result<AnchoringConfig, StorageError> {
         let schema = Schema::new(self.view);
         let stored = schema.configuration_by_height(height)?;
         Ok(self.parse_config(&stored))
     }
 
+    /// Creates and commits the genesis anchoring configuration from the proposed `cfg`.
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
         let (_, addr) = cfg.redeem_script();
         self.add_known_address(&addr)?;
@@ -119,6 +132,7 @@ impl<'a> AnchoringSchema<'a> {
         Ok(())
     }
 
+    /// Adds `lect` from validator with the given `public key`.
     pub fn add_lect<Tx>(&self,
                         validator_key: &btc::PublicKey,
                         tx: Tx,
@@ -136,10 +150,12 @@ impl<'a> AnchoringSchema<'a> {
         self.lect_indexes(validator_key).put(&txid, idx)
     }
 
+    /// Returns `lect` for validator with the given `public_key`.
     pub fn lect(&self, validator_key: &btc::PublicKey) -> Result<Option<BitcoinTx>, StorageError> {
         self.lects(validator_key).last().map(|x| x.map(|x| x.tx()))
     }
 
+    /// Returns previous `lect` for validator with the given `public_key`.
     pub fn prev_lect(&self,
                      validator_key: &btc::PublicKey)
                      -> Result<Option<BitcoinTx>, StorageError> {
@@ -154,6 +170,7 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
+    /// Returns the current `lect` if it matches `+2/3` of the current set of validators.
     pub fn collect_lects(&self, cfg: &AnchoringConfig) -> Result<Option<BitcoinTx>, StorageError> {
         let mut lects = HashMap::new();
         for validator_key in &cfg.validators {
@@ -181,6 +198,7 @@ impl<'a> AnchoringSchema<'a> {
         Ok(lect)
     }
 
+    /// Returns position in `lects` table for transaction with the given `txid`.
     pub fn find_lect_position(&self,
                               validator_key: &btc::PublicKey,
                               txid: &btc::TxId)
@@ -188,16 +206,19 @@ impl<'a> AnchoringSchema<'a> {
         self.lect_indexes(validator_key).get(txid)
     }
 
+    /// Marks address as known.
     pub fn add_known_address(&self, addr: &btc::Address) -> Result<(), StorageError> {
         self.known_addresses().put(&addr.to_base58check(), vec![])
     }
 
+    /// Checks that address is known.
     pub fn is_address_known(&self, addr: &btc::Address) -> Result<bool, StorageError> {
         self.known_addresses()
             .get(&addr.to_base58check())
             .map(|x| x.is_some())
     }
 
+    /// Adds signature to known if it is correct.
     pub fn add_known_signature(&self, msg: MsgAnchoringSignature) -> Result<(), StorageError> {
         let ntxid = msg.tx().nid();
         let signature_id = Self::known_signature_id(&msg);
@@ -211,6 +232,9 @@ impl<'a> AnchoringSchema<'a> {
         Ok(())
     }
 
+    /// Returns the `state_hash` table for anchoring tables.
+    /// 
+    /// It contains a list of `root_hash` of the actual `lects` tables.
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
         let cfg = self.actual_anchoring_config()?;
         let mut lect_hashes = Vec::new();

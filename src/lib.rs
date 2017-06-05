@@ -132,7 +132,6 @@ extern crate exonum;
 
 #[doc(hidden)]
 pub mod details;
-#[doc(hidden)]
 pub mod blockchain;
 #[doc(hidden)]
 pub mod local_storage;

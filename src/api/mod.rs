@@ -1,4 +1,4 @@
-//! An anchoring api rest implementation.
+//! An anchoring rest api implementation.
 
 use router::Router;
 use iron::prelude::*;
