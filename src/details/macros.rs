@@ -190,53 +190,41 @@ macro_rules! implement_tx_wrapper {
         }
     }
 
-    impl<'a> ::exonum::messages::Field<'a> for $name {
+    impl<'a> ::exonum::stream_struct::Field<'a> for $name {
         fn field_size() -> usize {
             8
         }
 
-        fn read(buffer: &'a [u8], from: usize, to: usize) -> $name {
-            let data = <&[u8] as ::exonum::messages::Field>::read(buffer, from, to);
+        fn read(buffer: &'a [u8], 
+                from: ::exonum::stream_struct::Offset, 
+                to: ::exonum::stream_struct::Offset)
+            -> $name {
+            let data = <&[u8] as ::exonum::stream_struct::Field>::read(buffer, from, to);
             <$name as StorageValue>::deserialize(data.to_vec())
         }
 
         fn write(&self, buffer: &'a mut Vec<u8>, from: usize, to: usize) {
-            <&[u8] as ::exonum::messages::Field>::write(&self.clone().serialize().as_slice(),
+            <&[u8] as ::exonum::stream_struct::Field>::write(&self.clone().serialize().as_slice(),
             buffer, from, to);
         }
 
-        fn check(buffer: &'a [u8], from: usize, to: usize) ->
-            Result<(), ::exonum::messages::Error> {
-            let buf: Vec<u8> = ::exonum::messages::Field::read(buffer, from, to);
+        fn check(buffer: &'a [u8], 
+                 ::exonum::stream_struct::CheckedOffset: usize, 
+                 ::exonum::stream_struct::CheckedOffset: usize) 
+            -> Result<(), ::exonum::stream_struct::Error> {
+            let buf: Vec<u8> = ::exonum::stream_struct::Field::read(buffer, from, to);
             let raw_tx = deserialize::<RawBitcoinTx>(buf.as_ref())
-                .map_err(|_| ::exonum::messages::Error::IncorrectMessageType { message_type: 1 })?;
+                .map_err(|_| "Incorrect bitcoin transaction".into())?;
+
             if <$name as TxFromRaw>::from_raw(raw_tx).is_some() {
                 Ok(())
             } else {
-                Err(::exonum::messages::Error::IncorrectMessageType { message_type: 2 })
+                Err("Incorrect bitcoin transaction".into())
             }
         }
     }
 
-    impl<'a> ::exonum::serialize::json::ExonumJsonSerialize for $name {
-        fn serialize<S: ::serde::Serializer>(&self, ser: S) -> Result<S::Ok, S::Error> {
-            ser.serialize_str(&self.to_hex())
-        }
-    }
-
-    impl ::exonum::serialize::json::ExonumJsonDeserializeField for $name {
-        fn deserialize_field<B>(value: &::serde_json::Value,
-                                buffer: &mut B,
-                                from: usize,
-                                to: usize)
-                                -> Result<(), Box<::std::error::Error>>
-            where B: ::exonum::serialize::json::WriteBufferWrapper
-        {
-            let tx = ::serde_json::from_value(value.clone())?;
-            buffer.write(from, to, <$name as StorageValue>::serialize(tx));
-            Ok(())
-        }
-    }
+    implement_exonum_serializer! { $name }
 )
 }
 

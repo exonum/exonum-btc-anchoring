@@ -15,7 +15,7 @@ use secp256k1::Secp256k1;
 
 use exonum::crypto::{Hash, HexValue, hash};
 use exonum::storage::StorageValue;
-use exonum::messages::Field;
+use exonum::stream_struct::Field;
 use exonum::helpers;
 
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};

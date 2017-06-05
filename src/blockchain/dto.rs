@@ -1,7 +1,8 @@
 use std::fmt;
 
 use exonum::crypto::{Hash, PublicKey};
-use exonum::messages::{Error as MessageError, FromRaw, Message, RawTransaction};
+use exonum::messages::{FromRaw, Message, RawTransaction};
+use exonum::stream_struct::Error as StreamStructError;
 
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
 
@@ -98,7 +99,7 @@ impl Message for AnchoringMessage {
 }
 
 impl FromRaw for AnchoringMessage {
-    fn from_raw(raw: RawTransaction) -> ::std::result::Result<AnchoringMessage, MessageError> {
+    fn from_raw(raw: RawTransaction) -> ::std::result::Result<AnchoringMessage, StreamStructError> {
         match raw.message_type() {
             ANCHORING_MESSAGE_SIGNATURE => {
                 Ok(AnchoringMessage::Signature(MsgAnchoringSignature::from_raw(raw)?))
@@ -106,7 +107,7 @@ impl FromRaw for AnchoringMessage {
             ANCHORING_MESSAGE_LATEST => {
                 Ok(AnchoringMessage::UpdateLatest(MsgAnchoringUpdateLatest::from_raw(raw)?))
             }
-            _ => Err(MessageError::IncorrectMessageType { message_type: raw.message_type() }),
+            _ => Err(StreamStructError::IncorrectMessageType { message_type: raw.message_type() }),
         }
     }
 }

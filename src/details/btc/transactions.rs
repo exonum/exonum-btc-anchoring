@@ -20,6 +20,8 @@ use exonum::crypto::{FromHexError, Hash, HexValue, hash};
 use exonum::node::Height;
 use exonum::storage::StorageValue;
 
+use exonum::stream_struct::serialize::WriteBufferWrapper;
+
 use details::rpc::{AnchoringRpc, Error as RpcError, RpcClient};
 use details::btc;
 use details::btc::{HexValueEx, RedeemScript, TxId};

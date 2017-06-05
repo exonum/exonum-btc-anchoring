@@ -9,7 +9,8 @@ use router::Router;
 
 use exonum::blockchain::{ApiContext, NodeState, Service, Transaction};
 use exonum::crypto::Hash;
-use exonum::messages::{Error as MessageError, FromRaw, RawTransaction};
+use exonum::messages::{FromRaw, RawTransaction};
+use exonum::stream_struct::Error as StreamStructError;
 use exonum::storage::{Error as StorageError, View};
 use exonum::api::Api;
 
@@ -74,7 +75,7 @@ impl Service for AnchoringService {
         AnchoringSchema::new(view).state_hash()
     }
 
-    fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, MessageError> {
+    fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, StreamStructError> {
         AnchoringMessage::from_raw(raw).map(|tx| Box::new(tx) as Box<Transaction>)
     }
 
