@@ -14,7 +14,20 @@ const PAYLOAD_V1: u8 = 1;
 const PAYLOAD_V1_KIND_REGULAR: u8 = 0;
 const PAYLOAD_V1_KIND_RECOVER: u8 = 1;
 
-/// Anchoring transaction payload
+/// Anchoring transaction payload.
+///
+/// Data layout in `OP_RETURN` script for `Payload` v.1:
+/// 
+/// | Position in bytes 	| Description                   	                |
+/// |-------------------	|----------------------------------------------     |   
+/// | 0..5               	| ASCII-encoded prefix `EXONUM` 	                |
+/// | 6                 	| Version byte, currently is 1             	        |
+/// | 7                     | Payload kind: (0 is regular, 1 is recover)        |
+/// | 8..16                 | Block height                                      |
+/// | 16..48                | Block hash                                        |
+/// | 48..80 (Optionally)   | Txid of previous tx chain (only for recover kind) |
+///
+/// In this way the length of `regular` payload is 48, and for `recover` is 80.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Payload {
     /// Anchored block height
