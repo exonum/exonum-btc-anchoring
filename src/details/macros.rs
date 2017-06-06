@@ -195,31 +195,35 @@ macro_rules! implement_tx_wrapper {
             8
         }
 
-        unsafe fn read(buffer: &'a [u8], 
-                from: ::exonum::stream_struct::Offset, 
-                to: ::exonum::stream_struct::Offset)
+        unsafe fn read(buffer: &'a [u8],
+                       from: ::exonum::stream_struct::Offset,
+                       to: ::exonum::stream_struct::Offset)
             -> $name {
             let data = <&[u8] as ::exonum::stream_struct::Field>::read(buffer, from, to);
             <$name as StorageValue>::deserialize(data.to_vec())
         }
 
         fn write(&self,
-                    buffer: &mut Vec<u8>,
-                    from: ::exonum::stream_struct::Offset,
-                    to: ::exonum::stream_struct::Offset) {
+                 buffer: &mut Vec<u8>,
+                 from: ::exonum::stream_struct::Offset,
+                 to: ::exonum::stream_struct::Offset) {
             <&[u8] as ::exonum::stream_struct::Field>::write(&self.clone().serialize().as_slice(),
-            buffer, from, to);
+                                                             buffer,
+                                                             from,
+                                                             to);
         }
 
-        fn check(buffer: &[u8], 
-                 from: ::exonum::stream_struct::CheckedOffset, 
-                 to: ::exonum::stream_struct::CheckedOffset) 
+        fn check(buffer: &[u8],
+                 from: ::exonum::stream_struct::CheckedOffset,
+                 to: ::exonum::stream_struct::CheckedOffset)
             -> ::exonum::stream_struct::Result {
             let result = <Vec<u8> as ::exonum::stream_struct::Field>::check(buffer, from, to)?;
-            let buf: Vec<u8> = unsafe {::exonum::stream_struct::Field::read(buffer,
-                                                        from.unchecked_offset(),
-                                                        to.unchecked_offset())};
-            let raw_tx: Result<RawBitcoinTx, ::exonum::stream_struct::Error> = 
+            let buf: Vec<u8> = unsafe {
+                ::exonum::stream_struct::Field::read(buffer,
+                                                     from.unchecked_offset(),
+                                                     to.unchecked_offset())
+            };
+            let raw_tx: Result<RawBitcoinTx, ::exonum::stream_struct::Error> =
                 deserialize::<RawBitcoinTx>(buf.as_ref())
                     .map_err(|_| "Incorrect bitcoin transaction".into());
 
