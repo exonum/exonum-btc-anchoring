@@ -27,25 +27,14 @@ bodyparser = "0.5.0"
 params = "0.6.0"
 
 [dependencies.exonum]
-<<<<<<< HEAD
-version = "0.1.0"
-git = "ssh://git@github.com/exonum/exonum-core.git"
-rev = "7c3d449015a11703330aeb54bf7c50204b273710"
-
-[dependencies.configuration_service]
-version = "0.1.0"
-git = "ssh://git@github.com/exonum/exonum-configuration.git"
-rev = "e1351db2fbf058065c5e216689a7e166088fe5a0"
-=======
 git = "ssh://git@github.com/vldm/exonum-core.git"
 version = "0.1.0"
-rev = "985bdae8d4d7622aedc009f96a906f8036bfba4e"
+rev = "9742fb0875501b90e4d9cfc7bb25940e8b78b329"
 
-[dependencies.configuration_service]
-git = "ssh://git@github.com/gisochre/exonum-configuration.git"
-version = "0.1.0"
-rev = "d37a1b70d1e88ce39fb78f08492acb78d3fedb70"
->>>>>>> Use refactored messages
+#[dependencies.configuration_service]
+#git = "ssh://git@github.com/exonum/exonum-configuration.git"
+#version = "0.1.0"
+#rev = "daf0e0a6dfb3067fbc6ad7e2078b56c89745c550"
 
 [features]
 default = []

@@ -107,7 +107,7 @@ impl FromRaw for AnchoringMessage {
             ANCHORING_MESSAGE_LATEST => {
                 Ok(AnchoringMessage::UpdateLatest(MsgAnchoringUpdateLatest::from_raw(raw)?))
             }
-            _ => Err(StreamStructError::IncorrectMessageType { message_type: raw.message_type() }),
+            _ => Err("Expected different message type".into()),
         }
     }
 }

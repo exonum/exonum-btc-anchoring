@@ -191,11 +191,11 @@ macro_rules! implement_tx_wrapper {
     }
 
     impl<'a> ::exonum::stream_struct::Field<'a> for $name {
-        fn field_size() -> usize {
+        fn field_size() -> ::exonum::stream_struct::Offset {
             8
         }
 
-        fn read(buffer: &'a [u8], 
+        unsafe fn read(buffer: &'a [u8], 
                 from: ::exonum::stream_struct::Offset, 
                 to: ::exonum::stream_struct::Offset)
             -> $name {
@@ -203,21 +203,28 @@ macro_rules! implement_tx_wrapper {
             <$name as StorageValue>::deserialize(data.to_vec())
         }
 
-        fn write(&self, buffer: &'a mut Vec<u8>, from: usize, to: usize) {
+        fn write(&self,
+                    buffer: &mut Vec<u8>,
+                    from: ::exonum::stream_struct::Offset,
+                    to: ::exonum::stream_struct::Offset) {
             <&[u8] as ::exonum::stream_struct::Field>::write(&self.clone().serialize().as_slice(),
             buffer, from, to);
         }
 
-        fn check(buffer: &'a [u8], 
-                 ::exonum::stream_struct::CheckedOffset: usize, 
-                 ::exonum::stream_struct::CheckedOffset: usize) 
-            -> Result<(), ::exonum::stream_struct::Error> {
-            let buf: Vec<u8> = ::exonum::stream_struct::Field::read(buffer, from, to);
-            let raw_tx = deserialize::<RawBitcoinTx>(buf.as_ref())
-                .map_err(|_| "Incorrect bitcoin transaction".into())?;
+        fn check(buffer: &[u8], 
+                 from: ::exonum::stream_struct::CheckedOffset, 
+                 to: ::exonum::stream_struct::CheckedOffset) 
+            -> ::exonum::stream_struct::Result {
+            let result = <Vec<u8> as ::exonum::stream_struct::Field>::check(buffer, from, to)?;
+            let buf: Vec<u8> = unsafe {::exonum::stream_struct::Field::read(buffer,
+                                                        from.unchecked_offset(),
+                                                        to.unchecked_offset())};
+            let raw_tx: Result<RawBitcoinTx, ::exonum::stream_struct::Error> = 
+                deserialize::<RawBitcoinTx>(buf.as_ref())
+                    .map_err(|_| "Incorrect bitcoin transaction".into());
 
-            if <$name as TxFromRaw>::from_raw(raw_tx).is_some() {
-                Ok(())
+            if <$name as TxFromRaw>::from_raw(raw_tx?).is_some() {
+                Ok(result)
             } else {
                 Err("Incorrect bitcoin transaction".into())
             }
