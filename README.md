@@ -7,13 +7,18 @@ This crate implements a protocol for blockchain anchoring onto the `Bitcoin` blo
 * [Specification](http://exonum.com/doc/anchoring-spec/)
 * [Implementation details](http://exonum.com/doc/anchoring-impl/)
 * [Example code](examples/anchoring.rs)
-* [Deployment](DEPLOY.md)
+* [Deployment guide](DEPLOY.md)
+* [Contribution guide](https://github.com/exonum/exonum-core/blob/master/CONTRIBUTING.md)
+
+# Installation guide
+
+Just follow the installation guide of the 
+[`exonum-core`](https://github.com/exonum/exonum-core/blob/master/INSTALL.md) to install dependencies.
 
 # Usage
-The anchoring service depends on bitcoind. For correct working of the service you need to launch bitcoind with specific configuration, see [tutorial](DEPLOY.md) for details.
+The anchoring service depends on bitcoind. For correct working of the service you need to launch bitcoind with specific configuration, see [deployment guide](DEPLOY.md) for details.
 
-To run tests you need to install `bitcoind` node in according of [Deployment](DEPLOY.md) document
-and specify such enviroment variables.
+To run tests you need to install `bitcoind` and specify such enviroment variables.
 ```shell
 ANCHORING_RELAY_HOST=<bitcoind-rpc-listen-address>
 ANCHORING_USER=<rpc-user>
