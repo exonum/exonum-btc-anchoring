@@ -16,7 +16,7 @@ use details::btc::transactions::BitcoinTx;
 
 #[doc(hidden)]
 pub struct AnchoringSchema<'a> {
-    view: &'a View,
+    pub view: &'a View,
 }
 
 // Define tables
@@ -57,7 +57,8 @@ impl<'a> AnchoringSchema<'a> {
         MapTable::new(prefix, self.view)
     }
 
-    fn gen_table_prefix(&self, ord: u8, suf: Option<&[u8]>) -> Vec<u8> {
+    #[doc(hidden)]
+    pub fn gen_table_prefix(&self, ord: u8, suf: Option<&[u8]>) -> Vec<u8> {
         gen_prefix(ANCHORING_SERVICE_ID, ord, suf)
     }
 

@@ -140,6 +140,7 @@ pub mod handler;
 #[doc(hidden)]
 pub mod error;
 pub mod api;
+pub mod observer;
 
 pub use details::btc::{Network as BitcoinNetwork, gen_btc_keypair, gen_btc_keypair_with_rng};
 pub use details::rpc::{AnchoringRpc, AnchoringRpcConfig};

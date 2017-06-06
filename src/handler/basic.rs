@@ -139,6 +139,7 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn current_state(&self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
+        let client = self.client();
         let actual = self.actual_config(state)?;
         let actual_addr = actual.redeem_script().1;
         let anchoring_schema = AnchoringSchema::new(state.view());
@@ -190,7 +191,7 @@ impl AnchoringHandler {
                 TxKind::Anchoring(lect) => {
                     let lect_addr = lect.output_address(actual.network);
                     if lect_addr == following_addr {
-                        let confirmations = get_confirmations(self.client(), &lect.txid())?;
+                        let confirmations = client.get_transaction_confirmations(&lect.id())?;
                         // Lect now is transition transaction
                         AnchoringState::Waiting {
                             lect: lect.into(),
@@ -218,7 +219,7 @@ impl AnchoringHandler {
                     if tx.find_out(&actual_addr).is_some() {
                         trace!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
                         /// Wait until funding_tx got enough confirmation
-                        let confirmations = get_confirmations(self.client(), &tx.txid())?;
+                        let confirmations = client.get_transaction_confirmations(&tx.id())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
                                 lect: tx.into(),
@@ -247,7 +248,8 @@ impl AnchoringHandler {
                     // If the lect encodes a transition to a new anchoring address,
                     // we need to wait until it reaches enough confirmations.
                     if actual_lect_is_transition(&actual, &actual_lect, &anchoring_schema)? {
-                        let confirmations = get_confirmations(self.client(), &actual_lect.txid())?;
+                        let confirmations =
+                            client.get_transaction_confirmations(&actual_lect.id())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
                                 lect: actual_lect.into(),
@@ -526,11 +528,6 @@ fn actual_lect_is_transition(actual: &AnchoringConfig,
         }
     };
     Ok(r)
-}
-
-fn get_confirmations(client: &AnchoringRpc, txid: &str) -> Result<Option<u64>, ServiceError> {
-    let info = client.get_transaction_info(txid)?;
-    Ok(info.and_then(|info| info.confirmations))
 }
 
 fn is_enough_confirmations(cfg: &AnchoringConfig, confirmations: Option<u64>) -> bool {

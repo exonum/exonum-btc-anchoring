@@ -21,8 +21,8 @@ use exonum::helpers::clap::{GenerateCommand, RunCommand};
 use exonum::helpers::generate_testnet_config;
 use exonum::helpers;
 use configuration_service::ConfigurationService;
-use anchoring_btc_service::AnchoringService;
-use anchoring_btc_service::AnchoringRpc;
+use anchoring_btc_service::{AnchoringService, AnchoringRpc};
+use anchoring_btc_service::observer::{AnchoringChainObserver, ObserverConfig};
 use anchoring_btc_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
                             BitcoinNetwork, gen_anchoring_testnet_config, gen_btc_keypair};
 
@@ -129,12 +129,23 @@ fn main() {
 
             let anchoring_cfg = cfg.anchoring_service;
             let services: Vec<Box<Service>> = vec![
-                    Box::new(AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node)),
+                    Box::new(AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node.clone())),
                     Box::new(ConfigurationService::new()),
                 ];
             let blockchain = Blockchain::new(db, services);
+
+            let observer_cfg = ObserverConfig {
+                rpc: anchoring_cfg.node.rpc.unwrap().clone(),
+                check_frequency: 300000,
+            };
+            let observer = AnchoringChainObserver::new(observer_cfg, blockchain.clone());
+            let observer_thread = ::std::thread::spawn(move || {
+                observer.run().unwrap();
+            });
+
             let mut node = Node::new(blockchain, cfg.node);
             node.run().unwrap();
+            observer_thread.join().unwrap();
         }
         ("keypair", Some(matches)) => {
             let network = match matches.value_of("NETWORK").unwrap() {
