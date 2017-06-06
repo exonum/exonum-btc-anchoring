@@ -91,6 +91,11 @@ impl AnchoringConfig {
         ::majority_count(self.validators.len() as u8)
     }
 
+    /// Returns the funding transaction.
+    ///
+    /// # Panics
+    ///
+    /// If funding transaction is not specified.
     pub fn funding_tx(&self) -> &FundingTx {
         self.funding_tx
             .as_ref()
