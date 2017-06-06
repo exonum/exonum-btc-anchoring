@@ -117,7 +117,7 @@ impl AnchoringSandbox {
         // Change default anchoring configs
         common.frequency = ANCHORING_FREQUENCY;
         common.utxo_confirmations = ANCHORING_UTXO_CONFIRMATIONS;
-        for &&(ref addr, ref keys) in &priv_keys {
+        for &&(addr, ref keys) in &priv_keys {
             for (id, key) in keys.iter().enumerate() {
                 nodes[id]
                     .private_keys

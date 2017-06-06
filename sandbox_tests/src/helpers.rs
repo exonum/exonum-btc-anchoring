@@ -27,12 +27,11 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            tx: &RawBitcoinTx,
                            count: u64)
                            -> MsgAnchoringUpdateLatest {
-    let tx = MsgAnchoringUpdateLatest::new(&sandbox.p(validator as usize),
-                                           validator,
-                                           BitcoinTx::from(tx.clone()),
-                                           count,
-                                           sandbox.s(validator as usize));
-    tx
+    MsgAnchoringUpdateLatest::new(&sandbox.p(validator as usize),
+                                  validator,
+                                  BitcoinTx::from(tx.clone()),
+                                  count,
+                                  sandbox.s(validator as usize))
 }
 
 pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
@@ -41,12 +40,11 @@ pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
                                  tx: &RawBitcoinTx,
                                  count: u64)
                                  -> MsgAnchoringUpdateLatest {
-    let tx = MsgAnchoringUpdateLatest::new(&sandbox.p(real_id as usize),
-                                           fake_id,
-                                           BitcoinTx::from(tx.clone()),
-                                           count,
-                                           sandbox.s(real_id as usize));
-    tx
+    MsgAnchoringUpdateLatest::new(&sandbox.p(real_id as usize),
+                                  fake_id,
+                                  BitcoinTx::from(tx.clone()),
+                                  count,
+                                  sandbox.s(real_id as usize))
 }
 
 pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
@@ -95,7 +93,7 @@ pub fn dump_signatures(sandbox: &Sandbox, txid: &btc::TxId) -> Vec<MsgAnchoringS
 
 pub fn gen_update_config_tx(sandbox: &Sandbox,
                             actual_from: u64,
-                            service_cfg: AnchoringConfig)
+                            service_cfg: &AnchoringConfig)
                             -> RawTransaction {
     let mut cfg = sandbox.cfg();
     cfg.actual_from = actual_from;
@@ -461,7 +459,7 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
 // Invoke this method after anchor_first_block_lect_normal
 pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     let cfg_change_height = 12;
-    let (cfg_tx, following_cfg) = gen_following_cfg_exclude_validator(&sandbox, cfg_change_height);
+    let (cfg_tx, following_cfg) = gen_following_cfg_exclude_validator(sandbox, cfg_change_height);
     let (_, following_addr) = following_cfg.redeem_script();
 
     // Tx has not enough confirmations.
@@ -495,7 +493,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
 
     let lects = (0..4)
         .map(|id| {
-                 gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
+                 gen_service_tx_lect(sandbox, id, &transition_tx, 2)
                      .raw()
                      .clone()
              })

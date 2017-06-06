@@ -55,7 +55,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
 // Invoke this method after anchor_first_block_lect_normal
 pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     let cfg_change_height = 12;
-    let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, cfg_change_height);
+    let (cfg_tx, following_cfg) = gen_following_cfg(sandbox, cfg_change_height);
     let (_, following_addr) = following_cfg.redeem_script();
 
     // Tx has not enough confirmations.
@@ -89,7 +89,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
 
     let lects = (0..4)
         .map(|id| {
-                 gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
+                 gen_service_tx_lect(sandbox, id, &transition_tx, 2)
                      .raw()
                      .clone()
              })
