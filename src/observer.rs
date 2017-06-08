@@ -47,7 +47,7 @@ pub struct AnchoringChainObserverApi {
     pub blockchain: Blockchain,
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq)]
 struct Height([u8; 8]);
 
 impl Into<Height> for u64 {
@@ -268,11 +268,21 @@ impl Api for AnchoringChainObserverApi {
             let map = req.extensions.get::<Router>().unwrap();
             match map.find("height") {
                 Some(height_str) => {
-                    let height: u64 = height_str.parse().map_err(|_| ApiError::IncorrectRequest)?;
+                    let height: u64 = height_str
+                        .parse()
+                        .map_err(|e| {
+                                     let msg = format!("An error during parsing of the block \
+                                                        height occurred: {}",
+                                                       e);
+                                     ApiError::IncorrectRequest(msg.into())
+                                 })?;
                     let lect = _self.nearest_lect(height)?;
                     _self.ok_response(&json!(lect))
                 }
-                None => Err(ApiError::IncorrectRequest)?,
+                None => {
+                    let msg = "The block height is not specified.";
+                    Err(ApiError::IncorrectRequest(msg.into()))?
+                }
             }
         };
 
