@@ -46,10 +46,15 @@ impl MsgAnchoringSignature {
         // Verify from field
         let schema = Schema::new(view);
         let actual_cfg = schema.actual_configuration()?;
-        if actual_cfg.validators.get(id as usize) != Some(self.from()) {
-            warn!("Received msg from non-validator, content={:#?}", self);
-            return Ok(());
+
+        match actual_cfg.validators.get(id as usize) {
+            Some(&(_, key)) if key == *self.from() => {},
+            _ => {
+                warn!("Received msg from non-validator, content={:#?}", self);
+                return Ok(());
+            }
         }
+
         // Verify signature
         let anchoring_cfg = anchoring_schema.actual_anchoring_config()?;
         if let Some(pub_key) = anchoring_cfg.validators.get(id as usize) {
@@ -94,10 +99,15 @@ impl MsgAnchoringUpdateLatest {
         // Verify lect with actual cfg
         let schema = Schema::new(view);
         let actual_cfg = schema.actual_configuration()?;
-        if actual_cfg.validators.get(self.validator() as usize) != Some(self.from()) {
-            warn!("Received lect from non validator, content={:#?}", self);
-            return Ok(());
+
+        match actual_cfg.validators.get(self.validator() as usize) {
+            Some(&(_, key)) if key == *self.from() => {},
+            _ => {
+                warn!("Received lect from non validator, content={:#?}", self);
+                return Ok(());
+            }
         }
+
         let anchoring_cfg = anchoring_schema.actual_anchoring_config()?;
         let key = &anchoring_cfg.validators[id as usize];
         match TxKind::from(tx.clone()) {
