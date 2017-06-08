@@ -132,11 +132,21 @@ impl Api for PublicApi {
             let map = req.extensions.get::<Router>().unwrap();
             match map.find("id") {
                 Some(id_str) => {
-                    let id: u32 = id_str.parse().map_err(|_| ApiError::IncorrectRequest)?;
+                    let id: u32 = id_str
+                        .parse()
+                        .map_err(|e| {
+                                     let msg = format!("An error during parsing of the validator \
+                                                        id occurred: {}",
+                                                       e);
+                                     ApiError::IncorrectRequest(msg.into())
+                                 })?;
                     let info = _self.current_lect_of_validator(id)?;
                     _self.ok_response(&json!(info))
                 }
-                None => Err(ApiError::IncorrectRequest)?,
+                None => {
+                    let msg = "The identifier of the validator is not specified.";
+                    Err(ApiError::IncorrectRequest(msg.into()))?
+                }
             }
         };
 
