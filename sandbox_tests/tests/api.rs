@@ -24,11 +24,13 @@ use exonum::crypto::HexValue;
 use exonum::messages::Message;
 use exonum::api::Api;
 
+use anchoring_btc_service::observer::{AnchoringChainObserver, AnchoringChainObserverApi};
 use anchoring_btc_service::api::{AnchoringInfo, LectInfo, PublicApi};
-use anchoring_btc_service::details::btc;
-use anchoring_btc_service::details::btc::transactions::BitcoinTx;
 use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
-use anchoring_btc_service::details::sandbox::Request;
+use anchoring_btc_service::details::btc;
+use anchoring_btc_service::details::btc::transactions::{AnchoringTx, BitcoinTx};
+use anchoring_btc_service::details::sandbox::{Request, SandboxClient};
+use anchoring_btc_service::details::rpc::AnchoringRpc;
 use anchoring_btc_sandbox::AnchoringSandbox;
 use anchoring_btc_sandbox::helpers::*;
 
@@ -46,11 +48,7 @@ impl ApiSandbox {
     }
 
     fn request_get<A: AsRef<str>>(&self, route: A) -> IronResult<IronResponse> {
-        info!("GET request:'{}'",
-              format!("http://127.0.0.1:8000/{}", route.as_ref()));
-        iron_test::request::get(&format!("http://127.0.0.1:8000/{}", route.as_ref()),
-                                Headers::new(),
-                                &self.router)
+        request_get(&self.router, route)
     }
 
     fn get_actual_address(&self) -> btc::Address {
@@ -79,6 +77,14 @@ impl ApiSandbox {
         let body = response_body(response);
         serde_json::from_value(body).unwrap()
     }
+}
+
+fn request_get<A: AsRef<str>>(router: &Router, route: A) -> IronResult<IronResponse> {
+    info!("GET request:'{}'",
+          format!("http://127.0.0.1:8000{}", route.as_ref()));
+    iron_test::request::get(&format!("http://127.0.0.1:8000{}", route.as_ref()),
+                            Headers::new(),
+                            router)
 }
 
 fn response_body(response: IronResponse) -> serde_json::Value {
@@ -211,4 +217,61 @@ fn test_api_public_get_following_address_nonexistent() {
     let sandbox = AnchoringSandbox::initialize(&[]);
     let api_sandbox = ApiSandbox::new(&sandbox);
     assert_eq!(api_sandbox.get_following_address(), None);
+}
+
+// Test for an anchoring observer
+#[test]
+fn test_api_anchoring_observer_normal() {
+    init_logger();
+
+    let sandbox = AnchoringSandbox::initialize(&[]);
+    let anchoring_addr = sandbox.current_addr();
+
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+    let first_anchored_tx = sandbox.latest_anchored_tx();
+
+    anchor_second_block_normal(&sandbox);
+    let second_anchored_tx = sandbox.latest_anchored_tx();
+
+    let observer = AnchoringChainObserver::new_with_client(sandbox.blockchain_ref().clone(),
+                                                           AnchoringRpc(SandboxClient::default()),
+                                                           0);
+    let client = observer.client();
+    client.expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&second_anchored_tx, &anchoring_addr, 10)
+            ]
+        },
+        get_transaction_request(&second_anchored_tx),
+        confirmations_request(&second_anchored_tx, 100),
+        get_transaction_request(&first_anchored_tx),
+        confirmations_request(&first_anchored_tx, 200),
+        get_transaction_request(&sandbox.current_funding_tx()),
+    ]);
+    observer.check_anchoring_chain().unwrap();
+
+    let observer_router = {
+        let observer_api = AnchoringChainObserverApi { blockchain: observer.blockchain().clone() };
+
+        let mut router = Router::new();
+        observer_api.wire(&mut router);
+        router
+    };
+
+    let get_nearest_anchoring_tx_for_height = |height: u64| -> Option<AnchoringTx> {
+        let response = request_get(&observer_router, format!("/v1/nearest_lect/{}", height))
+            .unwrap();
+        let body = response_body(response);
+        serde_json::from_value(body).unwrap()
+    };
+
+    assert_eq!(get_nearest_anchoring_tx_for_height(0),
+               Some(first_anchored_tx));
+    assert_eq!(get_nearest_anchoring_tx_for_height(1),
+               Some(second_anchored_tx));
+    assert_eq!(get_nearest_anchoring_tx_for_height(11), None);
 }

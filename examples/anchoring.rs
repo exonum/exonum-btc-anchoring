@@ -90,10 +90,7 @@ fn main() {
             let dir = GenerateCommand::output_dir(matches);
             let start_port = GenerateCommand::start_port(matches).unwrap_or(2000);
 
-            let host = matches
-                .value_of("ANCHORING_RPC_HOST")
-                .unwrap()
-                .to_string();
+            let host = matches.value_of("ANCHORING_RPC_HOST").unwrap().to_string();
             let user = matches
                 .value_of("ANCHORING_RPC_USER")
                 .map(|x| x.to_string());
@@ -105,11 +102,7 @@ fn main() {
                 .unwrap()
                 .parse()
                 .unwrap();
-            let fee: u64 = matches
-                .value_of("ANCHORING_FEE")
-                .unwrap()
-                .parse()
-                .unwrap();
+            let fee: u64 = matches.value_of("ANCHORING_FEE").unwrap().parse().unwrap();
 
             let rpc = AnchoringRpcConfig {
                 host: host,
@@ -156,7 +149,7 @@ fn main() {
             let observer_threads = observer_cfg.map(|observer_cfg| {
                 let mut threads = Vec::new();
                 let listen_address = observer_cfg.api_address;
-                let observer = AnchoringChainObserver::new(observer_cfg, blockchain.clone());
+                let observer = AnchoringChainObserver::new(blockchain.clone(), observer_cfg);
 
                 let mut mount = Mount::new();
                 mount.mount("api/btc_anchoring_observer", observer.api_handler());

@@ -47,7 +47,7 @@ pub struct AnchoringChainObserverApi {
     pub blockchain: Blockchain,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Copy)]
 struct Height([u8; 8]);
 
 impl Into<Height> for u64 {
@@ -70,6 +70,14 @@ impl AsRef<[u8]> for Height {
     }
 }
 
+impl Height {
+    pub fn from_bytes(bytes: Vec<u8>) -> Height {
+        let mut buf = [0; 8];
+        buf.copy_from_slice(&bytes);
+        Height(buf)
+    }
+}
+
 impl<'a> AnchoringSchema<'a> {
     fn anchoring_tx_chain(&self) -> MapTable<View, Height, AnchoringTx> {
         let prefix = self.gen_table_prefix(128, None);
@@ -79,11 +87,23 @@ impl<'a> AnchoringSchema<'a> {
 
 impl AnchoringChainObserver {
     /// Constructs observer for the given `blockchain`.
-    pub fn new(config: ObserverConfig, blockchain: Blockchain) -> AnchoringChainObserver {
+    pub fn new(blockchain: Blockchain, config: ObserverConfig) -> AnchoringChainObserver {
         AnchoringChainObserver {
             blockchain: blockchain,
             client: AnchoringRpc::new(config.rpc),
             check_frequency: config.check_frequency,
+        }
+    }
+
+    #[doc(hidden)]
+    pub fn new_with_client(blockchain: Blockchain,
+                           client: AnchoringRpc,
+                           check_frequency: Milliseconds)
+                           -> AnchoringChainObserver {
+        AnchoringChainObserver {
+            blockchain: blockchain,
+            client: client,
+            check_frequency: check_frequency,
         }
     }
 
@@ -123,6 +143,16 @@ impl AnchoringChainObserver {
         let api = AnchoringChainObserverApi { blockchain: self.blockchain.clone() };
         api.wire(&mut router);
         Box::new(router)
+    }
+
+    #[doc(hidden)]
+    pub fn client(&self) -> &AnchoringRpc {
+        &self.client
+    }
+
+    #[doc(hidden)]
+    pub fn blockchain(&self) -> &Blockchain {
+        &self.blockchain
     }
 
     fn update_anchoring_chain(&self,
@@ -180,7 +210,7 @@ impl AnchoringChainObserver {
 
         let unspent_txs: Vec<_> = self.client.unspent_transactions(&actual_addr)?;
         for tx in unspent_txs {
-            if self.transaction_is_lect(&view, &actual_cfg, &tx)? {
+            if self.transaction_is_lect(view, actual_cfg, &tx)? {
                 if let TxKind::Anchoring(lect) = TxKind::from(tx) {
                     return Ok(Some(lect));
                 }
@@ -199,9 +229,7 @@ impl AnchoringChainObserver {
 
         let mut lect_count = 0;
         for key in &actual_cfg.validators {
-            if anchoring_schema
-                   .find_lect_position(key, &txid)?
-                   .is_some() {
+            if anchoring_schema.find_lect_position(key, &txid)?.is_some() {
                 lect_count += 1;
             }
         }
@@ -223,33 +251,8 @@ impl AnchoringChainObserverApi {
         let anchoring_schema = AnchoringSchema::new(&view);
         let tx_chain = anchoring_schema.anchoring_tx_chain();
 
-        // dump lects
-        {
-            let mut height = 0;
-            let h: Height = height.into();
-            debug!("Begin dump heights, height={:?}", h);
-            while let Some(nearest_height_bytes) = tx_chain.find_key(&height.into())? {
-                let nearest_height = {
-                    let mut buf = [0; 8];
-                    buf.copy_from_slice(&nearest_height_bytes);
-                    Height(buf)
-                };
-
-                let tx = tx_chain.get(&nearest_height)?;
-                height = nearest_height.into();
-                debug!("height={}, tx={:#?}", height, tx);
-            }
-        }
-
         if let Some(nearest_height_bytes) = tx_chain.find_key(&height.into())? {
-            let nearest_height = {
-                let mut buf = [0; 8];
-                buf.copy_from_slice(&nearest_height_bytes);
-                Height(buf)
-            };
-            let h: u64 = height.into();
-            debug!("nearest height_bytes={:?}, height={}", nearest_height, h);
-
+            let nearest_height = Height::from_bytes(nearest_height_bytes);
             let tx = tx_chain.get(&nearest_height)?;
             Ok(tx)
         } else {
@@ -265,9 +268,7 @@ impl Api for AnchoringChainObserverApi {
             let map = req.extensions.get::<Router>().unwrap();
             match map.find("height") {
                 Some(height_str) => {
-                    let height: u64 = height_str
-                        .parse()
-                        .map_err(|_| ApiError::IncorrectRequest)?;
+                    let height: u64 = height_str.parse().map_err(|_| ApiError::IncorrectRequest)?;
                     let lect = _self.nearest_lect(height)?;
                     _self.ok_response(&json!(lect))
                 }
