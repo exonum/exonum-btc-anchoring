@@ -128,10 +128,10 @@ impl Service for AnchoringService {
 }
 
 
-/// Generates testnet configuration by given rpc for given given nodes amount
+/// Generates testnet configuration by given rpc for given nodes amount
 /// using given random number generator.
 ///
-/// Note: Bitcoin node that used by rpc have to enough bitcoin amount to generate
+/// Note: Bitcoin node that used by rpc should have enough bitcoin amount to generate
 /// funding transaction by given `total_funds`.
 pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
                                                 network: btc::Network,
