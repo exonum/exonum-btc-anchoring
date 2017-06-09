@@ -21,7 +21,8 @@ pub struct AnchoringSchema<'a> {
 
 // Data tables section.
 impl<'a> AnchoringSchema<'a> {
-    /// Returns table that contains signatures for the anchoring transaction with the given `normalized` `txid`. 
+    /// Returns table that contains signatures for the anchoring transaction with
+    /// the given `normalized` `txid`.
     pub fn signatures(&self,
                       txid: &btc::TxId)
                       -> ListTable<MapTable<View, [u8], Vec<u8>>, MsgAnchoringSignature> {
@@ -29,7 +30,7 @@ impl<'a> AnchoringSchema<'a> {
         ListTable::new(MapTable::new(prefix, self.view))
     }
 
-    /// Returns table that saves a list of `lects` for the validator with the given `public_key`.  
+    /// Returns table that saves a list of `lects` for the validator with the given `public_key`.
     pub fn lects(&self,
                  validator_key: &btc::PublicKey)
                  -> MerkleTable<MapTable<View, [u8], Vec<u8>>, LectContent> {
@@ -50,7 +51,7 @@ impl<'a> AnchoringSchema<'a> {
         MapTable::new(prefix, self.view)
     }
 
-    /// Returns the table of known signatures, where key is the tuple (txid, validator_id, input), 
+    /// Returns the table of known signatures, where key is the tuple (txid, validator_id, input),
     /// see [`known_signature_id`](fn) for details.
     pub fn known_signatures(&self) -> MapTable<View, [u8], MsgAnchoringSignature> {
         let prefix = self.gen_table_prefix(6, None);
@@ -233,7 +234,7 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     /// Returns the `state_hash` table for anchoring tables.
-    /// 
+    ///
     /// It contains a list of `root_hash` of the actual `lects` tables.
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
         let cfg = self.actual_anchoring_config()?;

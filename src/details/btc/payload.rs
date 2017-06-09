@@ -17,9 +17,9 @@ const PAYLOAD_V1_KIND_RECOVER: u8 = 1;
 /// Anchoring transaction payload.
 ///
 /// Data layout in `OP_RETURN` script for `Payload` v.1:
-/// 
+///
 /// | Position in bytes 	| Description                   	                |
-/// |-------------------	|----------------------------------------------     |   
+/// |-------------------	|----------------------------------------------     |
 /// | 0..5               	| ASCII-encoded prefix `EXONUM` 	                |
 /// | 6                 	| Version byte, currently is 1             	        |
 /// | 7                     | Payload kind: (0 is regular, 1 is recover)        |
