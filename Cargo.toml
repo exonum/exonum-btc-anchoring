@@ -30,12 +30,12 @@ mount = "0.3.0"
 [dependencies.exonum]
 version = "0.1.0"
 git = "ssh://git@github.com/exonum/exonum-core.git"
-rev = "7c3d449015a11703330aeb54bf7c50204b273710"
+rev = "ae45500c64bf6d4b503f8f3fc19dbea2650ab515"
 
 [dependencies.configuration_service]
 version = "0.1.0"
 git = "ssh://git@github.com/exonum/exonum-configuration.git"
-rev = "e1351db2fbf058065c5e216689a7e166088fe5a0"
+rev = "d7012f2387f2d1373a81e3a22b48e1f1652c6936"
 
 [features]
 default = []
