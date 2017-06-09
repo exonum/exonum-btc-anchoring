@@ -16,7 +16,7 @@ Just follow the installation guide of the
 [`exonum-core`](https://github.com/exonum/exonum-core/blob/master/INSTALL.md) to install dependencies.
 
 # Usage
-The anchoring service depends on bitcoind. For correct working of the service you need to launch bitcoind with specific configuration, see [deployment guide](DEPLOY.md) for details.
+The anchoring service depends on bitcoind. For the correct work, you need to launch bitcoind with specific configuration, see [deployment guide](DEPLOY.md) for details.
 
 To run tests you need to install `bitcoind` and specify following enviroment variables.
 ```shell

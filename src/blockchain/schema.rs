@@ -91,7 +91,7 @@ impl<'a> AnchoringSchema<'a> {
         Ok(self.parse_config(&actual))
     }
 
-    /// Returns the nearest following configuration if it exist.
+    /// Returns the nearest following configuration if it exists.
     pub fn following_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
         let schema = Schema::new(self.view);
         if let Some(stored) = schema.following_configuration()? {
@@ -101,7 +101,7 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
-    /// Returns the previous anchoring configuration if it exist.
+    /// Returns the previous anchoring configuration if it exists.
     pub fn previous_anchoring_config(&self) -> Result<Option<AnchoringConfig>, StorageError> {
         let schema = Schema::new(self.view);
         if let Some(stored) = schema.previous_configuration()? {
