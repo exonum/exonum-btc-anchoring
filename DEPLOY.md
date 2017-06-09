@@ -9,6 +9,8 @@
 ## Bitcoind node deployment
 
 First of all install `bitcoind` via your package manager and ensure that you use latest stable version. 
+You may visit official bitcoin [site][bitcoin:install] for more information about installation.
+
 Then create bitcoind configuration file in according to this [tutorial][bitcoin_wiki:configuration].
 
 For correct work of the service, the `bitcoind` configuration file should contain the following settings: 
@@ -151,6 +153,7 @@ Add the line with new address and corresponding `private key` for it. If node pu
 must use the old key for the new address otherwise use a new key. After modifying the configuration file
 you need to restart the node for the changes to take effect.
 
+[bitcoin:install]: https://bitcoin.org/en/full-node#what-is-a-full-node
 [bitcoin:faucet]: https://testnet.manu.backend.hamburg/faucet
 [bitcoin_wiki:configuration]: https://en.bitcoin.it/wiki/Running_Bitcoin#Bitcoin.conf_Configuration_File
 [exonum:node_api]: https://github.com/exonum/exonum-doc/blob/master/src/architecture/configuration.md#nodeapi
