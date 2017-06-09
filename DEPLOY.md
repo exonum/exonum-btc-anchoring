@@ -115,7 +115,7 @@ Also you can change selected validator by these settings.
 
 Variables that you can modify:
  - `fee` - the amount of the fee for the anchoring transaction.
- - `frequency` - the frequency in blocks with which occurs the generation of a new `anchoring` transactions.
+ - `frequency` - the frequency in blocks with which the generation of a new `anchoring` transactions occurs
  - `utxo_confirmations` - The minimum number of confirmations in bitcoin network to consider the `anchoring` transaction as fully confirmed.
 
 Just change these variables and apply the new configuration.

@@ -18,7 +18,7 @@ Just follow the installation guide of the
 # Usage
 The anchoring service depends on bitcoind. For correct working of the service you need to launch bitcoind with specific configuration, see [deployment guide](DEPLOY.md) for details.
 
-To run tests you need to install `bitcoind` and specify such enviroment variables.
+To run tests you need to install `bitcoind` and specify following enviroment variables.
 ```shell
 ANCHORING_RELAY_HOST=<bitcoind-rpc-listen-address>
 ANCHORING_USER=<rpc-user>
