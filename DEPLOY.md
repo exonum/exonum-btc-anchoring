@@ -124,11 +124,12 @@ Send to anchoring wallet some btc and save transactions hex. Wait until transact
 
 ### Change list of validators
 
-***Important warning!** This procedure changes the `anchroing` address and node needs to wait until the last anchored 
-transaction gets enough confirmations. 
-It happens because unable to sign transaction addressed to old `anchoring` address by keys from current configuration. 
-And service needs to be sure that the `transfering transaction` does not get lost in any cases!
-See this [article][exonum:anchoring_transfering] for details.*
+***Important warning!** This procedure changes the `anchoring address`. Node needs to wait until 
+the last anchored transaction gets enough confirmations. It is caused by impossibility to sign
+transaction addressed to `old anchoring address` by keys from the `current configuration`. If the
+last anchoring transaction does not catch enough confirmations before anchoring address is changed, 
+the following `transfering transaction` may be lost because of possible bitcoin forks and 
+transaction malleability. See this [article][exonum:anchoring_transfering] for details.*
 
 * Make sure that difference between the activation height (`actual_from`) and current `Exonum` blockchain height is enough for get sufficient confirmations for `latest anchored transaction`. Usually enough 6 hours for this, calculate how many blocks will be taken during this time and add this number to the `current_height`.
 * If necessary [generate][exonum:anchoring_gen_keypair] a new key pair for anchoring.
