@@ -85,6 +85,7 @@ As a maintainer, you can perform the following actions:
  - [Change list of validators](#change-list-of-validators).
  
 These actions must be performed by [Exonum configuration service][exonum:configuration_service]. 
+Visit its [tutorial][exonum:configuration_tutorial] for more explanations.
 
 For the `anchoring` example consensus configuration looks like this:
 ```json
@@ -119,6 +120,8 @@ Just change these variables and apply the new configuration.
 
 Send to anchoring wallet some btc and save transactions hex. Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex. 
 
+***Note!** If the current anchoring chain becomes unusable you may start a new chain by adding corresponding funding transaction.*
+
 ### Change list of validators
 
 ***Important warning!** This procedure changes the `anchroing` address and node needs to wait until the last anchored 
@@ -127,27 +130,31 @@ It happens because unable to sign transaction addressed to old `anchoring` addre
 And service needs to be sure that the `transfering transaction` does not get lost in any cases!
 See this [article][exonum:anchoring_transfering] for details.*
 
-* Make sure that difference between `actual_from` and `current_height` is enough for get sufficient confirmations for `latest anchored transaction`. Usually enough 6 hours for this, calculate how many blocks will be taken during this time and add this number to the `current_height`.
-* If necessary generate a new key pair for anchoring.
+* Make sure that difference between the activation height (`actual_from`) and current `Exonum` blockchain height is enough for get sufficient confirmations for `latest anchored transaction`. Usually enough 6 hours for this, calculate how many blocks will be taken during this time and add this number to the `current_height`.
+* If necessary [generate][exonum:anchoring_gen_keypair] a new key pair for anchoring.
 * Change list of validators.
 * Initiate the config update procedure.
-* Make sure that config update procedure is not delayed.
-* Look at the new address of the `anchoring` and [set private key for it](#private-key-updating).
+* Make sure that config update procedure is not delayed. That is, do not delay the voting procedure for the new configuration.
+* Look at the new address of the `anchoring` in the [`exonum-dashboard`][exonum:dashboard] and [set private key for it](#private-key-updating).
+
+***Note!** If `transfering transaction` has been lost you need to establish a new anchoring chain by a new `funding transaction`.*
 
 ### Private key updating
 
-Each node stores in configuration file set of private keys for each `anchoring` address, where the key is the `anchoring` address and the value is the private key for it.
+Each node stores a map for the `anchoring address` and its corresponding `private key`.
 ```ini
 [anchoring_service.node.private_keys]
 2NCJYWui4LGNZguUw41xBANbcHoKxSVxyzr = "cRf74adxyQzJs7V8fHoyrMDazxzCmKAan63Cfhf9i4KL69zRkdS2"
 ```
-If node public key is not changed you must use it for the new address otherwise use a new key. Then you need to restart node.
-
-***Note!** If `transfering transaction` has been lost you need to establish a new anchoring chain by a new `funding transaction`.*
+Add the line with new address and corresponding `private key` for it. If node public key is not changed you 
+must use the old key for the new address otherwise use a new key. After modifying the configuration file
+you need to restart the node for the changes to take effect.
 
 [bitcoin:faucet]: https://testnet.manu.backend.hamburg/faucet
 [bitcoin_wiki:configuration]: https://en.bitcoin.it/wiki/Running_Bitcoin#Bitcoin.conf_Configuration_File
 [exonum:node_api]: https://github.com/exonum/exonum-doc/blob/master/src/architecture/configuration.md#nodeapi
 [exonum:configuration_service]: https://github.com/exonum/exonum-configuration
+[exonum:configuration_tutorial]: https://github.com/exonum/exonum-configuration/blob/master/doc/testnet-api-tutorial.md
 [exonum:dashboard]: https://github.com/exonum/exonum-dashboard
 [exonum:anchoring_transfering]: #todo
+[exonum:anchoring_gen_keypair]: #todo
