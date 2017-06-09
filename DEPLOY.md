@@ -28,7 +28,7 @@ txindex=1
 #rpcuser=<username>
 #rpcpassword=YourSuperGreatPasswordNumber_DO_NOT_USE_THIS_OR_YOU_WILL_GET_ROBBED_385593
 ```
-Remember the rpc settings. They will be used later by the service.
+These rpc settings will be used by the service.
 
 After configuration file creation launch `bitcoind` daemon via command:
 ```shell
