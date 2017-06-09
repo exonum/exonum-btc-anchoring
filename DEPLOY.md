@@ -1,12 +1,12 @@
 # Anchoring btc service deployment
 
-# Contents
-* [Bitcoind deploy](#bitcoind-node-deploy)
-* [Testnet Deploy](#testnet-deploy)
-* [Production deploy](#production-deploy)
-* [Maintaince](#maintaince)
+## Contents
+* [Bitcoind deployment](#bitcoind-node-deployment)
+* [Testnet deployment](#testnet-deployment)
+* [Production deployment](#production-deployment)
+* [Maintenance](#maintenance)
 
-# Bitcoind node deploy
+## Bitcoind node deployment
 
 First of all install `bitcoind` via your package manager and ensure that you use latest stable version. 
 Then create bitcoind configuration file in according to this [tutorial][bitcoin_wiki:configuration].
@@ -36,9 +36,9 @@ bitcoind --daemon
 ```
 Downloading and indexing of the bitcoin blockchain may take a lot of time, especially for the `mainnet`.
 
-*Note! If you connect `bitcoind` node to the existing validator you must import current `anchoring` address by the `importaddress` rpc call.*
+***Note!** If you connect `bitcoind` node to the existing validator you must import current `anchoring` address by the `importaddress` rpc call.*
 
-# Testnet deploy
+## Testnet deployment
 
 For quick anchoring demonstration you can use built-in anchoring example.
 ```shell
@@ -50,32 +50,34 @@ After installation you need to generate testnet configuration.
 ```
 $ anchoring generate \
     --output-dir <destdir> <n> \
-    --anchoring-host <bitcoin full node host> \
-    --anchoring-user <username> \
-    --anchoring-password <password> \
-    --anchoring-funds <initial funds> \
-    --anchoring-fee <fee>
+    --anchoring-host <bitcoind RPC host> \
+    --anchoring-user <bitcoind RPC username> \
+    --anchoring-password <bitcoind RPC password> \
+    --anchoring-funds <amount in satoshis> \
+    --anchoring-fee <fee is satoshis>
 ```
 Which create the configuration of `N` nodes in destination directory using given `bitcoind` by rpc.
-In addition you may specify public and private api addresses according to this [document][exonum:node_api].
 
-***Warning!** It is important that the full node have some bitcoin amount greater  than `<initial_funds>`, since the initial funding transaction will create during the testnet generation.*
+In addition in the generated configuration files you may specify public and private api addresses according to this [document][exonum:node_api].
+
+***Warning!** It is important that the full node have some bitcoin amount greater  than `<initial_funds>`, 
+since the initial funding transaction will create during the testnet generation. 
+For `testnet` you may use a [`faucet`][bitcoin:faucet] to get some coins.*
 
 ### Launching testnet
 
-You need to launch the whole testnet nodes. 
-The command to launch `m` node look such this:
+Launch all nodes in the testnet. To launch node `m`, execute:
 ```
 $ anchoring run --node-config <destdir>/<m>.toml --leveldb-path <destdir>/db/<m>
 ```
 
 If you want to see additional information you may specify log level by environment variable `RUST_LOG="anchoring_btc_service=info"`.
 
-# Production deploy
+## Production deployment
 
 TODO.
 
-# Maintaince
+## Maintenance
 
 As a maintainer, you can perform the following actions:
  - [Change anchoring variables](#change-variables).
@@ -104,15 +106,20 @@ The application shows `anchoring` address and can change configuration.
 To connect an application with the anchoring node, you must specify its api addresses in the `Settings` tab. 
 Also you can change selected validator by these settings.
 
-## Change variables
+### Change variables
 
-Just change the settings and apply the new configuration.
+Variables that you can modify:
+ - `fee` - the amount of the fee for the anchoring transaction.
+ - `frequency` - the frequency in blocks with which occurs the generation of a new `anchoring` transactions.
+ - `utxo_confirmations` - The minimum number of confirmations in bitcoin network to consider the `anchoring` transaction as fully confirmed.
 
-## Add funds
+Just change these variables and apply the new configuration.
+
+### Add funds
 
 Send to anchoring wallet some btc and save transactions hex. Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex. 
 
-## Change list of validators
+### Change list of validators
 
 ***Important warning!** This procedure changes the `anchroing` address and node needs to wait until the last anchored 
 transaction gets enough confirmations. 
@@ -138,6 +145,7 @@ If node public key is not changed you must use it for the new address otherwise 
 
 ***Note!** If `transfering transaction` has been lost you need to establish a new anchoring chain by a new `funding transaction`.*
 
+[bitcoin:faucet]: https://testnet.manu.backend.hamburg/faucet
 [bitcoin_wiki:configuration]: https://en.bitcoin.it/wiki/Running_Bitcoin#Bitcoin.conf_Configuration_File
 [exonum:node_api]: https://github.com/exonum/exonum-doc/blob/master/src/architecture/configuration.md#nodeapi
 [exonum:configuration_service]: https://github.com/exonum/exonum-configuration
