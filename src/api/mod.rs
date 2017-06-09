@@ -78,9 +78,7 @@ impl PublicApi {
         let view = self.blockchain.view();
         let schema = AnchoringSchema::new(&view);
         let actual_cfg = &schema.actual_anchoring_config()?;
-        Ok(schema
-               .collect_lects(actual_cfg)?
-               .map(AnchoringInfo::from))
+        Ok(schema.collect_lects(actual_cfg)?.map(AnchoringInfo::from))
     }
 
     /// Returns current lect for validator with given `id`.
@@ -160,9 +158,7 @@ impl Api for PublicApi {
 
         let _self = self.clone();
         let following_address = move |_: &mut Request| -> IronResult<Response> {
-            let addr = _self
-                .following_address()?
-                .map(|addr| addr.to_base58check());
+            let addr = _self.following_address()?.map(|addr| addr.to_base58check());
             _self.ok_response(&json!(addr))
         };
 

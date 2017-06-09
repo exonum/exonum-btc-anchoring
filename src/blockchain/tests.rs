@@ -92,8 +92,7 @@ fn test_signed_input_in_msg_signature_tx_body() {
 
     let tx = dummy_anchoring_tx(&redeem_script);
     let btc_signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
-    let signed_tx = tx.clone()
-        .finalize(&redeem_script, btc_signatures.clone());
+    let signed_tx = tx.clone().finalize(&redeem_script, btc_signatures.clone());
 
     assert!(signed_tx.nid() != signed_tx.id());
     assert_eq!(signed_tx.nid(), tx.id());

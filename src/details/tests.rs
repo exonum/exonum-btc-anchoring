@@ -416,9 +416,7 @@ fn test_redeem_script_pubkey() {
         f08e756ae")
             .unwrap();
 
-    assert_eq!(redeem_script
-                   .script_pubkey(btc::Network::Testnet)
-                   .to_hex(),
+    assert_eq!(redeem_script.script_pubkey(btc::Network::Testnet).to_hex(),
                "a914544fa2db1f36b091bbee603c0bc7675fe34655ff87");
 }
 

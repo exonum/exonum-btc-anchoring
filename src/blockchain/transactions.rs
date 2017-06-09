@@ -163,9 +163,7 @@ fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
                                  anchoring_schema: &AnchoringSchema)
                                  -> Result<bool, StorageError> {
     // If tx has `prev_tx_chain` should be used it instead of `prev_hash`.
-    let prev_txid = tx.payload()
-        .prev_tx_chain
-        .unwrap_or_else(|| tx.prev_hash());
+    let prev_txid = tx.payload().prev_tx_chain.unwrap_or_else(|| tx.prev_hash());
     // Get `AnchoringConfig` for prev_tx
     let anchoring_cfg = {
         let cfg_height = anchoring_schema
@@ -197,8 +195,8 @@ fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
                     .get(prev_lect_idx)?
                     .expect(&format!("Lect with index {} is absent in lects table for validator \
                                      {}",
-                                     prev_lect_idx,
-                                     key.to_hex()));
+                                    prev_lect_idx,
+                                    key.to_hex()));
                 assert_eq!(prev_txid,
                            prev_lect.tx().id(),
                            "Inconsistent reference to previous lect in Exonum");
@@ -213,9 +211,7 @@ fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
 
 fn verify_anchoring_tx_payload(tx: &AnchoringTx, schema: &Schema) -> Result<bool, StorageError> {
     let payload = tx.payload();
-    Ok(schema
-           .block_hashes_by_height()
-           .get(payload.block_height)? == Some(payload.block_hash))
+    Ok(schema.block_hashes_by_height().get(payload.block_height)? == Some(payload.block_hash))
 }
 
 fn verify_funding_tx(tx: &FundingTx,
