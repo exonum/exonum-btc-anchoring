@@ -10,7 +10,7 @@ pub enum Error {
     Storage(StorageError),
     /// An internal error
     Internal(InternalError),
-    /// A handler error,
+    /// A handler error
     Handler(HandlerError),
 }
 
