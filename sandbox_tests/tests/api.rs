@@ -151,11 +151,11 @@ fn test_api_public_get_lect_unavailable() {
             .unwrap();
     let lects = (0..2)
         .map(|id| {
-                 MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),
+                 MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(id as usize),
                                                id,
                                                lect_tx.clone(),
                                                lects_count(&sandbox, id),
-                                               sandbox.s(id as usize))
+                                               sandbox.service_secret_key(id as usize))
              })
         .collect::<Vec<_>>();
     force_commit_lects(&sandbox, lects);

@@ -27,11 +27,11 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                            tx: &RawBitcoinTx,
                            count: u64)
                            -> MsgAnchoringUpdateLatest {
-    MsgAnchoringUpdateLatest::new(&sandbox.p(validator as usize),
+    MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(validator as usize),
                                   validator,
                                   BitcoinTx::from(tx.clone()),
                                   count,
-                                  sandbox.s(validator as usize))
+                                           sandbox.service_secret_key(validator as usize));
 }
 
 pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
@@ -40,7 +40,7 @@ pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
                                  tx: &RawBitcoinTx,
                                  count: u64)
                                  -> MsgAnchoringUpdateLatest {
-    MsgAnchoringUpdateLatest::new(&sandbox.p(real_id as usize),
+    MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(real_id as usize),
                                   fake_id,
                                   BitcoinTx::from(tx.clone()),
                                   count,
@@ -98,7 +98,10 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
     let mut cfg = sandbox.cfg();
     cfg.actual_from = actual_from;
     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
-    let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
+    let tx = TxConfig::new(&sandbox.service_public_key(0),
+                           &cfg.serialize(),
+                           actual_from,
+                           sandbox.service_secret_key(0));
     tx.raw().clone()
 }
 
@@ -536,6 +539,9 @@ fn gen_following_cfg_exclude_validator(sandbox: &AnchoringSandbox,
     cfg.actual_from = from_height;
     cfg.validators.swap_remove(0);
     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
-    let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), from_height, sandbox.s(0));
+    let tx = TxConfig::new(&sandbox.service_public_key(0),
+                           &cfg.serialize(),
+                           from_height,
+                           sandbox.service_secret_key(0));
     (tx.raw().clone(), service_cfg)
 }

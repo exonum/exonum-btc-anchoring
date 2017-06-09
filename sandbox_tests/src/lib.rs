@@ -317,12 +317,12 @@ impl AnchoringSandbox {
         for (validator, priv_key) in priv_keys.iter().enumerate() {
             for input in tx.inputs() {
                 let signature = tx.sign_input(&redeem_script, input, priv_key);
-                signs.push(MsgAnchoringSignature::new(&self.sandbox.p(validator),
+                signs.push(MsgAnchoringSignature::new(&self.sandbox.service_public_key(validator),
                                                       validator as u16,
                                                       tx.clone(),
                                                       input,
                                                       &signature,
-                                                      self.sandbox.s(validator)));
+                                                      self.sandbox.service_secret_key(validator)));
             }
         }
         signs

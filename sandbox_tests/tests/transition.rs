@@ -101,7 +101,8 @@ fn gen_following_cfg_add_two_validators_changed_self_key
         let self_keypair = btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng);
 
         let seed = Seed::new([212; 32]);
-        let exonum_keypairs = [gen_keypair_from_seed(&seed), gen_keypair_from_seed(&seed)];
+        let exonum_keypairs = [(gen_keypair_from_seed(&seed), gen_keypair_from_seed(&seed)),
+                               (gen_keypair_from_seed(&seed), gen_keypair_from_seed(&seed))];
         (self_keypair, anchoring_keypairs, exonum_keypairs)
     };
 
@@ -143,19 +144,20 @@ fn gen_following_cfg_add_two_validators_changed_self_key
         cfg.actual_from = from_height;
 
         for keypair in &exonum_keypairs {
-            cfg.validators.push(keypair.0);
+            cfg.validators.push(((keypair.0).0, (keypair.1).0));
             // Add validator to exonum sandbox validators map
-            sandbox.validators_map.insert(keypair.0, keypair.1.clone());
+            sandbox.validators_map.insert((keypair.0).0, (keypair.0).1.clone());
+            sandbox.services_map.insert((keypair.1).0, (keypair.1).1.clone());
         }
         // Generate cfg change tx
         *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(anchoring_cfg);
         cfg
     };
 
-    let tx = TxConfig::new(&sandbox.p(0),
+    let tx = TxConfig::new(&sandbox.service_public_key(0),
                            &consensus_cfg.serialize(),
                            from_height,
-                           sandbox.s(0));
+                           sandbox.service_secret_key(0));
 
     (tx.raw().clone(), anchoring_cfg, new_nodes)
 }
@@ -1448,7 +1450,8 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng),
             btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng),
         ];
-        let validator_keypair = gen_keypair_from_seed(&Seed::new([115; 32]));
+        let validator_keypair = (gen_keypair_from_seed(&Seed::new([115; 32])),
+                                 gen_keypair_from_seed(&Seed::new([115; 32])));
 
         let mut service_cfg = sandbox.current_cfg().clone();
         let priv_keys = sandbox.current_priv_keys();
@@ -1480,21 +1483,24 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             let mut cfg = sandbox.cfg();
             cfg.actual_from = cfg_change_height;
             cfg.validators.push(sandbox_node_pubkey);
-            cfg.validators.push(validator_keypair.0);
+            cfg.validators.push(((validator_keypair.0).0, (validator_keypair.1).0));
             cfg.validators.swap(0, 3);
             // Generate cfg change tx
             *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
             cfg
         };
 
-        let tx = TxConfig::new(&sandbox.p(1),
+        let tx = TxConfig::new(&sandbox.service_public_key(1),
                                &consensus_cfg.serialize(),
                                cfg_change_height,
-                               sandbox.s(1));
+                               sandbox.service_secret_key(1));
         // Add validator to exonum sandbox validators map
         sandbox
             .validators_map
-            .insert(validator_keypair.0, validator_keypair.1);
+            .insert((validator_keypair.0).0, (validator_keypair.0).1);
+        sandbox
+            .services_map
+            .insert((validator_keypair.1).0, (validator_keypair.1).1);
         (tx.raw().clone(), service_cfg, node_cfgs, following_addr)
     };
 

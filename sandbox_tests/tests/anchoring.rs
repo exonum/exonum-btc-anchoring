@@ -236,11 +236,11 @@ fn test_anchoring_find_lect_chain_normal() {
             let tx = sandbox.latest_anchored_tx().clone();
             let lects = (1..4)
                 .map(|id| {
-                         MsgAnchoringUpdateLatest::new(&sandbox.p(id),
+                         MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(id),
                                                        id as u16,
                                                        tx.clone().into(),
                                                        lects_count(&sandbox, id as u16),
-                                                       sandbox.s(id))
+                                                       sandbox.service_secret_key(id))
                      })
                 .collect::<Vec<_>>();
             force_commit_lects(&sandbox, lects);
@@ -414,12 +414,12 @@ fn test_anchoring_signature_wrong_validator() {
         tx
     };
 
-    let msg_signature_wrong = MsgAnchoringSignature::new(&sandbox.p(1),
+    let msg_signature_wrong = MsgAnchoringSignature::new(&sandbox.service_public_key(1),
                                                          1,
                                                          tx.clone(),
                                                          0,
                                                          signatures[0].signature(),
-                                                         sandbox.s(1));
+                                                         sandbox.service_secret_key(1));
 
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
@@ -450,12 +450,12 @@ fn test_anchoring_signature_nonexistent_tx() {
         .into_transaction()
         .unwrap();
     let signature = tx.sign_input(&redeem_script, 0, &sandbox.priv_keys(&addr)[1]);
-    let msg_sign = MsgAnchoringSignature::new(&sandbox.p(1),
+    let msg_sign = MsgAnchoringSignature::new(&sandbox.service_public_key(1),
                                               1,
                                               tx.clone(),
                                               0,
                                               signature.as_ref(),
-                                              sandbox.s(1));
+                                              sandbox.service_secret_key(1));
 
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
@@ -487,12 +487,12 @@ fn test_anchoring_signature_incorrect_payload() {
         .into_transaction()
         .unwrap();
     let signature = tx.sign_input(&redeem_script, 0, &sandbox.priv_keys(&addr)[1]);
-    let msg_sign = MsgAnchoringSignature::new(&sandbox.p(1),
+    let msg_sign = MsgAnchoringSignature::new(&sandbox.service_public_key(1),
                                               1,
                                               tx.clone(),
                                               0,
                                               signature.as_ref(),
-                                              sandbox.s(1));
+                                              sandbox.service_secret_key(1));
 
 
     let signatures_before = dump_signatures(&sandbox, &tx.id());
@@ -643,12 +643,12 @@ fn test_anchoring_signature_nonexistent_validator() {
         tx
     };
 
-    let msg_signature_wrong = MsgAnchoringSignature::new(&sandbox.p(1),
+    let msg_signature_wrong = MsgAnchoringSignature::new(&sandbox.service_public_key(1),
                                                          1000,
                                                          tx.clone(),
                                                          0,
                                                          signatures[0].signature(),
-                                                         sandbox.s(1));
+                                                         sandbox.service_secret_key(1));
 
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
@@ -695,12 +695,12 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
         different_signature.push(SigHashType::All.as_u32() as u8);
         assert_ne!(different_signature, signature_msgs[1].signature());
 
-        MsgAnchoringSignature::new(&sandbox.p(1),
+        MsgAnchoringSignature::new(&sandbox.service_public_key(1),
                                    1,
                                    tx.clone(),
                                    0,
                                    different_signature.as_ref(),
-                                   sandbox.s(1))
+                                   sandbox.service_secret_key(1))
     };
     assert_ne!(signature_msgs[1], msg_signature_different);
 
@@ -732,12 +732,12 @@ fn test_anchoring_signature_input_from_different_validator() {
         tx
     };
 
-    let msg_signature_wrong = MsgAnchoringSignature::new(&sandbox.p(1),
+    let msg_signature_wrong = MsgAnchoringSignature::new(&sandbox.service_public_key(1),
                                                          2,
                                                          tx.clone(),
                                                          0,
                                                          signatures[2].signature(),
-                                                         sandbox.s(1));
+                                                         sandbox.service_secret_key(1));
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_different` into blockchain
@@ -785,7 +785,12 @@ fn test_anchoring_signature_unknown_output_address() {
                             &signature));
 
     let msg_signature_wrong =
-        MsgAnchoringSignature::new(&sandbox.p(0), 0, tx.clone(), 0, &signature, sandbox.s(0));
+        MsgAnchoringSignature::new(&sandbox.service_public_key(0),
+                                   0,
+                                   tx.clone(),
+                                   0,
+                                   &signature,
+                                   sandbox.service_secret_key(0));
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_wrong` into blockchain
