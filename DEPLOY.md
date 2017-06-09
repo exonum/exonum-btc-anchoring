@@ -32,13 +32,15 @@ txindex=1
 ```
 These rpc settings will be used by the service.
 
-After configuration file creation launch `bitcoind` daemon via command:
+After creating configuration file, launch `bitcoind` daemon via command:
 ```shell
 bitcoind --daemon
 ```
 Downloading and indexing of the bitcoin blockchain may take a lot of time, especially for the `mainnet`.
 
-***Note!** If you connect `bitcoind` node to the existing validator you must import current `anchoring` address by the `importaddress` rpc call.*
+***Note!** If you connect `bitcoind` node to the existing validator you must import current
+`anchoring` address by the `importaddress` rpc call. You can obtain current `anchoring` 
+address via [`exonum-dashboard`][exonum:dashboard].*
 
 ## Testnet deployment
 
@@ -58,17 +60,17 @@ $ anchoring generate \
     --anchoring-funds <amount in satoshis> \
     --anchoring-fee <fee is satoshis>
 ```
-Which create the configuration of `N` nodes in destination directory using given `bitcoind` by rpc.
+Which create the configuration of `N` exonum anchoring nodes in destination directory using given `bitcoind` by rpc.
 
-In addition in the generated configuration files you may specify public and private api addresses according to this [document][exonum:node_api].
+Also in the generated configuration files you may specify public and private api addresses according to this [document][exonum:node_api].
 
-***Warning!** It is important that the full node have some bitcoin amount greater  than `<initial_funds>`, 
-since the initial funding transaction will create during the testnet generation. 
+***Warning!** `Bitcoind` node should have some bitcoin amount greater than `<initial_funds>`, 
+since the initial funding transaction will be created during the `testnet` generation.
 For `testnet` you may use a [`faucet`][bitcoin:faucet] to get some coins.*
 
 ### Launching testnet
 
-Launch all nodes in the testnet. To launch node `m`, execute:
+Launch all exonum nodes in the testnet. To launch node `m`, execute:
 ```
 $ anchoring run --node-config <destdir>/<m>.toml --leveldb-path <destdir>/db/<m>
 ```
@@ -106,7 +108,7 @@ For the `anchoring` example consensus configuration looks like this:
 
 You can perform these actions via [exonum-dashboard](exonum:dashboard) web application. 
 The application shows `anchoring` address and can change configuration. 
-To connect an application with the anchoring node, you must specify its api addresses in the `Settings` tab. 
+To connect an application with the `exonum anchoring node`, you must specify its api addresses in the `Settings` tab. 
 Also you can change selected validator by these settings.
 
 ### Change variables
@@ -120,31 +122,32 @@ Just change these variables and apply the new configuration.
 
 ### Add funds
 
-Send to anchoring wallet some btc and save transactions hex. Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex. 
+Send to anchoring wallet some btc and save raw transaction body hex. Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex. 
 
-***Note!** If the current anchoring chain becomes unusable you may start a new chain by adding corresponding funding transaction.*
+***Note!** If the current anchoring chain [`becomes unusable`][exonum:anchoring_transfering] you may start a new chain by adding corresponding funding transaction.*
 
 ### Change list of validators
 
-***Important warning!** This procedure changes the `anchoring address`. Node needs to wait until 
+***Important warning!** This procedure changes the `anchoring address`. Exonum node needs to wait until 
 the last anchored transaction gets enough confirmations. It is caused by impossibility to sign
 transaction addressed to `old anchoring address` by keys from the `current configuration`. If the
 last anchoring transaction does not catch enough confirmations before anchoring address is changed, 
 the following `transfering transaction` may be lost because of possible bitcoin forks and 
 transaction malleability. See this [article][exonum:anchoring_transfering] for details.*
 
-* Make sure that difference between the activation height (`actual_from`) and current `Exonum` blockchain height is enough for get sufficient confirmations for `latest anchored transaction`. Usually enough 6 hours for this, calculate how many blocks will be taken during this time and add this number to the `current_height`.
-* If necessary [generate][exonum:anchoring_gen_keypair] a new key pair for anchoring.
-* Change list of validators.
+* Make sure that difference between the activation height (`actual_from`) and current `Exonum` blockchain height is enough for get sufficient confirmations for `latest anchored transaction`. Usually 6 hours are enough for this. 
+Calculate how many blocks will be taken during this time and add this number to the `current_height`.
+* If necessary, [generate][exonum:anchoring_gen_keypair] a new key pair for anchoring.
+* Change list of validators via editing `validators` array.
 * Initiate the config update procedure.
 * Make sure that config update procedure is not delayed. That is, do not delay the voting procedure for the new configuration.
 * Look at the new address of the `anchoring` in the [`exonum-dashboard`][exonum:dashboard] and [set private key for it](#private-key-updating).
 
-***Note!** If `transfering transaction` has been lost you need to establish a new anchoring chain by a new `funding transaction`.*
+***Note!** If `transfering transaction` has been lost you need establishing a new anchoring chain by a new `funding transaction`.*
 
 ### Private key updating
 
-Each node stores a map for the `anchoring address` and its corresponding `private key`.
+Each exonum node stores a map for the `anchoring address` and its corresponding `private key`.
 ```ini
 [anchoring_service.node.private_keys]
 2NCJYWui4LGNZguUw41xBANbcHoKxSVxyzr = "cRf74adxyQzJs7V8fHoyrMDazxzCmKAan63Cfhf9i4KL69zRkdS2"
