@@ -10,7 +10,7 @@ use router::Router;
 use exonum::blockchain::{ApiContext, NodeState, Service, Transaction};
 use exonum::crypto::Hash;
 use exonum::messages::{FromRaw, RawTransaction};
-use exonum::stream_struct::Error as StreamStructError;
+use exonum::encoding::Error as StreamStructError;
 use exonum::storage::{Error as StorageError, View};
 use exonum::api::Api;
 

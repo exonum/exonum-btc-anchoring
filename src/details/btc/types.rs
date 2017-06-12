@@ -12,7 +12,7 @@ pub use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
 
 use exonum::crypto::{FromHexError, Hash, HexValue, hash};
-use exonum::stream_struct::Field;
+use exonum::encoding::Field;
 use exonum::storage::StorageValue;
 
 use super::HexValueEx;
@@ -79,7 +79,7 @@ impl HexValue for PublicKey {
     fn to_hex(&self) -> String {
         let context = Secp256k1::without_caps();
         let array = self.0.serialize_vec(&context, true);
-        ::exonum::stream_struct::serialize::ToHex::to_hex(&array.as_slice())
+        ::exonum::encoding::serialize::ToHex::to_hex(&array.as_slice())
     }
 
     fn from_hex<T: AsRef<str>>(v: T) -> Result<Self, FromHexError> {

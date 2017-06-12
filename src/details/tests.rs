@@ -15,7 +15,7 @@ use secp256k1::Secp256k1;
 
 use exonum::crypto::{Hash, HexValue, hash};
 use exonum::storage::StorageValue;
-use exonum::stream_struct::Field;
+use exonum::encoding::Field;
 use exonum::helpers;
 
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
@@ -195,7 +195,7 @@ fn anchoring_tx_serde() {
 }
 
 #[test]
-fn test_anchoring_tx_storage_value() {
+fn test_anchoring_tx_encoding_struct() {
     let hex = "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c099010000000\
         0ffffffff0240899500000000001976a914b85133a96a5cadf6cddcfb1d17c79f42c3bbc9dd88ac00000000000\
         000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd\

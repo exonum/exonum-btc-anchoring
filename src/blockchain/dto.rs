@@ -2,7 +2,7 @@ use std::fmt;
 
 use exonum::crypto::{Hash, PublicKey};
 use exonum::messages::{FromRaw, Message, RawTransaction};
-use exonum::stream_struct::Error as StreamStructError;
+use exonum::encoding::Error as StreamStructError;
 
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
 
@@ -38,7 +38,7 @@ message! {
     }
 }
 
-storage_value! {
+encoding_struct! {
     struct LectContent {
         const SIZE = 40;
 

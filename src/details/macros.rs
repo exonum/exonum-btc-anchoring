@@ -190,45 +190,46 @@ macro_rules! implement_tx_wrapper {
         }
     }
 
-    impl<'a> ::exonum::stream_struct::Field<'a> for $name {
-        fn field_size() -> ::exonum::stream_struct::Offset {
+    impl<'a> ::exonum::encoding::Field<'a> for $name {
+        fn field_size() -> ::exonum::encoding::Offset {
             8
         }
 
         unsafe fn read(buffer: &'a [u8],
-                       from: ::exonum::stream_struct::Offset,
-                       to: ::exonum::stream_struct::Offset)
+                       from: ::exonum::encoding::Offset,
+                       to: ::exonum::encoding::Offset)
             -> $name {
-            let data = <&[u8] as ::exonum::stream_struct::Field>::read(buffer, from, to);
+            let data = <&[u8] as ::exonum::encoding::Field>::read(buffer, from, to);
             <$name as StorageValue>::deserialize(data.to_vec())
         }
 
         fn write(&self,
                  buffer: &mut Vec<u8>,
-                 from: ::exonum::stream_struct::Offset,
-                 to: ::exonum::stream_struct::Offset) {
-            <&[u8] as ::exonum::stream_struct::Field>::write(&self.clone().serialize().as_slice(),
+                 from: ::exonum::encoding::Offset,
+                 to: ::exonum::encoding::Offset) {
+            <&[u8] as ::exonum::encoding::Field>::write(&self.clone().serialize().as_slice(),
                                                              buffer,
                                                              from,
                                                              to);
         }
 
         fn check(buffer: &[u8],
-                 from: ::exonum::stream_struct::CheckedOffset,
-                 to: ::exonum::stream_struct::CheckedOffset)
-            -> ::exonum::stream_struct::Result {
-            let result = <Vec<u8> as ::exonum::stream_struct::Field>::check(buffer, from, to)?;
+                 from: ::exonum::encoding::CheckedOffset,
+                 to: ::exonum::encoding::CheckedOffset,
+                 latest_segment: ::exonum::encoding::CheckedOffset )
+            -> ::exonum::encoding::Result {
+            let latest_segment = <Vec<u8> as ::exonum::encoding::Field>::check(buffer, from, to, latest_segment)?;
             let buf: Vec<u8> = unsafe {
-                ::exonum::stream_struct::Field::read(buffer,
+                ::exonum::encoding::Field::read(buffer,
                                                      from.unchecked_offset(),
                                                      to.unchecked_offset())
             };
-            let raw_tx: Result<RawBitcoinTx, ::exonum::stream_struct::Error> =
+            let raw_tx: Result<RawBitcoinTx, ::exonum::encoding::Error> =
                 deserialize::<RawBitcoinTx>(buf.as_ref())
                     .map_err(|_| "Incorrect bitcoin transaction".into());
 
             if <$name as TxFromRaw>::from_raw(raw_tx?).is_some() {
-                Ok(result)
+                Ok(latest_segment)
             } else {
                 Err("Incorrect bitcoin transaction".into())
             }
