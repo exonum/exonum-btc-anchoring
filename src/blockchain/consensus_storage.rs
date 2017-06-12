@@ -10,16 +10,16 @@ use details::btc::transactions::FundingTx;
 /// Public part of anchoring service configuration stored in blockchain.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct AnchoringConfig {
-    /// Public keys validators from which the current `anchoring` address can be calculated.
+    /// Validators' public keys from which the current `anchoring` address can be calculated.
     pub validators: Vec<btc::PublicKey>,
     /// The transaction that funds `anchoring` address.
-    /// If the anchoring transactions chain is empty, it will be a first transaction in the chain.
+    /// If the anchoring transactions chain is empty, it will be the first transaction in the chain.
     /// Note: you must specify a suitable transaction before the network launching.
     pub funding_tx: Option<FundingTx>,
     /// A fee for each transaction in chain
     pub fee: u64,
-    /// The frequency in blocks with which the generation of a new `anchoring`
-    /// transactions in chain occurs.
+    /// The frequency in blocks with which the generation of new `anchoring`
+    /// transactions in the chain occurs.
     pub frequency: u64,
     /// The minimum number of confirmations in bitcoin network for the transition to a
     /// new `anchoring` address.
