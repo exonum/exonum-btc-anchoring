@@ -218,7 +218,8 @@ macro_rules! implement_tx_wrapper {
                  to: ::exonum::encoding::CheckedOffset,
                  latest_segment: ::exonum::encoding::CheckedOffset )
             -> ::exonum::encoding::Result {
-            let latest_segment = <Vec<u8> as ::exonum::encoding::Field>::check(buffer, from, to, latest_segment)?;
+            use ::exonum::encoding::Field;
+            let latest_segment = <Vec<u8> as Field>::check(buffer, from, to, latest_segment)?;
             let buf: Vec<u8> = unsafe {
                 ::exonum::encoding::Field::read(buffer,
                                                      from.unchecked_offset(),
