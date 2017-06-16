@@ -147,10 +147,10 @@ fn test_anchoring_second_block_additional_funds() {
     sandbox.broadcast(signatures[1].clone());
 
     let anchored_tx = &sandbox.latest_anchored_tx();
-    client.expect(send_raw_transaction_requests(&anchored_tx));
+    client.expect(send_raw_transaction_requests(anchored_tx));
 
     sandbox.add_height(&signatures);
-    sandbox.broadcast(gen_service_tx_lect(&sandbox, 0, &anchored_tx, 2));
+    sandbox.broadcast(gen_service_tx_lect(&sandbox, 0, anchored_tx, 2));
 }
 
 // We anchor second block after successfuly anchored first
@@ -237,9 +237,9 @@ fn test_anchoring_find_lect_chain_normal() {
             let lects = (1..4)
                 .map(|id| {
                          MsgAnchoringUpdateLatest::new(&sandbox.p(id),
-                                                       id as u32,
+                                                       id as u16,
                                                        tx.clone().into(),
-                                                       lects_count(&sandbox, id as u32),
+                                                       lects_count(&sandbox, id as u16),
                                                        sandbox.s(id))
                      })
                 .collect::<Vec<_>>();
@@ -316,11 +316,11 @@ fn test_anchoring_find_lect_chain_wrong() {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
             response: [
-                listunspent_entry(&current_anchored_tx, &anchoring_addr, 0)
+                listunspent_entry(current_anchored_tx, &anchoring_addr, 0)
             ]
         });
         for tx in anchored_txs.iter().rev() {
-            request.push(get_transaction_request(&tx));
+            request.push(get_transaction_request(tx));
         }
         request
     };
@@ -693,7 +693,7 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
                                 different_signature.as_ref()));
 
         different_signature.push(SigHashType::All.as_u32() as u8);
-        assert!(different_signature != signature_msgs[1].signature());
+        assert_ne!(different_signature, signature_msgs[1].signature());
 
         MsgAnchoringSignature::new(&sandbox.p(1),
                                    1,
@@ -702,7 +702,7 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
                                    different_signature.as_ref(),
                                    sandbox.s(1))
     };
-    assert!(signature_msgs[1] != msg_signature_different);
+    assert_ne!(signature_msgs[1], msg_signature_different);
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_different` into blockchain
@@ -776,9 +776,9 @@ fn test_anchoring_signature_unknown_output_address() {
     };
     let (redeem_script, addr) = sandbox.current_cfg().redeem_script();
     let priv_key = &sandbox.current_priv_keys()[0];
-    let signature = tx.sign_input(&redeem_script, 0, &priv_key);
+    let signature = tx.sign_input(&redeem_script, 0, priv_key);
 
-    assert!(tx.output_address(Network::Testnet) != addr);
+    assert_ne!(tx.output_address(Network::Testnet), addr);
     assert!(tx.verify_input(&redeem_script,
                             0,
                             &sandbox.current_cfg().validators[0],

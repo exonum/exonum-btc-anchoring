@@ -1,12 +1,12 @@
 use std::fmt;
 
 use exonum::crypto::{Hash, PublicKey};
-use exonum::messages::{Error as MessageError, FromRaw, Message, RawTransaction};
+use exonum::messages::{FromRaw, Message, RawTransaction};
+use exonum::encoding::Error as StreamStructError;
 
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
+use service::ANCHORING_SERVICE_ID;
 
-#[doc(hidden)]
-pub const ANCHORING_SERVICE_ID: u16 = 3;
 const ANCHORING_MESSAGE_SIGNATURE: u16 = 0;
 const ANCHORING_MESSAGE_LATEST: u16 = 1;
 
@@ -14,13 +14,13 @@ message! {
     struct MsgAnchoringSignature {
         const TYPE = ANCHORING_SERVICE_ID;
         const ID = ANCHORING_MESSAGE_SIGNATURE;
-        const SIZE = 56;
+        const SIZE = 54;
 
         field from:           &PublicKey   [00 => 32]
-        field validator:      u32          [32 => 36]
-        field tx:             AnchoringTx  [36 => 44]
-        field input:          u32          [44 => 48]
-        field signature:      &[u8]        [48 => 56]
+        field validator:      u16          [32 => 34]
+        field tx:             AnchoringTx  [34 => 42]
+        field input:          u32          [42 => 46]
+        field signature:      &[u8]        [46 => 54]
     }
 }
 
@@ -28,16 +28,16 @@ message! {
     struct MsgAnchoringUpdateLatest {
         const TYPE = ANCHORING_SERVICE_ID;
         const ID = ANCHORING_MESSAGE_LATEST;
-        const SIZE = 52;
+        const SIZE = 50;
 
         field from:           &PublicKey   [00 => 32]
-        field validator:      u32          [32 => 36]
-        field tx:             BitcoinTx    [36 => 44]
-        field lect_count:     u64          [44 => 52]
+        field validator:      u16          [32 => 34]
+        field tx:             BitcoinTx    [34 => 42]
+        field lect_count:     u64          [42 => 50]
     }
 }
 
-storage_value! {
+encoding_struct! {
     struct LectContent {
         const SIZE = 40;
 
@@ -98,7 +98,7 @@ impl Message for AnchoringMessage {
 }
 
 impl FromRaw for AnchoringMessage {
-    fn from_raw(raw: RawTransaction) -> ::std::result::Result<AnchoringMessage, MessageError> {
+    fn from_raw(raw: RawTransaction) -> ::std::result::Result<AnchoringMessage, StreamStructError> {
         match raw.message_type() {
             ANCHORING_MESSAGE_SIGNATURE => {
                 Ok(AnchoringMessage::Signature(MsgAnchoringSignature::from_raw(raw)?))
@@ -106,7 +106,7 @@ impl FromRaw for AnchoringMessage {
             ANCHORING_MESSAGE_LATEST => {
                 Ok(AnchoringMessage::UpdateLatest(MsgAnchoringUpdateLatest::from_raw(raw)?))
             }
-            _ => Err(MessageError::IncorrectMessageType { message_type: raw.message_type() }),
+            _ => Err("Expected different message type".into()),
         }
     }
 }

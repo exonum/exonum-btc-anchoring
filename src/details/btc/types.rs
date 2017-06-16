@@ -12,7 +12,7 @@ pub use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
 
 use exonum::crypto::{FromHexError, Hash, HexValue, hash};
-use exonum::messages::Field;
+use exonum::encoding::Field;
 use exonum::storage::StorageValue;
 
 use super::HexValueEx;
@@ -79,7 +79,7 @@ impl HexValue for PublicKey {
     fn to_hex(&self) -> String {
         let context = Secp256k1::without_caps();
         let array = self.0.serialize_vec(&context, true);
-        ::exonum::serialize::ToHex::to_hex(&array.as_slice())
+        ::exonum::encoding::serialize::ToHex::to_hex(&array.as_slice())
     }
 
     fn from_hex<T: AsRef<str>>(v: T) -> Result<Self, FromHexError> {
@@ -112,19 +112,7 @@ impl HexValueEx for RawScript {
     }
 }
 
-impl<'a> Field<'a> for &'a TxId {
-    fn field_size() -> usize {
-        32
-    }
-
-    fn read(buffer: &'a [u8], from: usize, _: usize) -> &'a TxId {
-        unsafe { ::std::mem::transmute(&buffer[from]) }
-    }
-
-    fn write(&self, buffer: &'a mut Vec<u8>, from: usize, to: usize) {
-        buffer[from..to].copy_from_slice(self.as_ref());
-    }
-}
+implement_pod_as_ref_field! { TxId }
 
 impl StorageValue for RedeemScript {
     fn serialize(self) -> Vec<u8> {
