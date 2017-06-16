@@ -7,7 +7,7 @@ use serde_json::value::Value;
 use rand::{Rng, thread_rng};
 use router::Router;
 
-use exonum::blockchain::{ApiContext, NodeState, Service, Transaction};
+use exonum::blockchain::{ApiContext, Service, ServiceContext, Transaction};
 use exonum::crypto::Hash;
 use exonum::messages::{FromRaw, RawTransaction};
 use exonum::encoding::Error as StreamStructError;
@@ -95,7 +95,7 @@ impl Service for AnchoringService {
         Ok(serde_json::to_value(cfg).unwrap())
     }
 
-    fn handle_commit(&self, state: &mut NodeState) -> Result<(), StorageError> {
+    fn handle_commit(&self, state: &mut ServiceContext) -> Result<(), StorageError> {
         let mut handler = self.handler.lock().unwrap();
         match handler.handle_commit(state) {
             Err(ServiceError::Storage(e)) => Err(e),
