@@ -15,7 +15,7 @@ use secp256k1::Secp256k1;
 
 use exonum::crypto::{Hash, HexValue, hash};
 use exonum::storage::StorageValue;
-use exonum::messages::Field;
+use exonum::encoding::Field;
 use exonum::helpers;
 
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
@@ -195,7 +195,7 @@ fn anchoring_tx_serde() {
 }
 
 #[test]
-fn test_anchoring_tx_storage_value() {
+fn test_anchoring_tx_encoding_struct() {
     let hex = "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c099010000000\
         0ffffffff0240899500000000001976a914b85133a96a5cadf6cddcfb1d17c79f42c3bbc9dd88ac00000000000\
         000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd\
@@ -218,8 +218,8 @@ fn test_anchoring_tx_message_field_rw_correct() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    <AnchoringTx as Field>::check(&buf, 0, 8).unwrap();
-    let dat2: Vec<u8> = Field::read(&buf, 0, 8);
+    <AnchoringTx as Field>::check(&buf, 0.into(), 8.into(), 8.into()).unwrap();
+    let dat2: Vec<u8> = unsafe { Field::read(&buf, 0, 8) };
     assert_eq!(dat2, dat);
 }
 
@@ -234,8 +234,8 @@ fn test_bitcoin_tx_message_field_rw_correct() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    <BitcoinTx as Field>::check(&buf, 0, 8).unwrap();
-    let dat2: Vec<u8> = Field::read(&buf, 0, 8);
+    <BitcoinTx as Field>::check(&buf, 0.into(), 8.into(), 8.into()).unwrap();
+    let dat2: Vec<u8> = unsafe { Field::read(&buf, 0, 8) };
     assert_eq!(dat2, dat);
 }
 
@@ -248,7 +248,7 @@ fn test_anchoring_tx_message_field_rw_garbage_unwrap() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let _: BitcoinTx = Field::read(&buf, 0, 8);
+    let _: BitcoinTx = unsafe { Field::read(&buf, 0, 8) };
 }
 
 #[test]
@@ -260,7 +260,7 @@ fn test_bitcoin_tx_message_field_rw_garbage_unwrap() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    let _: BitcoinTx = Field::read(&buf, 0, 8);
+    let _: BitcoinTx = unsafe { Field::read(&buf, 0, 8) };
 }
 
 #[test]
@@ -272,7 +272,7 @@ fn test_anchoring_tx_message_field_rw_incorrect_check() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    AnchoringTx::check(&buf, 0, 8).unwrap();
+    AnchoringTx::check(&buf, 0.into(), 8.into(), 8.into()).unwrap();
 }
 
 #[test]
@@ -284,7 +284,7 @@ fn test_anchoring_tx_message_field_rw_without_payload_check() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    AnchoringTx::check(&buf, 0, 8).unwrap();
+    AnchoringTx::check(&buf, 0.into(), 8.into(), 8.into()).unwrap();
 }
 
 #[test]
@@ -302,7 +302,7 @@ fn test_anchoring_tx_message_field_rw_wrong_check() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    AnchoringTx::check(&buf, 0, 8).unwrap();
+    AnchoringTx::check(&buf, 0.into(), 8.into(), 8.into()).unwrap();
 }
 
 #[test]
@@ -323,7 +323,7 @@ fn test_funding_tx_message_field_rw_wrong_tx_kind_check() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    FundingTx::check(&buf, 0, 8).unwrap();
+    FundingTx::check(&buf, 0.into(), 8.into(), 8.into()).unwrap();
 }
 
 #[test]
@@ -335,7 +335,7 @@ fn test_bitcoin_tx_message_field_rw_incorrect_check() {
     let mut buf = vec![255; 8];
     Field::write(&dat, &mut buf, 0, 8);
 
-    BitcoinTx::check(&buf, 0, 8).unwrap();
+    BitcoinTx::check(&buf, 0.into(), 8.into(), 8.into()).unwrap();
 }
 
 #[test]

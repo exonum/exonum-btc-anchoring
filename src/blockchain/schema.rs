@@ -9,10 +9,10 @@ use exonum::crypto::Hash;
 
 use bitcoin::util::base58::ToBase58;
 use blockchain::consensus_storage::AnchoringConfig;
-use blockchain::ANCHORING_SERVICE_ID;
 use blockchain::dto::{LectContent, MsgAnchoringSignature};
 use details::btc;
 use details::btc::transactions::BitcoinTx;
+use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 
 #[doc(hidden)]
 pub struct AnchoringSchema<'a> {
@@ -64,9 +64,9 @@ impl<'a> AnchoringSchema<'a> {
     fn known_signature_id(msg: &MsgAnchoringSignature) -> Vec<u8> {
         let txid = msg.tx().id();
 
-        let mut id = vec![txid.as_ref(), [0; 8].as_ref()].concat();
-        BigEndian::write_u32(&mut id[32..36], msg.validator());
-        BigEndian::write_u32(&mut id[36..40], msg.input());
+        let mut id = vec![txid.as_ref(), [0; 6].as_ref()].concat();
+        BigEndian::write_u16(&mut id[32..34], msg.validator());
+        BigEndian::write_u32(&mut id[34..38], msg.input());
         id
     }
 }
@@ -221,7 +221,7 @@ impl<'a> AnchoringSchema<'a> {
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {
-        let service_id = ANCHORING_SERVICE_ID.to_string();
-        from_value(cfg.services[&service_id].clone()).expect("Anchoring config does not exist")
+        from_value(cfg.services[ANCHORING_SERVICE_NAME].clone())
+            .expect("Anchoring config does not exist")
     }
 }

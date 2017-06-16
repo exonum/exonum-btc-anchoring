@@ -23,7 +23,7 @@ use sandbox::config_updater::TxConfig;
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::details::btc::transactions::{FundingTx, TransactionBuilder};
 use anchoring_btc_service::details::btc;
-use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig, AnchoringNodeConfig};
+use anchoring_btc_service::{ANCHORING_SERVICE_NAME, AnchoringConfig, AnchoringNodeConfig};
 
 use anchoring_btc_sandbox::AnchoringSandbox;
 use anchoring_btc_sandbox::helpers::*;
@@ -57,7 +57,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
     sandbox
         .handler()
         .add_private_key(&following_addr, priv_keys[0].clone());
-    (gen_update_config_tx(sandbox, from_height, cfg.clone()), cfg)
+    (gen_update_config_tx(sandbox, from_height, &cfg), cfg)
 }
 
 fn gen_following_cfg_unchanged_self_key(sandbox: &AnchoringSandbox,
@@ -82,7 +82,7 @@ fn gen_following_cfg_unchanged_self_key(sandbox: &AnchoringSandbox,
     sandbox
         .handler()
         .add_private_key(&following_addr, priv_keys[0].clone());
-    (gen_update_config_tx(sandbox, from_height, cfg.clone()), cfg)
+    (gen_update_config_tx(sandbox, from_height, &cfg), cfg)
 }
 
 fn gen_following_cfg_add_two_validators_changed_self_key
@@ -143,14 +143,12 @@ fn gen_following_cfg_add_two_validators_changed_self_key
         cfg.actual_from = from_height;
 
         for keypair in &exonum_keypairs {
-            cfg.validators.push(keypair.0.clone());
+            cfg.validators.push(keypair.0);
             // Add validator to exonum sandbox validators map
             sandbox.validators_map.insert(keypair.0, keypair.1.clone());
         }
         // Generate cfg change tx
-        *cfg.services
-             .get_mut(&ANCHORING_SERVICE_ID.to_string())
-             .unwrap() = json!(anchoring_cfg);
+        *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(anchoring_cfg);
         cfg
     };
 
@@ -1011,7 +1009,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
     let (cfg_tx, following_cfg) = {
         let mut cfg = following_cfg;
         cfg.funding_tx = Some(funding_tx.clone());
-        let cfg_tx = gen_update_config_tx(&sandbox, second_cfg_change_height, cfg.clone());
+        let cfg_tx = gen_update_config_tx(&sandbox, second_cfg_change_height, &cfg);
         (cfg_tx, cfg)
     };
     let (_, following_addr) = following_cfg.redeem_script();
@@ -1143,7 +1141,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
     let (cfg_tx, following_cfg) = {
         let mut cfg = following_cfg;
         cfg.funding_tx = Some(funding_tx.clone());
-        let cfg_tx = gen_update_config_tx(&sandbox, second_cfg_change_height, cfg.clone());
+        let cfg_tx = gen_update_config_tx(&sandbox, second_cfg_change_height, &cfg);
         (cfg_tx, cfg)
     };
     let (_, following_addr) = following_cfg.redeem_script();
@@ -1437,7 +1435,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
 
     let mut sandbox = AnchoringSandbox::initialize(&[]);
 
-    let sandbox_node_pubkey = sandbox.cfg().validators[0].clone();
+    let sandbox_node_pubkey = sandbox.cfg().validators[0];
 
     anchor_first_block(&sandbox);
     anchor_first_block_lect_normal(&sandbox);
@@ -1485,9 +1483,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             cfg.validators.push(validator_keypair.0);
             cfg.validators.swap(0, 3);
             // Generate cfg change tx
-            *cfg.services
-                 .get_mut(&ANCHORING_SERVICE_ID.to_string())
-                 .unwrap() = json!(service_cfg);
+            *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
             cfg
         };
 

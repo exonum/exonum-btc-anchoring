@@ -11,7 +11,7 @@ use blockchain::dto::{LectContent, MsgAnchoringSignature, MsgAnchoringUpdateLate
 use details::tests::{dummy_anchoring_tx, gen_anchoring_keys, make_signatures};
 
 #[test]
-fn test_lect_content_storage_value() {
+fn test_lect_content_encoding_struct() {
     let hash = hash(&[1, 2, 3, 4]);
     let tx = BitcoinTx::from_hex("01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f3\
         69a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9\

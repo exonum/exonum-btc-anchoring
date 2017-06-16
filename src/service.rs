@@ -9,7 +9,8 @@ use router::Router;
 
 use exonum::blockchain::{ApiContext, NodeState, Service, Transaction};
 use exonum::crypto::Hash;
-use exonum::messages::{Error as MessageError, FromRaw, RawTransaction};
+use exonum::messages::{FromRaw, RawTransaction};
+use exonum::encoding::Error as StreamStructError;
 use exonum::storage::{Error as StorageError, View};
 use exonum::api::Api;
 
@@ -26,7 +27,10 @@ use error::Error as ServiceError;
 #[cfg(not(feature="sandbox_tests"))]
 use handler::error::Error as HandlerError;
 
-pub use blockchain::ANCHORING_SERVICE_ID;
+/// Anchoring service id.
+pub const ANCHORING_SERVICE_ID: u16 = 3;
+/// Anchoring service name.
+pub const ANCHORING_SERVICE_NAME: &'static str = "btc_anchoring";
 
 /// An anchoring service implementation for `Exonum` blockchain.
 pub struct AnchoringService {
@@ -74,7 +78,7 @@ impl Service for AnchoringService {
         AnchoringSchema::new(view).state_hash()
     }
 
-    fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, MessageError> {
+    fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, StreamStructError> {
         AnchoringMessage::from_raw(raw).map(|tx| Box::new(tx) as Box<Transaction>)
     }
 

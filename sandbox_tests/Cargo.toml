@@ -24,9 +24,9 @@ iron-test = "0.5.0"
 [dependencies.exonum]
 version = "0.1.0"
 git = "ssh://git@github.com/exonum/exonum-core.git"
-rev = "ae45500c64bf6d4b503f8f3fc19dbea2650ab515"
+rev = "d17959deb4763539c23343665f94c1d469e1b4f2"
 
 [dependencies.sandbox]
 version = "0.1.0"
 git = "ssh://git@github.com/exonum/exonum-core.git"
-rev = "ae45500c64bf6d4b503f8f3fc19dbea2650ab515"
+rev = "d17959deb4763539c23343665f94c1d469e1b4f2"

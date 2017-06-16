@@ -17,7 +17,7 @@ use exonum::messages::{Message, RawTransaction};
 use exonum::storage::StorageValue;
 use sandbox::config_updater::TxConfig;
 
-use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
+use anchoring_btc_service::{ANCHORING_SERVICE_NAME, AnchoringConfig};
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
 use anchoring_btc_service::error::HandlerError;
@@ -45,9 +45,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
     let mut cfg = sandbox.cfg();
     cfg.actual_from = from_height;
     cfg.validators.swap_remove(0);
-    *cfg.services
-         .get_mut(&ANCHORING_SERVICE_ID.to_string())
-         .unwrap() = json!(service_cfg);
+    *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), from_height, sandbox.s(0));
     (tx.raw().clone(), service_cfg)
 }
@@ -55,7 +53,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
 // Invoke this method after anchor_first_block_lect_normal
 pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     let cfg_change_height = 12;
-    let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, cfg_change_height);
+    let (cfg_tx, following_cfg) = gen_following_cfg(sandbox, cfg_change_height);
     let (_, following_addr) = following_cfg.redeem_script();
 
     // Tx has not enough confirmations.
@@ -89,7 +87,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
 
     let lects = (0..4)
         .map(|id| {
-                 gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
+                 gen_service_tx_lect(sandbox, id, &transition_tx, 2)
                      .raw()
                      .clone()
              })
