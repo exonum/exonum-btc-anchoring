@@ -109,7 +109,7 @@ impl PublicApi {
         Ok(schema.actual_anchoring_config()?.redeem_script().1)
     }
 
-    /// Returns the following anchoring address if the node is in transition state.
+    /// Returns the following anchoring address if the node is in a transition state.
     ///
     /// `GET /{api_prefix}/v1/address/actual`
     pub fn following_address(&self) -> Result<Option<btc::Address>, ApiError> {

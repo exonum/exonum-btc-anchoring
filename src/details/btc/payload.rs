@@ -34,7 +34,7 @@ pub struct Payload {
     pub block_height: u64,
     /// Anchored block hash
     pub block_hash: Hash,
-    /// `Txid` of previous transactions chain if it have been lost.
+    /// `Txid` of previous transactions chain if it has been lost.
     pub prev_tx_chain: Option<btc::TxId>,
 }
 
