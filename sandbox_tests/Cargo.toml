@@ -22,11 +22,11 @@ iron = "0.5.1"
 iron-test = "0.5.0"
 
 [dependencies.exonum]
-git = "ssh://git@github.com/vldm/exonum-core.git"
 version = "0.1.0"
-rev = "6eb0ee84af14af7d85c2ad70d426b721bfb6ed3f"
+git = "ssh://git@github.com/exonum/exonum-core.git"
+rev = "d17959deb4763539c23343665f94c1d469e1b4f2"
 
 [dependencies.sandbox]
-git = "ssh://git@github.com/vldm/exonum-core.git"
 version = "0.1.0"
-rev = "6eb0ee84af14af7d85c2ad70d426b721bfb6ed3f"
+git = "ssh://git@github.com/exonum/exonum-core.git"
+rev = "d17959deb4763539c23343665f94c1d469e1b4f2"

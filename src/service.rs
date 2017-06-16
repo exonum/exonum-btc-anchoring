@@ -27,7 +27,10 @@ use error::Error as ServiceError;
 #[cfg(not(feature="sandbox_tests"))]
 use handler::error::Error as HandlerError;
 
-pub use blockchain::ANCHORING_SERVICE_ID;
+/// Anchoring service id.
+pub const ANCHORING_SERVICE_ID: u16 = 3;
+/// Anchoring service name.
+pub const ANCHORING_SERVICE_NAME: &'static str = "btc_anchoring";
 
 /// An anchoring service implementation for `Exonum` blockchain.
 pub struct AnchoringService {
@@ -129,10 +132,10 @@ impl Service for AnchoringService {
 }
 
 
-/// Generates testnet configuration by given rpc for given given nodes amount
+/// Generates testnet configuration by given rpc for given nodes amount
 /// using given random number generator.
 ///
-/// Note: Bitcoin node that used by rpc have to enough bitcoin amount to generate
+/// Note: Bitcoin node that is used by rpc should have enough bitcoin amount to generate
 /// funding transaction by given `total_funds`.
 pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
                                                 network: btc::Network,

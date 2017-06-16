@@ -38,7 +38,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn validator_id(&self, state: &NodeState) -> u32 {
+    pub fn validator_id(&self, state: &NodeState) -> u16 {
         state
             .validator_state()
             .as_ref()

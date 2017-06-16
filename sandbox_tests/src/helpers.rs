@@ -10,7 +10,7 @@ use exonum::helpers;
 use sandbox::sandbox::Sandbox;
 use sandbox::config_updater::TxConfig;
 
-use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
+use anchoring_btc_service::{ANCHORING_SERVICE_NAME, AnchoringConfig};
 use anchoring_btc_service::details::btc;
 use anchoring_btc_service::details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
 use anchoring_btc_service::details::sandbox::Request;
@@ -98,7 +98,7 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
     let mut cfg = sandbox.cfg();
     cfg.actual_from = actual_from;
     *cfg.services
-         .get_mut(&ANCHORING_SERVICE_ID.to_string())
+         .get_mut(ANCHORING_SERVICE_NAME)
          .unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
     tx.raw().clone()
@@ -538,7 +538,7 @@ fn gen_following_cfg_exclude_validator(sandbox: &AnchoringSandbox,
     cfg.actual_from = from_height;
     cfg.validators.swap_remove(0);
     *cfg.services
-         .get_mut(&ANCHORING_SERVICE_ID.to_string())
+         .get_mut(ANCHORING_SERVICE_NAME)
          .unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), from_height, sandbox.s(0));
     (tx.raw().clone(), service_cfg)
