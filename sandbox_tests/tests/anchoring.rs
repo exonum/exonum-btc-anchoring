@@ -237,9 +237,9 @@ fn test_anchoring_find_lect_chain_normal() {
             let lects = (1..4)
                 .map(|id| {
                          MsgAnchoringUpdateLatest::new(&sandbox.p(id),
-                                                       id as u32,
+                                                       id as u16,
                                                        tx.clone().into(),
-                                                       lects_count(&sandbox, id as u32),
+                                                       lects_count(&sandbox, id as u16),
                                                        sandbox.s(id))
                      })
                 .collect::<Vec<_>>();

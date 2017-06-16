@@ -47,7 +47,7 @@ mod tests;
 pub mod helpers;
 pub mod secp256k1_hack;
 
-pub const ANCHORING_VALIDATOR: u32 = VALIDATOR_0;
+pub const ANCHORING_VALIDATOR: u16 = VALIDATOR_0;
 pub const ANCHORING_FREQUENCY: u64 = 10;
 pub const ANCHORING_UTXO_CONFIRMATIONS: u64 = 24;
 pub const ANCHORING_FUNDS: u64 = 4000;
@@ -318,7 +318,7 @@ impl AnchoringSandbox {
             for input in tx.inputs() {
                 let signature = tx.sign_input(&redeem_script, input, priv_key);
                 signs.push(MsgAnchoringSignature::new(&self.sandbox.p(validator),
-                                                      validator as u32,
+                                                      validator as u16,
                                                       tx.clone(),
                                                       input,
                                                       &signature,

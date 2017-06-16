@@ -17,7 +17,7 @@ use exonum::messages::{Message, RawTransaction};
 use exonum::storage::StorageValue;
 use sandbox::config_updater::TxConfig;
 
-use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig};
+use anchoring_btc_service::{ANCHORING_SERVICE_NAME, AnchoringConfig};
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
 use anchoring_btc_service::error::HandlerError;
@@ -45,9 +45,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
     let mut cfg = sandbox.cfg();
     cfg.actual_from = from_height;
     cfg.validators.swap_remove(0);
-    *cfg.services
-         .get_mut(&ANCHORING_SERVICE_ID.to_string())
-         .unwrap() = json!(service_cfg);
+    *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), from_height, sandbox.s(0));
     (tx.raw().clone(), service_cfg)
 }

@@ -23,7 +23,7 @@ use sandbox::config_updater::TxConfig;
 use anchoring_btc_service::details::sandbox::Request;
 use anchoring_btc_service::details::btc::transactions::{FundingTx, TransactionBuilder};
 use anchoring_btc_service::details::btc;
-use anchoring_btc_service::{ANCHORING_SERVICE_ID, AnchoringConfig, AnchoringNodeConfig};
+use anchoring_btc_service::{ANCHORING_SERVICE_NAME, AnchoringConfig, AnchoringNodeConfig};
 
 use anchoring_btc_sandbox::AnchoringSandbox;
 use anchoring_btc_sandbox::helpers::*;
@@ -148,9 +148,7 @@ fn gen_following_cfg_add_two_validators_changed_self_key
             sandbox.validators_map.insert(keypair.0, keypair.1.clone());
         }
         // Generate cfg change tx
-        *cfg.services
-             .get_mut(&ANCHORING_SERVICE_ID.to_string())
-             .unwrap() = json!(anchoring_cfg);
+        *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(anchoring_cfg);
         cfg
     };
 
@@ -1485,9 +1483,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             cfg.validators.push(validator_keypair.0);
             cfg.validators.swap(0, 3);
             // Generate cfg change tx
-            *cfg.services
-                 .get_mut(&ANCHORING_SERVICE_ID.to_string())
-                 .unwrap() = json!(service_cfg);
+            *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
             cfg
         };
 

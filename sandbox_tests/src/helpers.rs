@@ -23,7 +23,7 @@ pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
 pub fn gen_service_tx_lect(sandbox: &Sandbox,
-                           validator: u32,
+                           validator: u16,
                            tx: &RawBitcoinTx,
                            count: u64)
                            -> MsgAnchoringUpdateLatest {
@@ -35,8 +35,8 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
 }
 
 pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
-                                 real_id: u32,
-                                 fake_id: u32,
+                                 real_id: u16,
+                                 fake_id: u16,
                                  tx: &RawBitcoinTx,
                                  count: u64)
                                  -> MsgAnchoringUpdateLatest {
@@ -47,7 +47,7 @@ pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
                                   sandbox.s(real_id as usize))
 }
 
-pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
+pub fn dump_lects(sandbox: &Sandbox, id: u16) -> Vec<BitcoinTx> {
     let b = sandbox.blockchain_ref().clone();
     let v = b.view();
     let s = AnchoringSchema::new(&v);
@@ -61,7 +61,7 @@ pub fn dump_lects(sandbox: &Sandbox, id: u32) -> Vec<BitcoinTx> {
         .collect::<Vec<_>>()
 }
 
-pub fn lects_count(sandbox: &Sandbox, id: u32) -> u64 {
+pub fn lects_count(sandbox: &Sandbox, id: u16) -> u64 {
     dump_lects(sandbox, id).len() as u64
 }
 
@@ -97,9 +97,7 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
                             -> RawTransaction {
     let mut cfg = sandbox.cfg();
     cfg.actual_from = actual_from;
-    *cfg.services
-         .get_mut(ANCHORING_SERVICE_NAME)
-         .unwrap() = json!(service_cfg);
+    *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), actual_from, sandbox.s(0));
     tx.raw().clone()
 }
@@ -537,9 +535,7 @@ fn gen_following_cfg_exclude_validator(sandbox: &AnchoringSandbox,
     let mut cfg = sandbox.cfg();
     cfg.actual_from = from_height;
     cfg.validators.swap_remove(0);
-    *cfg.services
-         .get_mut(ANCHORING_SERVICE_NAME)
-         .unwrap() = json!(service_cfg);
+    *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), from_height, sandbox.s(0));
     (tx.raw().clone(), service_cfg)
 }
