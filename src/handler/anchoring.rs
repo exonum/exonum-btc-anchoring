@@ -1,7 +1,6 @@
 use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::{NodeState, Schema};
-use exonum::storage::List;
 use exonum::crypto::HexValue;
 
 use error::Error as ServiceError;
@@ -44,7 +43,7 @@ impl AnchoringHandler {
                                   -> Result<(), ServiceError> {
         let lect = self.collect_lects_for_validator(self.validator_key(multisig.common, state),
                                                     multisig.common,
-                                                    state)?;
+                                                    state);
         match lect {
             LectKind::Funding(_) => self.try_create_anchoring_tx_chain(multisig, None, state),
             LectKind::Anchoring(tx) => {
@@ -75,7 +74,7 @@ impl AnchoringHandler {
             let height = multisig.common.latest_anchoring_height(state.height());
             let hash = Schema::new(state.view())
                 .block_hashes_by_height()
-                .get(height)?
+                .get(height)
                 .unwrap();
 
             let out = funding_tx.find_out(&multisig.addr).unwrap();
@@ -106,7 +105,7 @@ impl AnchoringHandler {
                               -> Result<(), ServiceError> {
         let hash = Schema::new(state.view())
             .block_hashes_by_height()
-            .get(height)?
+            .get(height)
             .unwrap();
 
         let proposal = {
@@ -174,8 +173,8 @@ impl AnchoringHandler {
 
         let msgs = AnchoringSchema::new(state.view())
             .signatures(&txid)
-            .values()?;
-        if let Some(signatures) = collect_signatures(&proposal, multisig.common, msgs.iter()) {
+            .iter();
+        if let Some(signatures) = collect_signatures(&proposal, multisig.common, msgs) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
             if self.client()
@@ -198,13 +197,13 @@ impl AnchoringHandler {
                   new_lect.txid(),
                   AnchoringSchema::new(state.view())
                       .lects(self.validator_key(multisig.common, state))
-                      .len()?);
+                      .len());
 
             self.proposal_tx = None;
 
             let lects_count = AnchoringSchema::new(state.view())
                 .lects(self.validator_key(multisig.common, state))
-                .len()?;
+                .len();
             let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
                                                          self.validator_id(state),
                                                          new_lect.into(),

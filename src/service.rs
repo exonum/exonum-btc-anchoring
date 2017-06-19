@@ -11,7 +11,7 @@ use exonum::blockchain::{ApiContext, NodeState, Service, Transaction};
 use exonum::crypto::Hash;
 use exonum::messages::{FromRaw, RawTransaction};
 use exonum::encoding::Error as StreamStructError;
-use exonum::storage::{Error as StorageError, View};
+use exonum::storage::Snapshot;
 use exonum::api::Api;
 
 use api::PublicApi;
@@ -74,15 +74,15 @@ impl Service for AnchoringService {
         "btc_anchoring"
     }
 
-    fn state_hash(&self, view: &View) -> Result<Vec<Hash>, StorageError> {
-        AnchoringSchema::new(view).state_hash()
+    fn state_hash(&self, snapshot: &Snapshot) -> Vec<Hash> {
+        AnchoringSchema::new(snapshot).state_hash()
     }
 
     fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, StreamStructError> {
         AnchoringMessage::from_raw(raw).map(|tx| Box::new(tx) as Box<Transaction>)
     }
 
-    fn handle_genesis_block(&self, view: &View) -> Result<Value, StorageError> {
+    fn handle_genesis_block(&self, snapshot: &Snapshot) -> Value {
         let handler = self.handler.lock().unwrap();
         let cfg = self.genesis.clone();
         let (_, addr) = cfg.redeem_script();
@@ -91,19 +91,17 @@ impl Service for AnchoringService {
                 .importaddress(&addr.to_base58check(), "multisig", false, false)
                 .unwrap();
         }
-        AnchoringSchema::new(view).create_genesis_config(&cfg)?;
-        Ok(serde_json::to_value(cfg).unwrap())
+        AnchoringSchema::new(snapshot).create_genesis_config(&cfg);
+        serde_json::to_value(cfg).unwrap()
     }
 
-    fn handle_commit(&self, state: &mut NodeState) -> Result<(), StorageError> {
+    fn handle_commit(&self, state: &mut NodeState) {
         let mut handler = self.handler.lock().unwrap();
         match handler.handle_commit(state) {
-            Err(ServiceError::Storage(e)) => Err(e),
             #[cfg(feature="sandbox_tests")]
             Err(ServiceError::Handler(e)) => {
                 error!("An error occured: {:?}", e);
                 handler.errors.push(e);
-                Ok(())
             }
             #[cfg(not(feature="sandbox_tests"))]
             Err(ServiceError::Handler(e)) => {
@@ -111,13 +109,11 @@ impl Service for AnchoringService {
                     panic!("A critical error occured: {}", e);
                 }
                 error!("An error in handler occured: {}", e);
-                Ok(())
             }
             Err(e) => {
                 error!("An error occured: {:?}", e);
-                Ok(())
             }
-            Ok(()) => Ok(()),
+            Ok(()) => (),
         }
     }
 

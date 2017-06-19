@@ -38,7 +38,7 @@ impl AnchoringHandler {
             // Or try to create proposal
             match self.collect_lects_for_validator(self.validator_key(multisig.common, state),
                                                    multisig.common,
-                                                   state)? {
+                                                   state) {
                 LectKind::Anchoring(lect) => {
                     if lect.output_address(multisig.common.network) == multisig.addr {
                         return Ok(());
@@ -95,11 +95,11 @@ impl AnchoringHandler {
 
         let lect_txid = {
             let anchoring_schema = AnchoringSchema::new(state.view());
-            if let Some(tx) = anchoring_schema.collect_lects(&prev_cfg)? {
+            if let Some(tx) = anchoring_schema.collect_lects(&prev_cfg) {
                 tx.id()
             } else {
                 // Use initial funding tx as prev chain
-                let genesis_cfg = anchoring_schema.genesis_anchoring_config()?;
+                let genesis_cfg = anchoring_schema.genesis_anchoring_config();
                 genesis_cfg.funding_tx().id()
             }
         };

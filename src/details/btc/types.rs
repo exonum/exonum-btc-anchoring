@@ -1,3 +1,4 @@
+use std::borrow::Cow;
 use std::ops::Deref;
 use std::fmt;
 
@@ -13,17 +14,17 @@ use secp256k1::Secp256k1;
 
 use exonum::crypto::{FromHexError, Hash, HexValue, hash};
 use exonum::encoding::Field;
-use exonum::storage::StorageValue;
+use exonum::storage::{StorageValue, StorageKey};
 
 use super::HexValueEx;
 
-#[derive(Debug, Clone, Copy, PartialEq, Hash)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
 pub struct TxId(Sha256dHash);
 #[derive(Clone, PartialEq)]
 pub struct PrivateKey(pub RawPrivkey);
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
 pub struct PublicKey(pub RawPublicKey);
-#[derive(Clone, PartialEq)]
+#[derive(Clone, PartialEq, Eq)]
 pub struct Address(pub RawAddress);
 #[derive(Debug, Clone, PartialEq)]
 pub struct RedeemScript(pub RawScript);
@@ -45,9 +46,13 @@ implement_serde_hex! {TxId}
 implement_serde_base58check! {Address}
 implement_serde_base58check! {PrivateKey}
 
+implement_pod_as_ref_field! { TxId }
+
+const TXID_SIZE: usize = 32;
+
 impl TxId {
     pub fn from_slice(s: &[u8]) -> Option<TxId> {
-        if s.len() == 32 {
+        if s.len() == TXID_SIZE {
             Some(TxId(Sha256dHash::from(s)))
         } else {
             None
@@ -112,18 +117,30 @@ impl HexValueEx for RawScript {
     }
 }
 
-implement_pod_as_ref_field! { TxId }
-
 impl StorageValue for RedeemScript {
-    fn serialize(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         self.0.into_vec()
     }
 
-    fn deserialize(v: Vec<u8>) -> RedeemScript {
-        RedeemScript(RawScript::from(v))
+    fn from_bytes(v: Cow<[u8]>) -> RedeemScript {
+        RedeemScript(RawScript::from(v.into_owned()))
     }
 
     fn hash(&self) -> Hash {
         hash(self.0.clone().into_vec().as_ref())
+    }
+}
+
+impl StorageKey for TxId {
+    fn size(&self) -> usize {
+        TXID_SIZE
+    }
+
+    fn write(&self, buffer: &mut [u8]) {
+        buffer.copy_from_slice(self.as_ref())
+    }
+
+    fn read(buffer: &[u8]) -> Self {
+        TxId::from_slice(buffer).unwrap()
     }
 }

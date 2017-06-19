@@ -7,6 +7,7 @@ mod basic;
 pub mod error;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use details::rpc::AnchoringRpc;
 use details::btc;
@@ -26,6 +27,8 @@ pub struct AnchoringHandler {
     #[cfg(feature="sandbox_tests")]
     #[doc(hidden)]
     pub errors: Vec<error::Error>,
+    #[doc(hidden)]
+    pub known_addresses: HashSet<String>,
 }
 
 #[doc(hidden)]
@@ -71,7 +74,7 @@ pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
                                  common: &AnchoringConfig,
                                  msgs: I)
                                  -> Option<HashMap<u32, Vec<btc::Signature>>>
-    where I: Iterator<Item = &'a MsgAnchoringSignature>
+    where I: Iterator<Item = MsgAnchoringSignature>
 {
     let mut signatures = HashMap::new();
     for input in proposal.inputs() {

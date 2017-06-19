@@ -1,7 +1,9 @@
+use std::collections::HashSet;
+
 use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::NodeState;
-use exonum::storage::{Error as StorageError, List, Map};
+use exonum::storage::Snapshot;
 
 use error::Error as ServiceError;
 use handler::error::Error as HandlerError;
@@ -23,6 +25,7 @@ impl AnchoringHandler {
             client: client,
             node: node,
             proposal_tx: None,
+            known_addresses: HashSet::new(),
         }
     }
 
@@ -84,18 +87,17 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn import_address(&self,
+    pub fn import_address(&mut self,
                           addr: &btc::Address,
                           state: &NodeState)
                           -> Result<(), ServiceError> {
-        let schema = AnchoringSchema::new(state.view());
-        if !schema.is_address_known(addr)? {
-            let addr_str = addr.to_base58check();
+        let addr_str = addr.to_base58check();
+        if self.known_addresses.contains(&addr_str) {
             self.client()
                 .importaddress(&addr_str, "multisig", false, false)?;
-            schema.add_known_address(addr)?;
 
             trace!("Add address to known, addr={}", addr_str);
+            self.known_addresses.insert(addr_str);
         }
         Ok(())
     }
@@ -110,7 +112,7 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn actual_config(&self, state: &NodeState) -> Result<AnchoringConfig, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
-        let common = schema.actual_anchoring_config()?;
+        let common = schema.actual_anchoring_config();
         Ok(common)
     }
 
@@ -119,7 +121,7 @@ impl AnchoringHandler {
                             state: &NodeState)
                             -> Result<Option<AnchoringConfig>, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
-        let cfg = schema.following_anchoring_config()?;
+        let cfg = schema.following_anchoring_config();
         Ok(cfg)
     }
 
@@ -154,12 +156,12 @@ impl AnchoringHandler {
 
         // If we do not have any 'lect', then we have been added
         // later and can only be in the anchoring or recovering state.
-        let actual_lect = if let Some(lect) = anchoring_schema.lect(&key)? {
+        let actual_lect = if let Some(lect) = anchoring_schema.lect(&key) {
             lect
         } else {
-            let prev_cfg = anchoring_schema.previous_anchoring_config()?.unwrap();
+            let prev_cfg = anchoring_schema.previous_anchoring_config().unwrap();
             let is_recovering = if let Some(prev_lect) = anchoring_schema
-                   .collect_lects(&prev_cfg)? {
+                   .collect_lects(&prev_cfg) {
                 match TxKind::from(prev_lect) {
                     TxKind::FundingTx(_) => prev_cfg.redeem_script().1 != actual_addr,
                     TxKind::Anchoring(tx) => tx.output_address(actual.network) != actual_addr,
@@ -229,7 +231,7 @@ impl AnchoringHandler {
                         AnchoringState::Anchoring { cfg: actual }
                     } else {
                         AnchoringState::Recovering {
-                            prev_cfg: anchoring_schema.previous_anchoring_config()?.unwrap(),
+                            prev_cfg: anchoring_schema.previous_anchoring_config().unwrap(),
                             actual_cfg: actual,
                         }
                     }
@@ -239,14 +241,14 @@ impl AnchoringHandler {
                     // Ensure that we did not miss transition lect
                     if actual_lect_addr != actual_addr {
                         let state = AnchoringState::Recovering {
-                            prev_cfg: anchoring_schema.previous_anchoring_config()?.unwrap(),
+                            prev_cfg: anchoring_schema.previous_anchoring_config().unwrap(),
                             actual_cfg: actual,
                         };
                         return Ok(state);
                     }
                     // If the lect encodes a transition to a new anchoring address,
                     // we need to wait until it reaches enough confirmations.
-                    if actual_lect_is_transition(&actual, &actual_lect, &anchoring_schema)? {
+                    if actual_lect_is_transition(&actual, &actual_lect, &anchoring_schema) {
                         let confirmations = get_confirmations(self.client(), &actual_lect.txid())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
@@ -290,20 +292,20 @@ impl AnchoringHandler {
                                        validator_key: &btc::PublicKey,
                                        anchoring_cfg: &AnchoringConfig,
                                        state: &NodeState)
-                                       -> Result<LectKind, StorageError> {
+                                       -> LectKind {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
-        let our_lect = if let Some(lect) = anchoring_schema.lect(validator_key)? {
+        let our_lect = if let Some(lect) = anchoring_schema.lect(validator_key) {
             lect
         } else {
-            return Ok(LectKind::None);
+            return LectKind::None;
         };
 
         let mut count = 0;
 
         let validators_count = state.validators().len() as u32;
         for key in &anchoring_cfg.validators {
-            let validators_lect = anchoring_schema.lect(key)?;
+            let validators_lect = anchoring_schema.lect(key);
             if Some(&our_lect) == validators_lect.as_ref() {
                 count += 1;
             }
@@ -311,20 +313,20 @@ impl AnchoringHandler {
 
         if count >= ::majority_count(validators_count as u8) {
             match TxKind::from(our_lect) {
-                TxKind::Anchoring(tx) => Ok(LectKind::Anchoring(tx)),
-                TxKind::FundingTx(tx) => Ok(LectKind::Funding(tx)),
+                TxKind::Anchoring(tx) => LectKind::Anchoring(tx),
+                TxKind::FundingTx(tx) => LectKind::Funding(tx),
                 TxKind::Other(tx) => panic!("Found incorrect lect transaction, content={:#?}", tx),
             }
         } else {
-            Ok(LectKind::None)
+            LectKind::None
         }
     }
 
     #[doc(hidden)]
     pub fn collect_lects(&self, state: &NodeState) -> Result<LectKind, ServiceError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
-        let actual_cfg = anchoring_schema.actual_anchoring_config()?;
-        let kind = if let Some(lect) = anchoring_schema.collect_lects(&actual_cfg)? {
+        let actual_cfg = anchoring_schema.actual_anchoring_config();
+        let kind = if let Some(lect) = anchoring_schema.collect_lects(&actual_cfg) {
             match TxKind::from(lect) {
                 TxKind::Anchoring(tx) => LectKind::Anchoring(tx),
                 TxKind::FundingTx(tx) => LectKind::Funding(tx),
@@ -370,13 +372,13 @@ impl AnchoringHandler {
             /// New lect with different signatures set.
             let (our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.view());
-                let our_lect = schema.lect(key)?;
-                let count = schema.lects(key).len()?;
+                let our_lect = schema.lect(key);
+                let count = schema.lects(key).len();
                 (our_lect, count)
             };
 
             if Some(&lect) != our_lect.as_ref() {
-                self.send_updated_lect(lect.clone(), lects_count, state)?;
+                self.send_updated_lect(lect.clone(), lects_count, state);
             }
 
             Ok(Some(lect.into()))
@@ -417,22 +419,19 @@ impl AnchoringHandler {
         let key = self.validator_key(multisig.common, state);
 
         // Check that we know tx
-        if schema.find_lect_position(key, &lect.id())?.is_some() {
+        if schema.find_lect_position(key, &lect.id()).is_some() {
             return Ok(true);
         }
 
         let kind = TxKind::from(lect.clone());
         match kind {
             TxKind::FundingTx(tx) => {
-                let genesis_cfg = schema.genesis_anchoring_config()?;
+                let genesis_cfg = schema.genesis_anchoring_config();
                 Ok(genesis_cfg.funding_tx() == &tx)
             }
             TxKind::Anchoring(tx) => {
                 let lect_addr = tx.output_address(multisig.common.network);
-                if !schema.is_address_known(&lect_addr)? {
-                    return Ok(false);
-                }
-                if schema.find_lect_position(key, &tx.prev_hash())?.is_some() {
+                if schema.find_lect_position(key, &tx.prev_hash()).is_some() {
                     return Ok(true);
                 }
 
@@ -451,11 +450,11 @@ impl AnchoringHandler {
                     TxKind::Anchoring(tx) => tx.payload().block_height,
                     TxKind::Other(_) => return Ok(false),
                 };
-                let cfg = schema.anchoring_config_by_height(lect_height)?;
+                let cfg = schema.anchoring_config_by_height(lect_height);
 
                 let mut prev_lect_count = 0;
                 for key in &cfg.validators {
-                    if schema.find_lect_position(key, &txid)?.is_some() {
+                    if schema.find_lect_position(key, &txid).is_some() {
                         prev_lect_count += 1;
                     }
                 }
@@ -467,11 +466,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    fn send_updated_lect(&mut self,
-                         lect: BitcoinTx,
-                         lects_count: u64,
-                         state: &mut NodeState)
-                         -> Result<(), StorageError> {
+    fn send_updated_lect(&mut self, lect: BitcoinTx, lects_count: u64, state: &mut NodeState) {
         if self.proposal_tx.is_some() {
             self.proposal_tx = None;
         }
@@ -486,46 +481,44 @@ impl AnchoringHandler {
                                                      lects_count,
                                                      state.secret_key());
         state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
-        Ok(())
     }
 }
 
 /// Transition lects cannot be recovered without breaking of current anchoring chain.
-fn actual_lect_is_transition(actual: &AnchoringConfig,
-                             actual_lect: &AnchoringTx,
-                             schema: &AnchoringSchema)
-                             -> Result<bool, ServiceError> {
+fn actual_lect_is_transition<T>(actual: &AnchoringConfig,
+                                actual_lect: &AnchoringTx,
+                                schema: &AnchoringSchema<T>)
+                                -> bool
+    where T: AsRef<Snapshot>
+{
     // If tx contains prev_tx_chain it can not be a transition
     if actual_lect.payload().prev_tx_chain.is_some() {
-        return Ok(false);
+        return false;
     }
 
-    let r = {
-        let prev_lect_id = actual_lect.prev_hash();
-        let actual_lect_addr = actual_lect.output_address(actual.network);
+    let prev_lect_id = actual_lect.prev_hash();
+    let actual_lect_addr = actual_lect.output_address(actual.network);
 
-        if let Some(prev_lect) = schema.known_txs().get(&prev_lect_id)? {
-            match TxKind::from(prev_lect) {
-                TxKind::Anchoring(prev_lect) => {
-                    let prev_lect_addr = prev_lect.output_address(actual.network);
-                    prev_lect_addr != actual_lect_addr
-                }
-                TxKind::FundingTx(tx) => {
-                    let genesis_cfg = schema.genesis_anchoring_config()?;
-                    if &tx == genesis_cfg.funding_tx() {
-                        let prev_lect_addr = genesis_cfg.redeem_script().1;
-                        prev_lect_addr != actual_lect_addr
-                    } else {
-                        false
-                    }
-                }
-                TxKind::Other(tx) => panic!("Incorrect prev_lect found={:#?}", tx),
+    if let Some(prev_lect) = schema.known_txs().get(&prev_lect_id) {
+        match TxKind::from(prev_lect) {
+            TxKind::Anchoring(prev_lect) => {
+                let prev_lect_addr = prev_lect.output_address(actual.network);
+                prev_lect_addr != actual_lect_addr
             }
-        } else {
-            false
+            TxKind::FundingTx(tx) => {
+                let genesis_cfg = schema.genesis_anchoring_config();
+                if &tx == genesis_cfg.funding_tx() {
+                    let prev_lect_addr = genesis_cfg.redeem_script().1;
+                    prev_lect_addr != actual_lect_addr
+                } else {
+                    false
+                }
+            }
+            TxKind::Other(tx) => panic!("Incorrect prev_lect found={:#?}", tx),
         }
-    };
-    Ok(r)
+    } else {
+        false
+    }
 }
 
 fn get_confirmations(client: &AnchoringRpc, txid: &str) -> Result<Option<u64>, ServiceError> {
