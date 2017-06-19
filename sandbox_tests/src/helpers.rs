@@ -31,7 +31,7 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                                   validator,
                                   BitcoinTx::from(tx.clone()),
                                   count,
-                                           sandbox.service_secret_key(validator as usize));
+                                  sandbox.service_secret_key(validator as usize));
 }
 
 pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,

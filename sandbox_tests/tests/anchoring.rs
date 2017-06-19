@@ -784,13 +784,12 @@ fn test_anchoring_signature_unknown_output_address() {
                             &sandbox.current_cfg().validators[0],
                             &signature));
 
-    let msg_signature_wrong =
-        MsgAnchoringSignature::new(&sandbox.service_public_key(0),
-                                   0,
-                                   tx.clone(),
-                                   0,
-                                   &signature,
-                                   sandbox.service_secret_key(0));
+    let msg_signature_wrong = MsgAnchoringSignature::new(&sandbox.service_public_key(0),
+                                                         0,
+                                                         tx.clone(),
+                                                         0,
+                                                         &signature,
+                                                         sandbox.service_secret_key(0));
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_wrong` into blockchain
