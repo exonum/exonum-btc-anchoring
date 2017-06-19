@@ -103,7 +103,8 @@ fn gen_following_cfg_add_two_validators_changed_self_key
         let seed = Seed::new([212; 32]);
         let exonum_keypairs = [
             (gen_keypair_from_seed(&seed), gen_keypair_from_seed(&seed)),
-            (gen_keypair_from_seed(&seed), gen_keypair_from_seed(&seed))];
+            (gen_keypair_from_seed(&seed), gen_keypair_from_seed(&seed)),
+        ];
         (self_keypair, anchoring_keypairs, exonum_keypairs)
     };
 
