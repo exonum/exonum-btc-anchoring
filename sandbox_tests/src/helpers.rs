@@ -31,7 +31,7 @@ pub fn gen_service_tx_lect(sandbox: &Sandbox,
                                   validator,
                                   BitcoinTx::from(tx.clone()),
                                   count,
-                                  sandbox.service_secret_key(validator as usize));
+                                  sandbox.service_secret_key(validator as usize))
 }
 
 pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
@@ -537,7 +537,8 @@ fn gen_following_cfg_exclude_validator(sandbox: &AnchoringSandbox,
 
     let mut cfg = sandbox.cfg();
     cfg.actual_from = from_height;
-    cfg.validators.swap_remove(0);
+    cfg.validator_keys.swap_remove(0);
+    cfg.service_keys.swap_remove(0);
     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.service_public_key(0),
                            &cfg.serialize(),

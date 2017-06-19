@@ -47,8 +47,8 @@ impl MsgAnchoringSignature {
         let schema = Schema::new(view);
         let actual_cfg = schema.actual_configuration()?;
 
-        match actual_cfg.validators.get(id as usize) {
-            Some(&(_, key)) if key == *self.from() => {}
+        match actual_cfg.service_keys.get(id as usize) {
+            Some(key) if key == self.from() => {}
             _ => {
                 warn!("Received msg from non-validator, content={:#?}", self);
                 return Ok(());
@@ -100,8 +100,8 @@ impl MsgAnchoringUpdateLatest {
         let schema = Schema::new(view);
         let actual_cfg = schema.actual_configuration()?;
 
-        match actual_cfg.validators.get(self.validator() as usize) {
-            Some(&(_, key)) if key == *self.from() => {}
+        match actual_cfg.service_keys.get(self.validator() as usize) {
+            Some(key) if key == self.from() => {}
             _ => {
                 warn!("Received lect from non validator, content={:#?}", self);
                 return Ok(());

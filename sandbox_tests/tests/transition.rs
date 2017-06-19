@@ -146,7 +146,8 @@ fn gen_following_cfg_add_two_validators_changed_self_key
         cfg.actual_from = from_height;
 
         for keypair in &exonum_keypairs {
-            cfg.validators.push(((keypair.0).0, (keypair.1).0));
+            cfg.validator_keys.push((keypair.0).0);
+            cfg.service_keys.push((keypair.1).0);
             // Add validator to exonum sandbox validators map
             sandbox
                 .validators_map
@@ -1443,7 +1444,8 @@ fn test_anchoring_transit_after_exclude_from_validator() {
 
     let mut sandbox = AnchoringSandbox::initialize(&[]);
 
-    let sandbox_node_pubkey = sandbox.cfg().validators[0];
+    let sandbox_consensus_pubkey = sandbox.cfg().validator_keys[0];
+    let sandbox_service_pubkey = sandbox.cfg().service_keys[0];
 
     anchor_first_block(&sandbox);
     anchor_first_block_lect_normal(&sandbox);
@@ -1488,10 +1490,10 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         let consensus_cfg = {
             let mut cfg = sandbox.cfg();
             cfg.actual_from = cfg_change_height;
-            cfg.validators.push(sandbox_node_pubkey);
-            cfg.validators
-                .push(((validator_keypair.0).0, (validator_keypair.1).0));
-            cfg.validators.swap(0, 3);
+            cfg.validator_keys.push(sandbox_consensus_pubkey);
+            cfg.service_keys.push(sandbox_service_pubkey);
+            cfg.validator_keys.swap(0, 3);
+            cfg.service_keys.swap(0, 3);
             // Generate cfg change tx
             *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
             cfg
