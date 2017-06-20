@@ -1,8 +1,8 @@
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_btc_service;
+extern crate btc_anchoring_service;
 #[macro_use]
-extern crate anchoring_btc_sandbox;
+extern crate btc_anchoring_sandbox;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -20,13 +20,13 @@ use bitcoin::network::constants::Network;
 use exonum::crypto::{Hash, HexValue};
 use exonum::messages::Message;
 
-use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::details::btc::transactions::{AnchoringTx, FundingTx,
+use btc_anchoring_service::details::sandbox::Request;
+use btc_anchoring_service::details::btc::transactions::{AnchoringTx, FundingTx,
                                                         TransactionBuilder, verify_tx_input};
-use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
-use anchoring_btc_sandbox::AnchoringSandbox;
-use anchoring_btc_sandbox::helpers::*;
-use anchoring_btc_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
+use btc_anchoring_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use btc_anchoring_sandbox::AnchoringSandbox;
+use btc_anchoring_sandbox::helpers::*;
+use btc_anchoring_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
 
 // We anchor first block
 // problems: None
