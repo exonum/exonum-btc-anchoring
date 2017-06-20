@@ -100,10 +100,11 @@ fn gen_following_cfg_add_two_validators_changed_self_key
         ];
         let self_keypair = btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng);
 
-        let seed = Seed::new([212; 32]);
         let exonum_keypairs = [
-            (gen_keypair_from_seed(&seed), gen_keypair_from_seed(&seed)),
-            (gen_keypair_from_seed(&seed), gen_keypair_from_seed(&seed)),
+            (gen_keypair_from_seed(&Seed::new([212; 32])),
+             gen_keypair_from_seed(&Seed::new([213; 32]))),
+            (gen_keypair_from_seed(&Seed::new([214; 32])),
+             gen_keypair_from_seed(&Seed::new([215; 32]))),
         ];
         (self_keypair, anchoring_keypairs, exonum_keypairs)
     };
@@ -144,6 +145,7 @@ fn gen_following_cfg_add_two_validators_changed_self_key
     let consensus_cfg = {
         let mut cfg = sandbox.cfg();
         cfg.actual_from = from_height;
+        cfg.previous_cfg_hash = sandbox.cfg().hash();
 
         for keypair in &exonum_keypairs {
             cfg.validator_keys.push((keypair.0).0);
@@ -1490,6 +1492,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         let consensus_cfg = {
             let mut cfg = sandbox.cfg();
             cfg.actual_from = cfg_change_height;
+            cfg.previous_cfg_hash = sandbox.cfg().hash();
             cfg.validator_keys.push(sandbox_consensus_pubkey);
             cfg.service_keys.push(sandbox_service_pubkey);
             cfg.validator_keys.swap(0, 3);
