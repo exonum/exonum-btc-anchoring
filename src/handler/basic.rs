@@ -415,7 +415,8 @@ impl AnchoringHandler {
                            multisig: &MultisigAddress,
                            state: &NodeState)
                            -> Result<bool, ServiceError> {
-        let schema = AnchoringSchema::new(state.view());
+        let snapshot = state.view();
+        let schema = AnchoringSchema::new(&snapshot);
         let key = self.validator_key(multisig.common, state);
 
         // Check that we know tx

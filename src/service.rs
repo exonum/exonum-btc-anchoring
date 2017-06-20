@@ -75,7 +75,8 @@ impl Service for AnchoringService {
     }
 
     fn state_hash(&self, snapshot: &Snapshot) -> Vec<Hash> {
-        AnchoringSchema::new(snapshot).state_hash()
+        let schema = AnchoringSchema::new(snapshot);
+        schema.state_hash()
     }
 
     fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, StreamStructError> {
