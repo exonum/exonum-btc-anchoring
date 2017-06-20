@@ -44,7 +44,7 @@ pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
                                   fake_id,
                                   BitcoinTx::from(tx.clone()),
                                   count,
-                                  sandbox.s(real_id as usize))
+                                  sandbox.service_secret_key(real_id as usize))
 }
 
 pub fn dump_lects(sandbox: &Sandbox, id: u16) -> Vec<BitcoinTx> {
