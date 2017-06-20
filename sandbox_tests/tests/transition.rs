@@ -1461,7 +1461,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             btc::gen_btc_keypair_with_rng(Network::Testnet, &mut rng),
         ];
         let validator_keypair = (gen_keypair_from_seed(&Seed::new([115; 32])),
-                                 gen_keypair_from_seed(&Seed::new([115; 32])));
+                                 gen_keypair_from_seed(&Seed::new([116; 32])));
 
         let mut service_cfg = sandbox.current_cfg().clone();
         let priv_keys = sandbox.current_priv_keys();
@@ -1494,7 +1494,9 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             cfg.actual_from = cfg_change_height;
             cfg.previous_cfg_hash = sandbox.cfg().hash();
             cfg.validator_keys.push(sandbox_consensus_pubkey);
+            cfg.validator_keys.push((validator_keypair.0).0);
             cfg.service_keys.push(sandbox_service_pubkey);
+            cfg.service_keys.push((validator_keypair.1).0);
             cfg.validator_keys.swap(0, 3);
             cfg.service_keys.swap(0, 3);
             // Generate cfg change tx
