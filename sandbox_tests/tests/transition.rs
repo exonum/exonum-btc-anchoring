@@ -1,8 +1,8 @@
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_btc_service;
+extern crate btc_anchoring_service;
 #[macro_use]
-extern crate anchoring_btc_sandbox;
+extern crate btc_anchoring_sandbox;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -20,13 +20,13 @@ use exonum::crypto::{HexValue, Seed, gen_keypair_from_seed};
 use exonum::storage::StorageValue;
 use sandbox::config_updater::TxConfig;
 
-use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::details::btc::transactions::{FundingTx, TransactionBuilder};
-use anchoring_btc_service::details::btc;
-use anchoring_btc_service::{ANCHORING_SERVICE_NAME, AnchoringConfig, AnchoringNodeConfig};
+use btc_anchoring_service::details::sandbox::Request;
+use btc_anchoring_service::details::btc::transactions::{FundingTx, TransactionBuilder};
+use btc_anchoring_service::details::btc;
+use btc_anchoring_service::{ANCHORING_SERVICE_NAME, AnchoringConfig, AnchoringNodeConfig};
 
-use anchoring_btc_sandbox::AnchoringSandbox;
-use anchoring_btc_sandbox::helpers::*;
+use btc_anchoring_sandbox::AnchoringSandbox;
+use btc_anchoring_sandbox::helpers::*;
 
 fn gen_following_cfg(sandbox: &AnchoringSandbox,
                      from_height: u64,
