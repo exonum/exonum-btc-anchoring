@@ -97,6 +97,7 @@ pub fn gen_update_config_tx(sandbox: &Sandbox,
                             -> RawTransaction {
     let mut cfg = sandbox.cfg();
     cfg.actual_from = actual_from;
+    cfg.previous_cfg_hash = sandbox.cfg().hash();
     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.service_public_key(0),
                            &cfg.serialize(),
