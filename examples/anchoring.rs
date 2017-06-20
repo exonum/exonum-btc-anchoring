@@ -7,7 +7,7 @@ extern crate bitcoin;
 
 extern crate exonum;
 extern crate anchoring_btc_service;
-extern crate configuration_service;
+// extern crate configuration_service;
 
 use clap::{App, Arg, SubCommand};
 use bitcoin::network::constants::Network;
@@ -20,7 +20,7 @@ use exonum::crypto::HexValue;
 use exonum::helpers::clap::{GenerateCommand, RunCommand};
 use exonum::helpers::generate_testnet_config;
 use exonum::helpers;
-use configuration_service::ConfigurationService;
+// use configuration_service::ConfigurationService;
 use anchoring_btc_service::AnchoringService;
 use anchoring_btc_service::AnchoringRpc;
 use anchoring_btc_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
@@ -130,7 +130,7 @@ fn main() {
             let anchoring_cfg = cfg.anchoring_service;
             let services: Vec<Box<Service>> = vec![
                     Box::new(AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node)),
-                    Box::new(ConfigurationService::new()),
+                    // Box::new(ConfigurationService::new()),
                 ];
             let blockchain = Blockchain::new(db, services);
             let mut node = Node::new(blockchain, cfg.node);

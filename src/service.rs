@@ -74,7 +74,7 @@ impl Service for AnchoringService {
         "btc_anchoring"
     }
 
-    fn state_hash(&self, snapshot: &(Snapshot + 'static)) -> Vec<Hash> {
+    fn state_hash(&self, snapshot: &Snapshot) -> Vec<Hash> {
         let schema = AnchoringSchema::new(snapshot);
         schema.state_hash()
     }
