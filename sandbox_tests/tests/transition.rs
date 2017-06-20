@@ -153,7 +153,7 @@ fn gen_following_cfg_add_two_validators_changed_self_key
     };
 
     let tx = TxConfig::new(&sandbox.p(0),
-                           &consensus_cfg.serialize(),
+                           &consensus_cfg.into_bytes(),
                            from_height,
                            sandbox.s(0));
 
@@ -1488,7 +1488,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         };
 
         let tx = TxConfig::new(&sandbox.p(1),
-                               &consensus_cfg.serialize(),
+                               &consensus_cfg.into_bytes(),
                                cfg_change_height,
                                sandbox.s(1));
         // Add validator to exonum sandbox validators map

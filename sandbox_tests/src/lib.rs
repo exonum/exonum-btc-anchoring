@@ -292,7 +292,7 @@ impl AnchoringSandbox {
 
             let tx = builder.into_transaction().unwrap();
             let signs = self.gen_anchoring_signatures(&tx);
-            let signed_tx = self.finalize_tx(tx.clone(), signs.as_ref());
+            let signed_tx = self.finalize_tx(tx.clone(), signs.clone());
             (tx, signed_tx, signs)
         };
         self.state.borrow_mut().latest_anchored_tx = Some((signed_tx, signs.clone()));
@@ -304,8 +304,10 @@ impl AnchoringSandbox {
         (propose_tx, signs)
     }
 
-    pub fn finalize_tx(&self, tx: AnchoringTx, signs: &[MsgAnchoringSignature]) -> AnchoringTx {
-        let collected_signs = collect_signatures(&tx, &self.current_cfg(), signs.iter()).unwrap();
+    pub fn finalize_tx<I>(&self, tx: AnchoringTx, signs: I) -> AnchoringTx
+        where I: IntoIterator<Item=MsgAnchoringSignature>
+     {
+        let collected_signs = collect_signatures(&tx, &self.current_cfg(), signs).unwrap();
         tx.finalize(&self.current_redeem_script(), collected_signs)
     }
 

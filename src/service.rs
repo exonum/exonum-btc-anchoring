@@ -11,7 +11,7 @@ use exonum::blockchain::{ApiContext, NodeState, Service, Transaction};
 use exonum::crypto::Hash;
 use exonum::messages::{FromRaw, RawTransaction};
 use exonum::encoding::Error as StreamStructError;
-use exonum::storage::Snapshot;
+use exonum::storage::{Snapshot, Fork};
 use exonum::api::Api;
 
 use api::PublicApi;
@@ -74,7 +74,7 @@ impl Service for AnchoringService {
         "btc_anchoring"
     }
 
-    fn state_hash(&self, snapshot: &Snapshot) -> Vec<Hash> {
+    fn state_hash(&self, snapshot: &(Snapshot + 'static)) -> Vec<Hash> {
         let schema = AnchoringSchema::new(snapshot);
         schema.state_hash()
     }
@@ -83,16 +83,14 @@ impl Service for AnchoringService {
         AnchoringMessage::from_raw(raw).map(|tx| Box::new(tx) as Box<Transaction>)
     }
 
-    fn handle_genesis_block(&self, snapshot: &Snapshot) -> Value {
-        let handler = self.handler.lock().unwrap();
+    fn handle_genesis_block(&self, fork: &mut Fork) -> Value {
+        let mut handler = self.handler.lock().unwrap();
         let cfg = self.genesis.clone();
         let (_, addr) = cfg.redeem_script();
-        if let Some(ref client) = handler.client {
-            client
-                .importaddress(&addr.to_base58check(), "multisig", false, false)
-                .unwrap();
+        if handler.client.is_some() {
+            handler.import_address(&addr).unwrap();
         }
-        AnchoringSchema::new(snapshot).create_genesis_config(&cfg);
+        AnchoringSchema::new(fork).create_genesis_config(&cfg);
         serde_json::to_value(cfg).unwrap()
     }
 

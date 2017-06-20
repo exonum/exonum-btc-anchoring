@@ -74,7 +74,7 @@ pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
                                  common: &AnchoringConfig,
                                  msgs: I)
                                  -> Option<HashMap<u32, Vec<btc::Signature>>>
-    where I: Iterator<Item = MsgAnchoringSignature>
+    where I: IntoIterator<Item = MsgAnchoringSignature>
 {
     let mut signatures = HashMap::new();
     for input in proposal.inputs() {

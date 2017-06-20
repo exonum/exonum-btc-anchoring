@@ -9,7 +9,8 @@ use exonum::storage::{Fork, Snapshot};
 use blockchain::dto::{AnchoringMessage, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use blockchain::schema::AnchoringSchema;
 use blockchain::consensus_storage::AnchoringConfig;
-use details::btc::transactions::{AnchoringTx, FundingTx, TxKind};
+use details::btc;
+use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, TxKind};
 
 impl MsgAnchoringSignature {
     pub fn verify_content(&self) -> bool {
@@ -38,18 +39,19 @@ impl MsgAnchoringSignature {
         true
     }
 
-    pub fn execute(&self, fork: &mut Fork) {
-        let anchoring_schema = AnchoringSchema::new(fork);
+    pub fn validate(&self, view: &Fork) -> bool {
+        let core_schema = Schema::new(&view);
+        let anchoring_schema = AnchoringSchema::new(&view);
 
         let tx = self.tx();
         let id = self.validator();
+        let actual_cfg = core_schema.actual_configuration();
         // Verify from field
-        let schema = Schema::new(fork);
-        let actual_cfg = schema.actual_configuration();
         if actual_cfg.validators.get(id as usize) != Some(self.from()) {
             warn!("Received msg from non-validator, content={:#?}", self);
-            return;
+            return false;
         }
+
         // Verify signature
         let anchoring_cfg = anchoring_schema.actual_anchoring_config();
         if let Some(pub_key) = anchoring_cfg.validators.get(id as usize) {
@@ -64,18 +66,29 @@ impl MsgAnchoringSignature {
             if tx_addr != addr {
                 warn!("Received msg with incorrect output address, content={:#?}",
                       self);
-                return;
+                return false;
             }
-            if !verify_anchoring_tx_payload(&tx, &schema) {
+            if !verify_anchoring_tx_payload(&tx, &core_schema) {
                 warn!("Received msg with incorrect payload, content={:#?}", self);
-                return;
+                return false;
             }
             if !tx.verify_input(&redeem_script, self.input(), pub_key, self.signature()) {
                 warn!("Received msg with incorrect signature, content={:#?}", self);
-                return;
+                return false;
             }
-            anchoring_schema.add_known_signature(self.clone())
+            return true;
+        } else {
+            return false;
         }
+    }
+
+    pub fn execute(&self, fork: &mut Fork) {
+        if !self.validate(&fork) {
+            return;
+        }
+
+        let mut anchoring_schema = AnchoringSchema::new(fork);
+        anchoring_schema.add_known_signature(self.clone())
     }
 }
 
@@ -84,31 +97,33 @@ impl MsgAnchoringUpdateLatest {
         true
     }
 
-    pub fn execute(&self, view: &mut Fork) {
+    pub fn validate(&self, view: &Fork) -> Option<(btc::PublicKey, BitcoinTx)> {
         let anchoring_schema = AnchoringSchema::new(view);
+        let core_schema = Schema::new(view);
 
         let tx = self.tx();
         let id = self.validator();
         // Verify lect with actual cfg
-        let schema = Schema::new(view);
-        let actual_cfg = schema.actual_configuration();
+        let actual_cfg = core_schema.actual_configuration();
+
         if actual_cfg.validators.get(self.validator() as usize) != Some(self.from()) {
             warn!("Received lect from non validator, content={:#?}", self);
-            return;
+            return None;
         }
+
         let anchoring_cfg = anchoring_schema.actual_anchoring_config();
         let key = &anchoring_cfg.validators[id as usize];
         match TxKind::from(tx.clone()) {
             TxKind::Anchoring(tx) => {
-                if !verify_anchoring_tx_payload(&tx, &schema) {
+                if !verify_anchoring_tx_payload(&tx, &core_schema) {
                     warn!("Received lect with incorrect payload, content={:#?}", self);
-                    return;
+                    return None;
                 }
                 if !verify_anchoring_tx_prev_hash(&tx, &anchoring_schema) {
                     warn!("Received lect with prev_lect without 2/3+ confirmations, \
                             content={:#?}",
                           self);
-                    return;
+                    return None;
                 }
             }
             TxKind::FundingTx(tx) => {
@@ -116,7 +131,7 @@ impl MsgAnchoringUpdateLatest {
                 if !verify_funding_tx(&tx, &anchoring_cfg) {
                     warn!("Received lect with incorrect funding_tx, content={:#?}",
                           self);
-                    return;
+                    return None;
                 }
             }
             TxKind::Other(_) => panic!("Incorrect fields deserialization."),
@@ -124,9 +139,17 @@ impl MsgAnchoringUpdateLatest {
 
         if anchoring_schema.lects(key).len() != self.lect_count() {
             warn!("Received lect with wrong count, content={:#?}", self);
-            return;
+            return None;
         }
-        anchoring_schema.add_lect(key, tx, self.hash())
+
+        Some((key.clone(), tx))
+    }
+
+    pub fn execute(&self, view: &mut Fork) {
+        if let Some((key, tx)) = self.validate(&view) {
+            let mut anchoring_schema = AnchoringSchema::new(view);
+            anchoring_schema.add_lect(&key, tx, self.hash())
+        }
     }
 }
 

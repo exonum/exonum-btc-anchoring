@@ -72,7 +72,8 @@ impl AnchoringHandler {
         if let Some(funding_tx) = self.avaliable_funding_tx(multisig)? {
             // Create anchoring proposal
             let height = multisig.common.latest_anchoring_height(state.height());
-            let hash = Schema::new(state.view())
+            let view = state.view();
+            let hash = Schema::new(view)
                 .block_hashes_by_height()
                 .get(height)
                 .unwrap();
@@ -171,10 +172,11 @@ impl AnchoringHandler {
             return Ok(());
         }
 
-        let msgs = AnchoringSchema::new(state.view())
-            .signatures(&txid)
-            .iter();
-        if let Some(signatures) = collect_signatures(&proposal, multisig.common, msgs) {
+        let anchoring_schema = AnchoringSchema::new(state.view());
+        let signatures = anchoring_schema.signatures(&txid);
+        if let Some(signatures) = collect_signatures(&proposal,
+                                                     multisig.common,
+                                                     signatures.iter()) {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
             if self.client()

@@ -4,11 +4,10 @@ use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
 use exonum::blockchain::{Schema, StoredConfiguration, gen_prefix};
-use exonum::storage::{Fork, ListIndex, MapIndex, MapProof, ProofListIndex, ProofMapIndex,
-                      Snapshot, StorageKey, StorageValue};
+use exonum::storage::{Fork, ListIndex, MapIndex, ProofListIndex,
+                      Snapshot, StorageKey};
 use exonum::crypto::Hash;
 
-use bitcoin::util::base58::ToBase58;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::{LectContent, MsgAnchoringSignature};
 use details::btc;
@@ -37,7 +36,9 @@ impl StorageKey for KnownSignatureId {
         let validator_id = u16::read(&buffer[32..34]);
         let input = u32::read(&buffer[34..38]);
         KnownSignatureId {
-            txid, validator_id, input
+            txid,
+            validator_id,
+            input,
         }
     }
 }
@@ -47,7 +48,7 @@ impl<'a> From<&'a MsgAnchoringSignature> for KnownSignatureId {
         KnownSignatureId {
             txid: msg.tx().id(),
             validator_id: msg.validator(),
-            input: msg.input()
+            input: msg.input(),
         }
     }
 }
@@ -92,12 +93,13 @@ impl<T> AnchoringSchema<T>
     }
 
     pub fn actual_anchoring_config(&self) -> AnchoringConfig {
-        let actual = Schema::new(self.view).actual_configuration();
+        let schema = Schema::new(&self.view);
+        let actual = schema.actual_configuration();
         self.parse_config(&actual)
     }
 
     pub fn following_anchoring_config(&self) -> Option<AnchoringConfig> {
-        let schema = Schema::new(self.view);
+        let schema = Schema::new(&self.view);
         if let Some(stored) = schema.following_configuration() {
             Some(self.parse_config(&stored))
         } else {
@@ -106,7 +108,7 @@ impl<T> AnchoringSchema<T>
     }
 
     pub fn previous_anchoring_config(&self) -> Option<AnchoringConfig> {
-        let schema = Schema::new(self.view);
+        let schema = Schema::new(&self.view);
         if let Some(stored) = schema.previous_configuration() {
             Some(self.parse_config(&stored))
         } else {
@@ -119,7 +121,7 @@ impl<T> AnchoringSchema<T>
     }
 
     pub fn anchoring_config_by_height(&self, height: u64) -> AnchoringConfig {
-        let schema = Schema::new(self.view);
+        let schema = Schema::new(&self.view);
         let stored = schema.configuration_by_height(height);
         self.parse_config(&stored)
     }
@@ -195,23 +197,29 @@ impl<T> AnchoringSchema<T>
 
 // Define mutable operations and indicies
 impl<'a> AnchoringSchema<&'a mut Fork> {
-
-    pub fn signatures_mut(&mut self, txid: &btc::TxId) -> ListIndex<&mut Fork, MsgAnchoringSignature> {
+    pub fn signatures_mut(&mut self,
+                          txid: &btc::TxId)
+                          -> ListIndex<&mut Fork, MsgAnchoringSignature> {
         let prefix = self.gen_table_prefix(2, txid);
         ListIndex::new(prefix, &mut self.view)
     }
 
-    pub fn lects_mut(&mut self, validator_key: &btc::PublicKey) -> ProofListIndex<&mut Fork, LectContent> {
+    pub fn lects_mut(&mut self,
+                     validator_key: &btc::PublicKey)
+                     -> ProofListIndex<&mut Fork, LectContent> {
         let prefix = self.gen_table_prefix(3, validator_key);
         ProofListIndex::new(prefix, &mut self.view)
     }
 
-    pub fn lect_indexes_mut(&mut self, validator_key: &btc::PublicKey) -> MapIndex<&mut Fork, btc::TxId, u64> {
+    pub fn lect_indexes_mut(&mut self,
+                            validator_key: &btc::PublicKey)
+                            -> MapIndex<&mut Fork, btc::TxId, u64> {
         let prefix = self.gen_table_prefix(4, validator_key);
         MapIndex::new(prefix, &mut self.view)
     }
 
-    pub fn known_signatures_mut(&mut self) -> MapIndex<&mut Fork, KnownSignatureId, MsgAnchoringSignature> {
+    pub fn known_signatures_mut(&mut self)
+                                -> MapIndex<&mut Fork, KnownSignatureId, MsgAnchoringSignature> {
         let prefix = self.gen_table_prefix(6, &());
         MapIndex::new(prefix, &mut self.view)
     }
@@ -225,24 +233,26 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
     pub fn add_lect<Tx>(&mut self, validator_key: &btc::PublicKey, tx: Tx, msg_hash: Hash)
         where Tx: Into<BitcoinTx>
     {
-        let lects = self.lects_mut(validator_key);
+        let (tx, txid, idx) = {
+            let mut lects = self.lects_mut(validator_key);
+            let tx = tx.into();
+            let idx = lects.len();
+            let txid = tx.id();
+            lects.push(LectContent::new(&msg_hash, tx.clone()));
+            (tx, txid, idx)
+        };
 
-        let tx = tx.into();
-        let idx = lects.len();
-        let txid = tx.id();
-        lects.push(LectContent::new(&msg_hash, tx.clone()));
         self.known_txs_mut().put(&txid, tx.clone());
         self.lect_indexes_mut(validator_key).put(&txid, idx)
     }
 
     pub fn create_genesis_config(&mut self, cfg: &AnchoringConfig) {
-        let (_, addr) = cfg.redeem_script();
         for validator_key in &cfg.validators {
             self.add_lect(validator_key, cfg.funding_tx().clone(), Hash::zero());
         }
     }
 
-    pub fn add_known_signature(&self, msg: MsgAnchoringSignature) {
+    pub fn add_known_signature(&mut self, msg: MsgAnchoringSignature) {
         let ntxid = msg.tx().nid();
         let signature_id = KnownSignatureId::from(&msg);
         if let Some(sign_msg) = self.known_signatures().get(&signature_id) {

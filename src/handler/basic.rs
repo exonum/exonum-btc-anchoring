@@ -37,6 +37,7 @@ impl AnchoringHandler {
             node: node,
             proposal_tx: None,
             errors: Vec::new(),
+            known_addresses: HashSet::new(),
         }
     }
 
@@ -88,11 +89,10 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn import_address(&mut self,
-                          addr: &btc::Address,
-                          state: &NodeState)
+                          addr: &btc::Address)
                           -> Result<(), ServiceError> {
         let addr_str = addr.to_base58check();
-        if self.known_addresses.contains(&addr_str) {
+        if !self.known_addresses.contains(&addr_str) {
             self.client()
                 .importaddress(&addr_str, "multisig", false, false)?;
 
@@ -140,13 +140,13 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn current_state(&self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
+    pub fn current_state(&mut self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
         let actual = self.actual_config(state)?;
         let actual_addr = actual.redeem_script().1;
         let anchoring_schema = AnchoringSchema::new(state.view());
 
         // Ensure that bitcoind watching for the current addr
-        self.import_address(&actual_addr, state)?;
+        self.import_address(&actual_addr)?;
 
         if state.validator_state().is_none() {
             return Ok(AnchoringState::Auditing { cfg: actual });
@@ -186,7 +186,7 @@ impl AnchoringHandler {
         let result = self.following_config_is_transition(&actual_addr, state)?;
         let state = if let Some((following, following_addr)) = result {
             // Ensure that bitcoind watching for following addr.
-            self.import_address(&following_addr, state)?;
+            self.import_address(&following_addr)?;
 
             match TxKind::from(actual_lect) {
                 TxKind::Anchoring(lect) => {
@@ -431,7 +431,6 @@ impl AnchoringHandler {
                 Ok(genesis_cfg.funding_tx() == &tx)
             }
             TxKind::Anchoring(tx) => {
-                let lect_addr = tx.output_address(multisig.common.network);
                 if schema.find_lect_position(key, &tx.prev_hash()).is_some() {
                     return Ok(true);
                 }

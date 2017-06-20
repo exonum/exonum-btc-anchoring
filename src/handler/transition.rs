@@ -94,7 +94,8 @@ impl AnchoringHandler {
                multisig.addr.to_base58check());
 
         let lect_txid = {
-            let anchoring_schema = AnchoringSchema::new(state.view());
+            let view = state.view();
+            let anchoring_schema = AnchoringSchema::new(view);
             if let Some(tx) = anchoring_schema.collect_lects(&prev_cfg) {
                 tx.id()
             } else {
