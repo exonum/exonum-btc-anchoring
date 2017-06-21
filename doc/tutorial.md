@@ -69,7 +69,7 @@ $ anchoring run --node-config <destdir>/<m>.toml --leveldb-path <destdir>/db/<m>
 ```
 In addition you may to set http port for configuration update service. More information you can find by invoke `anchoring help`
 
-If you want to see additional information including current testnet `multisig` address you may set environment variable `RUST_LOG="anchoring_btc_service=info"`.
+If you want to see additional information including current testnet `multisig` address you may set environment variable `RUST_LOG="btc_anchoring_service=info"`.
 
 ## Testnet maintaining
 You may be need to change fee, add funds, change keys, etc... These actions must be made via 

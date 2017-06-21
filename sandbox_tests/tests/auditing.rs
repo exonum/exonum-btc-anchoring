@@ -1,8 +1,8 @@
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_btc_service;
+extern crate btc_anchoring_service;
 #[macro_use]
-extern crate anchoring_btc_sandbox;
+extern crate btc_anchoring_sandbox;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -17,13 +17,13 @@ use exonum::messages::{Message, RawTransaction};
 use exonum::storage::StorageValue;
 use sandbox::config_updater::TxConfig;
 
-use anchoring_btc_service::{ANCHORING_SERVICE_NAME, AnchoringConfig};
-use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
-use anchoring_btc_service::error::HandlerError;
-use anchoring_btc_service::details::btc::transactions::BitcoinTx;
-use anchoring_btc_sandbox::AnchoringSandbox;
-use anchoring_btc_sandbox::helpers::*;
+use btc_anchoring_service::{ANCHORING_SERVICE_NAME, AnchoringConfig};
+use btc_anchoring_service::details::sandbox::Request;
+use btc_anchoring_service::blockchain::dto::MsgAnchoringUpdateLatest;
+use btc_anchoring_service::error::HandlerError;
+use btc_anchoring_service::details::btc::transactions::BitcoinTx;
+use btc_anchoring_sandbox::AnchoringSandbox;
+use btc_anchoring_sandbox::helpers::*;
 
 /// Generates a configuration that excludes `sandbox node` from consensus.
 /// Then it continues to work as auditor.

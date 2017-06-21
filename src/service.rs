@@ -71,7 +71,7 @@ impl Service for AnchoringService {
     }
 
     fn service_name(&self) -> &'static str {
-        "btc_anchoring"
+        ANCHORING_SERVICE_NAME
     }
 
     fn state_hash(&self, snapshot: &Snapshot) -> Vec<Hash> {

@@ -1,8 +1,8 @@
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_btc_service;
+extern crate btc_anchoring_service;
 #[macro_use]
-extern crate anchoring_btc_sandbox;
+extern crate btc_anchoring_sandbox;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -24,13 +24,13 @@ use exonum::crypto::HexValue;
 use exonum::messages::Message;
 use exonum::api::Api;
 
-use anchoring_btc_service::api::{AnchoringInfo, LectInfo, PublicApi};
-use anchoring_btc_service::details::btc;
-use anchoring_btc_service::details::btc::transactions::BitcoinTx;
-use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
-use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_sandbox::AnchoringSandbox;
-use anchoring_btc_sandbox::helpers::*;
+use btc_anchoring_service::api::{AnchoringInfo, LectInfo, PublicApi};
+use btc_anchoring_service::details::btc;
+use btc_anchoring_service::details::btc::transactions::BitcoinTx;
+use btc_anchoring_service::blockchain::dto::MsgAnchoringUpdateLatest;
+use btc_anchoring_service::details::sandbox::Request;
+use btc_anchoring_sandbox::AnchoringSandbox;
+use btc_anchoring_sandbox::helpers::*;
 
 struct ApiSandbox {
     pub router: Router,

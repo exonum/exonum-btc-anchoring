@@ -1,11 +1,11 @@
 [package]
-name = "anchoring_btc_sandbox"
+name = "btc_anchoring_sandbox"
 version = "0.1.0"
 authors = ["Ivan Ivashchenko <ivan.ivashchenko@xdev.re",
            "Aleksey Sidorov <aleksei.sidorov@xdev.re>"]
 
 [dependencies]
-anchoring_btc_service = {version="0.1", path="../", features=["sandbox_tests"]}
+btc_anchoring_service = {version="0.1", path="../", features=["sandbox_tests"]}
 
 bitcoinrpc = {version="0.1", path="../3rdparty/bitcoinrpc"}
 bitcoin="0.9.0"

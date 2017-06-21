@@ -1,5 +1,5 @@
 extern crate exonum;
-extern crate anchoring_btc_service;
+extern crate btc_anchoring_service;
 extern crate tempdir;
 
 use std::thread;
@@ -12,7 +12,7 @@ use exonum::node::Node;
 use exonum::storage::{LevelDB, LevelDBOptions};
 use exonum::helpers::{generate_testnet_config, init_logger};
 
-use anchoring_btc_service::{AnchoringRpc, AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
+use btc_anchoring_service::{AnchoringRpc, AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
                             gen_anchoring_testnet_config};
 
 fn main() {

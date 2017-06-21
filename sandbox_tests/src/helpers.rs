@@ -10,12 +10,12 @@ use exonum::helpers;
 use sandbox::sandbox::Sandbox;
 use sandbox::config_updater::TxConfig;
 
-use anchoring_btc_service::{ANCHORING_SERVICE_NAME, AnchoringConfig};
-use anchoring_btc_service::details::btc;
-use anchoring_btc_service::details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
-use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
-use anchoring_btc_service::blockchain::schema::AnchoringSchema;
+use btc_anchoring_service::{ANCHORING_SERVICE_NAME, AnchoringConfig};
+use btc_anchoring_service::details::btc;
+use btc_anchoring_service::details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
+use btc_anchoring_service::details::sandbox::Request;
+use btc_anchoring_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use btc_anchoring_service::blockchain::schema::AnchoringSchema;
 
 use AnchoringSandbox;
 
