@@ -36,10 +36,10 @@ After creating configuration file, launch `bitcoind` daemon via command:
 ```shell
 bitcoind --daemon
 ```
-Downloading and indexing of the bitcoin blockchain may take a lot of time, especially for the `mainnet`.
+Downloading and indexing of the bitcoin blockchain may take a lot of time, especially for the mainnet.
 
 ***Note!** If you connect `bitcoind` node to the existing validator you must import current
-`anchoring` address by the `importaddress` rpc call. You can obtain current `anchoring` 
+`anchoring` address by the `importaddress` rpc call. You can obtain current anchoring 
 address via [`exonum-dashboard`][exonum:dashboard].*
 
 ## Testnet deployment
@@ -65,8 +65,8 @@ Which create the configuration of `N` exonum anchoring nodes in destination dire
 Also in the generated configuration files you may specify public and private api addresses according to this [document][exonum:node_api].
 
 ***Warning!** `Bitcoind` node should have some bitcoin amount greater than `<initial_funds>`, 
-since the initial funding transaction will be created during the `testnet` generation.
-For `testnet` you may use a [`faucet`][bitcoin:faucet] to get some coins.*
+since the initial funding transaction will be created during the testnet generation.
+For testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.*
 
 ### Launching testnet
 
@@ -107,7 +107,7 @@ For the `anchoring` example consensus configuration looks like this:
 ```
 
 You can perform these actions via [exonum-dashboard][exonum:dashboard] web application. 
-The application shows `anchoring` address and can change configuration. 
+The application shows anchoring address and can change configuration. 
 To connect an application with the exonum anchoring node, you must specify its api addresses in the `Settings` tab. 
 Also you can change selected validator by these settings.
 
@@ -115,8 +115,8 @@ Also you can change selected validator by these settings.
 
 Variables that you can modify:
  - `fee` - the amount of the fee for the anchoring transaction.
- - `frequency` - the frequency in blocks with which the generation of a new `anchoring` transactions occurs
- - `utxo_confirmations` - The minimum number of confirmations in bitcoin network to consider the `anchoring` transaction as fully confirmed.
+ - `frequency` - the frequency in blocks with which the generation of a new anchoring transactions occurs
+ - `utxo_confirmations` - The minimum number of confirmations in bitcoin network to consider the anchoring transaction as fully confirmed.
 
 Just change these variables and apply the new configuration.
 
@@ -128,31 +128,31 @@ Send to anchoring wallet some btc and save raw transaction body hex. Wait until 
 
 ### Change list of validators
 
-***Important warning!** This procedure changes the `anchoring address`. Exonum node needs to wait until 
+***Important warning!** This procedure changes the anchoring address. Exonum node needs to wait until 
 the last anchored transaction gets enough confirmations. It is caused by impossibility to sign
-transaction addressed to `old anchoring address` by keys from the `current configuration`. If the
+transaction addressed to old anchoring address by keys from the current configuration. If the
 last anchoring transaction does not get enough confirmations before anchoring address is changed, 
-the following `transfering transaction` may be lost because of possible bitcoin forks and 
+the following transfering transaction may be lost because of possible bitcoin forks and 
 transaction malleability. See this [article][exonum:anchoring_transfering] for details.*
 
-* Make sure that difference between the activation height (`actual_from`) and current `Exonum` blockchain height is enough for get sufficient confirmations for `latest anchored transaction`. Usually 6 hours are enough for this. 
+* Make sure that difference between the activation height (`actual_from`) and current `Exonum` blockchain height is enough for get sufficient confirmations for the latest anchored transaction. Usually 6 hours are enough for this. 
 Calculate how many blocks will be taken during this time and add this number to the `current_height`.
 * If necessary, [generate][exonum:anchoring_gen_keypair] a new key pair for anchoring.
 * Change list of validators via editing `validators` array.
 * Initiate the config update procedure.
 * Make sure that config update procedure is not delayed. That is, do not delay the voting procedure for the new configuration.
-* Look at the new address of the `anchoring` in the [`exonum-dashboard`][exonum:dashboard] and [set private key for it](#private-key-updating).
+* Look at the new address of the anchoring in the [`exonum-dashboard`][exonum:dashboard] and [set private key for it](#private-key-updating).
 
-***Note!** If `transfering transaction` has been lost you need establishing a new anchoring chain by a new `funding transaction`.*
+***Note!** If transfering transaction has been lost you need establishing a new anchoring chain by a new funding transaction.*
 
 ### Private key updating
 
-Each exonum node stores a map for the `anchoring address` and its corresponding `private key`.
+Each exonum node stores a map for the anchoring address and its corresponding private key.
 ```ini
 [anchoring_service.node.private_keys]
 2NCJYWui4LGNZguUw41xBANbcHoKxSVxyzr = "cRf74adxyQzJs7V8fHoyrMDazxzCmKAan63Cfhf9i4KL69zRkdS2"
 ```
-Add the line with new address and corresponding `private key` for it. If node public key is not changed you 
+Add the line with new address and corresponding private key for it. If node public key is not changed you 
 must use the old key for the new address otherwise use a new key. After modifying the configuration file
 you need to restart the node for the changes to take effect.
 
