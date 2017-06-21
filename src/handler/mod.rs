@@ -70,10 +70,10 @@ pub enum LectKind {
 
 #[doc(hidden)]
 /// The function extracts signatures from messages and order them by inputs.
-pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
-                                 common: &AnchoringConfig,
-                                 msgs: I)
-                                 -> Option<HashMap<u32, Vec<btc::Signature>>>
+pub fn collect_signatures<I>(proposal: &AnchoringTx,
+                             common: &AnchoringConfig,
+                             msgs: I)
+                             -> Option<HashMap<u32, Vec<btc::Signature>>>
     where I: IntoIterator<Item = MsgAnchoringSignature>
 {
     let mut signatures = HashMap::new();

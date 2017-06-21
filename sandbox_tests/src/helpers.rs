@@ -49,8 +49,7 @@ pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
 
 pub fn dump_lects(sandbox: &Sandbox, id: u16) -> Vec<BitcoinTx> {
     let b = sandbox.blockchain_ref().clone();
-    let v = b.snapshot();
-    let anchoring_schema = AnchoringSchema::new(&v);
+    let anchoring_schema = AnchoringSchema::new(b.snapshot());
     let key = &anchoring_schema.actual_anchoring_config().validators[id as usize];
 
     let lects = anchoring_schema.lects(key);

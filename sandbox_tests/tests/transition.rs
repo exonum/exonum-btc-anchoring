@@ -116,7 +116,7 @@ fn gen_following_cfg_add_two_validators_changed_self_key
     }
 
     for keypair in &anchoring_keypairs {
-        anchoring_cfg.validators.push(keypair.0.clone());
+        anchoring_cfg.validators.push(keypair.0);
         anchoring_priv_keys.push(keypair.1.clone());
     }
 
@@ -1453,8 +1453,8 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         let mut service_cfg = sandbox.current_cfg().clone();
         let priv_keys = sandbox.current_priv_keys();
 
-        service_cfg.validators.push(anchoring_keypairs[0].0.clone());
-        service_cfg.validators.push(anchoring_keypairs[1].0.clone());
+        service_cfg.validators.push(anchoring_keypairs[0].0);
+        service_cfg.validators.push(anchoring_keypairs[1].0);
         service_cfg.validators.swap(0, 3);
 
         let following_addr = service_cfg.redeem_script().1;

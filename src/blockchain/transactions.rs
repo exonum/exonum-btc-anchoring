@@ -83,7 +83,7 @@ impl MsgAnchoringSignature {
     }
 
     pub fn execute(&self, fork: &mut Fork) {
-        if !self.validate(&fork) {
+        if !self.validate(fork) {
             return;
         }
 
@@ -142,11 +142,11 @@ impl MsgAnchoringUpdateLatest {
             return None;
         }
 
-        Some((key.clone(), tx))
+        Some((*key, tx))
     }
 
     pub fn execute(&self, view: &mut Fork) {
-        if let Some((key, tx)) = self.validate(&view) {
+        if let Some((key, tx)) = self.validate(view) {
             let mut anchoring_schema = AnchoringSchema::new(view);
             anchoring_schema.add_lect(&key, tx, self.hash())
         }

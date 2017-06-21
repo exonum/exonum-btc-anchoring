@@ -151,7 +151,7 @@ impl AnchoringHandler {
             return Ok(AnchoringState::Auditing { cfg: actual });
         }
 
-        let key = self.validator_key(&actual, state).clone();
+        let key = *self.validator_key(&actual, state);
 
         // If we do not have any 'lect', then we have been added
         // later and can only be in the anchoring or recovering state.

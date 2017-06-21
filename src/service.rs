@@ -153,7 +153,7 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
     for _ in 0..count as usize {
         let (pub_key, priv_key) = btc::gen_btc_keypair_with_rng(network, rng);
 
-        pub_keys.push(pub_key.clone());
+        pub_keys.push(pub_key);
         node_cfgs.push(AnchoringNodeConfig::new(Some(rpc.clone())));
         priv_keys.push(priv_key.clone());
     }

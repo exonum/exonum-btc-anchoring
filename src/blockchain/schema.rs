@@ -134,8 +134,7 @@ impl<T> AnchoringSchema<T>
 
         let idx = lects.len();
         if idx > 1 {
-            let lect = lects.get(idx - 2).map(|content| content.tx());
-            lect
+            lects.get(idx - 2).map(|content| content.tx())
         } else {
             None
         }
@@ -156,7 +155,7 @@ impl<T> AnchoringSchema<T>
             }
         }
 
-        let lect = if let Some((lect, count)) = lects.iter().max_by_key(|&(_, v)| v) {
+        if let Some((lect, count)) = lects.iter().max_by_key(|&(_, v)| v) {
             if *count >= cfg.majority_count() {
                 Some(BitcoinTx::from(lect.clone()))
             } else {
@@ -164,8 +163,7 @@ impl<T> AnchoringSchema<T>
             }
         } else {
             None
-        };
-        lect
+        }
     }
 
     pub fn find_lect_position(&self,
@@ -261,5 +259,11 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
             self.signatures_mut(&ntxid).push(msg.clone());
             self.known_signatures_mut().put(&signature_id, msg);
         }
+    }
+}
+
+impl<T> AnchoringSchema<T> {
+    pub fn into_snapshot(self) -> T {
+        self.view
     }
 }
