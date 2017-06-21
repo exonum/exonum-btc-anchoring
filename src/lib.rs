@@ -81,7 +81,7 @@
 //!                 let mut options = LevelDBOptions::new();
 //!                 let path = destdir.join(idx.to_string());
 //!                 options.create_if_missing = true;
-//!                 LevelDB::new(&path, options).expect("Unable to create database")
+//!                 LevelDB::open(&path, options).expect("Unable to create database")
 //!             };
 //!             // Create node[idx]
 //!            let blockchain = Blockchain::new(db, vec![Box::new(service)]);
