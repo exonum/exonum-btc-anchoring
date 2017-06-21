@@ -4,8 +4,7 @@ use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
 use exonum::blockchain::{Schema, StoredConfiguration, gen_prefix};
-use exonum::storage::{Fork, ListIndex, MapIndex, ProofListIndex,
-                      Snapshot, StorageKey};
+use exonum::storage::{Fork, ListIndex, MapIndex, ProofListIndex, Snapshot, StorageKey};
 use exonum::crypto::Hash;
 
 use blockchain::consensus_storage::AnchoringConfig;

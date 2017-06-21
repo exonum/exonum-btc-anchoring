@@ -1,6 +1,6 @@
 use bitcoin::util::base58::ToBase58;
 
-use exonum::blockchain::NodeState;
+use exonum::blockchain::ServiceContext;
 
 use error::Error as ServiceError;
 use details::btc::transactions::BitcoinTx;
@@ -14,7 +14,7 @@ impl AnchoringHandler {
     pub fn handle_transition_state(&mut self,
                                    from: AnchoringConfig,
                                    to: AnchoringConfig,
-                                   state: &mut NodeState)
+                                   state: &mut ServiceContext)
                                    -> Result<(), ServiceError> {
         let multisig: MultisigAddress = {
             let mut multisig = self.multisig_address(&from);
@@ -81,7 +81,7 @@ impl AnchoringHandler {
     pub fn handle_recovering_state(&mut self,
                                    prev_cfg: AnchoringConfig,
                                    actual_cfg: AnchoringConfig,
-                                   state: &mut NodeState)
+                                   state: &mut ServiceContext)
                                    -> Result<(), ServiceError> {
         let multisig: MultisigAddress = self.multisig_address(&actual_cfg);
 
@@ -94,8 +94,7 @@ impl AnchoringHandler {
                multisig.addr.to_base58check());
 
         let lect_txid = {
-            let view = state.view();
-            let anchoring_schema = AnchoringSchema::new(view);
+            let anchoring_schema = AnchoringSchema::new(state.snapshot());
             if let Some(tx) = anchoring_schema.collect_lects(&prev_cfg) {
                 tx.id()
             } else {

@@ -1,6 +1,6 @@
 use bitcoin::util::base58::ToBase58;
 
-use exonum::blockchain::NodeState;
+use exonum::blockchain::ServiceContext;
 
 use error::Error as ServiceError;
 use details::btc::transactions::{AnchoringTx, FundingTx};
@@ -14,7 +14,7 @@ use super::error::Error as HandlerError;
 impl AnchoringHandler {
     pub fn handle_auditing_state(&mut self,
                                  cfg: AnchoringConfig,
-                                 state: &NodeState)
+                                 state: &ServiceContext)
                                  -> Result<(), ServiceError> {
         trace!("Auditing state");
         if state.height() % self.node.check_lect_frequency == 0 {
@@ -33,8 +33,11 @@ impl AnchoringHandler {
         Ok(())
     }
 
-    fn check_funding_lect(&self, tx: FundingTx, context: &NodeState) -> Result<(), ServiceError> {
-        let cfg = AnchoringSchema::new(context.view()).genesis_anchoring_config();
+    fn check_funding_lect(&self,
+                          tx: FundingTx,
+                          context: &ServiceContext)
+                          -> Result<(), ServiceError> {
+        let cfg = AnchoringSchema::new(context.snapshot()).genesis_anchoring_config();
         let (_, addr) = cfg.redeem_script();
         if &tx != cfg.funding_tx() {
             let e = HandlerError::IncorrectLect {

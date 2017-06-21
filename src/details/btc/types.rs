@@ -14,7 +14,7 @@ use secp256k1::Secp256k1;
 
 use exonum::crypto::{FromHexError, Hash, HexValue, hash};
 use exonum::encoding::Field;
-use exonum::storage::{StorageValue, StorageKey};
+use exonum::storage::{StorageKey, StorageValue};
 
 use super::HexValueEx;
 
