@@ -15,6 +15,7 @@ use details::btc::transactions::BitcoinTx;
 use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 
 /// An anchoring information schema.
+#[derive(Debug)]
 pub struct AnchoringSchema<'a> {
     view: &'a View,
 }
@@ -38,7 +39,7 @@ impl<'a> AnchoringSchema<'a> {
         MerkleTable::new(MapTable::new(prefix, self.view))
     }
 
-    /// Returns table that keeps the `lect` index for every anchoring `txid` for the validator.
+    /// Returns table that keeps the `lect` index for every anchoring `txid` for the validator
     /// with given `public_key`.
     pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapTable<View, btc::TxId, u64> {
         let prefix = self.gen_table_prefix(4, Some(validator_key.to_bytes().as_ref()));
@@ -171,7 +172,7 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
-    /// Returns the current `lect` if it matches `+2/3` of the current set of validators.
+    /// Returns a lect that is currently supported by at least 2/3 of the current set of validators.
     pub fn collect_lects(&self, cfg: &AnchoringConfig) -> Result<Option<BitcoinTx>, StorageError> {
         let mut lects = HashMap::new();
         for validator_key in &cfg.validators {
@@ -207,12 +208,12 @@ impl<'a> AnchoringSchema<'a> {
         self.lect_indexes(validator_key).get(txid)
     }
 
-    /// Marks address as known.
+    /// Marks address as already imported.
     pub fn add_known_address(&self, addr: &btc::Address) -> Result<(), StorageError> {
         self.known_addresses().put(&addr.to_base58check(), vec![])
     }
 
-    /// Checks that address is known.
+    /// Checks that address is already imported by `bitcoind`.
     pub fn is_address_known(&self, addr: &btc::Address) -> Result<bool, StorageError> {
         self.known_addresses()
             .get(&addr.to_base58check())

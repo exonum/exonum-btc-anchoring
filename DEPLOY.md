@@ -106,9 +106,9 @@ For the `anchoring` example consensus configuration looks like this:
 }
 ```
 
-You can perform these actions via [exonum-dashboard](exonum:dashboard) web application. 
+You can perform these actions via [exonum-dashboard][exonum:dashboard] web application. 
 The application shows `anchoring` address and can change configuration. 
-To connect an application with the `exonum anchoring node`, you must specify its api addresses in the `Settings` tab. 
+To connect an application with the exonum anchoring node, you must specify its api addresses in the `Settings` tab. 
 Also you can change selected validator by these settings.
 
 ### Change variables
@@ -131,7 +131,7 @@ Send to anchoring wallet some btc and save raw transaction body hex. Wait until 
 ***Important warning!** This procedure changes the `anchoring address`. Exonum node needs to wait until 
 the last anchored transaction gets enough confirmations. It is caused by impossibility to sign
 transaction addressed to `old anchoring address` by keys from the `current configuration`. If the
-last anchoring transaction does not catch enough confirmations before anchoring address is changed, 
+last anchoring transaction does not get enough confirmations before anchoring address is changed, 
 the following `transfering transaction` may be lost because of possible bitcoin forks and 
 transaction malleability. See this [article][exonum:anchoring_transfering] for details.*
 

@@ -105,7 +105,7 @@
 //!
 
 #![deny(missing_docs)]
-// #![deny(missing_debug_implementations)]
+#![deny(missing_debug_implementations)]
 
 extern crate serde;
 #[macro_use]

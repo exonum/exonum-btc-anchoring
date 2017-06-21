@@ -20,7 +20,7 @@ pub use details::btc::payload::Payload;
 mod error;
 
 /// Public api implementation.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct PublicApi {
     /// An `exonum` blockchain.
     pub blockchain: Blockchain,

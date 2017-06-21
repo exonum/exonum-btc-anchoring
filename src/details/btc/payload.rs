@@ -20,7 +20,7 @@ const PAYLOAD_V1_KIND_RECOVER: u8 = 1;
 ///
 /// | Position in bytes 	| Description                   	                |
 /// |-------------------	|----------------------------------------------     |
-/// | 0..5               	| ASCII-encoded prefix `EXONUM` 	                |
+/// | 0..6               	| ASCII-encoded prefix `EXONUM` 	                |
 /// | 6                 	| Version byte, currently is 1             	        |
 /// | 7                     | Payload kind: (0 is regular, 1 is recover)        |
 /// | 8..16                 | Block height                                      |
