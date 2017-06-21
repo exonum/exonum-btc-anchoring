@@ -1,6 +1,6 @@
 use bitcoin::util::base58::ToBase58;
 
-use exonum::blockchain::{NodeState, Schema};
+use exonum::blockchain::{Schema, ServiceContext};
 use exonum::storage::List;
 use exonum::crypto::HexValue;
 
@@ -18,7 +18,7 @@ use super::{AnchoringHandler, LectKind, MultisigAddress, collect_signatures};
 impl AnchoringHandler {
     pub fn handle_anchoring_state(&mut self,
                                   cfg: AnchoringConfig,
-                                  state: &mut NodeState)
+                                  state: &mut ServiceContext)
                                   -> Result<(), ServiceError> {
         let multisig = self.multisig_address(&cfg);
         trace!("Anchoring state, addr={}", multisig.addr.to_base58check());
@@ -40,7 +40,7 @@ impl AnchoringHandler {
 
     pub fn try_create_proposal_tx(&mut self,
                                   multisig: &MultisigAddress,
-                                  state: &mut NodeState)
+                                  state: &mut ServiceContext)
                                   -> Result<(), ServiceError> {
         let lect = self.collect_lects_for_validator(self.validator_key(multisig.common, state),
                                                     multisig.common,
@@ -67,7 +67,7 @@ impl AnchoringHandler {
     pub fn try_create_anchoring_tx_chain(&mut self,
                                          multisig: &MultisigAddress,
                                          prev_tx_chain: Option<btc::TxId>,
-                                         state: &mut NodeState)
+                                         state: &mut ServiceContext)
                                          -> Result<(), ServiceError> {
         trace!("Create tx chain");
         if let Some(funding_tx) = self.avaliable_funding_tx(multisig)? {
@@ -102,7 +102,7 @@ impl AnchoringHandler {
                               lect: AnchoringTx,
                               multisig: &MultisigAddress,
                               height: u64,
-                              state: &mut NodeState)
+                              state: &mut ServiceContext)
                               -> Result<(), ServiceError> {
         let hash = Schema::new(state.view())
             .block_hashes_by_height()
@@ -134,7 +134,7 @@ impl AnchoringHandler {
     pub fn sign_proposal_tx(&mut self,
                             proposal: AnchoringTx,
                             multisig: &MultisigAddress,
-                            state: &mut NodeState)
+                            state: &mut ServiceContext)
                             -> Result<(), ServiceError> {
         for input in proposal.inputs() {
             let signature = proposal.sign_input(&multisig.redeem_script, input, &multisig.priv_key);
@@ -158,7 +158,7 @@ impl AnchoringHandler {
     pub fn try_finalize_proposal_tx(&mut self,
                                     proposal: AnchoringTx,
                                     multisig: &MultisigAddress,
-                                    state: &mut NodeState)
+                                    state: &mut ServiceContext)
                                     -> Result<(), ServiceError> {
         trace!("Try finalize proposal tx");
         let txid = proposal.id();

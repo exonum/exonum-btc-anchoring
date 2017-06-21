@@ -3,7 +3,7 @@
 This crate implements a protocol for blockchain anchoring onto the `Bitcoin` blockchain that utilizes the native `Bitcoin` capabilities of creating multisig transactions.
 
 ## You may looking for:
-* [Reference documentation](http://exonum.com/doc/crates/anchoring_btc_service/index.html)
+* [Reference documentation](http://exonum.com/doc/crates/btc_anchoring_service/index.html)
 * [Specification](http://exonum.com/doc/anchoring-spec/)
 * [Implementation details](http://exonum.com/doc/anchoring-impl/)
 * [Example code](examples/anchoring.rs)

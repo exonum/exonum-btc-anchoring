@@ -75,7 +75,7 @@ Launch all exonum nodes in the testnet. To launch node `m`, execute:
 $ anchoring run --node-config <destdir>/<m>.toml --leveldb-path <destdir>/db/<m>
 ```
 
-If you want to see additional information you may specify log level by environment variable `RUST_LOG="anchoring_btc_service=info"`.
+If you want to see additional information you may specify log level by environment variable `RUST_LOG="btc_anchoring_service=info"`.
 
 ## Production deployment
 
