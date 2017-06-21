@@ -43,7 +43,8 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn validator_id(&self, context: &ServiceContext) -> u16 {
-        context.validator_state()
+        context
+            .validator_state()
             .as_ref()
             .expect("Request `validator_id` only from validator node.")
             .id()

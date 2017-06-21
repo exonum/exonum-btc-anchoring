@@ -305,8 +305,8 @@ impl AnchoringSandbox {
     }
 
     pub fn finalize_tx<I>(&self, tx: AnchoringTx, signs: I) -> AnchoringTx
-        where I: IntoIterator<Item=MsgAnchoringSignature>
-     {
+        where I: IntoIterator<Item = MsgAnchoringSignature>
+    {
         let collected_signs = collect_signatures(&tx, &self.current_cfg(), signs).unwrap();
         tx.finalize(&self.current_redeem_script(), collected_signs)
     }
