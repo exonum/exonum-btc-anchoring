@@ -31,10 +31,10 @@ version = "0.1.0"
 git = "ssh://git@github.com/alekseysidorov/exonum-core.git"
 rev = "ad315ac592593cdcde30a4e280d9f961a3aa6cae"
 
-# [dependencies.configuration_service]
-# version = "0.1.0"
-# git = "ssh://git@github.com/exonum/exonum-configuration.git"
-# rev = "c4af34982d3d0ad7df6a5d0eb60664d150688120"
+[dependencies.configuration_service]
+version = "0.1.0"
+git = "ssh://git@github.com/alekseysidorov/exonum-configuration.git"
+rev = "84e50618082d89bed410e0e0445ce8519b89fe23"
 
 [features]
 default = []
