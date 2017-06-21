@@ -9,7 +9,7 @@ extern crate mount;
 extern crate bitcoin;
 
 extern crate exonum;
-extern crate anchoring_btc_service;
+extern crate btc_anchoring_service;
 extern crate configuration_service;
 
 use std::thread;
@@ -28,9 +28,9 @@ use exonum::helpers::clap::{GenerateCommand, RunCommand};
 use exonum::helpers::generate_testnet_config;
 use exonum::helpers;
 use configuration_service::ConfigurationService;
-use anchoring_btc_service::{AnchoringRpc, AnchoringService};
-use anchoring_btc_service::observer::{AnchoringChainObserver, ObserverConfig};
-use anchoring_btc_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
+use btc_anchoring_service::{AnchoringRpc, AnchoringService};
+use btc_anchoring_service::observer::{AnchoringChainObserver, ObserverConfig};
+use btc_anchoring_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
                             BitcoinNetwork, gen_anchoring_testnet_config, gen_btc_keypair};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]

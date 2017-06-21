@@ -1,6 +1,6 @@
 use bitcoin::util::base58::ToBase58;
 
-use exonum::blockchain::NodeState;
+use exonum::blockchain::ServiceContext;
 use exonum::storage::{Error as StorageError, List, Map};
 
 use error::Error as ServiceError;
@@ -38,7 +38,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn validator_id(&self, state: &NodeState) -> u16 {
+    pub fn validator_id(&self, state: &ServiceContext) -> u16 {
         state
             .validator_state()
             .as_ref()
@@ -49,7 +49,7 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn validator_key<'a>(&self,
                              cfg: &'a AnchoringConfig,
-                             state: &NodeState)
+                             state: &ServiceContext)
                              -> &'a btc::PublicKey {
         let validator_id = state
             .validator_state()
@@ -86,7 +86,7 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn import_address(&self,
                           addr: &btc::Address,
-                          state: &NodeState)
+                          state: &ServiceContext)
                           -> Result<(), ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         if !schema.is_address_known(addr)? {
@@ -108,7 +108,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn actual_config(&self, state: &NodeState) -> Result<AnchoringConfig, ServiceError> {
+    pub fn actual_config(&self, state: &ServiceContext) -> Result<AnchoringConfig, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let common = schema.actual_anchoring_config()?;
         Ok(common)
@@ -116,7 +116,7 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn following_config(&self,
-                            state: &NodeState)
+                            state: &ServiceContext)
                             -> Result<Option<AnchoringConfig>, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let cfg = schema.following_anchoring_config()?;
@@ -126,7 +126,7 @@ impl AnchoringHandler {
     fn following_config_is_transition
         (&self,
          actual_addr: &btc::Address,
-         state: &NodeState)
+         state: &ServiceContext)
          -> Result<Option<(AnchoringConfig, btc::Address)>, ServiceError> {
         if let Some(following) = self.following_config(state)? {
             let following_addr = following.redeem_script().1;
@@ -138,7 +138,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn current_state(&self, state: &NodeState) -> Result<AnchoringState, ServiceError> {
+    pub fn current_state(&self, state: &ServiceContext) -> Result<AnchoringState, ServiceError> {
         let client = self.client();
         let actual = self.actual_config(state)?;
         let actual_addr = actual.redeem_script().1;
@@ -268,7 +268,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn handle_commit(&mut self, state: &mut NodeState) -> Result<(), ServiceError> {
+    pub fn handle_commit(&mut self, state: &mut ServiceContext) -> Result<(), ServiceError> {
         match self.current_state(state)? {
             AnchoringState::Anchoring { cfg } => self.handle_anchoring_state(cfg, state),
             AnchoringState::Transition { from, to } => {
@@ -291,7 +291,7 @@ impl AnchoringHandler {
     pub fn collect_lects_for_validator(&self,
                                        validator_key: &btc::PublicKey,
                                        anchoring_cfg: &AnchoringConfig,
-                                       state: &NodeState)
+                                       state: &ServiceContext)
                                        -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
@@ -323,7 +323,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn collect_lects(&self, state: &NodeState) -> Result<LectKind, ServiceError> {
+    pub fn collect_lects(&self, state: &ServiceContext) -> Result<LectKind, ServiceError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
         let actual_cfg = anchoring_schema.actual_anchoring_config()?;
         let kind = if let Some(lect) = anchoring_schema.collect_lects(&actual_cfg)? {
@@ -350,7 +350,7 @@ impl AnchoringHandler {
     /// if all `lects` have disappeared.
     pub fn find_lect(&self,
                      multisig: &MultisigAddress,
-                     state: &NodeState)
+                     state: &ServiceContext)
                      -> Result<Option<BitcoinTx>, ServiceError> {
         let lects: Vec<_> = self.client().unspent_transactions(&multisig.addr)?;
         for lect in lects {
@@ -364,7 +364,7 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn update_our_lect(&mut self,
                            multisig: &MultisigAddress,
-                           state: &mut NodeState)
+                           state: &mut ServiceContext)
                            -> Result<Option<BitcoinTx>, ServiceError> {
         let key = self.validator_key(multisig.common, state);
         trace!("Update our lect");
@@ -413,7 +413,7 @@ impl AnchoringHandler {
     fn transaction_is_lect(&self,
                            lect: &BitcoinTx,
                            multisig: &MultisigAddress,
-                           state: &NodeState)
+                           state: &ServiceContext)
                            -> Result<bool, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
         let key = self.validator_key(multisig.common, state);
@@ -472,7 +472,7 @@ impl AnchoringHandler {
     fn send_updated_lect(&mut self,
                          lect: BitcoinTx,
                          lects_count: u64,
-                         state: &mut NodeState)
+                         state: &mut ServiceContext)
                          -> Result<(), StorageError> {
         if self.proposal_tx.is_some() {
             self.proposal_tx = None;
