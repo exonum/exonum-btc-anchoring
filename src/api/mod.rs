@@ -1,4 +1,4 @@
-//! An anchoring rest api implementation.
+//! Anchoring rest api implementation.
 
 use router::Router;
 use iron::prelude::*;
@@ -22,11 +22,11 @@ mod error;
 /// Public api implementation.
 #[derive(Debug, Clone)]
 pub struct PublicApi {
-    /// An `exonum` blockchain.
+    /// Exonum blockchain instance.
     pub blockchain: Blockchain,
 }
 
-/// Public information about the anchoring transaction in `bitcoin`.
+/// Public information about the anchoring transaction in bitcoin.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct AnchoringInfo {
     /// `Txid` of anchoring transaction.
@@ -35,7 +35,7 @@ pub struct AnchoringInfo {
     pub payload: Option<Payload>,
 }
 
-/// Public information about the `lect` transaction in `exonum`.
+/// Public information about the lect transaction in exonum.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct LectInfo {
     /// `Exonum` transaction hash.

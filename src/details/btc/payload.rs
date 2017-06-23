@@ -1,4 +1,3 @@
-
 use byteorder::{ByteOrder, LittleEndian};
 
 use bitcoin::blockdata::script::{Builder, Instruction, Script};

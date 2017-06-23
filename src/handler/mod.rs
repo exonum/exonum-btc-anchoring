@@ -15,7 +15,7 @@ use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::MsgAnchoringSignature;
 
-/// An internal anchoring service handler. Can be used to manage the service.
+/// Internal anchoring service handler. Can be used to manage the service.
 #[derive(Debug)]
 pub struct AnchoringHandler {
     #[doc(hidden)]

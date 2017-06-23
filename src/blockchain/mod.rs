@@ -1,4 +1,4 @@
-//! An anchoring blockchain implementation details.
+//! Blockchain implementation details for the anchoring service.
 
 #[doc(hidden)]
 pub mod schema;

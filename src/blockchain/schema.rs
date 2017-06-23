@@ -14,7 +14,7 @@ use details::btc;
 use details::btc::transactions::BitcoinTx;
 use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 
-/// An anchoring information schema.
+/// Anchoring information schema.
 #[derive(Debug)]
 pub struct AnchoringSchema<'a> {
     view: &'a View,
@@ -116,7 +116,8 @@ impl<'a> AnchoringSchema<'a> {
         self.anchoring_config_by_height(0)
     }
 
-    /// Returns the configuration that is the actual for the given height.
+    /// Returns the configuration that is the actual for the given `height`.
+    /// For non-existent heights, it will return the configuration closest to them.
     pub fn anchoring_config_by_height(&self, height: u64) -> Result<AnchoringConfig, StorageError> {
         let schema = Schema::new(self.view);
         let stored = schema.configuration_by_height(height)?;

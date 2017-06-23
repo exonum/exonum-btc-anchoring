@@ -111,7 +111,7 @@ For the `anchoring` example consensus configuration looks like this:
 }
 ```
 
-With this variables you can perform the following actions:
+With these variables you can perform the following actions:
  - [Add funds to anchoring wallet via funding transaction](#add-funds).
  - [Change list of validators](#change-list-of-validators).
  - Just change other variables to more convenient.
@@ -146,7 +146,7 @@ Calculate how many blocks will be taken during this time and add this number to 
 
 ***Note!** If transfering transaction has been lost you need establishing a new anchoring chain by a new funding transaction.*
 
-### Updating anchoring address in config.
+### Updating anchoring address in config
 
 Each exonum node stores in the local configuration a map for the anchoring address and its corresponding private key.
 The address is encoded using [`base58check`][bitcoin:base58check] encoding and the private key uses [`WIF`][bitcoin:wif] format.

@@ -32,7 +32,7 @@ pub const ANCHORING_SERVICE_ID: u16 = 3;
 /// Anchoring service name.
 pub const ANCHORING_SERVICE_NAME: &'static str = "btc_anchoring";
 
-/// An anchoring service implementation for the Exonum blockchain.
+/// Anchoring service implementation for the Exonum blockchain.
 #[derive(Debug)]
 pub struct AnchoringService {
     genesis: AnchoringConfig,

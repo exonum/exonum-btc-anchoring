@@ -16,15 +16,15 @@ pub struct AnchoringConfig {
     /// If the anchoring transactions chain is empty, it will be the first transaction in the chain.
     /// Note: you must specify a suitable transaction before the network launching.
     pub funding_tx: Option<FundingTx>,
-    /// A fee for each transaction in chain
+    /// Fee for each transaction in chain.
     pub fee: u64,
-    /// The frequency in blocks with which the generation of new `anchoring`
+    /// The frequency in blocks with which the generation of new anchoring
     /// transactions in the chain occurs.
     pub frequency: u64,
     /// The minimum number of confirmations in bitcoin network for the transition to a
     /// new anchoring address.
     pub utxo_confirmations: u64,
-    /// The current bitcoin network type
+    /// The current bitcoin network type.
     #[serde(serialize_with = "btc_network_to_str", deserialize_with = "btc_network_from_str")]
     pub network: btc::Network,
 }

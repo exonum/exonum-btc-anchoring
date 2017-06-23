@@ -1,6 +1,6 @@
 use details::rpc::Error as RpcError;
 
-/// A Service error
+/// Service error
 #[derive(Debug, Error)]
 pub enum Error {
     /// Rpc error
