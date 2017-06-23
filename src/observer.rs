@@ -5,14 +5,13 @@ use std::thread::sleep;
 use std::net::SocketAddr;
 
 use bitcoin::util::base58::ToBase58;
-use byteorder::{BigEndian, ByteOrder};
 use router::Router;
 use iron::prelude::*;
 use iron::Handler;
 
 use exonum::api::{Api, ApiError};
 use exonum::blockchain::{Blockchain, Schema};
-use exonum::storage::{Fork, List, Map, MapTable, View};
+use exonum::storage::{Fork, List, Map, MapTable, View, U64Key};
 
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
 use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
@@ -21,6 +20,7 @@ use blockchain::consensus_storage::AnchoringConfig;
 use error::Error as ServiceError;
 
 pub type Milliseconds = u64;
+pub type Height = U64Key;
 
 /// An anchoring observer configuration.
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -45,37 +45,6 @@ pub struct AnchoringChainObserver {
 #[derive(Clone)]
 pub struct AnchoringChainObserverApi {
     pub blockchain: Blockchain,
-}
-
-#[derive(Debug, Clone, Copy, PartialEq)]
-struct Height([u8; 8]);
-
-impl Into<Height> for u64 {
-    fn into(self) -> Height {
-        let mut bytes = [0; 8];
-        BigEndian::write_u64(&mut bytes, self);
-        Height(bytes)
-    }
-}
-
-impl Into<u64> for Height {
-    fn into(self) -> u64 {
-        BigEndian::read_u64(&self.0)
-    }
-}
-
-impl AsRef<[u8]> for Height {
-    fn as_ref(&self) -> &[u8] {
-        self.0.as_ref()
-    }
-}
-
-impl Height {
-    pub fn from_bytes(bytes: Vec<u8>) -> Height {
-        let mut buf = [0; 8];
-        buf.copy_from_slice(&bytes);
-        Height(buf)
-    }
 }
 
 impl<'a> AnchoringSchema<'a> {
@@ -254,9 +223,10 @@ impl AnchoringChainObserverApi {
         debug!("Looking up for nearest anchoring tx for height={}.", height);
 
         if let Some(nearest_height_bytes) = tx_chain.find_key(&height.into())? {
-            let nearest_height = Height::from_bytes(nearest_height_bytes);
+            let nearest_height = Height::from_vec(nearest_height_bytes);
             let tx = tx_chain.get(&nearest_height)?;
-            debug!("Found anchoring tx content={:#?}, payload={:#?}", tx, tx.clone().map(|tx| tx.payload()));
+            debug!("Found anchoring tx content={:#?}",
+                   tx.as_ref().unwrap());
             Ok(tx)
         } else {
             debug!("Anchoring tx not found.");
