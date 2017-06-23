@@ -251,11 +251,15 @@ impl AnchoringChainObserverApi {
         let anchoring_schema = AnchoringSchema::new(&view);
         let tx_chain = anchoring_schema.anchoring_tx_chain();
 
+        debug!("Looking up for nearest anchoring tx for height={}.", height);
+
         if let Some(nearest_height_bytes) = tx_chain.find_key(&height.into())? {
             let nearest_height = Height::from_bytes(nearest_height_bytes);
             let tx = tx_chain.get(&nearest_height)?;
+            debug!("Found anchoring tx content={:#?}, payload={:#?}", tx, tx.clone().map(|tx| tx.payload()));
             Ok(tx)
         } else {
+            debug!("Anchoring tx not found.");
             Ok(None)
         }
     }
