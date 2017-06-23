@@ -82,7 +82,9 @@ impl AnchoringChainObserver {
               self.check_frequency);
         let duration = Duration::from_millis(self.check_frequency);
         loop {
-            self.check_anchoring_chain()?;
+            if let Err(e) = self.check_anchoring_chain() {
+                error!("An error during `check_anchoring_chain` occured, msg={:?}", e);
+            }
             sleep(duration);
         }
     }
