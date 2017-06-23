@@ -11,7 +11,7 @@ use iron::Handler;
 
 use exonum::api::{Api, ApiError};
 use exonum::blockchain::{Blockchain, Schema};
-use exonum::storage::{Fork, List, Map, MapTable, View, U64Key};
+use exonum::storage::{Fork, List, Map, MapTable, U64Key, View};
 
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
 use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
@@ -209,7 +209,10 @@ impl AnchoringChainObserver {
         Ok(lect_count >= actual_cfg.majority_count())
     }
 
-    fn lect_payload_is_correct(&self, view: &View, lect: &AnchoringTx) -> Result<bool, ServiceError> {
+    fn lect_payload_is_correct(&self,
+                               view: &View,
+                               lect: &AnchoringTx)
+                               -> Result<bool, ServiceError> {
         let core_schema = Schema::new(view);
         let payload = lect.payload();
         let block_hash = core_schema.block_hash_by_height(payload.block_height)?;
@@ -236,8 +239,7 @@ impl AnchoringChainObserverApi {
         if let Some(nearest_height_bytes) = tx_chain.find_key(&height.into())? {
             let nearest_height = Height::from_vec(nearest_height_bytes);
             let tx = tx_chain.get(&nearest_height)?;
-            debug!("Found anchoring tx content={:#?}",
-                   tx.as_ref().unwrap());
+            debug!("Found anchoring tx content={:#?}", tx.as_ref().unwrap());
             Ok(tx)
         } else {
             debug!("Anchoring tx not found.");
