@@ -98,8 +98,12 @@ impl AnchoringChainObserver {
         let anchoring_schema = AnchoringSchema::new(&view);
         let cfg = anchoring_schema.actual_anchoring_config()?;
         if let Some(lect) = self.find_lect(&view, &cfg)? {
-            self.update_anchoring_chain(&view, &cfg, lect)?;
+            if !self.lect_payload_is_correct(&view, &lect)? {
+                warn!("Received lect with incorrect payload, content={:#?}", lect);
+                return Ok(());
+            }
 
+            self.update_anchoring_chain(&view, &cfg, lect)?;
             let changes = view.changes();
             self.blockchain.merge(&changes)?;
         }
@@ -203,6 +207,13 @@ impl AnchoringChainObserver {
             }
         }
         Ok(lect_count >= actual_cfg.majority_count())
+    }
+
+    fn lect_payload_is_correct(&self, view: &View, lect: &AnchoringTx) -> Result<bool, ServiceError> {
+        let core_schema = Schema::new(view);
+        let payload = lect.payload();
+        let block_hash = core_schema.block_hash_by_height(payload.block_height)?;
+        Ok(block_hash == Some(payload.block_hash))
     }
 
     fn is_blockchain_inited(&self, view: &View) -> Result<bool, ServiceError> {
