@@ -3,14 +3,14 @@ pub use details::error::Error as InternalError;
 pub use handler::error::Error as HandlerError;
 use bitcoinrpc::Error as RpcError;
 
-/// An anchoring btc service Error type
+/// An anchoring btc service Error type.
 #[derive(Debug, Error)]
 pub enum Error {
-    /// Storage error
+    /// A storage error.
     Storage(StorageError),
-    /// An internal error
+    /// An internal error.
     Internal(InternalError),
-    /// A handler error
+    /// A handler error.
     Handler(HandlerError),
 }
 

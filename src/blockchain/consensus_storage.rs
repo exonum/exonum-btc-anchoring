@@ -10,9 +10,9 @@ use details::btc::transactions::FundingTx;
 /// Public part of anchoring service configuration stored in blockchain.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct AnchoringConfig {
-    /// Validators' public keys from which the current `anchoring` address can be calculated.
+    /// Validators' public keys from which the current anchoring address can be calculated.
     pub validators: Vec<btc::PublicKey>,
-    /// The transaction that funds `anchoring` address.
+    /// The transaction that funds anchoring address.
     /// If the anchoring transactions chain is empty, it will be the first transaction in the chain.
     /// Note: you must specify a suitable transaction before the network launching.
     pub funding_tx: Option<FundingTx>,
@@ -22,7 +22,7 @@ pub struct AnchoringConfig {
     /// transactions in the chain occurs.
     pub frequency: u64,
     /// The minimum number of confirmations in bitcoin network for the transition to a
-    /// new `anchoring` address.
+    /// new anchoring address.
     pub utxo_confirmations: u64,
     /// The current bitcoin network type
     #[serde(serialize_with = "btc_network_to_str", deserialize_with = "btc_network_from_str")]
@@ -71,7 +71,7 @@ impl AnchoringConfig {
     }
 
     #[doc(hidden)]
-    /// Creates compressed `redeem_script` from public keys in config.
+    /// Creates compressed `RedeemScript` from public keys in config.
     pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
         let redeem_script = btc::RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
@@ -81,7 +81,7 @@ impl AnchoringConfig {
     }
 
     #[doc(hidden)]
-    /// Returns the latest height below the given `height` which needs to be anchored
+    /// Returns the latest height below the given `height` which needs to be anchored.
     pub fn latest_anchoring_height(&self, height: u64) -> u64 {
         height - height % self.frequency as u64
     }

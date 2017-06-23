@@ -31,7 +31,7 @@ message! {
 }
 
 message! {
-    /// Exonum message with the updated validator's `lect`.
+    /// Exonum message with the updated validator's lect.
     struct MsgAnchoringUpdateLatest {
         const TYPE = ANCHORING_SERVICE_ID;
         const ID = ANCHORING_MESSAGE_LATEST;
@@ -53,14 +53,14 @@ encoding_struct! {
     struct LectContent {
         const SIZE = 40;
 
-        /// Hash of `exonum` transaction that contains this `lect`.
+        /// Hash of `exonum` transaction that contains this lect.
         field msg_hash:       &Hash       [00 => 32]
         /// Bitcoin transaction content.
         field tx:             BitcoinTx   [32 => 40]
     }
 }
 
-/// Generalized type of any anchoring messages.
+/// Generalized type of any message defined by the anchoring service.
 #[derive(Clone, Serialize)]
 pub enum AnchoringMessage {
     /// Signature message

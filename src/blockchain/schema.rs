@@ -23,7 +23,7 @@ pub struct AnchoringSchema<'a> {
 // Data tables section.
 impl<'a> AnchoringSchema<'a> {
     /// Returns table that contains signatures for the anchoring transaction with
-    /// the given `normalized` `txid`.
+    /// the given normalized `txid`.
     pub fn signatures(&self,
                       txid: &btc::TxId)
                       -> ListTable<MapTable<View, [u8], Vec<u8>>, MsgAnchoringSignature> {
@@ -31,7 +31,7 @@ impl<'a> AnchoringSchema<'a> {
         ListTable::new(MapTable::new(prefix, self.view))
     }
 
-    /// Returns table that saves a list of `lects` for the validator with the given `public_key`.
+    /// Returns table that saves a list of lects for the validator with the given `validator_key`.
     pub fn lects(&self,
                  validator_key: &btc::PublicKey)
                  -> MerkleTable<MapTable<View, [u8], Vec<u8>>, LectContent> {
@@ -39,8 +39,8 @@ impl<'a> AnchoringSchema<'a> {
         MerkleTable::new(MapTable::new(prefix, self.view))
     }
 
-    /// Returns table that keeps the `lect` index for every anchoring `txid` for the validator
-    /// with given `public_key`.
+    /// Returns table that keeps the lect index for every anchoring txid for the validator
+    /// with given `validator_key`.
     pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapTable<View, btc::TxId, u64> {
         let prefix = self.gen_table_prefix(4, Some(validator_key.to_bytes().as_ref()));
         MapTable::new(prefix, self.view)
@@ -52,14 +52,13 @@ impl<'a> AnchoringSchema<'a> {
         MapTable::new(prefix, self.view)
     }
 
-    /// Returns the table of known signatures, where key is the tuple (txid, validator_id, input),
-    /// see [`known_signature_id`](fn) for details.
+    /// Returns the table of known signatures, where key is the tuple `(txid, validator_id, input)`.
     pub fn known_signatures(&self) -> MapTable<View, [u8], MsgAnchoringSignature> {
         let prefix = self.gen_table_prefix(6, None);
         MapTable::new(prefix, self.view)
     }
 
-    /// Returns the table that keeps the `anchoring transaction` for any known `txid`.
+    /// Returns the table that keeps the anchoring transaction for any known txid.
     pub fn known_txs(&self) -> MapTable<View, btc::TxId, BitcoinTx> {
         let prefix = self.gen_table_prefix(7, None);
         MapTable::new(prefix, self.view)
@@ -86,7 +85,7 @@ impl<'a> AnchoringSchema<'a> {
         AnchoringSchema { view: view }
     }
 
-    /// Returns an actual anchoring configuration.
+    /// Returns the actual anchoring configuration.
     pub fn actual_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
         let actual = Schema::new(self.view).actual_configuration()?;
         Ok(self.parse_config(&actual))
@@ -112,7 +111,7 @@ impl<'a> AnchoringSchema<'a> {
         }
     }
 
-    /// Returns the anchoring configuration from the `genesis` block.
+    /// Returns the anchoring configuration from the genesis block.
     pub fn genesis_anchoring_config(&self) -> Result<AnchoringConfig, StorageError> {
         self.anchoring_config_by_height(0)
     }
@@ -234,7 +233,7 @@ impl<'a> AnchoringSchema<'a> {
         Ok(())
     }
 
-    /// Returns the `state_hash` table for anchoring tables.
+    /// Returns the `state_hash` for anchoring tables.
     ///
     /// It contains a list of `root_hash` of the actual `lects` tables.
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {

@@ -82,14 +82,19 @@ If you want to see additional information you may specify log level by environme
 TODO.
 
 ## Maintenance
-
-As a maintainer, you can perform the following actions:
- - [Change anchoring variables](#change-variables).
- - [Add funds to anchoring wallet via funding transaction](#add-funds).
- - [Change list of validators](#change-list-of-validators).
  
+As maintainer, you can change the anchoring [configuration parameters](#change-configuration-parameters).
 These actions must be performed by [Exonum configuration service][exonum:configuration_service]. 
 Visit its [tutorial][exonum:configuration_tutorial] for more explanations.
+
+### Change configuration parameters
+
+Variables that you can modify:
+ - `fee` - the amount of the fee for the anchoring transaction.
+ - `frequency` - the frequency in exonum blocks with which the generation of a new anchoring transactions occurs.
+ - `utxo_confirmations` - the minimum number of confirmations in bitcoin network to consider the anchoring transaction as fully confirmed. Uses for transition and initial funding transactions.
+ - `funding_tx` - the hex representation of current funding transaction. Node would use it as input if it did not spent.
+ - `validators` - the list of hex-encoded compressed bitcoin public keys of exonum validators that collects into the current anchoring address.
 
 For the `anchoring` example consensus configuration looks like this:
 ```json
@@ -106,27 +111,23 @@ For the `anchoring` example consensus configuration looks like this:
 }
 ```
 
-You can perform these actions via [exonum-dashboard][exonum:dashboard] web application. 
+With this variables you can perform the following actions:
+ - [Add funds to anchoring wallet via funding transaction](#add-funds).
+ - [Change list of validators](#change-list-of-validators).
+ - Just change other variables to more convenient.
+
+You may perform these actions via [exonum-dashboard][exonum:dashboard] web application. 
 The application shows anchoring address and can change configuration. 
 To connect an application with the exonum anchoring node, you must specify its api addresses in the `Settings` tab. 
 Also you can change selected validator by these settings.
 
-### Change variables
-
-Variables that you can modify:
- - `fee` - the amount of the fee for the anchoring transaction.
- - `frequency` - the frequency in blocks with which the generation of a new anchoring transactions occurs
- - `utxo_confirmations` - The minimum number of confirmations in bitcoin network to consider the anchoring transaction as fully confirmed.
-
-Just change these variables and apply the new configuration.
-
-### Add funds
+#### Add funds
 
 Send to anchoring wallet some btc and save raw transaction body hex. Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex. 
 
-***Note!** If the current anchoring chain [`becomes unusable`][exonum:anchoring_transfering] you may start a new chain by adding corresponding funding transaction.*
+***Note!** If the current anchoring chain [becomes unusable][exonum:anchoring_transfering] you may start a new chain by adding corresponding funding transaction.*
 
-### Change list of validators
+#### Change list of validators
 
 ***Important warning!** This procedure changes the anchoring address. Exonum node needs to wait until 
 the last anchored transaction gets enough confirmations. It is caused by impossibility to sign
@@ -141,13 +142,14 @@ Calculate how many blocks will be taken during this time and add this number to 
 * Change list of validators via editing `validators` array.
 * Initiate the config update procedure.
 * Make sure that config update procedure is not delayed. That is, do not delay the voting procedure for the new configuration.
-* Look at the new address of the anchoring in the [`exonum-dashboard`][exonum:dashboard] and [set private key for it](#private-key-updating).
+* Look at the new address of the anchoring in the [`exonum-dashboard`][exonum:dashboard] and [set private key for it](#updating-anchoring-address).
 
 ***Note!** If transfering transaction has been lost you need establishing a new anchoring chain by a new funding transaction.*
 
-### Private key updating
+### Updating anchoring address in config.
 
-Each exonum node stores a map for the anchoring address and its corresponding private key.
+Each exonum node stores in the local configuration a map for the anchoring address and its corresponding private key.
+The address is encoded using [`base58check`][bitcoin:base58check] encoding and the private key uses [`WIF`][bitcoin:wif] format.
 ```ini
 [anchoring_service.node.private_keys]
 2NCJYWui4LGNZguUw41xBANbcHoKxSVxyzr = "cRf74adxyQzJs7V8fHoyrMDazxzCmKAan63Cfhf9i4KL69zRkdS2"
@@ -158,6 +160,8 @@ you need to restart the node for the changes to take effect.
 
 [bitcoin:install]: https://bitcoin.org/en/full-node#what-is-a-full-node
 [bitcoin:faucet]: https://testnet.manu.backend.hamburg/faucet
+[bitcoin:base58check]: https://en.bitcoin.it/wiki/Base58Check_encoding
+[bitcoin:wif]: https://en.bitcoin.it/wiki/Wallet_import_format
 [bitcoin_wiki:configuration]: https://en.bitcoin.it/wiki/Running_Bitcoin#Bitcoin.conf_Configuration_File
 [exonum:node_api]: https://github.com/exonum/exonum-doc/blob/master/src/architecture/configuration.md#nodeapi
 [exonum:configuration_service]: https://github.com/exonum/exonum-configuration

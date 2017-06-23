@@ -100,11 +100,11 @@ impl AnchoringHandler {
         Ok(())
     }
 
-    /// Adds a private_key for the corresponding anchoring address.
-    pub fn add_private_key(&mut self, addr: &btc::Address, priv_key: btc::PrivateKey) {
+    /// Adds a `private_key` for the corresponding anchoring `address`.
+    pub fn add_private_key(&mut self, address: &btc::Address, private_key: btc::PrivateKey) {
         self.node
             .private_keys
-            .insert(addr.to_base58check(), priv_key);
+            .insert(address.to_base58check(), private_key);
     }
 
     #[doc(hidden)]

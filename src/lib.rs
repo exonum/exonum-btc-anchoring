@@ -2,16 +2,16 @@
 //!
 //! Private blockchain infrastructure necessitates additional measures for
 //! accountability of the blockchain validators.
-//! In public `PoW` blockchains (e.g., `Bitcoin`), accountability is purely economic and is
+//! In public PoW blockchains (e.g., Bitcoin), accountability is purely economic and is
 //! based on game theory and equivocation or retroactive modifications being economically costly.
 //! Not so in private blockchains, where these two behaviors
 //! are a real threat per any realistic threat model that assumes
 //! that the blockchain is of use not only to the system validators,
 //! but also to third parties.
 //!
-//! This crate implements a protocol for blockchain anchoring onto the `Bitcoin` blockchain
-//! that utilizes the native `Bitcoin` capabilities of creating multisig([p2sh][1]) transactions.
-//! This transactions contains metadata from `Exonum` blockchain (block's hash on corresponding
+//! This crate implements a protocol for blockchain anchoring onto the Bitcoin blockchain
+//! that utilizes the native Bitcoin capabilities of creating multisig([p2sh][1]) transactions.
+//! This transactions contains metadata from Exonum blockchain (block's hash on corresponding
 //! height) and forms a chain.
 //!
 //! You can read the details in [specification][2].
@@ -37,7 +37,8 @@
 //! use exonum::node::Node;
 //! use exonum::storage::{LevelDB, LevelDBOptions};
 //! use exonum::helpers::{generate_testnet_config, init_logger};
-//! use btc_anchoring_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
+//! use btc_anchoring_service::{AnchoringRpcConfig, AnchoringRpc, 
+//!                             AnchoringService, BitcoinNetwork,
 //!                             gen_anchoring_testnet_config};
 //!
 //! fn main() {
