@@ -42,7 +42,7 @@ pub struct AnchoringService {
 impl AnchoringService {
     /// Creates a new service instance with the given `consensus` and `local` configurations.
     pub fn new(consensus: AnchoringConfig, local: AnchoringNodeConfig) -> AnchoringService {
-        let client = local_cfg.rpc.clone().map(AnchoringRpc::new);
+        let client = local.rpc.clone().map(AnchoringRpc::new);
         AnchoringService {
             genesis: consensus,
             handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local))),

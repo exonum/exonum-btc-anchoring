@@ -2,7 +2,7 @@
 //!
 //! Private blockchain infrastructure necessitates additional measures for
 //! accountability of the blockchain validators.
-//! In public PoW blockchains (e.g., Bitcoin), accountability is purely economic and is
+//! In public proof of work blockchains (e.g., Bitcoin), accountability is purely economic and is
 //! based on game theory and equivocation or retroactive modifications being economically costly.
 //! Not so in private blockchains, where these two behaviors
 //! are a real threat per any realistic threat model that assumes
@@ -37,7 +37,7 @@
 //! use exonum::node::Node;
 //! use exonum::storage::{LevelDB, LevelDBOptions};
 //! use exonum::helpers::{generate_testnet_config, init_logger};
-//! use btc_anchoring_service::{AnchoringRpcConfig, AnchoringRpc, 
+//! use btc_anchoring_service::{AnchoringRpcConfig, AnchoringRpc,
 //!                             AnchoringService, BitcoinNetwork,
 //!                             gen_anchoring_testnet_config};
 //!
