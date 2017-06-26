@@ -141,8 +141,20 @@ fn send_anchoring_tx(client: &AnchoringRpc,
     tx
 }
 
+// Test key that extracted by `dumprpivkey` for address
+// `cTvVLNQvaku9XG8LvKXEfWBvxehnj9S67FB3GZPP6mnY4c94AstC`
 #[test]
-fn txid_serde_hex() {
+fn test_privkey_serde_wif() {
+    let privkey_str = "cTvVLNQvaku9XG8LvKXEfWBvxehnj9S67FB3GZPP6mnY4c94AstC";
+    let privkey = btc::PrivateKey::from_base58check(privkey_str).unwrap();
+
+    assert!(privkey.compressed);
+    assert_eq!(privkey.network, Network::Testnet);
+    assert_eq!(privkey.to_base58check(), privkey_str);
+}
+
+#[test]
+fn test_txid_serde_hex() {
     let txid_hex = "0e4167aeb4769de5ad8d64d1b2342330c2b6aadc0ed9ad0d26ae8eafb18d9c87";
     let txid = btc::TxId::from_hex(txid_hex).unwrap();
 
@@ -182,7 +194,7 @@ fn test_anchoring_txid() {
 }
 
 #[test]
-fn anchoring_tx_serde() {
+fn test_anchoring_tx_serde() {
     let hex = "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c099010000000\
         0ffffffff0240899500000000001976a914b85133a96a5cadf6cddcfb1d17c79f42c3bbc9dd88ac00000000000\
         000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd\

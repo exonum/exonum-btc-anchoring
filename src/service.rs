@@ -32,7 +32,8 @@ pub const ANCHORING_SERVICE_ID: u16 = 3;
 /// Anchoring service name.
 pub const ANCHORING_SERVICE_NAME: &'static str = "btc_anchoring";
 
-/// An anchoring service implementation for `Exonum` blockchain.
+/// Anchoring service implementation for the Exonum blockchain.
+#[derive(Debug)]
 pub struct AnchoringService {
     genesis: AnchoringConfig,
     handler: Arc<Mutex<AnchoringHandler>>,
@@ -40,11 +41,11 @@ pub struct AnchoringService {
 
 impl AnchoringService {
     /// Creates a new service instance with the given `consensus` and `local` configurations.
-    pub fn new(consensus_cfg: AnchoringConfig, local_cfg: AnchoringNodeConfig) -> AnchoringService {
-        let client = local_cfg.rpc.clone().map(AnchoringRpc::new);
+    pub fn new(consensus: AnchoringConfig, local: AnchoringNodeConfig) -> AnchoringService {
+        let client = local.rpc.clone().map(AnchoringRpc::new);
         AnchoringService {
-            genesis: consensus_cfg,
-            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local_cfg))),
+            genesis: consensus,
+            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local))),
         }
     }
 
