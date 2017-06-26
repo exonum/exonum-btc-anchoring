@@ -11,7 +11,7 @@ use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, TxKind};
 use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
-use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest};
+use blockchain::dto::MsgAnchoringUpdateLatest;
 
 use super::{AnchoringHandler, AnchoringState, LectKind, MultisigAddress};
 
@@ -485,7 +485,7 @@ impl AnchoringHandler {
                                                      lect.clone(),
                                                      lects_count,
                                                      state.secret_key());
-        state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
+        state.add_transaction(Box::new(lect_msg));
         Ok(())
     }
 }
