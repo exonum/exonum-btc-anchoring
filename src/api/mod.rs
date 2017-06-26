@@ -1,3 +1,5 @@
+//! Anchoring rest api implementation.
+
 use router::Router;
 use iron::prelude::*;
 use bitcoin::util::base58::ToBase58;
@@ -18,26 +20,27 @@ pub use details::btc::payload::Payload;
 mod error;
 
 /// Public api implementation.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct PublicApi {
+    /// Exonum blockchain instance.
     pub blockchain: Blockchain,
 }
 
-/// Public information about the anchoring transaction in `bitcoin`
+/// Public information about the anchoring transaction in bitcoin.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct AnchoringInfo {
     /// `Txid` of anchoring transaction.
     pub txid: TxId,
-    /// Anchoring transaction payload
+    /// Anchoring transaction payload.
     pub payload: Option<Payload>,
 }
 
-/// Public information about the `lect` transaction in `exonum`
+/// Public information about the lect transaction in exonum.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct LectInfo {
-    /// `Exonum` transaction hash
+    /// `Exonum` transaction hash.
     pub hash: Hash,
-    /// Information about anchoring transaction
+    /// Information about anchoring transaction.
     pub content: AnchoringInfo,
 }
 
@@ -97,7 +100,7 @@ impl PublicApi {
         Err(error::Error::UnknownValidatorId(id).into())
     }
 
-    /// Returns actual anchoring address
+    /// Returns actual anchoring address.
     ///
     /// `GET /{api_prefix}/v1/address/actual`
     pub fn actual_address(&self) -> Result<btc::Address, ApiError> {

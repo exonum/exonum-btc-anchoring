@@ -20,19 +20,19 @@ pub type Error = bitcoinrpc::Error;
 // Rpc method `sendtoaddress` uses amount in btc instead of the satoshis.
 const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 
-/// A `Bitcoind` rpc configuration
+/// `Bitcoind` rpc configuration.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AnchoringRpcConfig {
-    /// Rpc url
+    /// Rpc url.
     pub host: String,
-    /// Rpc username
+    /// Rpc username.
     pub username: Option<String>,
-    /// Rpc password
+    /// Rpc password.
     pub password: Option<String>,
 }
 
-/// A client for `Bitcoind` rpc api, for more information visit
-/// this [site](https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list)
+/// Client for the `Bitcoind` rpc api, for more information visit
+/// this [site](https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list).
 #[derive(Debug)]
 pub struct AnchoringRpc(pub RpcClient);
 
