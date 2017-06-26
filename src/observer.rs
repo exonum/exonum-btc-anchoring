@@ -19,7 +19,9 @@ use blockchain::schema::AnchoringSchema;
 use blockchain::consensus_storage::AnchoringConfig;
 use error::Error as ServiceError;
 
+/// Type alias for milliseconds.
 pub type Milliseconds = u64;
+/// Type alias for block height.
 pub type Height = U64Key;
 
 /// An anchoring observer configuration.
@@ -35,6 +37,7 @@ pub struct ObserverConfig {
 
 /// An anchoring chain observer. Periodically checks the state of the anchor chain and keeps
 /// the verified transactions in database.
+#[derive(Debug)]
 pub struct AnchoringChainObserver {
     blockchain: Blockchain,
     client: AnchoringRpc,
@@ -42,8 +45,9 @@ pub struct AnchoringChainObserver {
 }
 
 /// An anchoring chain observer api implementation.
-#[derive(Clone)]
+#[derive(Debug, Clone)]
 pub struct AnchoringChainObserverApi {
+    /// Exonum blockchain instance.
     pub blockchain: Blockchain,
 }
 
@@ -83,7 +87,8 @@ impl AnchoringChainObserver {
         let duration = Duration::from_millis(self.check_frequency);
         loop {
             if let Err(e) = self.check_anchoring_chain() {
-                error!("An error during `check_anchoring_chain` occured, msg={:?}", e);
+                error!("An error during `check_anchoring_chain` occured, msg={:?}",
+                       e);
             }
             sleep(duration);
         }
