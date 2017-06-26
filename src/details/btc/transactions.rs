@@ -55,6 +55,7 @@ pub trait TxFromRaw: Sized {
     fn from_raw(raw: RawBitcoinTx) -> Option<Self>;
 }
 
+#[derive(Debug)]
 pub struct TransactionBuilder {
     inputs: Vec<(RawBitcoinTx, u32)>,
     output: Option<btc::Address>,

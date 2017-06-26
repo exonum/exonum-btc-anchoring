@@ -12,21 +12,21 @@ use details::btc::transactions::FundingTx;
 /// Public part of anchoring service configuration stored in blockchain.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct AnchoringConfig {
-    /// Validators' public keys from which the current `anchoring` address can be calculated.
+    /// Validators' public keys from which the current anchoring address can be calculated.
     pub validators: Vec<btc::PublicKey>,
-    /// The transaction that funds `anchoring` address.
+    /// The transaction that funds anchoring address.
     /// If the anchoring transactions chain is empty, it will be the first transaction in the chain.
     /// Note: you must specify a suitable transaction before the network launching.
     pub funding_tx: Option<FundingTx>,
-    /// A fee for each transaction in chain
+    /// Fee for each transaction in chain.
     pub fee: u64,
-    /// The frequency in blocks with which the generation of new `anchoring`
+    /// The frequency in blocks with which the generation of new anchoring
     /// transactions in the chain occurs.
     pub frequency: u64,
     /// The minimum number of confirmations in bitcoin network for the transition to a
-    /// new `anchoring` address.
+    /// new anchoring address.
     pub utxo_confirmations: u64,
-    /// The current bitcoin network type
+    /// The current bitcoin network type.
     #[serde(serialize_with = "btc_network_to_str", deserialize_with = "btc_network_from_str")]
     pub network: btc::Network,
 }
@@ -73,7 +73,7 @@ impl AnchoringConfig {
     }
 
     #[doc(hidden)]
-    /// Creates compressed `redeem_script` from public keys in config.
+    /// Creates compressed `RedeemScript` from public keys in config.
     pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
         let redeem_script = btc::RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
@@ -83,17 +83,21 @@ impl AnchoringConfig {
     }
 
     #[doc(hidden)]
-    /// Returns the latest height below the given `height` which needs to be anchored
+    /// Returns the latest height below the given `height` which needs to be anchored.
     pub fn latest_anchoring_height(&self, height: u64) -> u64 {
         height - height % self.frequency as u64
     }
 
     #[doc(hidden)]
-    /// For test purpose only
     pub fn majority_count(&self) -> u8 {
         ::majority_count(self.validators.len() as u8)
     }
 
+    /// Returns the funding transaction.
+    ///
+    /// # Panics
+    ///
+    /// If funding transaction is not specified.
     pub fn funding_tx(&self) -> &FundingTx {
         self.funding_tx
             .as_ref()
