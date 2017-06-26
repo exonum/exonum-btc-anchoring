@@ -22,8 +22,8 @@ use local_storage::AnchoringNodeConfig;
 use handler::AnchoringHandler;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
-use blockchain::dto::{MsgAnchoringUpdateLatest, MsgAnchoringSignature, ANCHORING_MESSAGE_LATEST,
-                      ANCHORING_MESSAGE_SIGNATURE};
+use blockchain::dto::{ANCHORING_MESSAGE_LATEST, ANCHORING_MESSAGE_SIGNATURE,
+                      MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use error::Error as ServiceError;
 #[cfg(not(feature="sandbox_tests"))]
 use handler::error::Error as HandlerError;

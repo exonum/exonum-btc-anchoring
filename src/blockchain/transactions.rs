@@ -16,21 +16,21 @@ impl MsgAnchoringSignature {
         let sighash_type_all = SigHashType::All.as_u32() as u8;
         if self.signature().last() != Some(&sighash_type_all) {
             warn!("Received msg with incorrect signature type, content={:#?}",
-            self);
+                  self);
             return false;
         }
         let tx = self.tx();
         // Check that the signature is provided for an existing anchoring tx input
         if tx.input.len() as u32 <= self.input() {
             warn!("Received msg for non-existing input index, content={:#?}",
-            self);
+                  self);
             return false;
         }
         // Check that input scriptSigs are empty
         for input in &tx.input {
             if !input.script_sig.is_empty() {
                 warn!("Received msg with non empty input scriptSigs, content={:#?}",
-                self);
+                      self);
                 return false;
             }
         }
