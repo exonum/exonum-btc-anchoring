@@ -10,7 +10,7 @@ use details::btc::HexValueEx;
 use details::btc::transactions::{AnchoringTx, TransactionBuilder};
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
-use blockchain::dto::{AnchoringMessage, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 
 use super::{AnchoringHandler, LectKind, MultisigAddress, collect_signatures};
 
@@ -149,7 +149,7 @@ impl AnchoringHandler {
             trace!("Sign input msg={:#?}, sighex={}",
                    sign_msg,
                    signature.to_hex());
-            state.add_transaction(AnchoringMessage::Signature(sign_msg));
+            state.add_transaction(Box::new(sign_msg));
         }
         self.proposal_tx = Some(proposal);
         Ok(())
@@ -210,7 +210,7 @@ impl AnchoringHandler {
                                                          new_lect.into(),
                                                          lects_count,
                                                          state.secret_key());
-            state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
+            state.add_transaction(Box::new(lect_msg));
         } else {
             warn!("Insufficient signatures for proposal={:#?}", proposal);
         }
