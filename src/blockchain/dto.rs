@@ -35,7 +35,7 @@ message! {
         field tx:             AnchoringTx  [34 => 42]
         /// Signed input.
         field input:          u32          [42 => 46]
-        /// Signature.
+        /// Signature for the corresponding `input`.
         field signature:      &[u8]        [46 => 54]
     }
 }
@@ -63,7 +63,7 @@ encoding_struct! {
     struct LectContent {
         const SIZE = 40;
 
-        /// Hash of `exonum` transaction that contains this lect.
+        /// Hash of exonum transaction that contains this lect.
         field msg_hash:       &Hash       [00 => 32]
         /// Bitcoin transaction content.
         field tx:             BitcoinTx   [32 => 40]
