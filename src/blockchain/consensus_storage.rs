@@ -11,7 +11,7 @@ use details::btc::transactions::FundingTx;
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct AnchoringConfig {
     /// Validators' public keys from which the current anchoring address can be calculated.
-    pub validators: Vec<btc::PublicKey>,
+    pub anchoring_keys: Vec<btc::PublicKey>,
     /// The transaction that funds anchoring address.
     /// If the anchoring transactions chain is empty, it will be the first transaction in the chain.
     /// Note: you must specify a suitable transaction before the network launching.
@@ -32,7 +32,7 @@ pub struct AnchoringConfig {
 impl Default for AnchoringConfig {
     fn default() -> AnchoringConfig {
         AnchoringConfig {
-            validators: vec![],
+            anchoring_keys: vec![],
             funding_tx: None,
             fee: 1000,
             frequency: 500,
@@ -43,14 +43,16 @@ impl Default for AnchoringConfig {
 }
 
 impl AnchoringConfig {
-    /// Creates anchoring configuration for the given keypair without funding transaction.
+    /// Creates anchoring configuration for the given `anchoring_keys` without funding transaction.
     /// This is usable for deploying procedure when the network participants exchange
     /// the public configuration before launching.
     /// Do not forget to send funding transaction to the final multisig address
     /// and add it to the final configuration.
-    pub fn new(network: btc::Network, public_key: btc::PublicKey) -> AnchoringConfig {
+    pub fn new<I>(network: btc::Network, anchoring_keys: I) -> AnchoringConfig
+        where I: IntoIterator<Item = btc::PublicKey>
+    {
         AnchoringConfig {
-            validators: vec![public_key],
+            anchoring_keys: anchoring_keys.into_iter().collect(),
             network: network,
             ..Default::default()
         }
@@ -63,7 +65,7 @@ impl AnchoringConfig {
                                tx: FundingTx)
                                -> AnchoringConfig {
         AnchoringConfig {
-            validators: validators,
+            anchoring_keys: validators,
             funding_tx: Some(tx),
             network: network,
             ..Default::default()
@@ -74,8 +76,9 @@ impl AnchoringConfig {
     /// Creates compressed `RedeemScript` from public keys in config.
     pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
-        let redeem_script = btc::RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
-            .compressed(self.network);
+        let redeem_script = btc::RedeemScript::from_pubkeys(self.anchoring_keys.iter(),
+                                                            majority_count)
+                .compressed(self.network);
         let addr = btc::Address::from_script(&redeem_script, self.network);
         (redeem_script, addr)
     }
@@ -88,7 +91,7 @@ impl AnchoringConfig {
 
     #[doc(hidden)]
     pub fn majority_count(&self) -> u8 {
-        ::majority_count(self.validators.len() as u8)
+        ::majority_count(self.anchoring_keys.len() as u8)
     }
 
     /// Returns the funding transaction.

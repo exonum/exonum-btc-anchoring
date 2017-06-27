@@ -42,7 +42,7 @@ impl AnchoringHandler {
                                   multisig: &MultisigAddress,
                                   state: &mut ServiceContext)
                                   -> Result<(), ServiceError> {
-        let lect = self.collect_lects_for_validator(self.validator_key(multisig.common, state),
+        let lect = self.collect_lects_for_validator(self.anchoring_key(multisig.common, state),
                                                     multisig.common,
                                                     state)?;
         match lect {
@@ -197,13 +197,13 @@ impl AnchoringHandler {
             info!("LECT ====== txid={}, total_count={}",
                   new_lect.txid(),
                   AnchoringSchema::new(state.view())
-                      .lects(self.validator_key(multisig.common, state))
+                      .lects(self.anchoring_key(multisig.common, state))
                       .len()?);
 
             self.proposal_tx = None;
 
             let lects_count = AnchoringSchema::new(state.view())
-                .lects(self.validator_key(multisig.common, state))
+                .lects(self.anchoring_key(multisig.common, state))
                 .len()?;
             let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
                                                          self.validator_id(state),

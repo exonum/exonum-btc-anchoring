@@ -51,7 +51,7 @@ pub fn dump_lects(sandbox: &Sandbox, id: u16) -> Vec<BitcoinTx> {
     let b = sandbox.blockchain_ref().clone();
     let v = b.view();
     let s = AnchoringSchema::new(&v);
-    let key = &s.actual_anchoring_config().unwrap().validators[id as usize];
+    let key = &s.actual_anchoring_config().unwrap().anchoring_keys[id as usize];
 
     s.lects(key)
         .values()
@@ -74,7 +74,7 @@ pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
         let anchoring_schema = AnchoringSchema::new(&view);
         let anchoring_cfg = anchoring_schema.actual_anchoring_config().unwrap();
         for lect_msg in lects {
-            let key = &anchoring_cfg.validators[lect_msg.validator() as usize];
+            let key = &anchoring_cfg.anchoring_keys[lect_msg.validator() as usize];
             anchoring_schema
                 .add_lect(key, lect_msg.tx().clone(), Message::hash(&lect_msg))
                 .unwrap();
@@ -524,7 +524,7 @@ fn gen_following_cfg_exclude_validator(sandbox: &AnchoringSandbox,
 
     let mut service_cfg = sandbox.current_cfg().clone();
     let priv_keys = sandbox.current_priv_keys();
-    service_cfg.validators.swap_remove(0);
+    service_cfg.anchoring_keys.swap_remove(0);
 
     let following_addr = service_cfg.redeem_script().1;
     for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {

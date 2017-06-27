@@ -183,7 +183,7 @@ fn test_api_public_get_following_address_existent() {
     let client = sandbox.client();
 
     let mut cfg = sandbox.current_cfg().clone();
-    cfg.validators.swap_remove(1);
+    cfg.anchoring_keys.swap_remove(1);
     let cfg_tx = gen_update_config_tx(&sandbox, 12, &cfg);
     let following_addr = cfg.redeem_script().1;
 

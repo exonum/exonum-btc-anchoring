@@ -94,7 +94,7 @@ Variables that you can modify:
  - `frequency` - the frequency in exonum blocks with which the generation of a new anchoring transactions occurs.
  - `utxo_confirmations` - the minimum number of confirmations in bitcoin network to consider the anchoring transaction as fully confirmed. Uses for transition and initial funding transactions.
  - `funding_tx` - the hex representation of current funding transaction. Node would use it as input if it did not spent.
- - `validators` - the list of hex-encoded compressed bitcoin public keys of exonum validators that collects into the current anchoring address.
+ - `anchoring_keys` - the list of hex-encoded compressed bitcoin public keys of exonum validators that collects into the current anchoring address.
 
 For the `anchoring` example consensus configuration looks like this:
 ```json

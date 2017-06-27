@@ -128,28 +128,28 @@ impl<'a> AnchoringSchema<'a> {
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
         let (_, addr) = cfg.redeem_script();
         self.add_known_address(&addr)?;
-        for validator_key in &cfg.validators {
-            self.add_lect(validator_key, cfg.funding_tx().clone(), Hash::zero())?;
+        for key in &cfg.anchoring_keys {
+            self.add_lect(key, cfg.funding_tx().clone(), Hash::zero())?;
         }
         Ok(())
     }
 
-    /// Adds `lect` from validator with the given `public key`.
+    /// Adds `lect` from validator with the given public key.
     pub fn add_lect<Tx>(&self,
-                        validator_key: &btc::PublicKey,
+                        anchoring_key: &btc::PublicKey,
                         tx: Tx,
                         msg_hash: Hash)
                         -> Result<(), StorageError>
         where Tx: Into<BitcoinTx>
     {
-        let lects = self.lects(validator_key);
+        let lects = self.lects(anchoring_key);
 
         let tx = tx.into();
         let idx = lects.len()?;
         let txid = tx.id();
         lects.append(LectContent::new(&msg_hash, tx.clone()))?;
         self.known_txs().put(&txid, tx.clone())?;
-        self.lect_indexes(validator_key).put(&txid, idx)
+        self.lect_indexes(anchoring_key).put(&txid, idx)
     }
 
     /// Returns `lect` for validator with the given `public_key`.
@@ -175,7 +175,7 @@ impl<'a> AnchoringSchema<'a> {
     /// Returns a lect that is currently supported by at least 2/3 of the current set of validators.
     pub fn collect_lects(&self, cfg: &AnchoringConfig) -> Result<Option<BitcoinTx>, StorageError> {
         let mut lects = HashMap::new();
-        for validator_key in &cfg.validators {
+        for validator_key in &cfg.anchoring_keys {
             if let Some(last_lect) = self.lect(validator_key)? {
                 match lects.entry(last_lect.0) {
                     Entry::Occupied(mut v) => {
@@ -240,7 +240,7 @@ impl<'a> AnchoringSchema<'a> {
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
         let cfg = self.actual_anchoring_config()?;
         let mut lect_hashes = Vec::new();
-        for key in &cfg.validators {
+        for key in &cfg.anchoring_keys {
             lect_hashes.push(self.lects(key).root_hash()?);
         }
         Ok(lect_hashes)
