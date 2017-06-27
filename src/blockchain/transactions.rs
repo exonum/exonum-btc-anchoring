@@ -1,12 +1,11 @@
 use bitcoin::blockdata::transaction::SigHashType;
-use serde_json::{Value, to_value};
 
 use exonum::blockchain::{Schema, Transaction};
 use exonum::messages::Message;
 use exonum::storage::{Error as StorageError, List, Map, View};
 use exonum::crypto::HexValue;
 
-use blockchain::dto::{AnchoringMessage, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use blockchain::schema::AnchoringSchema;
 use blockchain::consensus_storage::AnchoringConfig;
 use details::btc::transactions::{AnchoringTx, FundingTx, TxKind};
@@ -37,8 +36,14 @@ impl MsgAnchoringSignature {
         }
         true
     }
+}
 
-    pub fn execute(&self, view: &View) -> Result<(), StorageError> {
+impl Transaction for MsgAnchoringSignature {
+    fn verify(&self) -> bool {
+        self.verify_signature(self.from()) && self.verify_content()
+    }
+
+    fn execute(&self, view: &View) -> Result<(), StorageError> {
         let anchoring_schema = AnchoringSchema::new(view);
 
         let tx = self.tx();
@@ -81,12 +86,12 @@ impl MsgAnchoringSignature {
     }
 }
 
-impl MsgAnchoringUpdateLatest {
-    pub fn verify_content(&self) -> bool {
-        true
+impl Transaction for MsgAnchoringUpdateLatest {
+    fn verify(&self) -> bool {
+        self.verify_signature(self.from())
     }
 
-    pub fn execute(&self, view: &View) -> Result<(), StorageError> {
+    fn execute(&self, view: &View) -> Result<(), StorageError> {
         let anchoring_schema = AnchoringSchema::new(view);
 
         let tx = self.tx();
@@ -129,33 +134,6 @@ impl MsgAnchoringUpdateLatest {
             return Ok(());
         }
         anchoring_schema.add_lect(key, tx, self.hash())
-    }
-}
-
-impl AnchoringMessage {
-    pub fn verify_content(&self) -> bool {
-        match *self {
-            AnchoringMessage::Signature(ref msg) => msg.verify_content(),
-            AnchoringMessage::UpdateLatest(ref msg) => msg.verify_content(),
-        }
-    }
-}
-
-
-impl Transaction for AnchoringMessage {
-    fn verify(&self) -> bool {
-        self.verify_signature(self.from()) && self.verify_content()
-    }
-
-    fn execute(&self, view: &View) -> Result<(), StorageError> {
-        match *self {
-            AnchoringMessage::Signature(ref msg) => msg.execute(view),
-            AnchoringMessage::UpdateLatest(ref msg) => msg.execute(view),
-        }
-    }
-
-    fn info(&self) -> Value {
-        to_value(self).unwrap()
     }
 }
 
