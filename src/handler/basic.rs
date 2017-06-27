@@ -287,13 +287,13 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn collect_lects_for_validator(&self,
-                                       validator_key: &btc::PublicKey,
+                                       anchoring_key: &btc::PublicKey,
                                        anchoring_cfg: &AnchoringConfig,
                                        state: &ServiceContext)
                                        -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
-        let our_lect = if let Some(lect) = anchoring_schema.lect(validator_key)? {
+        let our_lect = if let Some(lect) = anchoring_schema.lect(anchoring_key)? {
             lect
         } else {
             return Ok(LectKind::None);
