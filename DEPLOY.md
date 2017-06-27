@@ -116,7 +116,35 @@ If you want to see additional information you may specify log level by environme
 
 ## Production deployment
 
-TODO.
+Production deployment performs in a few stages.
+
+At the first stage, one of the participants creates a template of blockchain consensus configuration and broadcasts its to other members.
+```
+$ anchoring generate-template -o <template.toml> \
+    --anchoring-fee <fee is satoshis> \
+    --anchoring-utxo-confirmations <confirmations in bitcoin blocks>
+```
+Then each of participants generates own public and secret keys files.
+```
+$ anchoring generate-keys -o <output-dir>
+```
+In next stage they exchanges public keys files and imports them in predetermined order.
+```
+$ anchoring import-validators -t <template.toml> -k <keys-directory> -c <validator.toml>
+```
+After that, the participant discovers the resulting address. And sends `bitcoins` to it, hex 
+of this transaction uses as initial `funding_tx`.
+```
+$ anchoring get-anchoring-address -c <validator.toml>
+```
+In final stage each node finalizes the validator configuration.
+```
+$ anchoring finalize-configuration -c <validator.toml> \
+    --anchoring-funding-tx <hex of initial funding transaction> \ 
+    --anchoring-host <bitcoind RPC host> \
+    --anchoring-user <bitcoind RPC username> \
+    --anchoring-password <bitcoind RPC password> \
+```
 
 ## Maintenance
  
