@@ -1453,8 +1453,12 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         let mut service_cfg = sandbox.current_cfg().clone();
         let priv_keys = sandbox.current_priv_keys();
 
-        service_cfg.anchoring_keys.push(anchoring_keypairs[0].0.clone());
-        service_cfg.anchoring_keys.push(anchoring_keypairs[1].0.clone());
+        service_cfg
+            .anchoring_keys
+            .push(anchoring_keypairs[0].0.clone());
+        service_cfg
+            .anchoring_keys
+            .push(anchoring_keypairs[1].0.clone());
         service_cfg.anchoring_keys.swap(0, 3);
 
         let following_addr = service_cfg.redeem_script().1;

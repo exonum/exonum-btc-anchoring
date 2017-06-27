@@ -60,12 +60,14 @@ impl AnchoringConfig {
 
     /// Creates default anchoring configuration from given public keys and funding transaction
     /// which were created earlier by other way.
-    pub fn new_with_funding_tx(network: btc::Network,
-                               validators: Vec<btc::PublicKey>,
-                               tx: FundingTx)
-                               -> AnchoringConfig {
+    pub fn new_with_funding_tx<I>(network: btc::Network,
+                                  anchoring_keys: I,
+                                  tx: FundingTx)
+                                  -> AnchoringConfig
+        where I: IntoIterator<Item = btc::PublicKey>
+    {
         AnchoringConfig {
-            anchoring_keys: validators,
+            anchoring_keys: anchoring_keys.into_iter().collect(),
             funding_tx: Some(tx),
             network: network,
             ..Default::default()
