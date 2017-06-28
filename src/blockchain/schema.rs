@@ -31,18 +31,18 @@ impl<'a> AnchoringSchema<'a> {
         ListTable::new(MapTable::new(prefix, self.view))
     }
 
-    /// Returns table that saves a list of lects for the validator with the given `validator_key`.
+    /// Returns table that saves a list of lects for the validator with the given `anchoring_key`.
     pub fn lects(&self,
-                 validator_key: &btc::PublicKey)
+                 anchoring_key: &btc::PublicKey)
                  -> MerkleTable<MapTable<View, [u8], Vec<u8>>, LectContent> {
-        let prefix = self.gen_table_prefix(3, Some(validator_key.to_bytes().as_ref()));
+        let prefix = self.gen_table_prefix(3, Some(anchoring_key.to_bytes().as_ref()));
         MerkleTable::new(MapTable::new(prefix, self.view))
     }
 
     /// Returns table that keeps the lect index for every anchoring txid for the validator
-    /// with given `validator_key`.
-    pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapTable<View, btc::TxId, u64> {
-        let prefix = self.gen_table_prefix(4, Some(validator_key.to_bytes().as_ref()));
+    /// with given `anchoring_key`.
+    pub fn lect_indexes(&self, anchoring_key: &btc::PublicKey) -> MapTable<View, btc::TxId, u64> {
+        let prefix = self.gen_table_prefix(4, Some(anchoring_key.to_bytes().as_ref()));
         MapTable::new(prefix, self.view)
     }
 
@@ -128,40 +128,40 @@ impl<'a> AnchoringSchema<'a> {
     pub fn create_genesis_config(&self, cfg: &AnchoringConfig) -> Result<(), StorageError> {
         let (_, addr) = cfg.redeem_script();
         self.add_known_address(&addr)?;
-        for validator_key in &cfg.validators {
-            self.add_lect(validator_key, cfg.funding_tx().clone(), Hash::zero())?;
+        for key in &cfg.anchoring_keys {
+            self.add_lect(key, cfg.funding_tx().clone(), Hash::zero())?;
         }
         Ok(())
     }
 
-    /// Adds `lect` from validator with the given `public key`.
+    /// Adds `lect` from validator with the given public key.
     pub fn add_lect<Tx>(&self,
-                        validator_key: &btc::PublicKey,
+                        anchoring_key: &btc::PublicKey,
                         tx: Tx,
                         msg_hash: Hash)
                         -> Result<(), StorageError>
         where Tx: Into<BitcoinTx>
     {
-        let lects = self.lects(validator_key);
+        let lects = self.lects(anchoring_key);
 
         let tx = tx.into();
         let idx = lects.len()?;
         let txid = tx.id();
         lects.append(LectContent::new(&msg_hash, tx.clone()))?;
         self.known_txs().put(&txid, tx.clone())?;
-        self.lect_indexes(validator_key).put(&txid, idx)
+        self.lect_indexes(anchoring_key).put(&txid, idx)
     }
 
-    /// Returns `lect` for validator with the given `public_key`.
-    pub fn lect(&self, validator_key: &btc::PublicKey) -> Result<Option<BitcoinTx>, StorageError> {
-        self.lects(validator_key).last().map(|x| x.map(|x| x.tx()))
+    /// Returns `lect` for validator with the given `anchoring_key`.
+    pub fn lect(&self, anchoring_key: &btc::PublicKey) -> Result<Option<BitcoinTx>, StorageError> {
+        self.lects(anchoring_key).last().map(|x| x.map(|x| x.tx()))
     }
 
-    /// Returns previous `lect` for validator with the given `public_key`.
+    /// Returns previous `lect` for validator with the given `anchoring_key`.
     pub fn prev_lect(&self,
-                     validator_key: &btc::PublicKey)
+                     anchoring_key: &btc::PublicKey)
                      -> Result<Option<BitcoinTx>, StorageError> {
-        let lects = self.lects(validator_key);
+        let lects = self.lects(anchoring_key);
 
         let idx = lects.len()?;
         if idx > 1 {
@@ -175,8 +175,8 @@ impl<'a> AnchoringSchema<'a> {
     /// Returns a lect that is currently supported by at least 2/3 of the current set of validators.
     pub fn collect_lects(&self, cfg: &AnchoringConfig) -> Result<Option<BitcoinTx>, StorageError> {
         let mut lects = HashMap::new();
-        for validator_key in &cfg.validators {
-            if let Some(last_lect) = self.lect(validator_key)? {
+        for anchoring_key in &cfg.anchoring_keys {
+            if let Some(last_lect) = self.lect(anchoring_key)? {
                 match lects.entry(last_lect.0) {
                     Entry::Occupied(mut v) => {
                         *v.get_mut() += 1;
@@ -200,12 +200,13 @@ impl<'a> AnchoringSchema<'a> {
         Ok(lect)
     }
 
-    /// Returns position in `lects` table for transaction with the given `txid`.
+    /// Returns position in `lects` table of validator with the given `anchoring_key`
+    /// for transaction with the given `txid`.
     pub fn find_lect_position(&self,
-                              validator_key: &btc::PublicKey,
+                              anchoring_key: &btc::PublicKey,
                               txid: &btc::TxId)
                               -> Result<Option<u64>, StorageError> {
-        self.lect_indexes(validator_key).get(txid)
+        self.lect_indexes(anchoring_key).get(txid)
     }
 
     /// Marks address as already imported.
@@ -240,7 +241,7 @@ impl<'a> AnchoringSchema<'a> {
     pub fn state_hash(&self) -> Result<Vec<Hash>, StorageError> {
         let cfg = self.actual_anchoring_config()?;
         let mut lect_hashes = Vec::new();
-        for key in &cfg.validators {
+        for key in &cfg.anchoring_keys {
             lect_hashes.push(self.lects(key).root_hash()?);
         }
         Ok(lect_hashes)

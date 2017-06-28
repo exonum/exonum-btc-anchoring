@@ -34,7 +34,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
 
     let mut service_cfg = sandbox.current_cfg().clone();
     let priv_keys = sandbox.priv_keys(&anchoring_addr);
-    service_cfg.validators.swap_remove(0);
+    service_cfg.anchoring_keys.swap_remove(0);
 
     let following_addr = service_cfg.redeem_script().1;
     for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
