@@ -130,7 +130,7 @@ impl CommandExtension for InitCommand {
             Argument::new_named("ANCHORING_FUNDING_TXID", false, 
             "Txid of the initial funding tx", None, "anchoring-funding-txid"),
             Argument::new_named("ANCHORING_CREATE_FUNDING_TX", false, 
-            "Create initial funding tx with given amount in satoshis", None, "anchoring-create-finding-tx")
+            "Create initial funding tx with given amount in satoshis", None, "anchoring-create-funding-tx")
         ]
     }
 
@@ -214,6 +214,7 @@ impl CommandExtension for InitCommand {
 
             let mut genesis_cfg = if let Some(total_funds) = create_funding_tx_with_amount {
                 let tx = FundingTx::create(&client, &address, total_funds).unwrap();
+                println!("Created funding tx with txid {}", tx.txid());
                 AnchoringConfig::new_with_funding_tx(network, pub_keys, tx)
             }
             else {
