@@ -1,3 +1,7 @@
+//! Basic clap factory implementation.
+//! This module collect all basic `CommandExtension` that
+//! we can use in anchoring bootstraping process.
+//!
 use toml::Value;
 use exonum::helpers::fabric::{CommandName, Argument, Context, CommandExtension, ServiceFactory};
 use exonum::blockchain::Service;
@@ -21,8 +25,11 @@ use details::btc::transactions::FundingTx;
 use bitcoin::util::base58::FromBase58;
                              
 #[derive(Clone, Debug, Serialize, Deserialize)]
+/// Anchoring configuration that should be saved into file
 pub struct AnchoringServiceConfig {
+    /// `AnchoringConfig` is a common for all nodes part.
     pub genesis: AnchoringConfig,
+    /// `AnchoringNodeConfig` is a unique for each node.
     pub node: AnchoringNodeConfig,
 }
 
