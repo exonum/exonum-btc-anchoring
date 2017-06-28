@@ -1,6 +1,6 @@
 //! Basic clap factory implementation.
 //! This module collect all basic `CommandExtension` that
-//! we can use in anchoring bootstraping process.
+//! we can use in `anchoring` bootstraping process.
 //!
 use toml::Value;
 use exonum::helpers::fabric::{CommandName, Argument, Context, CommandExtension, ServiceFactory};
@@ -98,7 +98,7 @@ impl CommandExtension for GenerateTemplateCommand {
                                    .expect("No network name found.");
             
             let mut values: BTreeMap<String, Value> = 
-                context.get("VALUES")
+                context.get("VALUE")
                     .expect("Expected VALUES in context.");
 
             values.extend(
@@ -111,7 +111,7 @@ impl CommandExtension for GenerateTemplateCommand {
                             ("ANCHORING_NETWORK".to_owned(),
                                 Value::try_from(network).unwrap())]
                         .into_iter());
-            context.set("VALUES", values);
+            context.set("VALUE", values);
             Ok(context)
     }
 }
