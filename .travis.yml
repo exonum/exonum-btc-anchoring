@@ -4,6 +4,7 @@ rust:
 cache: cargo
 sudo: required
 dist: trusty
+group: deprecated-2017Q2
 env:
   global:
   - ANCHORING_RELAY_HOST=http://127.0.0.1:18332
