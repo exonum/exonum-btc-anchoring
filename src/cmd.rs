@@ -22,12 +22,9 @@ use bitcoin::util::base58::FromBase58;
                              
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {
-    pub common: AnchoringConfig,
+    pub genesis: AnchoringConfig,
     pub node: AnchoringNodeConfig,
 }
-// if rpc node is in `test` mode,
-// and could send money for our purposes.
-static ANCHORING_NODE_TEST: bool = true;
 
 struct KeygenCommand;
 
@@ -72,8 +69,10 @@ struct GenerateTemplateCommand;
 impl CommandExtension for GenerateTemplateCommand {
     fn args(&self) -> Vec<Argument> {
         vec![
-            Argument::new_named("ANCHORING_FUNDS", true,
-            "Funds in anchoring adress.", None, "anchoring-funds"),
+            Argument::new_named("ANCHORING_FREQUENCY", false,
+            "The frequency of anchoring in blocks", None, "anchoring-frequency"),
+            Argument::new_named("ANCHORING_UTXO_CONFIRMATIONS", false,
+            "The minimum number of confirmations for anchoring transactions", None, "anchoring-utxo-confirmations"),
             Argument::new_named("ANCHORING_FEE", true,
             "Fee that anchoring nodes should use.",  None, "anchoring-fee"),
             Argument::new_positional("NETWORK", true,
@@ -82,19 +81,24 @@ impl CommandExtension for GenerateTemplateCommand {
     }
 
     fn execute(&self, mut context: Context) -> Result<Context, Box<Error>> {
-            let total_funds: u64 = context.arg::<u64>("ANCHORING_FUNDS")
-                                  .expect("Expected ANCHORING_FUNDS in cmd.");
+            let anchoring_frequency: u64 = context.arg::<u64>("ANCHORING_FREQUENCY")
+                                  .unwrap_or(500);
+            let anchoring_utxo_confirmations: u64 = context.arg::<u64>("ANCHORING_UTXO_CONFIRMATIONS")
+                                  .unwrap_or(5);
             let fee: u64 = context.arg::<u64>("ANCHORING_FEE")
-                                  .expect("Expected ANCHORING_FEE in cmd.");
+                                  .expect("Expected `ANCHORING_FEE` in cmd.");
             let network = context.arg::<String>("NETWORK")
                                    .expect("No network name found.");
             
             let mut values: BTreeMap<String, Value> = 
                 context.get("VALUES")
                     .expect("Expected VALUES in context.");
+
             values.extend(
-                        vec![("ANCHORING_FUNDS".to_owned(),
-                                Value::try_from(total_funds).unwrap()),
+                        vec![("ANCHORING_FREQUENCY".to_owned(),
+                                Value::try_from(anchoring_frequency).unwrap()),
+                            ("ANCHORING_UTXO_CONFIRMATIONS".to_owned(),
+                                Value::try_from(anchoring_utxo_confirmations).unwrap()),
                             ("ANCHORING_FEE".to_owned(),
                                 Value::try_from(fee).unwrap()),
                             ("ANCHORING_NETWORK".to_owned(),
@@ -116,6 +120,10 @@ impl CommandExtension for InitCommand {
             "User to login into bitcoind.",  None, "anchoring-user"),
             Argument::new_named("ANCHORING_RPC_PASSWD", false,
             "Password to login into bitcoind.",  None, "anchoring-password"),
+            Argument::new_named("ANCHORING_FUNDING_TXID", false, 
+            "Txid of the initial funding tx", None, "anchoring-funding-txid"),
+            Argument::new_named("ANCHORING_CREATE_FUNDING_TX", false, 
+            "Create initial funding tx with given amount in satoshis", None, "anchoring-create-finding-tx")
         ]
     }
 
@@ -124,6 +132,9 @@ impl CommandExtension for InitCommand {
                               .expect("Expected ANCHORING_RPC_HOST");
             let user = context.arg("ANCHORING_RPC_USER").ok();
             let passwd = context.arg("ANCHORING_RPC_PASSWD").ok();
+            let funding_txid = context.arg::<String>("ANCHORING_FUNDING_TXID").ok();
+            let create_funding_tx_with_amount = context.arg::<u64>("ANCHORING_CREATE_FUNDING_TX").ok();
+
             let mut node_config: NodeConfig = context.get("node_config").unwrap();
             let template: ConfigTemplate = context.get("template").unwrap();
             let keys: BTreeMap<String, Value> = context.get("services_sec_keys").unwrap();
@@ -144,8 +155,13 @@ impl CommandExtension for InitCommand {
                             .clone()
                             .try_into()
                             .unwrap();
-            let total_funds: u64 = template.services.get("ANCHORING_FUNDS")
-                            .expect("Anchoring funds not fount")
+            let utxo_confirmations: u64 = template.services.get("ANCHORING_UTXO_CONFIRMATIONS")
+                            .expect("Anchoring utxo confirmations not fount")
+                            .clone()
+                            .try_into()
+                            .unwrap();
+            let frequency: u64 = template.services.get("ANCHORING_FREQUENCY")
+                            .expect("Anchoring frequency not fount")
                             .clone()
                             .try_into()
                             .unwrap();
@@ -189,12 +205,14 @@ impl CommandExtension for InitCommand {
                     .unwrap();
             
 
-            let mut genesis_cfg = if ANCHORING_NODE_TEST {
+            let mut genesis_cfg = if let Some(total_funds) = create_funding_tx_with_amount {
                 let tx = FundingTx::create(&client, &address, total_funds).unwrap();
                 AnchoringConfig::new_with_funding_tx(network, pub_keys, tx)
             }
             else {
-                AnchoringConfig::new(network, pub_keys)
+                let txid = funding_txid.expect("Funding txid not fount");
+                let tx = client.get_transaction(&txid).unwrap().expect("Funding tx with the given id not fount");
+                AnchoringConfig::new_with_funding_tx(network, pub_keys, tx.into())
             };
 
             anchoring_config
@@ -202,11 +220,13 @@ impl CommandExtension for InitCommand {
                     .insert(address.to_base58check(), priv_key.clone());
 
             genesis_cfg.fee = fee;
+            genesis_cfg.frequency = frequency;
+            genesis_cfg.utxo_confirmations = utxo_confirmations;
 
             node_config.services_configs.insert(
                 "anchoring_service".to_owned(), Value::try_from(
                     AnchoringServiceConfig {
-                    common: genesis_cfg,
+                    genesis: genesis_cfg,
                     node: anchoring_config,
                 }).expect("could not serialize anchoring service config"));
             context.set("node_config", node_config);
@@ -235,6 +255,6 @@ impl ServiceFactory for AnchoringService {
                                                         .clone()
                                                         .try_into()
                                                         .unwrap();
-        Box::new(AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node))
+        Box::new(AnchoringService::new(anchoring_cfg.genesis, anchoring_cfg.node))
     }
 }
