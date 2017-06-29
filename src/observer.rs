@@ -1,4 +1,4 @@
-//! An anchoring transactions' chain observer.
+//! Anchoring transactions' chain observer.
 
 use std::time::Duration;
 use std::thread::sleep;
@@ -19,7 +19,7 @@ pub type Milliseconds = u64;
 /// Type alias for block height.
 pub type Height = U64Key;
 
-/// An anchoring observer configuration.
+/// Anchoring observer configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AnchoringObserverConfig {
     /// A frequency of anchoring chain checks.
