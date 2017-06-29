@@ -6,14 +6,15 @@ use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::Blockchain;
 use exonum::crypto::Hash;
-use exonum::storage::List;
+use exonum::storage::{List, Map};
 use exonum::api::{Api, ApiError};
 
 use details::btc;
 use details::btc::TxId;
-use details::btc::transactions::{BitcoinTx, TxKind};
+use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
 use blockchain::schema::AnchoringSchema;
 use blockchain::dto::LectContent;
+use observer::Height;
 
 pub use details::btc::payload::Payload;
 
@@ -120,6 +121,24 @@ impl PublicApi {
             .map(|cfg| cfg.redeem_script().1);
         Ok(following_addr)
     }
+
+    /// Returns the anchoring transaction for the nearest block with
+    /// a height greater than the given.
+    ///
+    /// `GET /{api_prefix}/v1/nearest_lect/:height`
+    pub fn nearest_lect(&self, height: u64) -> Result<Option<AnchoringTx>, ApiError> {
+        let view = self.blockchain.view();
+        let anchoring_schema = AnchoringSchema::new(&view);
+        let tx_chain = anchoring_schema.anchoring_tx_chain();
+
+        if let Some(nearest_height_bytes) = tx_chain.find_key(&height.into())? {
+            let nearest_height = Height::from_vec(nearest_height_bytes);
+            let tx = tx_chain.get(&nearest_height)?;
+            Ok(tx)
+        } else {
+            Ok(None)
+        }
+    }
 }
 
 impl Api for PublicApi {
@@ -165,6 +184,29 @@ impl Api for PublicApi {
             _self.ok_response(&json!(addr))
         };
 
+        let _self = self.clone();
+        let nearest_lect = move |req: &mut Request| -> IronResult<Response> {
+            let map = req.extensions.get::<Router>().unwrap();
+            match map.find("height") {
+                Some(height_str) => {
+                    let height: u64 = height_str
+                        .parse()
+                        .map_err(|e| {
+                                     let msg = format!("An error during parsing of the block \
+                                                        height occurred: {}",
+                                                       e);
+                                     ApiError::IncorrectRequest(msg.into())
+                                 })?;
+                    let lect = _self.nearest_lect(height)?;
+                    _self.ok_response(&json!(lect))
+                }
+                None => {
+                    let msg = "The block height is not specified.";
+                    Err(ApiError::IncorrectRequest(msg.into()))?
+                }
+            }
+        };
+
         router.get("/v1/address/actual", actual_address, "actual_address");
         router.get("/v1/address/following",
                    following_address,
@@ -173,5 +215,6 @@ impl Api for PublicApi {
         router.get("/v1/actual_lect/:id",
                    current_lect_of_validator,
                    "current_lect_of_validator");
+        router.get("/v1/nearest_lect/:height", nearest_lect, "nearest_lect");
     }
 }

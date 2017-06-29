@@ -23,8 +23,9 @@ use iron::prelude::{IronResult, Response as IronResponse};
 use exonum::crypto::HexValue;
 use exonum::messages::Message;
 use exonum::api::Api;
+use exonum::blockchain::Blockchain;
 
-use btc_anchoring_service::observer::{AnchoringChainObserver, AnchoringChainObserverApi};
+use btc_anchoring_service::observer::AnchoringChainObserver;
 use btc_anchoring_service::api::{AnchoringInfo, LectInfo, PublicApi};
 use btc_anchoring_service::blockchain::dto::MsgAnchoringUpdateLatest;
 use btc_anchoring_service::details::btc;
@@ -40,11 +41,15 @@ struct ApiSandbox {
 
 impl ApiSandbox {
     fn new(anchoring_sandbox: &AnchoringSandbox) -> ApiSandbox {
+        Self::new_with_blockchain(anchoring_sandbox.blockchain_ref().clone())
+    }
+
+    fn new_with_blockchain(blockchain: Blockchain) -> ApiSandbox {
         let mut router = Router::new();
-        let api = PublicApi { blockchain: anchoring_sandbox.blockchain_ref().clone() };
+        let api = PublicApi { blockchain };
         api.wire(&mut router);
 
-        ApiSandbox { router: router }
+        ApiSandbox { router }
     }
 
     fn request_get<A: AsRef<str>>(&self, route: A) -> IronResult<IronResponse> {
@@ -73,6 +78,13 @@ impl ApiSandbox {
 
     pub fn get_current_lect_of_validator(&self, validator_id: u32) -> LectInfo {
         let response = self.request_get(format!("/v1/actual_lect/{}", validator_id))
+            .unwrap();
+        let body = response_body(response);
+        serde_json::from_value(body).unwrap()
+    }
+
+    pub fn get_nearest_anchoring_tx_for_height(&self, height: u64) -> Option<AnchoringTx> {
+        let response = self.request_get(format!("/v1/nearest_lect/{}", height))
             .unwrap();
         let body = response_body(response);
         serde_json::from_value(body).unwrap()
@@ -254,24 +266,11 @@ fn test_api_anchoring_observer_normal() {
     ]);
     observer.check_anchoring_chain().unwrap();
 
-    let observer_router = {
-        let observer_api = AnchoringChainObserverApi { blockchain: observer.blockchain().clone() };
+    let api_sandbox = ApiSandbox::new_with_blockchain(observer.blockchain().clone());
 
-        let mut router = Router::new();
-        observer_api.wire(&mut router);
-        router
-    };
-
-    let get_nearest_anchoring_tx_for_height = |height: u64| -> Option<AnchoringTx> {
-        let response = request_get(&observer_router, format!("/v1/nearest_lect/{}", height))
-            .unwrap();
-        let body = response_body(response);
-        serde_json::from_value(body).unwrap()
-    };
-
-    assert_eq!(get_nearest_anchoring_tx_for_height(0),
+    assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(0),
                Some(first_anchored_tx));
-    assert_eq!(get_nearest_anchoring_tx_for_height(1),
+    assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(1),
                Some(second_anchored_tx));
-    assert_eq!(get_nearest_anchoring_tx_for_height(11), None);
+    assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(11), None);
 }

@@ -2,14 +2,9 @@
 
 use std::time::Duration;
 use std::thread::sleep;
-use std::net::SocketAddr;
 
 use bitcoin::util::base58::ToBase58;
-use router::Router;
-use iron::prelude::*;
-use iron::Handler;
 
-use exonum::api::{Api, ApiError};
 use exonum::blockchain::{Blockchain, Schema};
 use exonum::storage::{Fork, List, Map, MapTable, U64Key, View};
 
@@ -25,17 +20,13 @@ pub type Milliseconds = u64;
 pub type Height = U64Key;
 
 /// An anchoring observer configuration.
-#[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct ObserverConfig {
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct AnchoringObserverConfig {
     /// A frequency of anchoring chain checks.
     pub check_frequency: Milliseconds,
-    /// A rpc configuration.
-    pub rpc: AnchoringRpcConfig,
-    /// A listen address for api.
-    pub api_address: SocketAddr,
 }
 
-/// An anchoring chain observer. Periodically checks the state of the anchor chain and keeps
+/// Anchoring chain observer. Periodically checks the state of the anchor chain and keeps
 /// the verified transactions in database.
 #[derive(Debug)]
 pub struct AnchoringChainObserver {
@@ -44,15 +35,9 @@ pub struct AnchoringChainObserver {
     check_frequency: Milliseconds,
 }
 
-/// An anchoring chain observer api implementation.
-#[derive(Debug, Clone)]
-pub struct AnchoringChainObserverApi {
-    /// Exonum blockchain instance.
-    pub blockchain: Blockchain,
-}
-
 impl<'a> AnchoringSchema<'a> {
-    fn anchoring_tx_chain(&self) -> MapTable<View, Height, AnchoringTx> {
+    /// Returns table that maps anchoring transactions to their heights.
+    pub fn anchoring_tx_chain(&self) -> MapTable<View, Height, AnchoringTx> {
         let prefix = self.gen_table_prefix(128, None);
         MapTable::new(prefix, self.view)
     }
@@ -60,11 +45,14 @@ impl<'a> AnchoringSchema<'a> {
 
 impl AnchoringChainObserver {
     /// Constructs observer for the given `blockchain`.
-    pub fn new(blockchain: Blockchain, config: ObserverConfig) -> AnchoringChainObserver {
+    pub fn new(blockchain: Blockchain,
+               rpc: AnchoringRpcConfig,
+               observer: AnchoringObserverConfig)
+               -> AnchoringChainObserver {
         AnchoringChainObserver {
             blockchain: blockchain,
-            client: AnchoringRpc::new(config.rpc),
-            check_frequency: config.check_frequency,
+            client: AnchoringRpc::new(rpc),
+            check_frequency: observer.check_frequency,
         }
     }
 
@@ -115,14 +103,6 @@ impl AnchoringChainObserver {
             self.blockchain.merge(&changes)?;
         }
         Ok(())
-    }
-
-    /// Returns an api handler.
-    pub fn api_handler(&self) -> Box<Handler> {
-        let mut router = Router::new();
-        let api = AnchoringChainObserverApi { blockchain: self.blockchain.clone() };
-        api.wire(&mut router);
-        Box::new(router)
     }
 
     #[doc(hidden)]
@@ -230,56 +210,5 @@ impl AnchoringChainObserver {
         let schema = Schema::new(view);
         let len = schema.block_hashes_by_height().len()?;
         Ok(len > 0)
-    }
-}
-
-impl AnchoringChainObserverApi {
-    /// Returns the anchoring transaction for the nearest block with
-    /// a height greater than the given.
-    pub fn nearest_lect(&self, height: u64) -> Result<Option<AnchoringTx>, ApiError> {
-        let view = self.blockchain.view();
-        let anchoring_schema = AnchoringSchema::new(&view);
-        let tx_chain = anchoring_schema.anchoring_tx_chain();
-
-        debug!("Looking up for nearest anchoring tx for height={}.", height);
-
-        if let Some(nearest_height_bytes) = tx_chain.find_key(&height.into())? {
-            let nearest_height = Height::from_vec(nearest_height_bytes);
-            let tx = tx_chain.get(&nearest_height)?;
-            debug!("Found anchoring tx content={:#?}", tx.as_ref().unwrap());
-            Ok(tx)
-        } else {
-            debug!("Anchoring tx not found.");
-            Ok(None)
-        }
-    }
-}
-
-impl Api for AnchoringChainObserverApi {
-    fn wire(&self, router: &mut Router) {
-        let _self = self.clone();
-        let nearest_lect = move |req: &mut Request| -> IronResult<Response> {
-            let map = req.extensions.get::<Router>().unwrap();
-            match map.find("height") {
-                Some(height_str) => {
-                    let height: u64 = height_str
-                        .parse()
-                        .map_err(|e| {
-                                     let msg = format!("An error during parsing of the block \
-                                                        height occurred: {}",
-                                                       e);
-                                     ApiError::IncorrectRequest(msg.into())
-                                 })?;
-                    let lect = _self.nearest_lect(height)?;
-                    _self.ok_response(&json!(lect))
-                }
-                None => {
-                    let msg = "The block height is not specified.";
-                    Err(ApiError::IncorrectRequest(msg.into()))?
-                }
-            }
-        };
-
-        router.get("/v1/nearest_lect/:height", nearest_lect, "nearest_lect");
     }
 }

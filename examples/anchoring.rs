@@ -1,8 +1,6 @@
 extern crate clap;
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
-extern crate log;
 extern crate iron;
 extern crate router;
 extern crate mount;
@@ -17,8 +15,6 @@ use std::thread;
 use clap::{App, Arg, SubCommand};
 use bitcoin::network::constants::Network;
 use bitcoin::util::base58::ToBase58;
-use iron::{Chain, Iron};
-use mount::Mount;
 
 use exonum::blockchain::{Blockchain, Service};
 use exonum::node::{Node, NodeConfig};
@@ -29,7 +25,7 @@ use exonum::helpers::generate_testnet_config;
 use exonum::helpers;
 use configuration_service::ConfigurationService;
 use btc_anchoring_service::{AnchoringRpc, AnchoringService};
-use btc_anchoring_service::observer::{AnchoringChainObserver, ObserverConfig};
+use btc_anchoring_service::observer::AnchoringChainObserver;
 use btc_anchoring_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
                             BitcoinNetwork, gen_anchoring_testnet_config, gen_btc_keypair};
 
@@ -37,7 +33,6 @@ use btc_anchoring_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcCo
 pub struct AnchoringServiceConfig {
     pub common: AnchoringConfig,
     pub node: AnchoringNodeConfig,
-    pub observer: Option<ObserverConfig>,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -124,7 +119,6 @@ fn main() {
                     anchoring_service: AnchoringServiceConfig {
                         common: anchoring_common.clone(),
                         node: anchoring_nodes[idx].clone(),
-                        observer: None,
                     },
                 };
                 let file_name = format!("{}.toml", idx);
@@ -137,7 +131,8 @@ fn main() {
             let cfg: ServicesConfig = ConfigFile::load(path).unwrap();
 
             let anchoring_cfg = cfg.anchoring_service;
-            let observer_cfg = anchoring_cfg.observer;
+            let observer_cfg = anchoring_cfg.node.observer.clone();
+            let rpc_cfg = anchoring_cfg.node.rpc.clone();
 
             let services: Vec<Box<Service>> =
                 vec![
@@ -147,30 +142,20 @@ fn main() {
                 ];
             let blockchain = Blockchain::new(db, services);
 
-            let observer_threads = observer_cfg.map(|observer_cfg| {
-                let mut threads = Vec::new();
-                let listen_address = observer_cfg.api_address;
-                let observer = AnchoringChainObserver::new(blockchain.clone(), observer_cfg);
+            let observer_thread = observer_cfg.map(|observer_cfg| {
+                let observer = AnchoringChainObserver::new(blockchain.clone(),
+                                                           rpc_cfg
+                                                               .expect("Rpc config is not setted"),
+                                                           observer_cfg);
 
-                let mut mount = Mount::new();
-                mount.mount("api/btc_anchoring_observer", observer.api_handler());
-                threads.push(thread::spawn(move || {
-                                               info!("Observer api started on {}", listen_address);
-
-                                               let chain = Chain::new(mount);
-                                               Iron::new(chain).http(listen_address).unwrap();
-                                           }));
-                threads.push(thread::spawn(move || { observer.run().unwrap(); }));
-                threads
+                thread::spawn(move || { observer.run().unwrap(); })
             });
 
             let mut node = Node::new(blockchain, cfg.node);
             node.run().unwrap();
 
-            if let Some(threads) = observer_threads {
-                for thread in threads {
-                    thread.join().unwrap()
-                }
+            if let Some(thread) = observer_thread {
+                thread.join().unwrap();
             }
         }
         ("keypair", Some(matches)) => {
