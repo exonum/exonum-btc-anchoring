@@ -66,7 +66,7 @@ extern crate serde;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
-extern crate bitcoinrpc;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
 extern crate bitcoin;
 extern crate secp256k1;
 extern crate byteorder;

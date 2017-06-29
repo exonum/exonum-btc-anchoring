@@ -6,7 +6,6 @@ authors = ["Exonum Team <exonum@bitfury.com>"]
 [dependencies]
 btc_anchoring_service = {version="0.1", path="../", features=["sandbox_tests"]}
 
-bitcoinrpc = {version="0.1", path="../3rdparty/bitcoinrpc"}
 bitcoin="0.9.0"
 secp256k1 = "0.6.0"
 serde = "1.0.0"
@@ -19,6 +18,11 @@ libc = "0.2.21"
 router = "0.5.1"
 iron = "0.5.1"
 iron-test = "0.5.0"
+
+[dependencies.exonum-bitcoinrpc]
+version = "0.1.0"
+git = "ssh://git@github.com/exonum/bitcoinrpc.git"
+rev="0943d53ed6df38a71153a38dcadac397172873c6"
 
 [dependencies.exonum]
 version = "0.1.0"
