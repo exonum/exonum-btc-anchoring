@@ -79,7 +79,7 @@ pub fn collect_signatures<I>(proposal: &AnchoringTx,
 {
     let mut signatures = HashMap::new();
     for input in proposal.inputs() {
-        signatures.insert(input, vec![None; common.validators.len()]);
+        signatures.insert(input, vec![None; common.anchoring_keys.len()]);
     }
 
     for msg in msgs {

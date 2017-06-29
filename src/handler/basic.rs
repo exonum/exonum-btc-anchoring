@@ -13,7 +13,7 @@ use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, TxKind};
 use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
-use blockchain::dto::{AnchoringMessage, MsgAnchoringUpdateLatest};
+use blockchain::dto::MsgAnchoringUpdateLatest;
 
 use super::{AnchoringHandler, AnchoringState, LectKind, MultisigAddress};
 
@@ -51,7 +51,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn validator_key<'a>(&self,
+    pub fn anchoring_key<'a>(&self,
                              cfg: &'a AnchoringConfig,
                              state: &ServiceContext)
                              -> &'a btc::PublicKey {
@@ -60,7 +60,7 @@ impl AnchoringHandler {
             .as_ref()
             .expect("Request `validator_id` only from validator node.")
             .id();
-        &cfg.validators[validator_id as usize]
+        &cfg.anchoring_keys[validator_id as usize]
     }
 
     #[doc(hidden)]
@@ -152,7 +152,7 @@ impl AnchoringHandler {
             return Ok(AnchoringState::Auditing { cfg: actual });
         }
 
-        let key = *self.validator_key(&actual, state);
+        let key = *self.anchoring_key(&actual, state);
 
         // If we do not have any 'lect', then we have been added
         // later and can only be in the anchoring or recovering state.
@@ -289,13 +289,13 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn collect_lects_for_validator(&self,
-                                       validator_key: &btc::PublicKey,
+                                       anchoring_key: &btc::PublicKey,
                                        anchoring_cfg: &AnchoringConfig,
                                        state: &ServiceContext)
                                        -> LectKind {
         let anchoring_schema = AnchoringSchema::new(state.snapshot());
 
-        let our_lect = if let Some(lect) = anchoring_schema.lect(validator_key) {
+        let our_lect = if let Some(lect) = anchoring_schema.lect(anchoring_key) {
             lect
         } else {
             return LectKind::None;
@@ -304,7 +304,7 @@ impl AnchoringHandler {
         let mut count = 0;
 
         let validators_count = state.validators().len() as u32;
-        for key in &anchoring_cfg.validators {
+        for key in &anchoring_cfg.anchoring_keys {
             let validators_lect = anchoring_schema.lect(key);
             if Some(&our_lect) == validators_lect.as_ref() {
                 count += 1;
@@ -366,7 +366,7 @@ impl AnchoringHandler {
                            multisig: &MultisigAddress,
                            state: &mut ServiceContext)
                            -> Result<Option<BitcoinTx>, ServiceError> {
-        let key = self.validator_key(multisig.common, state);
+        let key = self.anchoring_key(multisig.common, state);
         trace!("Update our lect");
         if let Some(lect) = self.find_lect(multisig, state)? {
             /// New lect with different signatures set.
@@ -415,9 +415,8 @@ impl AnchoringHandler {
                            multisig: &MultisigAddress,
                            state: &ServiceContext)
                            -> Result<bool, ServiceError> {
-        let snapshot = state.snapshot();
-        let schema = AnchoringSchema::new(&snapshot);
-        let key = self.validator_key(multisig.common, state);
+        let schema = AnchoringSchema::new(state.snapshot());
+        let key = self.anchoring_key(multisig.common, state);
 
         // Check that we know tx
         if schema.find_lect_position(key, &lect.id()).is_some() {
@@ -453,7 +452,7 @@ impl AnchoringHandler {
                 let cfg = schema.anchoring_config_by_height(lect_height);
 
                 let mut prev_lect_count = 0;
-                for key in &cfg.validators {
+                for key in &cfg.anchoring_keys {
                     if schema.find_lect_position(key, &txid).is_some() {
                         prev_lect_count += 1;
                     }
@@ -483,7 +482,7 @@ impl AnchoringHandler {
                                                      lect.clone(),
                                                      lects_count,
                                                      state.secret_key());
-        state.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
+        state.add_transaction(Box::new(lect_msg)); 
     }
 }
 

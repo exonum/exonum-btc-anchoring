@@ -36,7 +36,7 @@ impl AnchoringHandler {
             self.try_finalize_proposal_tx(proposal, &multisig, state)?;
         } else {
             // Or try to create proposal
-            match self.collect_lects_for_validator(self.validator_key(multisig.common, state),
+            match self.collect_lects_for_validator(self.anchoring_key(multisig.common, state),
                                                    multisig.common,
                                                    state) {
                 LectKind::Anchoring(lect) => {

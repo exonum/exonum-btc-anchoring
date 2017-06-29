@@ -9,7 +9,7 @@ use details::btc::HexValueEx;
 use details::btc::transactions::{AnchoringTx, TransactionBuilder};
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
-use blockchain::dto::{AnchoringMessage, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 
 use super::{AnchoringHandler, LectKind, MultisigAddress, collect_signatures};
 
@@ -41,7 +41,7 @@ impl AnchoringHandler {
                                   multisig: &MultisigAddress,
                                   context: &mut ServiceContext)
                                   -> Result<(), ServiceError> {
-        let lect = self.collect_lects_for_validator(self.validator_key(multisig.common, context),
+        let lect = self.collect_lects_for_validator(self.anchoring_key(multisig.common, context),
                                                     multisig.common,
                                                     context);
         match lect {
@@ -148,7 +148,7 @@ impl AnchoringHandler {
             trace!("Sign input msg={:#?}, sighex={}",
                    sign_msg,
                    signature.to_hex());
-            context.add_transaction(AnchoringMessage::Signature(sign_msg));
+            context.add_transaction(Box::new(sign_msg));
         }
         self.proposal_tx = Some(proposal);
         Ok(())
@@ -197,20 +197,20 @@ impl AnchoringHandler {
             info!("LECT ====== txid={}, total_count={}",
                   new_lect.txid(),
                   AnchoringSchema::new(context.snapshot())
-                      .lects(self.validator_key(multisig.common, context))
+                      .lects(self.anchoring_key(multisig.common, context))
                       .len());
 
             self.proposal_tx = None;
 
             let lects_count = AnchoringSchema::new(context.snapshot())
-                .lects(self.validator_key(multisig.common, context))
+                .lects(self.anchoring_key(multisig.common, context))
                 .len();
             let lect_msg = MsgAnchoringUpdateLatest::new(context.public_key(),
                                                          self.validator_id(context),
                                                          new_lect.into(),
                                                          lects_count,
                                                          context.secret_key());
-            context.add_transaction(AnchoringMessage::UpdateLatest(lect_msg));
+            context.add_transaction(Box::new(lect_msg));
         } else {
             warn!("Insufficient signatures for proposal={:#?}", proposal);
         }

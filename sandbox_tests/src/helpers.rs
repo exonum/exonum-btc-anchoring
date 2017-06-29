@@ -50,7 +50,7 @@ pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
 pub fn dump_lects(sandbox: &Sandbox, id: u16) -> Vec<BitcoinTx> {
     let b = sandbox.blockchain_ref().clone();
     let anchoring_schema = AnchoringSchema::new(b.snapshot());
-    let key = &anchoring_schema.actual_anchoring_config().validators[id as usize];
+    let key = &anchoring_schema.actual_anchoring_config().anchoring_keys[id as usize];
 
     let lects = anchoring_schema.lects(key);
     let lects = lects.into_iter().map(|x| x.tx()).collect::<Vec<_>>();
@@ -70,7 +70,7 @@ pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
         let mut anchoring_schema = AnchoringSchema::new(&mut fork);
         let anchoring_cfg = anchoring_schema.actual_anchoring_config();
         for lect_msg in lects {
-            let key = &anchoring_cfg.validators[lect_msg.validator() as usize];
+            let key = &anchoring_cfg.anchoring_keys[lect_msg.validator() as usize];
             anchoring_schema.add_lect(key, lect_msg.tx().clone(), Message::hash(&lect_msg));
         }
     };
@@ -516,7 +516,7 @@ fn gen_following_cfg_exclude_validator(sandbox: &AnchoringSandbox,
 
     let mut service_cfg = sandbox.current_cfg().clone();
     let priv_keys = sandbox.current_priv_keys();
-    service_cfg.validators.swap_remove(0);
+    service_cfg.anchoring_keys.swap_remove(0);
 
     let following_addr = service_cfg.redeem_script().1;
     for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {

@@ -165,8 +165,8 @@ impl<T> AnchoringSchema<T>
     /// Returns a lect that is currently supported by at least 2/3 of the current set of validators.
     pub fn collect_lects(&self, cfg: &AnchoringConfig) -> Option<BitcoinTx> {
         let mut lects = HashMap::new();
-        for validator_key in &cfg.validators {
-            if let Some(last_lect) = self.lect(validator_key) {
+        for anchoring_key in &cfg.anchoring_keys {
+            if let Some(last_lect) = self.lect(anchoring_key) {
                 match lects.entry(last_lect.0) {
                     Entry::Occupied(mut v) => {
                         *v.get_mut() += 1;
@@ -189,12 +189,13 @@ impl<T> AnchoringSchema<T>
         }
     }
 
-    /// Returns position in `lects` table for transaction with the given `txid`.
+    /// Returns position in `lects` table of validator with the given `anchoring_key`
+    /// for transaction with the given `txid`.
     pub fn find_lect_position(&self,
-                              validator_key: &btc::PublicKey,
+                              anchoring_key: &btc::PublicKey,
                               txid: &btc::TxId)
                               -> Option<u64> {
-        self.lect_indexes(validator_key).get(txid)
+        self.lect_indexes(anchoring_key).get(txid)
     }
 
     /// Returns the `state_hash` for anchoring tables.
@@ -203,7 +204,7 @@ impl<T> AnchoringSchema<T>
     pub fn state_hash(&self) -> Vec<Hash> {
         let cfg = self.actual_anchoring_config();
         let mut lect_hashes = Vec::new();
-        for key in &cfg.validators {
+        for key in &cfg.anchoring_keys {
             lect_hashes.push(self.lects(key).root_hash());
         }
         lect_hashes
@@ -270,7 +271,7 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
 
     /// Creates and commits the genesis anchoring configuration from the proposed `cfg`.
     pub fn create_genesis_config(&mut self, cfg: &AnchoringConfig) {
-        for validator_key in &cfg.validators {
+        for validator_key in &cfg.anchoring_keys {
             self.add_lect(validator_key, cfg.funding_tx().clone(), Hash::zero());
         }
     }
