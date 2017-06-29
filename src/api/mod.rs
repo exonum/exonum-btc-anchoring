@@ -92,7 +92,7 @@ impl PublicApi {
         let schema = AnchoringSchema::new(&view);
 
         let actual_cfg = schema.actual_anchoring_config()?;
-        if let Some(key) = actual_cfg.validators.get(id as usize) {
+        if let Some(key) = actual_cfg.anchoring_keys.get(id as usize) {
             if let Some(lect) = schema.lects(key).last()? {
                 return Ok(LectInfo::from(lect));
             }

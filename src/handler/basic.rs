@@ -16,7 +16,7 @@ use blockchain::dto::MsgAnchoringUpdateLatest;
 use super::{AnchoringHandler, AnchoringState, LectKind, MultisigAddress};
 
 impl AnchoringHandler {
-    #[cfg(not(feature="sandbox_tests"))]
+    #[cfg(not(feature = "sandbox_tests"))]
     #[doc(hidden)]
     pub fn new(client: Option<AnchoringRpc>, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
@@ -26,7 +26,7 @@ impl AnchoringHandler {
         }
     }
 
-    #[cfg(feature="sandbox_tests")]
+    #[cfg(feature = "sandbox_tests")]
     #[doc(hidden)]
     pub fn new(client: Option<AnchoringRpc>, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
@@ -47,7 +47,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn validator_key<'a>(&self,
+    pub fn anchoring_key<'a>(&self,
                              cfg: &'a AnchoringConfig,
                              state: &ServiceContext)
                              -> &'a btc::PublicKey {
@@ -56,7 +56,7 @@ impl AnchoringHandler {
             .as_ref()
             .expect("Request `validator_id` only from validator node.")
             .id();
-        &cfg.validators[validator_id as usize]
+        &cfg.anchoring_keys[validator_id as usize]
     }
 
     #[doc(hidden)]
@@ -151,7 +151,7 @@ impl AnchoringHandler {
             return Ok(AnchoringState::Auditing { cfg: actual });
         }
 
-        let key = self.validator_key(&actual, state).clone();
+        let key = self.anchoring_key(&actual, state).clone();
 
         // If we do not have any 'lect', then we have been added
         // later and can only be in the anchoring or recovering state.
@@ -248,8 +248,8 @@ impl AnchoringHandler {
                     // If the lect encodes a transition to a new anchoring address,
                     // we need to wait until it reaches enough confirmations.
                     if actual_lect_is_transition(&actual, &actual_lect, &anchoring_schema)? {
-                        let confirmations =
-                            client.get_transaction_confirmations(&actual_lect.id())?;
+                        let confirmations = client
+                            .get_transaction_confirmations(&actual_lect.id())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
                                 lect: actual_lect.into(),
@@ -289,13 +289,13 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn collect_lects_for_validator(&self,
-                                       validator_key: &btc::PublicKey,
+                                       anchoring_key: &btc::PublicKey,
                                        anchoring_cfg: &AnchoringConfig,
                                        state: &ServiceContext)
                                        -> Result<LectKind, StorageError> {
         let anchoring_schema = AnchoringSchema::new(state.view());
 
-        let our_lect = if let Some(lect) = anchoring_schema.lect(validator_key)? {
+        let our_lect = if let Some(lect) = anchoring_schema.lect(anchoring_key)? {
             lect
         } else {
             return Ok(LectKind::None);
@@ -304,7 +304,7 @@ impl AnchoringHandler {
         let mut count = 0;
 
         let validators_count = state.validators().len() as u32;
-        for key in &anchoring_cfg.validators {
+        for key in &anchoring_cfg.anchoring_keys {
             let validators_lect = anchoring_schema.lect(key)?;
             if Some(&our_lect) == validators_lect.as_ref() {
                 count += 1;
@@ -366,7 +366,7 @@ impl AnchoringHandler {
                            multisig: &MultisigAddress,
                            state: &mut ServiceContext)
                            -> Result<Option<BitcoinTx>, ServiceError> {
-        let key = self.validator_key(multisig.common, state);
+        let key = self.anchoring_key(multisig.common, state);
         trace!("Update our lect");
         if let Some(lect) = self.find_lect(multisig, state)? {
             /// New lect with different signatures set.
@@ -416,7 +416,7 @@ impl AnchoringHandler {
                            state: &ServiceContext)
                            -> Result<bool, ServiceError> {
         let schema = AnchoringSchema::new(state.view());
-        let key = self.validator_key(multisig.common, state);
+        let key = self.anchoring_key(multisig.common, state);
 
         // Check that we know tx
         if schema.find_lect_position(key, &lect.id())?.is_some() {
@@ -456,7 +456,7 @@ impl AnchoringHandler {
                 let cfg = schema.anchoring_config_by_height(lect_height)?;
 
                 let mut prev_lect_count = 0;
-                for key in &cfg.validators {
+                for key in &cfg.anchoring_keys {
                     if schema.find_lect_position(key, &txid)?.is_some() {
                         prev_lect_count += 1;
                     }

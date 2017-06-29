@@ -51,7 +51,7 @@ pub fn dump_lects(sandbox: &Sandbox, id: u16) -> Vec<BitcoinTx> {
     let b = sandbox.blockchain_ref().clone();
     let v = b.view();
     let s = AnchoringSchema::new(&v);
-    let key = &s.actual_anchoring_config().unwrap().validators[id as usize];
+    let key = &s.actual_anchoring_config().unwrap().anchoring_keys[id as usize];
 
     s.lects(key)
         .values()
@@ -74,7 +74,7 @@ pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
         let anchoring_schema = AnchoringSchema::new(&view);
         let anchoring_cfg = anchoring_schema.actual_anchoring_config().unwrap();
         for lect_msg in lects {
-            let key = &anchoring_cfg.validators[lect_msg.validator() as usize];
+            let key = &anchoring_cfg.anchoring_keys[lect_msg.validator() as usize];
             anchoring_schema
                 .add_lect(key, lect_msg.tx().clone(), Message::hash(&lect_msg))
                 .unwrap();
@@ -252,9 +252,7 @@ pub fn anchor_first_block_lect_normal(sandbox: &AnchoringSandbox) {
     let anchored_tx = sandbox.latest_anchored_tx();
     let anchoring_addr = sandbox.current_addr();
 
-    sandbox
-        .client()
-        .expect(vec![
+    sandbox.client().expect(vec![
             request! {
                 method: "listunspent",
                 params: [0, 9999999, [&anchoring_addr.to_base58check()]],
@@ -394,13 +392,14 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     ]);
     sandbox.add_height(&[]);
 
-    let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
-        10,
-        sandbox.last_hash(),
-        &[],
-        None,
-        &btc::Address::from_base58check(&anchoring_addr.to_base58check()).unwrap()
-    );
+    let (_, signatures) = sandbox
+        .gen_anchoring_tx_with_signatures(10,
+                                          sandbox.last_hash(),
+                                          &[],
+                                          None,
+                                          &btc::Address::from_base58check(&anchoring_addr
+                                                                              .to_base58check())
+                                              .unwrap());
     let anchored_tx = sandbox.latest_anchored_tx();
 
     sandbox.broadcast(signatures[0].clone());
@@ -474,12 +473,12 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[cfg_tx]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().block_hash,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
@@ -524,7 +523,7 @@ fn gen_following_cfg_exclude_validator(sandbox: &AnchoringSandbox,
 
     let mut service_cfg = sandbox.current_cfg().clone();
     let priv_keys = sandbox.current_priv_keys();
-    service_cfg.validators.swap_remove(0);
+    service_cfg.anchoring_keys.swap_remove(0);
 
     let following_addr = service_cfg.redeem_script().1;
     for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {

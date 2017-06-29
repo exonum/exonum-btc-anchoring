@@ -94,7 +94,7 @@ Variables that you can modify:
  - `frequency` - the frequency in exonum blocks with which the generation of a new anchoring transactions occurs.
  - `utxo_confirmations` - the minimum number of confirmations in bitcoin network to consider the anchoring transaction as fully confirmed. Uses for transition and initial funding transactions.
  - `funding_tx` - the hex representation of current funding transaction. Node would use it as input if it did not spent.
- - `validators` - the list of hex-encoded compressed bitcoin public keys of exonum validators that collects into the current anchoring address.
+ - `anchoring_keys` - the list of hex-encoded compressed bitcoin public keys of exonum validators that collects into the current anchoring address.
 
 For the `anchoring` example consensus configuration looks like this:
 ```json
@@ -103,7 +103,7 @@ For the `anchoring` example consensus configuration looks like this:
     "frequency":1000,
     "funding_tx":"0100000001c13d4c739390c799344fa89fb701add04e5ccaf3d580e4d4379c4b897e3a2266000000006b483045022100ff88211040a8a95a42ca8520749c1b2b4024ce07b3ed1b51da8bb90ef77dbe5d022034b34ef638d23ef0ea532e2c84a8816cb32021112d4bcf1457b4e2c149d1b83f01210250749a68b12a93c2cca6f86a9a9c9ba37f5191e85334c340856209a17cca349afeffffff0240420f000000000017a914180d8e6b0ad7f63177e943752c278294709425bd872908da0b000000001976a914dee9f9433b3f2d24cbd833f83a41e4c1235efa3f88acd6ac1000",
     "utxo_confirmations":4,
-    "validators":[
+    "anchoring_keys":[
         "03aa5ef3f68ad710b1fcc368b2f1855790f4f0c0fd762dbc1d47339c7ffb8fe363",
         "032a360ef29c339964dba55f701728b8faf34c48ce1988ef85229011cc26d0472f",
         "02e3708c15674f626fd127da715638176df238b2f88730b07ed1700fcede872c25"
@@ -139,7 +139,7 @@ transaction malleability. See this [article][exonum:anchoring_transfering] for d
 * Make sure that difference between the activation height (`actual_from`) and current `Exonum` blockchain height is enough for get sufficient confirmations for the latest anchored transaction. Usually 6 hours are enough for this. 
 Calculate how many blocks will be taken during this time and add this number to the `current_height`.
 * If necessary, [generate][exonum:anchoring_gen_keypair] a new key pair for anchoring.
-* Change list of validators via editing `validators` array.
+* Change list of validators via editing `anchoring_keys` array.
 * Initiate the config update procedure.
 * Make sure that config update procedure is not delayed. That is, do not delay the voting procedure for the new configuration.
 * Look at the new address of the anchoring in the [`exonum-dashboard`][exonum:dashboard] and [set private key for it](#updating-anchoring-address).

@@ -154,7 +154,7 @@ fn test_api_public_get_lect_unavailable() {
                                        17a914dcfbafb4c432a24dd4b268570d26d7841a20fbbd87e7cc39\
                                        0a000000001976a914b3203ee5a42f8f524d14397ef10b84277f78\
                                        4b4a88acd81d1100")
-            .unwrap();
+        .unwrap();
     let lects = (0..2)
         .map(|id| {
                  MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),
@@ -189,7 +189,7 @@ fn test_api_public_get_following_address_existent() {
     let client = sandbox.client();
 
     let mut cfg = sandbox.current_cfg().clone();
-    cfg.validators.swap_remove(1);
+    cfg.anchoring_keys.swap_remove(1);
     let cfg_tx = gen_update_config_tx(&sandbox, 12, &cfg);
     let following_addr = cfg.redeem_script().1;
 

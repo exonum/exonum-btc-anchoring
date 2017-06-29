@@ -119,10 +119,8 @@ impl AnchoringSandbox {
         common.utxo_confirmations = ANCHORING_UTXO_CONFIRMATIONS;
         for &&(addr, ref keys) in &priv_keys {
             for (id, key) in keys.iter().enumerate() {
-                nodes[id]
-                    .private_keys
-                    .insert(addr.to_string(),
-                            btc::PrivateKey::from_base58check(key).unwrap());
+                nodes[id].private_keys.insert(addr.to_string(),
+                                              btc::PrivateKey::from_base58check(key).unwrap());
             }
         }
 

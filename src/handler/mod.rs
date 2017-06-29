@@ -24,7 +24,7 @@ pub struct AnchoringHandler {
     pub node: AnchoringNodeConfig,
     #[doc(hidden)]
     pub proposal_tx: Option<AnchoringTx>,
-    #[cfg(feature="sandbox_tests")]
+    #[cfg(feature = "sandbox_tests")]
     #[doc(hidden)]
     pub errors: Vec<error::Error>,
 }
@@ -76,7 +76,7 @@ pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
 {
     let mut signatures = HashMap::new();
     for input in proposal.inputs() {
-        signatures.insert(input, vec![None; common.validators.len()]);
+        signatures.insert(input, vec![None; common.anchoring_keys.len()]);
     }
 
     for msg in msgs {

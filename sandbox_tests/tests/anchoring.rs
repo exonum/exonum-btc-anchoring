@@ -681,7 +681,7 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
     let msg_signature_different = {
         let cfg = sandbox.current_cfg();
         let (redeem_script, addr) = cfg.redeem_script();
-        let pub_key = &cfg.validators[1];
+        let pub_key = &cfg.anchoring_keys[1];
         let priv_key = &sandbox.priv_keys(&addr)[1];
 
         let mut different_signature =
@@ -763,7 +763,7 @@ fn test_anchoring_signature_unknown_output_address() {
     let tx = {
         let (_, addr) = {
             let mut anchoring_cfg = sandbox.current_cfg().clone();
-            anchoring_cfg.validators.swap(1, 2);
+            anchoring_cfg.anchoring_keys.swap(1, 2);
             anchoring_cfg.redeem_script()
         };
 
@@ -781,7 +781,7 @@ fn test_anchoring_signature_unknown_output_address() {
     assert_ne!(tx.output_address(Network::Testnet), addr);
     assert!(tx.verify_input(&redeem_script,
                             0,
-                            &sandbox.current_cfg().validators[0],
+                            &sandbox.current_cfg().anchoring_keys[0],
                             &signature));
 
     let msg_signature_wrong =

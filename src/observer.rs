@@ -208,7 +208,7 @@ impl AnchoringChainObserver {
         let anchoring_schema = AnchoringSchema::new(view);
 
         let mut lect_count = 0;
-        for key in &actual_cfg.validators {
+        for key in &actual_cfg.anchoring_keys {
             if anchoring_schema.find_lect_position(key, &txid)?.is_some() {
                 lect_count += 1;
             }

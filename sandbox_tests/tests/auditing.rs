@@ -34,7 +34,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
 
     let mut service_cfg = sandbox.current_cfg().clone();
     let priv_keys = sandbox.priv_keys(&anchoring_addr);
-    service_cfg.validators.swap_remove(0);
+    service_cfg.anchoring_keys.swap_remove(0);
 
     let following_addr = service_cfg.redeem_script().1;
     for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
@@ -70,12 +70,12 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[cfg_tx]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().block_hash,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
@@ -208,7 +208,7 @@ fn test_auditing_lect_incorrect_funding_tx() {
                                        17a914dcfbafb4c432a24dd4b268570d26d7841a20fbbd87e7cc39\
                                        0a000000001976a914b3203ee5a42f8f524d14397ef10b84277f78\
                                        4b4a88acd81d1100")
-            .unwrap();
+        .unwrap();
     let lects = (0..3)
         .map(|id| {
                  MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),

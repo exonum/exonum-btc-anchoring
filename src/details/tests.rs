@@ -361,10 +361,9 @@ fn test_redeem_script_from_pubkeys() {
         "02bdd272891c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a5",
         "03280883dc31ccaee34218819aaa245480c35a33acd91283586ff6d1284ed681e5",
         "03e2bc790a6e32bf5a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb0",
-    ]
-            .into_iter()
-            .map(|x| btc::PublicKey::from_hex(x).unwrap())
-            .collect::<Vec<_>>();
+    ].into_iter()
+        .map(|x| btc::PublicKey::from_hex(x).unwrap())
+        .collect::<Vec<_>>();
 
     let redeem_script = btc::RedeemScript::from_pubkeys(&keys, 3);
     assert_eq!(redeem_script.to_hex(), redeem_script_hex);
@@ -441,20 +440,18 @@ fn test_anchoring_tx_sign() {
         "cMk66oMazTgquBVaBLHzDi8FMgAaRN3tSf6iZykf9bCh3D3FsLX1",
         "cT2S5KgUQJ41G6RnakJ2XcofvoxK68L9B44hfFTnH4ddygaxi7rc",
         "cRUKB8Nrhxwd5Rh6rcX3QK1h7FosYPw5uzEsuPpzLcDNErZCzSaj",
-    ]
-            .iter()
-            .map(|x| btc::PrivateKey::from_base58check(x).unwrap())
-            .collect::<Vec<_>>();
+    ].iter()
+        .map(|x| btc::PrivateKey::from_base58check(x).unwrap())
+        .collect::<Vec<_>>();
 
     let pub_keys = [
         "03475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c",
         "02a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0",
         "0230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb49",
         "036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e",
-    ]
-            .iter()
-            .map(|x| btc::PublicKey::from_hex(x).unwrap())
-            .collect::<Vec<_>>();
+    ].iter()
+        .map(|x| btc::PublicKey::from_hex(x).unwrap())
+        .collect::<Vec<_>>();
     let redeem_script = btc::RedeemScript::from_pubkeys(pub_keys.iter(), 3)
         .compressed(Network::Testnet);
 
@@ -482,7 +479,7 @@ fn test_anchoring_tx_sign() {
     let tx = TransactionBuilder::with_prev_tx(&prev_tx, 0)
         .add_funds(&funding_tx, 0)
         .payload(10,
-                 Hash::from_hex("164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9",)
+                 Hash::from_hex("164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9")
                      .unwrap())
         .fee(1000)
         .send_to(btc::Address::from_script(&redeem_script, Network::Testnet))
@@ -527,10 +524,9 @@ fn test_anchoring_tx_output_address() {
         "02a63948315dda66506faf4fecd54b085c08b13932a210fa5806e3691c69819aa0",
         "0230cb2805476bf984d2236b56ff5da548dfe116daf2982608d898d9ecb3dceb49",
         "036e4777c8d19ccaa67334491e777f221d37fd85d5786a4e5214b281cf0133d65e",
-    ]
-            .iter()
-            .map(|x| btc::PublicKey::from_hex(x).unwrap())
-            .collect::<Vec<_>>();
+    ].iter()
+        .map(|x| btc::PublicKey::from_hex(x).unwrap())
+        .collect::<Vec<_>>();
     let redeem_script = btc::RedeemScript::from_pubkeys(&pub_keys, 3).compressed(Network::Testnet);
 
     assert_eq!(tx.output_address(Network::Testnet).to_base58check(),

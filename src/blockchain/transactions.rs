@@ -57,7 +57,7 @@ impl Transaction for MsgAnchoringSignature {
         }
         // Verify signature
         let anchoring_cfg = anchoring_schema.actual_anchoring_config()?;
-        if let Some(pub_key) = anchoring_cfg.validators.get(id as usize) {
+        if let Some(pub_key) = anchoring_cfg.anchoring_keys.get(id as usize) {
             let (redeem_script, addr) = anchoring_cfg.redeem_script();
             let tx_addr = tx.output_address(anchoring_cfg.network);
             // Use following address if it exists
@@ -104,7 +104,7 @@ impl Transaction for MsgAnchoringUpdateLatest {
             return Ok(());
         }
         let anchoring_cfg = anchoring_schema.actual_anchoring_config()?;
-        let key = &anchoring_cfg.validators[id as usize];
+        let key = &anchoring_cfg.anchoring_keys[id as usize];
         match TxKind::from(tx.clone()) {
             TxKind::Anchoring(tx) => {
                 if !verify_anchoring_tx_payload(&tx, &schema)? {
@@ -166,15 +166,15 @@ fn verify_anchoring_tx_prev_hash(tx: &AnchoringTx,
 
     let prev_lects_count = {
         let mut prev_lects_count = 0;
-        for key in &anchoring_cfg.validators {
+        for key in &anchoring_cfg.anchoring_keys {
             if let Some(prev_lect_idx) = anchoring_schema.find_lect_position(key, &prev_txid)? {
                 let prev_lect = anchoring_schema
                     .lects(key)
                     .get(prev_lect_idx)?
                     .expect(&format!("Lect with index {} is absent in lects table for validator \
                                      {}",
-                                    prev_lect_idx,
-                                    key.to_hex()));
+                                     prev_lect_idx,
+                                     key.to_hex()));
                 assert_eq!(prev_txid,
                            prev_lect.tx().id(),
                            "Inconsistent reference to previous lect in Exonum");

@@ -139,7 +139,8 @@ fn main() {
             let anchoring_cfg = cfg.anchoring_service;
             let observer_cfg = anchoring_cfg.observer;
 
-            let services: Vec<Box<Service>> = vec![
+            let services: Vec<Box<Service>> =
+                vec![
                     Box::new(AnchoringService::new(anchoring_cfg.common,
                                                    anchoring_cfg.node.clone())),
                     Box::new(ConfigurationService::new()),
