@@ -82,7 +82,7 @@ impl AnchoringConfig {
         let majority_count = self.majority_count();
         let redeem_script = btc::RedeemScript::from_pubkeys(self.anchoring_keys.iter(),
                                                             majority_count)
-                .compressed(self.network);
+            .compressed(self.network);
         let addr = btc::Address::from_script(&redeem_script, self.network);
         (redeem_script, addr)
     }

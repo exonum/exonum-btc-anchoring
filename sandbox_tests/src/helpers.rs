@@ -244,9 +244,7 @@ pub fn anchor_first_block_lect_normal(sandbox: &AnchoringSandbox) {
     let anchored_tx = sandbox.latest_anchored_tx();
     let anchoring_addr = sandbox.current_addr();
 
-    sandbox
-        .client()
-        .expect(vec![
+    sandbox.client().expect(vec![
             request! {
                 method: "listunspent",
                 params: [0, 9999999, [&anchoring_addr.to_base58check()]],
@@ -386,13 +384,14 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     ]);
     sandbox.add_height(&[]);
 
-    let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
-        10,
-        sandbox.last_hash(),
-        &[],
-        None,
-        &btc::Address::from_base58check(&anchoring_addr.to_base58check()).unwrap()
-    );
+    let (_, signatures) = sandbox
+        .gen_anchoring_tx_with_signatures(10,
+                                          sandbox.last_hash(),
+                                          &[],
+                                          None,
+                                          &btc::Address::from_base58check(&anchoring_addr
+                                                                              .to_base58check())
+                                              .unwrap());
     let anchored_tx = sandbox.latest_anchored_tx();
 
     sandbox.broadcast(signatures[0].clone());
@@ -466,12 +465,12 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[cfg_tx]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().block_hash,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);

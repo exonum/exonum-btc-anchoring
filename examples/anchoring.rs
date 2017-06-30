@@ -128,7 +128,8 @@ fn main() {
             let cfg: ServicesConfig = ConfigFile::load(path).unwrap();
 
             let anchoring_cfg = cfg.anchoring_service;
-            let services: Vec<Box<Service>> = vec![
+            let services: Vec<Box<Service>> =
+                vec![
                     Box::new(AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node)),
                     Box::new(ConfigurationService::new()),
                 ];

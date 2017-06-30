@@ -18,7 +18,7 @@ use blockchain::dto::MsgAnchoringUpdateLatest;
 use super::{AnchoringHandler, AnchoringState, LectKind, MultisigAddress};
 
 impl AnchoringHandler {
-    #[cfg(not(feature="sandbox_tests"))]
+    #[cfg(not(feature = "sandbox_tests"))]
     #[doc(hidden)]
     pub fn new(client: Option<AnchoringRpc>, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
@@ -29,7 +29,7 @@ impl AnchoringHandler {
         }
     }
 
-    #[cfg(feature="sandbox_tests")]
+    #[cfg(feature = "sandbox_tests")]
     #[doc(hidden)]
     pub fn new(client: Option<AnchoringRpc>, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
@@ -465,10 +465,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    fn send_updated_lect(&mut self,
-                         lect: BitcoinTx,
-                         lects_count: u64,
-                         state: &mut ServiceContext) {
+    fn send_updated_lect(&mut self, lect: BitcoinTx, lects_count: u64, state: &mut ServiceContext) {
         if self.proposal_tx.is_some() {
             self.proposal_tx = None;
         }
@@ -482,7 +479,7 @@ impl AnchoringHandler {
                                                      lect.clone(),
                                                      lects_count,
                                                      state.secret_key());
-        state.add_transaction(Box::new(lect_msg)); 
+        state.add_transaction(Box::new(lect_msg));
     }
 }
 

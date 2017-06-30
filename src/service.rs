@@ -25,7 +25,7 @@ use blockchain::schema::AnchoringSchema;
 use blockchain::dto::{ANCHORING_MESSAGE_LATEST, ANCHORING_MESSAGE_SIGNATURE,
                       MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use error::Error as ServiceError;
-#[cfg(not(feature="sandbox_tests"))]
+#[cfg(not(feature = "sandbox_tests"))]
 use handler::error::Error as HandlerError;
 
 /// Anchoring service id.
@@ -103,12 +103,12 @@ impl Service for AnchoringService {
     fn handle_commit(&self, state: &mut ServiceContext) {
         let mut handler = self.handler.lock().unwrap();
         match handler.handle_commit(state) {
-            #[cfg(feature="sandbox_tests")]
+            #[cfg(feature = "sandbox_tests")]
             Err(ServiceError::Handler(e)) => {
                 error!("An error occured: {:?}", e);
                 handler.errors.push(e);
             }
-            #[cfg(not(feature="sandbox_tests"))]
+            #[cfg(not(feature = "sandbox_tests"))]
             Err(ServiceError::Handler(e)) => {
                 if let HandlerError::IncorrectLect { .. } = e {
                     panic!("A critical error occured: {}", e);

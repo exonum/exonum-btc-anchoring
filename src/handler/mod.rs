@@ -25,7 +25,7 @@ pub struct AnchoringHandler {
     pub node: AnchoringNodeConfig,
     #[doc(hidden)]
     pub proposal_tx: Option<AnchoringTx>,
-    #[cfg(feature="sandbox_tests")]
+    #[cfg(feature = "sandbox_tests")]
     #[doc(hidden)]
     pub errors: Vec<error::Error>,
     #[doc(hidden)]

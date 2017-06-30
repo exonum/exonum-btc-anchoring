@@ -9,9 +9,9 @@ use details::btc;
 use details::btc::transactions::{BitcoinTx, TxKind};
 
 #[doc(hidden)]
-#[cfg(not(feature="sandbox_tests"))]
+#[cfg(not(feature = "sandbox_tests"))]
 pub use bitcoinrpc::Client as RpcClient;
-#[cfg(feature="sandbox_tests")]
+#[cfg(feature = "sandbox_tests")]
 pub use super::sandbox::SandboxClient as RpcClient;
 
 pub type Result<T> = bitcoinrpc::Result<T>;
@@ -101,14 +101,12 @@ impl AnchoringRpc {
                                            addr: &str,
                                            limit: u32)
                                            -> Result<Vec<bitcoinrpc::TransactionInfo>> {
-        self.0
-            .listtransactions(limit, 0, true)
-            .map(|v| {
-                     v.into_iter()
-                         .rev()
-                         .filter(|tx| tx.address == Some(addr.into()))
-                         .collect::<Vec<_>>()
-                 })
+        self.0.listtransactions(limit, 0, true).map(|v| {
+            v.into_iter()
+                .rev()
+                .filter(|tx| tx.address == Some(addr.into()))
+                .collect::<Vec<_>>()
+        })
     }
 
     pub fn get_unspent_transactions(&self,
