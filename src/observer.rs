@@ -126,8 +126,12 @@ impl AnchoringChainObserver {
             let payload = lect.payload();
             let height = payload.block_height.into();
 
-            if anchoring_schema.anchoring_tx_chain().get(&height)?.as_ref() == Some(&lect) {
-                return Ok(());
+            // We already committed given lect to chain and there is no need to continue
+            // checking chain.
+            if let Some(other_lect) = anchoring_schema.anchoring_tx_chain().get(&height)? {
+                if other_lect == lect {
+                    return Ok(());
+                }
             }
 
             let confirmations = self.client.get_transaction_confirmations(&lect.id())?;
