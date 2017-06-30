@@ -10,8 +10,6 @@ extern crate exonum;
 extern crate btc_anchoring_service;
 extern crate configuration_service;
 
-use std::thread;
-
 use clap::{App, Arg, SubCommand};
 use bitcoin::network::constants::Network;
 use bitcoin::util::base58::ToBase58;
@@ -27,7 +25,6 @@ use configuration_service::ConfigurationService;
 use btc_anchoring_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpc,
                             AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
                             gen_anchoring_testnet_config, gen_btc_keypair};
-use btc_anchoring_service::observer::AnchoringChainObserver;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {
@@ -131,8 +128,6 @@ fn main() {
             let cfg: ServicesConfig = ConfigFile::load(path).unwrap();
 
             let anchoring_cfg = cfg.btc_anchoring_service;
-            let observer_cfg = anchoring_cfg.local.observer.clone();
-            let rpc_cfg = anchoring_cfg.local.rpc.clone();
 
             let services: Vec<Box<Service>> =
                 vec![
@@ -142,21 +137,8 @@ fn main() {
                 ];
             let blockchain = Blockchain::new(db, services);
 
-            let observer_thread = observer_cfg.map(|observer_cfg| {
-                let observer = AnchoringChainObserver::new(blockchain.clone(),
-                                                           rpc_cfg
-                                                               .expect("Rpc config is not setted"),
-                                                           observer_cfg);
-
-                thread::spawn(move || { observer.run().unwrap(); })
-            });
-
             let mut node = Node::new(blockchain, cfg.node);
             node.run().unwrap();
-
-            if let Some(thread) = observer_thread {
-                thread.join().unwrap();
-            }
         }
         ("keypair", Some(matches)) => {
             let network = match matches.value_of("NETWORK").unwrap() {
