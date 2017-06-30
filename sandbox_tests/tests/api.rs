@@ -241,9 +241,11 @@ fn test_api_anchoring_observer_normal() {
 
     anchor_first_block(&sandbox);
     anchor_first_block_lect_normal(&sandbox);
+    // Anchoring transaction for block with height 0.
     let first_anchored_tx = sandbox.latest_anchored_tx();
 
     anchor_second_block_normal(&sandbox);
+    // Anchoring transaction for block with height 10.
     let second_anchored_tx = sandbox.latest_anchored_tx();
 
     let observer = AnchoringChainObserver::new_with_client(sandbox.blockchain_ref().clone(),
@@ -268,9 +270,13 @@ fn test_api_anchoring_observer_normal() {
 
     let api_sandbox = ApiSandbox::new_with_blockchain(observer.blockchain().clone());
 
+    // Check that `first_anchored_tx` anchors the block at height 0.
     assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(0),
                Some(first_anchored_tx));
+    // Check that closest anchoring transaction for height 1 is
+    // `second_anchored_tx` that anchors the block at height 10.
     assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(1),
                Some(second_anchored_tx));
+    // Check that there are no anchoring transactions for heights that greater than 10
     assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(11), None);
 }

@@ -122,8 +122,8 @@ impl PublicApi {
         Ok(following_addr)
     }
 
-    /// Returns the anchoring transaction for the nearest block with
-    /// a height greater than the given.
+    /// Returns hex of the anchoring transaction for the nearest block with a height greater
+    /// or equal than the given.
     ///
     /// `GET /{api_prefix}/v1/nearest_lect/:height`
     pub fn nearest_lect(&self, height: u64) -> Result<Option<AnchoringTx>, ApiError> {

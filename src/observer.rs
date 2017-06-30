@@ -94,7 +94,7 @@ impl AnchoringChainObserver {
         let cfg = anchoring_schema.actual_anchoring_config()?;
         if let Some(lect) = self.find_lect(&view, &cfg)? {
             if !self.lect_payload_is_correct(&view, &lect)? {
-                warn!("Received lect with incorrect payload, content={:#?}", lect);
+                error!("Received lect with incorrect payload, content={:#?}", lect);
                 return Ok(());
             }
 
