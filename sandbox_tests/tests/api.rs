@@ -231,7 +231,7 @@ fn test_api_public_get_following_address_nonexistent() {
     assert_eq!(api_sandbox.get_following_address(), None);
 }
 
-// Test for an anchoring observer
+// Testing the observer for the existing anchoring chain.
 #[test]
 fn test_api_anchoring_observer_normal() {
     init_logger();

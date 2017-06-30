@@ -24,10 +24,10 @@ use exonum::helpers::clap::{GenerateCommand, RunCommand};
 use exonum::helpers::generate_testnet_config;
 use exonum::helpers;
 use configuration_service::ConfigurationService;
-use btc_anchoring_service::{AnchoringRpc, AnchoringService};
+use btc_anchoring_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpc,
+                            AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
+                            gen_anchoring_testnet_config, gen_btc_keypair};
 use btc_anchoring_service::observer::AnchoringChainObserver;
-use btc_anchoring_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
-                            BitcoinNetwork, gen_anchoring_testnet_config, gen_btc_keypair};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {
