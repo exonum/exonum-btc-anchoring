@@ -31,14 +31,14 @@ use btc_anchoring_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcCo
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {
-    pub common: AnchoringConfig,
-    pub node: AnchoringNodeConfig,
+    pub genesis: AnchoringConfig,
+    pub local: AnchoringNodeConfig,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ServicesConfig {
     pub node: NodeConfig,
-    pub anchoring_service: AnchoringServiceConfig,
+    pub btc_anchoring_service: AnchoringServiceConfig,
 }
 
 fn main() {
@@ -116,9 +116,9 @@ fn main() {
             for (idx, node_cfg) in node_cfgs.into_iter().enumerate() {
                 let cfg = ServicesConfig {
                     node: node_cfg,
-                    anchoring_service: AnchoringServiceConfig {
-                        common: anchoring_common.clone(),
-                        node: anchoring_nodes[idx].clone(),
+                    btc_anchoring_service: AnchoringServiceConfig {
+                        genesis: anchoring_common.clone(),
+                        local: anchoring_nodes[idx].clone(),
                     },
                 };
                 let file_name = format!("{}.toml", idx);
@@ -130,14 +130,14 @@ fn main() {
             let db = RunCommand::db(matches);
             let cfg: ServicesConfig = ConfigFile::load(path).unwrap();
 
-            let anchoring_cfg = cfg.anchoring_service;
-            let observer_cfg = anchoring_cfg.node.observer.clone();
-            let rpc_cfg = anchoring_cfg.node.rpc.clone();
+            let anchoring_cfg = cfg.btc_anchoring_service;
+            let observer_cfg = anchoring_cfg.local.observer.clone();
+            let rpc_cfg = anchoring_cfg.local.rpc.clone();
 
             let services: Vec<Box<Service>> =
                 vec![
-                    Box::new(AnchoringService::new(anchoring_cfg.common,
-                                                   anchoring_cfg.node.clone())),
+                    Box::new(AnchoringService::new(anchoring_cfg.genesis,
+                                                   anchoring_cfg.local.clone())),
                     Box::new(ConfigurationService::new()),
                 ];
             let blockchain = Blockchain::new(db, services);
