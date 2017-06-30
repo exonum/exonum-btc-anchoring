@@ -17,7 +17,7 @@ use rand::{SeedableRng, StdRng};
 
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{HexValue, Seed, gen_keypair_from_seed};
-use exonum::storage::{StorageValue, Map};
+use exonum::storage::{Map, StorageValue};
 use sandbox::config_updater::TxConfig;
 
 use btc_anchoring_service::{ANCHORING_SERVICE_NAME, AnchoringConfig, AnchoringNodeConfig};
@@ -1778,6 +1778,8 @@ fn test_anchoring_transit_changed_self_key_observer() {
     let anchoring_schema = AnchoringSchema::new(&view);
     let tx_chain_index = anchoring_schema.anchoring_tx_chain();
 
-    assert_eq!(tx_chain_index.get(&0.into()).unwrap(), Some(first_anchored_tx));
-    assert_eq!(tx_chain_index.get(&20.into()).unwrap(), Some(third_anchored_tx));
+    assert_eq!(tx_chain_index.get(&0.into()).unwrap(),
+               Some(first_anchored_tx));
+    assert_eq!(tx_chain_index.get(&20.into()).unwrap(),
+               Some(third_anchored_tx));
 }
