@@ -70,7 +70,7 @@ impl AnchoringChainObserver {
 
     /// Runs obesrver in infinity loop.
     pub fn run(&self) -> Result<(), ServiceError> {
-        info!("Anchoring chain observer runs with check frequency: {}ms",
+        info!("Launching anchoring chain observer with polling frequency {} ms",
               self.check_frequency);
         let duration = Duration::from_millis(self.check_frequency);
         loop {
@@ -126,10 +126,7 @@ impl AnchoringChainObserver {
             let payload = lect.payload();
             let height = payload.block_height.into();
 
-            if anchoring_schema
-                   .anchoring_tx_chain()
-                   .get(&height)?
-                   .is_some() {
+            if anchoring_schema.anchoring_tx_chain().get(&height)?.as_ref() == Some(&lect) {
                 return Ok(());
             }
 
