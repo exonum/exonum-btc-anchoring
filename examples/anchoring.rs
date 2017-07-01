@@ -128,7 +128,6 @@ fn main() {
             let cfg: ServicesConfig = ConfigFile::load(path).unwrap();
 
             let anchoring_cfg = cfg.btc_anchoring_service;
-
             let services: Vec<Box<Service>> =
                 vec![
                     Box::new(AnchoringService::new(anchoring_cfg.genesis,

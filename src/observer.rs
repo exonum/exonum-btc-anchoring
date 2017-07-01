@@ -6,7 +6,7 @@ use std::thread::sleep;
 use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::{Blockchain, Schema};
-use exonum::storage::{Fork, List, Map, MapTable, U64Key, View};
+use exonum::storage::Fork;
 
 use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
 use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
@@ -17,7 +17,7 @@ use error::Error as ServiceError;
 /// Type alias for milliseconds.
 pub type Milliseconds = u64;
 /// Type alias for block height.
-pub type Height = U64Key;
+pub type Height = u64;
 
 /// Anchoring observer configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -33,14 +33,6 @@ pub struct AnchoringChainObserver {
     blockchain: Blockchain,
     client: AnchoringRpc,
     check_frequency: Milliseconds,
-}
-
-impl<'a> AnchoringSchema<'a> {
-    /// Returns table that maps anchoring transactions to their heights.
-    pub fn anchoring_tx_chain(&self) -> MapTable<View, Height, AnchoringTx> {
-        let prefix = self.gen_table_prefix(128, None);
-        MapTable::new(prefix, self.view)
-    }
 }
 
 impl AnchoringChainObserver {
@@ -69,7 +61,7 @@ impl AnchoringChainObserver {
     }
 
     /// Runs obesrver in infinity loop.
-    pub fn run(&self) -> Result<(), ServiceError> {
+    pub fn run(&mut self) -> Result<(), ServiceError> {
         info!("Launching anchoring chain observer with polling frequency {} ms",
               self.check_frequency);
         let duration = Duration::from_millis(self.check_frequency);
@@ -84,23 +76,22 @@ impl AnchoringChainObserver {
 
     /// Tries to get `lect` for the current anchoring configuration and retrospectively adds
     /// all previosly unknown anchoring transactions.
-    pub fn check_anchoring_chain(&self) -> Result<(), ServiceError> {
-        let view = self.blockchain.view();
-        if !self.is_blockchain_inited(&view)? {
+    pub fn check_anchoring_chain(&mut self) -> Result<(), ServiceError> {
+        let mut fork = self.blockchain.fork();
+        if !self.is_blockchain_inited(&fork) {
             return Ok(());
         }
 
-        let anchoring_schema = AnchoringSchema::new(&view);
-        let cfg = anchoring_schema.actual_anchoring_config()?;
-        if let Some(lect) = self.find_lect(&view, &cfg)? {
-            if !self.lect_payload_is_correct(&view, &lect)? {
+        let cfg = AnchoringSchema::new(&fork).actual_anchoring_config();
+        if let Some(lect) = self.find_lect(&fork, &cfg)? {
+            if !self.lect_payload_is_correct(&fork, &lect) {
                 error!("Received lect with incorrect payload, content={:#?}", lect);
                 return Ok(());
             }
 
-            self.update_anchoring_chain(&view, &cfg, lect)?;
-            let changes = view.changes();
-            self.blockchain.merge(&changes)?;
+            self.update_anchoring_chain(&mut fork, &cfg, lect)?;
+            let patch = fork.into_patch();
+            self.blockchain.merge(patch).unwrap(); // FIXME remove unwrap.
         }
         Ok(())
     }
@@ -116,11 +107,11 @@ impl AnchoringChainObserver {
     }
 
     fn update_anchoring_chain(&self,
-                              view: &View,
+                              fork: &mut Fork,
                               actual_cfg: &AnchoringConfig,
                               mut lect: AnchoringTx)
                               -> Result<(), ServiceError> {
-        let anchoring_schema = AnchoringSchema::new(view);
+        let mut anchoring_schema = AnchoringSchema::new(fork);
 
         loop {
             let payload = lect.payload();
@@ -128,7 +119,7 @@ impl AnchoringChainObserver {
 
             // We already committed given lect to chain and there is no need to continue
             // checking chain.
-            if let Some(other_lect) = anchoring_schema.anchoring_tx_chain().get(&height)? {
+            if let Some(other_lect) = anchoring_schema.anchoring_tx_chain().get(&height) {
                 if other_lect == lect {
                     return Ok(());
                 }
@@ -141,8 +132,8 @@ impl AnchoringChainObserver {
                        lect);
 
                 anchoring_schema
-                    .anchoring_tx_chain()
-                    .put(&height, lect.clone().into())?;
+                    .anchoring_tx_chain_mut()
+                    .put(&height, lect.clone().into());
             }
 
             let prev_txid = payload.prev_tx_chain.unwrap_or_else(|| lect.prev_hash());
@@ -161,7 +152,7 @@ impl AnchoringChainObserver {
     }
 
     fn find_lect(&self,
-                 view: &View,
+                 fork: &Fork,
                  actual_cfg: &AnchoringConfig)
                  -> Result<Option<AnchoringTx>, ServiceError> {
         let actual_addr = actual_cfg.redeem_script().1;
@@ -171,7 +162,7 @@ impl AnchoringChainObserver {
 
         let unspent_txs: Vec<_> = self.client.unspent_transactions(&actual_addr)?;
         for tx in unspent_txs {
-            if self.transaction_is_lect(view, actual_cfg, &tx)? {
+            if self.transaction_is_lect(fork, actual_cfg, &tx)? {
                 if let TxKind::Anchoring(lect) = TxKind::from(tx) {
                     return Ok(Some(lect));
                 }
@@ -181,35 +172,32 @@ impl AnchoringChainObserver {
     }
 
     fn transaction_is_lect(&self,
-                           view: &View,
+                           fork: &Fork,
                            actual_cfg: &AnchoringConfig,
                            tx: &BitcoinTx)
                            -> Result<bool, ServiceError> {
         let txid = tx.id();
-        let anchoring_schema = AnchoringSchema::new(view);
+        let anchoring_schema = AnchoringSchema::new(fork);
 
         let mut lect_count = 0;
         for key in &actual_cfg.anchoring_keys {
-            if anchoring_schema.find_lect_position(key, &txid)?.is_some() {
+            if anchoring_schema.find_lect_position(key, &txid).is_some() {
                 lect_count += 1;
             }
         }
         Ok(lect_count >= actual_cfg.majority_count())
     }
 
-    fn lect_payload_is_correct(&self,
-                               view: &View,
-                               lect: &AnchoringTx)
-                               -> Result<bool, ServiceError> {
-        let core_schema = Schema::new(view);
+    fn lect_payload_is_correct(&self, fork: &Fork, lect: &AnchoringTx) -> bool {
+        let core_schema = Schema::new(fork);
         let payload = lect.payload();
-        let block_hash = core_schema.block_hash_by_height(payload.block_height)?;
-        Ok(block_hash == Some(payload.block_hash))
+        let block_hash = core_schema.block_hash_by_height(payload.block_height);
+        block_hash == Some(payload.block_hash)
     }
 
-    fn is_blockchain_inited(&self, view: &View) -> Result<bool, ServiceError> {
-        let schema = Schema::new(view);
-        let len = schema.block_hashes_by_height().len()?;
-        Ok(len > 0)
+    fn is_blockchain_inited(&self, fork: &Fork) -> bool {
+        let schema = Schema::new(fork);
+        let len = schema.block_hashes_by_height().len();
+        len > 0
     }
 }

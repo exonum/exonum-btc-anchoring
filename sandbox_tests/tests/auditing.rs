@@ -46,7 +46,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
     cfg.actual_from = from_height;
     cfg.validators.swap_remove(0);
     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
-    let tx = TxConfig::new(&sandbox.p(0), &cfg.serialize(), from_height, sandbox.s(0));
+    let tx = TxConfig::new(&sandbox.p(0), &cfg.into_bytes(), from_height, sandbox.s(0));
     (tx.raw().clone(), service_cfg)
 }
 
