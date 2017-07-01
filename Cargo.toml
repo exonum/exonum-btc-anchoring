@@ -29,12 +29,12 @@ params = "0.6.0"
 [dependencies.exonum]
 version = "0.1.0"
 git = "ssh://git@github.com/exonum/exonum-core.git"
-rev = "07840ee882865907e79147c0cd7870772fc9d5a5"
+rev = "b67e4414d7b0f851e272b6893f7d7d674891bc96"
 
 [dependencies.configuration_service]
 version = "0.1.0"
 git = "ssh://git@github.com/alekseysidorov/exonum-configuration.git"
-rev = "ce776ff0f29659fccc41601689d5df2ce73f6714"
+rev = "eea3cc5d481a223e65e49a69eee6c81991625b48"
 
 [features]
 default = []
