@@ -153,9 +153,9 @@ fn gen_following_cfg_add_two_validators_changed_self_key
 
         for keypair in &exonum_keypairs {
             cfg.validator_keys.push(ValidatorKeys {
-                consensus_key: (keypair.0).0,
-                service_key: (keypair.1).0,
-            });
+                                        consensus_key: (keypair.0).0,
+                                        service_key: (keypair.1).0,
+                                    });
             // Add validator to exonum sandbox validators map
             sandbox
                 .validators_map
@@ -1499,13 +1499,13 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             cfg.actual_from = cfg_change_height;
             cfg.previous_cfg_hash = sandbox.cfg().hash();
             cfg.validator_keys.push(ValidatorKeys {
-                consensus_key: sandbox_consensus_pubkey,
-                service_key: sandbox_service_pubkey,
-            });
+                                        consensus_key: sandbox_consensus_pubkey,
+                                        service_key: sandbox_service_pubkey,
+                                    });
             cfg.validator_keys.push(ValidatorKeys {
-                consensus_key: (validator_keypair.0).0,
-                service_key: (validator_keypair.1).0,
-            });
+                                        consensus_key: (validator_keypair.0).0,
+                                        service_key: (validator_keypair.1).0,
+                                    });
             cfg.validator_keys.swap(0, 3);
             // Generate cfg change tx
             *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
