@@ -38,10 +38,6 @@ bitcoind --daemon
 ```
 Downloading and indexing of the bitcoin blockchain may take a lot of time, especially for the mainnet.
 
-***Note!** If you connect `bitcoind` node to the existing validator you must import current
-`anchoring` address by the `importaddress` rpc call. You can obtain current anchoring 
-address via [`exonum-dashboard`][exonum:dashboard].*
-
 ## Testnet deployment
 
 For quick anchoring demonstration you can use built-in anchoring example.
@@ -181,11 +177,6 @@ With these variables you can perform the following actions:
  - [Change list of validators](#change-list-of-validators).
  - Just change other variables to more convenient.
 
-You may perform these actions via [exonum-dashboard][exonum:dashboard] web application. 
-The application shows anchoring address and can change configuration. 
-To connect an application with the exonum anchoring node, you must specify its api addresses in the `Settings` tab. 
-Also you can change selected validator by these settings.
-
 #### Add funds
 
 Send to anchoring wallet some btc and save raw transaction body hex. Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex. 
@@ -207,7 +198,7 @@ Calculate how many blocks will be taken during this time and add this number to 
 * Change list of validators via editing `anchoring_keys` array.
 * Initiate the config update procedure.
 * Make sure that config update procedure is not delayed. That is, do not delay the voting procedure for the new configuration.
-* Look at the new address of the anchoring in the [`exonum-dashboard`][exonum:dashboard] and [set private key for it](#updating-anchoring-address).
+* Look at the new address of the anchoring by the anchoring public [api][exonum:anchoring_public_api].
 
 ***Note!** If transfering transaction has been lost you need establishing a new anchoring chain by a new funding transaction.*
 
@@ -232,5 +223,6 @@ you need to restart the node for the changes to take effect.
 [exonum:configuration_service]: https://github.com/exonum/exonum-configuration
 [exonum:configuration_tutorial]: https://github.com/exonum/exonum-configuration/blob/master/doc/testnet-api-tutorial.md
 [exonum:dashboard]: https://github.com/exonum/exonum-dashboard
-[exonum:anchoring_transfering]: #todo
+[exonum:anchoring_transfering]: https://github.com/exonum/exonum-doc/blob/master/src/advanced/bitcoin-anchoring.md#changing-validators-list
 [exonum:anchoring_gen_keypair]: #todo
+[exonum:anchoring_public_api]: https://github.com/exonum/exonum-doc/blob/master/src/advanced/bitcoin-anchoring.md#following-address
