@@ -10,7 +10,7 @@ use exonum::crypto::Hash;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::{LectContent, MsgAnchoringSignature};
 use details::btc;
-use details::btc::transactions::BitcoinTx;
+use details::btc::transactions::{AnchoringTx, BitcoinTx};
 use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 
 /// Unique identifier of signature for the `AnchoringTx`.
@@ -102,6 +102,12 @@ impl<T> AnchoringSchema<T>
     /// Returns the table that keeps the anchoring transaction for any known txid.
     pub fn known_txs(&self) -> MapIndex<&T, btc::TxId, BitcoinTx> {
         let prefix = self.gen_table_prefix(7, &());
+        MapIndex::new(prefix, &self.view)
+    }
+
+    /// Returns table that maps anchoring transactions to their heights.
+    pub fn anchoring_tx_chain(&self) -> MapIndex<&T, u64, AnchoringTx> {
+        let prefix = self.gen_table_prefix(128, &());
         MapIndex::new(prefix, &self.view)
     }
 
@@ -266,6 +272,14 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
     /// [1]: struct.AnchoringSchema.html#method.known_txs
     pub fn known_txs_mut(&mut self) -> MapIndex<&mut Fork, btc::TxId, BitcoinTx> {
         let prefix = self.gen_table_prefix(7, &());
+        MapIndex::new(prefix, &mut self.view)
+    }
+
+    /// Mutable variant of the [`signatures`][1] index.
+    ///
+    /// [1]: struct.AnchoringSchema.html#method.anchoring_tx_chain
+    pub fn anchoring_tx_chain_mut(&mut self) -> MapIndex<&mut Fork, u64, AnchoringTx> {
+        let prefix = self.gen_table_prefix(128, &());
         MapIndex::new(prefix, &mut self.view)
     }
 

@@ -23,12 +23,15 @@ use iron::prelude::{IronResult, Response as IronResponse};
 use exonum::crypto::HexValue;
 use exonum::messages::Message;
 use exonum::api::Api;
+use exonum::blockchain::Blockchain;
 
+use btc_anchoring_service::observer::AnchoringChainObserver;
 use btc_anchoring_service::api::{AnchoringInfo, LectInfo, PublicApi};
-use btc_anchoring_service::details::btc;
-use btc_anchoring_service::details::btc::transactions::BitcoinTx;
 use btc_anchoring_service::blockchain::dto::MsgAnchoringUpdateLatest;
-use btc_anchoring_service::details::sandbox::Request;
+use btc_anchoring_service::details::btc;
+use btc_anchoring_service::details::btc::transactions::{AnchoringTx, BitcoinTx};
+use btc_anchoring_service::details::sandbox::{Request, SandboxClient};
+use btc_anchoring_service::details::rpc::AnchoringRpc;
 use btc_anchoring_sandbox::AnchoringSandbox;
 use btc_anchoring_sandbox::helpers::*;
 
@@ -38,19 +41,19 @@ struct ApiSandbox {
 
 impl ApiSandbox {
     fn new(anchoring_sandbox: &AnchoringSandbox) -> ApiSandbox {
+        Self::new_with_blockchain(anchoring_sandbox.blockchain_ref().clone())
+    }
+
+    fn new_with_blockchain(blockchain: Blockchain) -> ApiSandbox {
         let mut router = Router::new();
-        let api = PublicApi { blockchain: anchoring_sandbox.blockchain_ref().clone() };
+        let api = PublicApi { blockchain };
         api.wire(&mut router);
 
-        ApiSandbox { router: router }
+        ApiSandbox { router }
     }
 
     fn request_get<A: AsRef<str>>(&self, route: A) -> IronResult<IronResponse> {
-        info!("GET request:'{}'",
-              format!("http://127.0.0.1:8000/{}", route.as_ref()));
-        iron_test::request::get(&format!("http://127.0.0.1:8000/{}", route.as_ref()),
-                                Headers::new(),
-                                &self.router)
+        request_get(&self.router, route)
     }
 
     fn get_actual_address(&self) -> btc::Address {
@@ -79,6 +82,21 @@ impl ApiSandbox {
         let body = response_body(response);
         serde_json::from_value(body).unwrap()
     }
+
+    pub fn get_nearest_anchoring_tx_for_height(&self, height: u64) -> Option<AnchoringTx> {
+        let response = self.request_get(format!("/v1/nearest_lect/{}", height))
+            .unwrap();
+        let body = response_body(response);
+        serde_json::from_value(body).unwrap()
+    }
+}
+
+fn request_get<A: AsRef<str>>(router: &Router, route: A) -> IronResult<IronResponse> {
+    info!("GET request:'{}'",
+          format!("http://127.0.0.1:8000{}", route.as_ref()));
+    iron_test::request::get(&format!("http://127.0.0.1:8000{}", route.as_ref()),
+                            Headers::new(),
+                            router)
 }
 
 fn response_body(response: IronResponse) -> serde_json::Value {
@@ -211,4 +229,54 @@ fn test_api_public_get_following_address_nonexistent() {
     let sandbox = AnchoringSandbox::initialize(&[]);
     let api_sandbox = ApiSandbox::new(&sandbox);
     assert_eq!(api_sandbox.get_following_address(), None);
+}
+
+// Testing the observer for the existing anchoring chain.
+#[test]
+fn test_api_anchoring_observer_normal() {
+    init_logger();
+
+    let sandbox = AnchoringSandbox::initialize(&[]);
+    let anchoring_addr = sandbox.current_addr();
+
+    anchor_first_block(&sandbox);
+    anchor_first_block_lect_normal(&sandbox);
+    // Anchoring transaction for block with height 0.
+    let first_anchored_tx = sandbox.latest_anchored_tx();
+
+    anchor_second_block_normal(&sandbox);
+    // Anchoring transaction for block with height 10.
+    let second_anchored_tx = sandbox.latest_anchored_tx();
+
+    let mut observer =
+        AnchoringChainObserver::new_with_client(sandbox.blockchain_ref().clone(),
+                                                AnchoringRpc(SandboxClient::default()),
+                                                0);
+    observer.client().expect(vec![
+        request! {
+            method: "listunspent",
+            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&second_anchored_tx, &anchoring_addr, 10)
+            ]
+        },
+        get_transaction_request(&second_anchored_tx),
+        confirmations_request(&second_anchored_tx, 100),
+        get_transaction_request(&first_anchored_tx),
+        confirmations_request(&first_anchored_tx, 200),
+        get_transaction_request(&sandbox.current_funding_tx()),
+    ]);
+    observer.check_anchoring_chain().unwrap();
+
+    let api_sandbox = ApiSandbox::new_with_blockchain(observer.blockchain().clone());
+
+    // Check that `first_anchored_tx` anchors the block at height 0.
+    assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(0),
+               Some(first_anchored_tx));
+    // Check that closest anchoring transaction for height 1 is
+    // `second_anchored_tx` that anchors the block at height 10.
+    assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(1),
+               Some(second_anchored_tx));
+    // Check that there are no anchoring transactions for heights that greater than 10
+    assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(11), None);
 }

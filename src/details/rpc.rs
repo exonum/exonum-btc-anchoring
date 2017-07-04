@@ -69,6 +69,11 @@ impl AnchoringRpc {
         }
     }
 
+    pub fn get_transaction_confirmations(&self, txid: &btc::TxId) -> Result<Option<u64>> {
+        let info = self.get_transaction_info(&txid.be_hex_string())?;
+        Ok(info.and_then(|info| info.confirmations))
+    }
+
     pub fn send_transaction(&self, tx: BitcoinTx) -> Result<()> {
         let tx_hex = tx.to_hex();
         self.0.sendrawtransaction(&tx_hex)?;

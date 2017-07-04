@@ -10,7 +10,7 @@ use exonum::api::{Api, ApiError};
 
 use details::btc;
 use details::btc::TxId;
-use details::btc::transactions::{BitcoinTx, TxKind};
+use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
 use blockchain::schema::AnchoringSchema;
 use blockchain::dto::LectContent;
 
@@ -119,6 +119,24 @@ impl PublicApi {
             .map(|cfg| cfg.redeem_script().1);
         Ok(following_addr)
     }
+
+    /// Returns hex of the anchoring transaction for the nearest block with a height greater
+    /// or equal than the given.
+    ///
+    /// `GET /{api_prefix}/v1/nearest_lect/:height`
+    pub fn nearest_lect(&self, height: u64) -> Result<Option<AnchoringTx>, ApiError> {
+        let snapshot = self.blockchain.snapshot();
+        let anchoring_schema = AnchoringSchema::new(&snapshot);
+        let tx_chain = anchoring_schema.anchoring_tx_chain();
+
+        // TODO use binary find.
+        for (tx_height, tx) in &tx_chain {
+            if tx_height >= height {
+                return Ok(Some(tx));
+            }
+        }
+        Ok(None)
+    }
 }
 
 impl Api for PublicApi {
@@ -164,6 +182,29 @@ impl Api for PublicApi {
             _self.ok_response(&json!(addr))
         };
 
+        let _self = self.clone();
+        let nearest_lect = move |req: &mut Request| -> IronResult<Response> {
+            let map = req.extensions.get::<Router>().unwrap();
+            match map.find("height") {
+                Some(height_str) => {
+                    let height: u64 = height_str
+                        .parse()
+                        .map_err(|e| {
+                                     let msg = format!("An error during parsing of the block \
+                                                        height occurred: {}",
+                                                       e);
+                                     ApiError::IncorrectRequest(msg.into())
+                                 })?;
+                    let lect = _self.nearest_lect(height)?;
+                    _self.ok_response(&json!(lect))
+                }
+                None => {
+                    let msg = "The block height is not specified.";
+                    Err(ApiError::IncorrectRequest(msg.into()))?
+                }
+            }
+        };
+
         router.get("/v1/address/actual", actual_address, "actual_address");
         router.get("/v1/address/following",
                    following_address,
@@ -172,5 +213,6 @@ impl Api for PublicApi {
         router.get("/v1/actual_lect/:id",
                    current_lect_of_validator,
                    "current_lect_of_validator");
+        router.get("/v1/nearest_lect/:height", nearest_lect, "nearest_lect");
     }
 }
