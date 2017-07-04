@@ -135,7 +135,7 @@ impl Service for AnchoringService {
     /// See [`PublicApi`](api/struct.PublicApi.html) for details.
     fn public_api_handler(&self, context: &ApiContext) -> Option<Box<Handler>> {
         let handler = self.handler.lock().unwrap();
-        let router = PublicApiRouter::new(context.blockchain().clone(), &handler.node);
+        let router = PublicApiHandler::new(context.blockchain().clone(), &handler.node);
         Some(Box::new(router))
     }
 }
@@ -200,14 +200,15 @@ pub fn gen_anchoring_testnet_config(client: &AnchoringRpc,
 }
 
 /// Helper class that combines `Router` for public api with the observer thread.
-struct PublicApiRouter {
+struct PublicApiHandler {
     router: Router,
     observer: Option<thread::JoinHandle<()>>,
 }
 
-impl PublicApiRouter {
-    /// Creates router instance for the given `blockchain` and anchoring node `config`
-    pub fn new(blockchain: Blockchain, config: &AnchoringNodeConfig) -> PublicApiRouter {
+impl PublicApiHandler {
+    /// Creates public api handler instance for the given `blockchain`
+    /// and anchoring node `config`.
+    pub fn new(blockchain: Blockchain, config: &AnchoringNodeConfig) -> PublicApiHandler {
         let mut router = Router::new();
         let api = PublicApi { blockchain: blockchain.clone() };
         api.wire(&mut router);
@@ -219,17 +220,17 @@ impl PublicApiRouter {
             thread::spawn(move || { observer.run().unwrap(); })
         });
 
-        PublicApiRouter { router, observer }
+        PublicApiHandler { router, observer }
     }
 }
 
-impl Handler for PublicApiRouter {
+impl Handler for PublicApiHandler {
     fn handle(&self, request: &mut Request) -> IronResult<Response> {
         self.router.handle(request)
     }
 }
 
-impl Drop for PublicApiRouter {
+impl Drop for PublicApiHandler {
     fn drop(&mut self) {
         if let Some(observer_thread) = self.observer.take() {
             observer_thread.join().unwrap()
