@@ -118,6 +118,65 @@ $ anchoring run --node-config <destdir>/<m>.toml --leveldb-path <destdir>/db/<m>
 
 If you want to see additional information you may specify log level by environment variable `RUST_LOG="btc_anchoring_service=info"`.
 
+<<<<<<< HEAD
+=======
+## Production deployment
+
+Production deployment performs in a few stages.
+
+### Generate template config
+At the first stage, one of the participants creates a template of blockchain consensus configuration and broadcasts its to other members.
+```
+$ anchoring generate-template \
+    --anchoring-fee <fee in satoshis> \
+    --anchoring-frequency <frequency in exonum blocks> \
+    --anchoring-utxo-confirmations <confirmations number> \
+    <number of nodes> \
+    <template.toml> \
+    <bitcoin network type>
+```
+### Generate node keys
+Then each of participants generates own public and secret keys files.
+```
+$ anchoring keygen <path-to-key/validator_ident> <bitcoin network type>
+```
+This command generates two files: `validator_ident` with the validator's keypairs and
+`validator_ident.pub` file only with the public keys.
+### Exchange of public keys
+In next stage they exchanges public keys files and imports them in predetermined order.
+```
+$ anchoring add-validator \
+    <template.toml> \
+    <path-to-key/validator_ident>.pub \
+    --listen-addr <ip:port>
+```
+
+### Generate node configuration
+Participants need to send some bitcoins to the anchoring address in order to enable Bitcoin anchoring.
+One of participants generates initial `funding_tx` by init command:
+```
+anchoring init <template.toml> \
+    <path-to-key/validator_ident> \
+    <output-dir/validator_ident> \
+    --anchoring-host <bitcoind RPC host> \
+    --anchoring-password <bitcoind RPC password> \
+    --anchoring-user <<bitcoind RPC username> \
+    --anchoring-create-finding-tx <funds amount in satoshis>
+```
+This command generates configuration of node from the `validator_ident` file and returns 
+txid of generated `funding_tx`, other participants uses it in their init command:
+```
+anchoring init <template.toml> \
+    <path-to-key/validator_ident> \
+    <output-dir/validator_ident> \
+    --anchoring-host <bitcoind RPC host> \
+    --anchoring-password <bitcoind RPC password> \
+    --anchoring-user <<bitcoind RPC username> \
+    --anchoring-funding-txid <txid of created anchoring tx>
+```
+As result `init` command generates node configuration file, that can be used to launching.
+
+>>>>>>> Clarify the deploy doc.
 ## Maintenance
  
 As maintainer, you can change the anchoring [configuration parameters](#change-configuration-parameters).
