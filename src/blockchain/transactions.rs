@@ -46,7 +46,7 @@ impl MsgAnchoringSignature {
         let id = self.validator();
         let actual_cfg = core_schema.actual_configuration();
         // Verify from field
-        if actual_cfg.validators.get(id as usize) != Some(self.from()) {
+        if actual_cfg.validator_keys.get(id as usize).map(|k| k.service_key) != Some(*self.from()) {
             warn!("Received msg from non-validator, content={:#?}", self);
             return false;
         }
@@ -107,7 +107,10 @@ impl MsgAnchoringUpdateLatest {
         // Verify lect with actual cfg
         let actual_cfg = core_schema.actual_configuration();
 
-        if actual_cfg.validators.get(self.validator() as usize) != Some(self.from()) {
+        if actual_cfg
+            .validator_keys
+            .get(self.validator() as usize)
+            .map(|k| k.service_key) != Some(*self.from()) {
             warn!("Received lect from non validator, content={:#?}", self);
             return None;
         }

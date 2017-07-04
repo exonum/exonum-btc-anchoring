@@ -18,6 +18,7 @@ use rand::{SeedableRng, StdRng};
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{HexValue, Seed, gen_keypair_from_seed};
 use exonum::storage::StorageValue;
+use exonum::blockchain::ValidatorKeys;
 use sandbox::config_updater::TxConfig;
 
 use btc_anchoring_service::{ANCHORING_SERVICE_NAME, AnchoringConfig, AnchoringNodeConfig};
@@ -151,8 +152,10 @@ fn gen_following_cfg_add_two_validators_changed_self_key
         cfg.previous_cfg_hash = sandbox.cfg().hash();
 
         for keypair in &exonum_keypairs {
-            cfg.validator_keys.push((keypair.0).0);
-            cfg.service_keys.push((keypair.1).0);
+            cfg.validator_keys.push(ValidatorKeys {
+                consensus_key: (keypair.0).0,
+                service_key: (keypair.1).0,
+            });
             // Add validator to exonum sandbox validators map
             sandbox
                 .validators_map
@@ -1449,8 +1452,8 @@ fn test_anchoring_transit_after_exclude_from_validator() {
 
     let mut sandbox = AnchoringSandbox::initialize(&[]);
 
-    let sandbox_consensus_pubkey = sandbox.cfg().validator_keys[0];
-    let sandbox_service_pubkey = sandbox.cfg().service_keys[0];
+    let sandbox_consensus_pubkey = sandbox.cfg().validator_keys[0].consensus_key;
+    let sandbox_service_pubkey = sandbox.cfg().validator_keys[0].service_key;
 
     anchor_first_block(&sandbox);
     anchor_first_block_lect_normal(&sandbox);
@@ -1495,12 +1498,15 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             let mut cfg = sandbox.cfg();
             cfg.actual_from = cfg_change_height;
             cfg.previous_cfg_hash = sandbox.cfg().hash();
-            cfg.validator_keys.push(sandbox_consensus_pubkey);
-            cfg.validator_keys.push((validator_keypair.0).0);
-            cfg.service_keys.push(sandbox_service_pubkey);
-            cfg.service_keys.push((validator_keypair.1).0);
+            cfg.validator_keys.push(ValidatorKeys {
+                consensus_key: sandbox_consensus_pubkey,
+                service_key: sandbox_service_pubkey,
+            });
+            cfg.validator_keys.push(ValidatorKeys {
+                consensus_key: (validator_keypair.0).0,
+                service_key: (validator_keypair.1).0,
+            });
             cfg.validator_keys.swap(0, 3);
-            cfg.service_keys.swap(0, 3);
             // Generate cfg change tx
             *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
             cfg
