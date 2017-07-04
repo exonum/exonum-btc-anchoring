@@ -38,9 +38,9 @@ bitcoind --daemon
 ```
 Downloading and indexing of the bitcoin blockchain may take a lot of time, especially for the mainnet.
 
-## Testnet deployment
+## Deployment
 
-For quick anchoring demonstration you can use built-in anchoring example.
+For now we have no quick "testnet" deployment, but for fast anchoring demonstration you can use built-in anchoring example, and regular deployment guide.
 ```shell
 $ cargo install --example anchoring
 ```
@@ -48,16 +48,18 @@ $ cargo install --example anchoring
 ### Create blockchain with anchoring
 After installation you need to generate configuration.
 For this you need:
-1. Generate common config:
+
+#### Generate template config:
+At the first stage, one of the participants creates a template of blockchain consensus configuration and broadcasts its to other members.
 ```
 $ anchoring generate-template \
     <Path where save template config> \
     <Network in which anchoring shoud work (testnet\bitcoin)> \
     --anchoring-fee <fee is satoshis>
 ```
-2. Share this config with all nodes.
 
-3. Generate config for each node:
+#### Generate config for each node:
+Then each of participants generates own public and secret node config files.
 ```
 $ anchoring generate-config \
     <Path to saved template config> \
@@ -68,11 +70,14 @@ $ anchoring generate-config \
     [--anchoring-password <bitcoind RPC password>] \
     --peer-addr <external node listening address>
 ```
+Each node should broadcast public config part.
+#### Finalizing configuration
+When administrator collect all public configs, he can could create final node configuration.
 
-4. Each node should share "public config".
-5. When you collect all public configs, you could create your final config.
 
- - One of administrators should create funding transaction, and give its hash to the others.
+Participants need to send some bitcoins to the anchoring address in order to enable Bitcoin anchoring.
+For this:
+ - One of participants generates initial `funding_tx` by init command:
 ```
 $ anchoring finalize 
     <Path to saved private node config> \
@@ -81,8 +86,10 @@ $ anchoring finalize
     --public-configs <Path to node1 public config>\
     [<Path to node2 public config> ...]
 ```
+This command generates configuration of node and returns 
+txid of generated `funding_tx`:
 
- - While others, should use this hash.
+ - While others, should use this `funding_tx`.
 ```
 $ anchoring finalize 
     <Path to saved private node config> \
@@ -92,6 +99,7 @@ $ anchoring finalize
     [<Path to node2 public config> ...]
 ```
 This is important, because all nodes in the network should start from one state.
+As result `finalize` command generates node configuration file, that can be used to launching.
 
 Which create the configuration of `N` exonum anchoring nodes in destination directory using given `bitcoind` by rpc.
 
@@ -101,7 +109,7 @@ Also in the generated configuration files you may specify public and private api
 since the initial funding transaction will be created during the testnet generation.
 For testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.*
 
-### Launching testnet
+### Launching node
 
 Launch all exonum nodes in the testnet. To launch node `m`, execute:
 ```
@@ -109,38 +117,6 @@ $ anchoring run --node-config <destdir>/<m>.toml --leveldb-path <destdir>/db/<m>
 ```
 
 If you want to see additional information you may specify log level by environment variable `RUST_LOG="btc_anchoring_service=info"`.
-
-## Production deployment
-
-Production deployment performs in a few stages.
-
-At the first stage, one of the participants creates a template of blockchain consensus configuration and broadcasts its to other members.
-```
-$ anchoring generate-template -o <template.toml> \
-    --anchoring-fee <fee is satoshis> \
-    --anchoring-utxo-confirmations <confirmations in bitcoin blocks>
-```
-Then each of participants generates own public and secret keys files.
-```
-$ anchoring generate-keys -o <output-dir>
-```
-In next stage they exchanges public keys files and imports them in predetermined order.
-```
-$ anchoring import-validators -t <template.toml> -k <keys-directory> -c <validator.toml>
-```
-After that, the participant discovers the resulting address. And sends `bitcoins` to it, hex 
-of this transaction uses as initial `funding_tx`.
-```
-$ anchoring get-anchoring-address -c <validator.toml>
-```
-In final stage each node finalizes the validator configuration.
-```
-$ anchoring finalize-configuration -c <validator.toml> \
-    --anchoring-funding-tx <hex of initial funding transaction> \ 
-    --anchoring-host <bitcoind RPC host> \
-    --anchoring-user <bitcoind RPC username> \
-    --anchoring-password <bitcoind RPC password> \
-```
 
 ## Maintenance
  
@@ -194,7 +170,7 @@ transaction malleability. See this [article][exonum:anchoring_transfering] for d
 
 * Make sure that difference between the activation height (`actual_from`) and current `Exonum` blockchain height is enough for get sufficient confirmations for the latest anchored transaction. Usually 6 hours are enough for this. 
 Calculate how many blocks will be taken during this time and add this number to the `current_height`.
-* If necessary, [generate][exonum:anchoring_gen_keypair] a new key pair for anchoring.
+* If necessary, [generate](#generate-node-keys) a new key pair for anchoring.
 * Change list of validators via editing `anchoring_keys` array.
 * Initiate the config update procedure.
 * Make sure that config update procedure is not delayed. That is, do not delay the voting procedure for the new configuration.
@@ -224,5 +200,4 @@ you need to restart the node for the changes to take effect.
 [exonum:configuration_tutorial]: https://github.com/exonum/exonum-configuration/blob/master/doc/testnet-api-tutorial.md
 [exonum:dashboard]: https://github.com/exonum/exonum-dashboard
 [exonum:anchoring_transfering]: https://github.com/exonum/exonum-doc/blob/master/src/advanced/bitcoin-anchoring.md#changing-validators-list
-[exonum:anchoring_gen_keypair]: #todo
 [exonum:anchoring_public_api]: https://github.com/exonum/exonum-doc/blob/master/src/advanced/bitcoin-anchoring.md#following-address
