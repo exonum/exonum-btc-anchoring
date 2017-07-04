@@ -132,7 +132,7 @@ impl PublicApi {
         // TODO use binary find.
         for (tx_height, tx) in &tx_chain {
             if tx_height >= height {
-                return Ok(Some(tx))
+                return Ok(Some(tx));
             }
         }
         Ok(None)

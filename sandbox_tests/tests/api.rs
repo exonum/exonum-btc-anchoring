@@ -248,9 +248,10 @@ fn test_api_anchoring_observer_normal() {
     // Anchoring transaction for block with height 10.
     let second_anchored_tx = sandbox.latest_anchored_tx();
 
-    let mut observer = AnchoringChainObserver::new_with_client(sandbox.blockchain_ref().clone(),
-                                                           AnchoringRpc(SandboxClient::default()),
-                                                           0);
+    let mut observer =
+        AnchoringChainObserver::new_with_client(sandbox.blockchain_ref().clone(),
+                                                AnchoringRpc(SandboxClient::default()),
+                                                0);
     observer.client().expect(vec![
         request! {
             method: "listunspent",

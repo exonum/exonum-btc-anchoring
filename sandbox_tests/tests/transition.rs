@@ -17,7 +17,7 @@ use rand::{SeedableRng, StdRng};
 
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{HexValue, Seed, gen_keypair_from_seed};
-use exonum::storage::{StorageValue};
+use exonum::storage::StorageValue;
 use sandbox::config_updater::TxConfig;
 
 use btc_anchoring_service::{ANCHORING_SERVICE_NAME, AnchoringConfig, AnchoringNodeConfig};
@@ -1744,9 +1744,10 @@ fn test_anchoring_transit_changed_self_key_observer() {
     sandbox.add_height(&lects);
 
     let anchoring_addr = sandbox.current_addr();
-    let mut observer = AnchoringChainObserver::new_with_client(sandbox.blockchain_ref().clone(),
-                                                           AnchoringRpc(SandboxClient::default()),
-                                                           0);
+    let mut observer =
+        AnchoringChainObserver::new_with_client(sandbox.blockchain_ref().clone(),
+                                                AnchoringRpc(SandboxClient::default()),
+                                                0);
 
     observer.client().expect(vec![
         request! {
@@ -1773,8 +1774,6 @@ fn test_anchoring_transit_changed_self_key_observer() {
     let anchoring_schema = AnchoringSchema::new(&snapshot);
     let tx_chain_index = anchoring_schema.anchoring_tx_chain();
 
-    assert_eq!(tx_chain_index.get(&0),
-               Some(first_anchored_tx));
-    assert_eq!(tx_chain_index.get(&20),
-               Some(third_anchored_tx));
+    assert_eq!(tx_chain_index.get(&0), Some(first_anchored_tx));
+    assert_eq!(tx_chain_index.get(&20), Some(third_anchored_tx));
 }

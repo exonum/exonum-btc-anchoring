@@ -210,7 +210,8 @@ impl PublicApiHandler {
 
         let observer = config.observer.clone().map(|observer_cfg| {
             let rpc_cfg = config.rpc.clone().expect("Rpc config is not setted");
-            let mut observer = AnchoringChainObserver::new(blockchain.clone(), rpc_cfg, observer_cfg);
+            let mut observer =
+                AnchoringChainObserver::new(blockchain.clone(), rpc_cfg, observer_cfg);
 
             thread::spawn(move || { observer.run().unwrap(); })
         });
