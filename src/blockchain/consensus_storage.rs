@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde_json;
 use serde::{Deserialize, Deserializer};
 
@@ -10,21 +12,21 @@ use details::btc::transactions::FundingTx;
 /// Public part of anchoring service configuration stored in blockchain.
 #[derive(Deserialize, Serialize, Debug, Clone, PartialEq)]
 pub struct AnchoringConfig {
-    /// Validators' public keys from which the current `anchoring` address can be calculated.
-    pub validators: Vec<btc::PublicKey>,
-    /// The transaction that funds `anchoring` address.
+    /// Validators' public keys from which the current anchoring address can be calculated.
+    pub anchoring_keys: Vec<btc::PublicKey>,
+    /// The transaction that funds anchoring address.
     /// If the anchoring transactions chain is empty, it will be the first transaction in the chain.
     /// Note: you must specify a suitable transaction before the network launching.
     pub funding_tx: Option<FundingTx>,
-    /// A fee for each transaction in chain
+    /// Fee for each transaction in chain.
     pub fee: u64,
-    /// The frequency in blocks with which the generation of new `anchoring`
+    /// The frequency in blocks with which the generation of new anchoring
     /// transactions in the chain occurs.
     pub frequency: u64,
     /// The minimum number of confirmations in bitcoin network for the transition to a
-    /// new `anchoring` address.
+    /// new anchoring address.
     pub utxo_confirmations: u64,
-    /// The current bitcoin network type
+    /// The current bitcoin network type.
     #[serde(serialize_with = "btc_network_to_str", deserialize_with = "btc_network_from_str")]
     pub network: btc::Network,
 }
@@ -32,7 +34,7 @@ pub struct AnchoringConfig {
 impl Default for AnchoringConfig {
     fn default() -> AnchoringConfig {
         AnchoringConfig {
-            validators: vec![],
+            anchoring_keys: vec![],
             funding_tx: None,
             fee: 1000,
             frequency: 500,
@@ -43,14 +45,16 @@ impl Default for AnchoringConfig {
 }
 
 impl AnchoringConfig {
-    /// Creates anchoring configuration for the given keypair without funding transaction.
+    /// Creates anchoring configuration for the given `anchoring_keys` without funding transaction.
     /// This is usable for deploying procedure when the network participants exchange
     /// the public configuration before launching.
     /// Do not forget to send funding transaction to the final multisig address
     /// and add it to the final configuration.
-    pub fn new(network: btc::Network, public_key: btc::PublicKey) -> AnchoringConfig {
+    pub fn new<I>(network: btc::Network, anchoring_keys: I) -> AnchoringConfig
+        where I: IntoIterator<Item = btc::PublicKey>
+    {
         AnchoringConfig {
-            validators: vec![public_key],
+            anchoring_keys: anchoring_keys.into_iter().collect(),
             network: network,
             ..Default::default()
         }
@@ -58,12 +62,14 @@ impl AnchoringConfig {
 
     /// Creates default anchoring configuration from given public keys and funding transaction
     /// which were created earlier by other way.
-    pub fn new_with_funding_tx(network: btc::Network,
-                               validators: Vec<btc::PublicKey>,
-                               tx: FundingTx)
-                               -> AnchoringConfig {
+    pub fn new_with_funding_tx<I>(network: btc::Network,
+                                  anchoring_keys: I,
+                                  tx: FundingTx)
+                                  -> AnchoringConfig
+        where I: IntoIterator<Item = btc::PublicKey>
+    {
         AnchoringConfig {
-            validators: validators,
+            anchoring_keys: anchoring_keys.into_iter().collect(),
             funding_tx: Some(tx),
             network: network,
             ..Default::default()
@@ -71,27 +77,32 @@ impl AnchoringConfig {
     }
 
     #[doc(hidden)]
-    /// Creates compressed `redeem_script` from public keys in config.
+    /// Creates compressed `RedeemScript` from public keys in config.
     pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
-        let redeem_script = btc::RedeemScript::from_pubkeys(self.validators.iter(), majority_count)
+        let redeem_script = btc::RedeemScript::from_pubkeys(self.anchoring_keys.iter(),
+                                                            majority_count)
             .compressed(self.network);
         let addr = btc::Address::from_script(&redeem_script, self.network);
         (redeem_script, addr)
     }
 
     #[doc(hidden)]
-    /// Returns the latest height below the given `height` which needs to be anchored
+    /// Returns the latest height below the given `height` which needs to be anchored.
     pub fn latest_anchoring_height(&self, height: u64) -> u64 {
         height - height % self.frequency as u64
     }
 
     #[doc(hidden)]
-    /// For test purpose only
     pub fn majority_count(&self) -> u8 {
-        ::majority_count(self.validators.len() as u8)
+        ::majority_count(self.anchoring_keys.len() as u8)
     }
 
+    /// Returns the funding transaction.
+    ///
+    /// # Panics
+    ///
+    /// If funding transaction is not specified.
     pub fn funding_tx(&self) -> &FundingTx {
         self.funding_tx
             .as_ref()
@@ -122,12 +133,12 @@ fn btc_network_from_str<'de, D>(deserializer: D) -> Result<btc::Network, D::Erro
 }
 
 impl StorageValue for AnchoringConfig {
-    fn serialize(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         serde_json::to_vec(&self).unwrap()
     }
 
-    fn deserialize(v: Vec<u8>) -> Self {
-        serde_json::from_slice(v.as_slice()).unwrap()
+    fn from_bytes(value: Cow<[u8]>) -> Self {
+        serde_json::from_slice(value.as_ref()).unwrap()
     }
 
     fn hash(&self) -> Hash {

@@ -1,6 +1,6 @@
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_btc_service;
+extern crate btc_anchoring_service;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -31,14 +31,14 @@ use sandbox::sandbox_tests_helper::{SandboxState, VALIDATOR_0, add_one_height_wi
                                     add_one_height_with_transactions_from_other_validator};
 use sandbox::config_updater::ConfigUpdateService;
 
-use anchoring_btc_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpc, AnchoringService,
+use btc_anchoring_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpc, AnchoringService,
                             gen_anchoring_testnet_config_with_rng};
-use anchoring_btc_service::details::sandbox::{Request, SandboxClient};
-use anchoring_btc_service::details::btc;
-use anchoring_btc_service::details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
-use anchoring_btc_service::blockchain::dto::MsgAnchoringSignature;
-use anchoring_btc_service::handler::{AnchoringHandler, collect_signatures};
-use anchoring_btc_service::error::HandlerError;
+use btc_anchoring_service::details::sandbox::{Request, SandboxClient};
+use btc_anchoring_service::details::btc;
+use btc_anchoring_service::details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
+use btc_anchoring_service::blockchain::dto::MsgAnchoringSignature;
+use btc_anchoring_service::handler::{AnchoringHandler, collect_signatures};
+use btc_anchoring_service::error::HandlerError;
 
 #[macro_use]
 mod macros;
@@ -119,10 +119,8 @@ impl AnchoringSandbox {
         common.utxo_confirmations = ANCHORING_UTXO_CONFIRMATIONS;
         for &&(addr, ref keys) in &priv_keys {
             for (id, key) in keys.iter().enumerate() {
-                nodes[id]
-                    .private_keys
-                    .insert(addr.to_string(),
-                            btc::PrivateKey::from_base58check(key).unwrap());
+                nodes[id].private_keys.insert(addr.to_string(),
+                                              btc::PrivateKey::from_base58check(key).unwrap());
             }
         }
 
@@ -292,7 +290,7 @@ impl AnchoringSandbox {
 
             let tx = builder.into_transaction().unwrap();
             let signs = self.gen_anchoring_signatures(&tx);
-            let signed_tx = self.finalize_tx(tx.clone(), signs.as_ref());
+            let signed_tx = self.finalize_tx(tx.clone(), signs.clone());
             (tx, signed_tx, signs)
         };
         self.state.borrow_mut().latest_anchored_tx = Some((signed_tx, signs.clone()));
@@ -304,8 +302,10 @@ impl AnchoringSandbox {
         (propose_tx, signs)
     }
 
-    pub fn finalize_tx(&self, tx: AnchoringTx, signs: &[MsgAnchoringSignature]) -> AnchoringTx {
-        let collected_signs = collect_signatures(&tx, &self.current_cfg(), signs.iter()).unwrap();
+    pub fn finalize_tx<I>(&self, tx: AnchoringTx, signs: I) -> AnchoringTx
+        where I: IntoIterator<Item = MsgAnchoringSignature>
+    {
+        let collected_signs = collect_signatures(&tx, &self.current_cfg(), signs).unwrap();
         tx.finalize(&self.current_redeem_script(), collected_signs)
     }
 

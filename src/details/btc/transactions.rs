@@ -55,6 +55,7 @@ pub trait TxFromRaw: Sized {
     fn from_raw(raw: RawBitcoinTx) -> Option<Self>;
 }
 
+#[derive(Debug)]
 pub struct TransactionBuilder {
     inputs: Vec<(RawBitcoinTx, u32)>,
     output: Option<btc::Address>,
@@ -104,10 +105,10 @@ impl FundingTx {
             .iter()
             .position(|output| if let Some(Instruction::PushBytes(bytes)) =
                 output.script_pubkey.into_iter().nth(1) {
-                          Hash160::from(bytes) == redeem_script_hash
-                      } else {
-                          false
-                      })
+                Hash160::from(bytes) == redeem_script_hash
+            } else {
+                false
+            })
             .map(|x| x as u32)
     }
 
@@ -140,11 +141,10 @@ impl AnchoringTx {
             .unwrap();
 
         Address {
-                ty: Type::ScriptHash,
-                network: network,
-                hash: Hash160::from(bytes),
-            }
-            .into()
+            ty: Type::ScriptHash,
+            network: network,
+            hash: Hash160::from(bytes),
+        }.into()
     }
 
     pub fn inputs(&self) -> ::std::ops::Range<u32> {

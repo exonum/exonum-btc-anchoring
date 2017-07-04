@@ -4,6 +4,7 @@ rust:
 cache: cargo
 sudo: required
 dist: trusty
+group: deprecated-2017Q2
 env:
   global:
   - ANCHORING_RELAY_HOST=http://127.0.0.1:18332
@@ -12,7 +13,7 @@ env:
   - RUST_LOG=off
   - NIGHTLY_RUST=nightly-2017-06-13
   - CLIPPY_VERS=0.0.139
-  - RUSTFMT_VERS=0.8.4
+  - RUSTFMT_VERS=0.8.6
 before_install:
 - rustfmt -V | grep $RUSTFMT_VERS || cargo install rustfmt --vers $RUSTFMT_VERS --force
 - rustup toolchain install $NIGHTLY_RUST
@@ -29,7 +30,7 @@ before_script:
 - bitcoin-cli -regtest -rpcuser=travis -rpcpassword=travis generate 200
 script:
 - cargo fmt -- --write-mode=diff
-- cargo fmt -p anchoring_btc_sandbox -- --write-mode=diff
+- cargo fmt -p btc_anchoring_sandbox -- --write-mode=diff
 - cargo +$NIGHTLY_RUST clippy -- -D warnings
 - cargo test --release
 - cargo test --manifest-path sandbox_tests/Cargo.toml

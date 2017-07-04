@@ -1,5 +1,5 @@
 [package]
-name = "anchoring_btc_service"
+name = "btc_anchoring_service"
 version = "0.1.0"
 authors = ["Ivan Ivashchenko <ivan.ivashchenko@xdev.re",
            "Aleksey Sidorov <aleksei.sidorov@xdev.re>"]
@@ -25,16 +25,17 @@ router = "0.5.1"
 iron = "0.5.1"
 bodyparser = "0.5.0"
 params = "0.6.0"
+mount = "0.3.0"
 
 [dependencies.exonum]
-git = "ssh://git@github.com/darkeld3r/exonum-core.git"
 version = "0.1.0"
-rev = "aeec8e7b864979d06ac2de5620f8f07f86765e34"
+git = "ssh://git@github.com/darkeld3r/exonum-core.git"
+rev = "b67e4414d7b0f851e272b6893f7d7d674891bc96"
 
 [dependencies.configuration_service]
-git = "ssh://git@github.com/darkeld3r/exonum-configuration.git"
 version = "0.1.0"
-rev = "bf6de201337fc14e7e2e0861087e8d9835e7356c"
+git = "ssh://git@github.com/darkeld3r/exonum-configuration.git"
+rev = "58bb2c82b77ae3b92783e6646679ebcc1509d4bb"
 
 [features]
 default = []

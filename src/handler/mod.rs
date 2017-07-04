@@ -7,6 +7,7 @@ mod basic;
 pub mod error;
 
 use std::collections::HashMap;
+use std::collections::HashSet;
 
 use details::rpc::AnchoringRpc;
 use details::btc;
@@ -15,7 +16,8 @@ use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::MsgAnchoringSignature;
 
-/// An internal anchoring service handler. Can be used to manage the service.
+/// Internal anchoring service handler. Can be used to manage the service.
+#[derive(Debug)]
 pub struct AnchoringHandler {
     #[doc(hidden)]
     pub client: Option<AnchoringRpc>,
@@ -23,9 +25,11 @@ pub struct AnchoringHandler {
     pub node: AnchoringNodeConfig,
     #[doc(hidden)]
     pub proposal_tx: Option<AnchoringTx>,
-    #[cfg(feature="sandbox_tests")]
+    #[cfg(feature = "sandbox_tests")]
     #[doc(hidden)]
     pub errors: Vec<error::Error>,
+    #[doc(hidden)]
+    pub known_addresses: HashSet<String>,
 }
 
 #[doc(hidden)]
@@ -67,15 +71,15 @@ pub enum LectKind {
 
 #[doc(hidden)]
 /// The function extracts signatures from messages and order them by inputs.
-pub fn collect_signatures<'a, I>(proposal: &AnchoringTx,
-                                 common: &AnchoringConfig,
-                                 msgs: I)
-                                 -> Option<HashMap<u32, Vec<btc::Signature>>>
-    where I: Iterator<Item = &'a MsgAnchoringSignature>
+pub fn collect_signatures<I>(proposal: &AnchoringTx,
+                             common: &AnchoringConfig,
+                             msgs: I)
+                             -> Option<HashMap<u32, Vec<btc::Signature>>>
+    where I: IntoIterator<Item = MsgAnchoringSignature>
 {
     let mut signatures = HashMap::new();
     for input in proposal.inputs() {
-        signatures.insert(input, vec![None; common.validators.len()]);
+        signatures.insert(input, vec![None; common.anchoring_keys.len()]);
     }
 
     for msg in msgs {

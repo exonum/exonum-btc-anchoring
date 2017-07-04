@@ -1,8 +1,8 @@
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_btc_service;
+extern crate btc_anchoring_service;
 #[macro_use]
-extern crate anchoring_btc_sandbox;
+extern crate btc_anchoring_sandbox;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -20,13 +20,13 @@ use bitcoin::network::constants::Network;
 use exonum::crypto::{Hash, HexValue};
 use exonum::messages::Message;
 
-use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::details::btc::transactions::{AnchoringTx, FundingTx,
+use btc_anchoring_service::details::sandbox::Request;
+use btc_anchoring_service::details::btc::transactions::{AnchoringTx, FundingTx,
                                                         TransactionBuilder, verify_tx_input};
-use anchoring_btc_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
-use anchoring_btc_sandbox::AnchoringSandbox;
-use anchoring_btc_sandbox::helpers::*;
-use anchoring_btc_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
+use btc_anchoring_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use btc_anchoring_sandbox::AnchoringSandbox;
+use btc_anchoring_sandbox::helpers::*;
+use btc_anchoring_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
 
 // We anchor first block
 // problems: None
@@ -681,7 +681,7 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
     let msg_signature_different = {
         let cfg = sandbox.current_cfg();
         let (redeem_script, addr) = cfg.redeem_script();
-        let pub_key = &cfg.validators[1];
+        let pub_key = &cfg.anchoring_keys[1];
         let priv_key = &sandbox.priv_keys(&addr)[1];
 
         let mut different_signature =
@@ -763,7 +763,7 @@ fn test_anchoring_signature_unknown_output_address() {
     let tx = {
         let (_, addr) = {
             let mut anchoring_cfg = sandbox.current_cfg().clone();
-            anchoring_cfg.validators.swap(1, 2);
+            anchoring_cfg.anchoring_keys.swap(1, 2);
             anchoring_cfg.redeem_script()
         };
 
@@ -781,7 +781,7 @@ fn test_anchoring_signature_unknown_output_address() {
     assert_ne!(tx.output_address(Network::Testnet), addr);
     assert!(tx.verify_input(&redeem_script,
                             0,
-                            &sandbox.current_cfg().validators[0],
+                            &sandbox.current_cfg().anchoring_keys[0],
                             &signature));
 
     let msg_signature_wrong = MsgAnchoringSignature::new(&sandbox.service_public_key(0),

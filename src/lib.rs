@@ -2,16 +2,16 @@
 //!
 //! Private blockchain infrastructure necessitates additional measures for
 //! accountability of the blockchain validators.
-//! In public `PoW` blockchains (e.g., `Bitcoin`), accountability is purely economic and is
+//! In public proof of work blockchains (e.g., Bitcoin), accountability is purely economic and is
 //! based on game theory and equivocation or retroactive modifications being economically costly.
 //! Not so in private blockchains, where these two behaviors
 //! are a real threat per any realistic threat model that assumes
 //! that the blockchain is of use not only to the system validators,
 //! but also to third parties.
 //!
-//! This crate implements a protocol for blockchain anchoring onto the `Bitcoin` blockchain
-//! that utilizes the native `Bitcoin` capabilities of creating multisig([p2sh][1]) transactions.
-//! This transactions contains metadata from `Exonum` blockchain (block's hash on corresponding
+//! This crate implements a protocol for blockchain anchoring onto the Bitcoin blockchain
+//! that utilizes the native Bitcoin capabilities of creating multisig([p2sh][1]) transactions.
+//! This transactions contains metadata from Exonum blockchain (block's hash on corresponding
 //! height) and forms a chain.
 //!
 //! You can read the details in [specification][2].
@@ -25,7 +25,7 @@
 //!
 //! ```rust,no_run
 //! extern crate exonum;
-//! extern crate anchoring_btc_service;
+//! extern crate btc_anchoring_service;
 //! extern crate tempdir;
 //!
 //! use std::thread;
@@ -37,7 +37,8 @@
 //! use exonum::node::Node;
 //! use exonum::storage::{LevelDB, LevelDBOptions};
 //! use exonum::helpers::{generate_testnet_config, init_logger};
-//! use anchoring_btc_service::{AnchoringRpcConfig, AnchoringRpc, AnchoringService, BitcoinNetwork,
+//! use btc_anchoring_service::{AnchoringRpcConfig, AnchoringRpc,
+//!                             AnchoringService, BitcoinNetwork,
 //!                             gen_anchoring_testnet_config};
 //!
 //! fn main() {
@@ -81,10 +82,10 @@
 //!                 let mut options = LevelDBOptions::new();
 //!                 let path = destdir.join(idx.to_string());
 //!                 options.create_if_missing = true;
-//!                 LevelDB::new(&path, options).expect("Unable to create database")
+//!                 LevelDB::open(&path, options).expect("Unable to create database")
 //!             };
 //!             // Create node[idx]
-//!            let blockchain = Blockchain::new(db, vec![Box::new(service)]);
+//!            let blockchain = Blockchain::new(Box::new(db), vec![Box::new(service)]);
 //!            let node_cfg = node_cfgs[idx].clone();
 //!            let node_thread = thread::spawn(move || {
 //!                                                // Run it in separate thread
@@ -103,6 +104,9 @@
 //! }
 //! ```
 //!
+
+#![deny(missing_docs)]
+#![deny(missing_debug_implementations)]
 
 extern crate serde;
 #[macro_use]
@@ -129,7 +133,6 @@ extern crate exonum;
 
 #[doc(hidden)]
 pub mod details;
-#[doc(hidden)]
 pub mod blockchain;
 #[doc(hidden)]
 pub mod local_storage;
@@ -140,6 +143,7 @@ pub mod handler;
 #[doc(hidden)]
 pub mod error;
 pub mod api;
+pub mod observer;
 
 pub use details::btc::{Network as BitcoinNetwork, gen_btc_keypair, gen_btc_keypair_with_rng};
 pub use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
@@ -150,6 +154,7 @@ pub use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME, AnchoringService
 pub use handler::AnchoringHandler;
 pub use error::Error;
 
+#[doc(hidden)]
 pub fn majority_count(cnt: u8) -> u8 {
     cnt * 2 / 3 + 1
 }

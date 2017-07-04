@@ -3,10 +3,11 @@ extern crate clap;
 extern crate serde_derive;
 extern crate iron;
 extern crate router;
+extern crate mount;
 extern crate bitcoin;
 
 extern crate exonum;
-extern crate anchoring_btc_service;
+extern crate btc_anchoring_service;
 extern crate configuration_service;
 
 use clap::{App, Arg, SubCommand};
@@ -21,21 +22,20 @@ use exonum::helpers::clap::{GenerateCommand, RunCommand};
 use exonum::helpers::generate_testnet_config;
 use exonum::helpers;
 use configuration_service::ConfigurationService;
-use anchoring_btc_service::AnchoringService;
-use anchoring_btc_service::AnchoringRpc;
-use anchoring_btc_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig,
-                            BitcoinNetwork, gen_anchoring_testnet_config, gen_btc_keypair};
+use btc_anchoring_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpc,
+                            AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
+                            gen_anchoring_testnet_config, gen_btc_keypair};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct AnchoringServiceConfig {
-    pub common: AnchoringConfig,
-    pub node: AnchoringNodeConfig,
+    pub genesis: AnchoringConfig,
+    pub local: AnchoringNodeConfig,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 pub struct ServicesConfig {
     pub node: NodeConfig,
-    pub anchoring_service: AnchoringServiceConfig,
+    pub btc_anchoring_service: AnchoringServiceConfig,
 }
 
 fn main() {
@@ -113,9 +113,9 @@ fn main() {
             for (idx, node_cfg) in node_cfgs.into_iter().enumerate() {
                 let cfg = ServicesConfig {
                     node: node_cfg,
-                    anchoring_service: AnchoringServiceConfig {
-                        common: anchoring_common.clone(),
-                        node: anchoring_nodes[idx].clone(),
+                    btc_anchoring_service: AnchoringServiceConfig {
+                        genesis: anchoring_common.clone(),
+                        local: anchoring_nodes[idx].clone(),
                     },
                 };
                 let file_name = format!("{}.toml", idx);
@@ -127,12 +127,15 @@ fn main() {
             let db = RunCommand::db(matches);
             let cfg: ServicesConfig = ConfigFile::load(path).unwrap();
 
-            let anchoring_cfg = cfg.anchoring_service;
-            let services: Vec<Box<Service>> = vec![
-                    Box::new(AnchoringService::new(anchoring_cfg.common, anchoring_cfg.node)),
+            let anchoring_cfg = cfg.btc_anchoring_service;
+            let services: Vec<Box<Service>> =
+                vec![
+                    Box::new(AnchoringService::new(anchoring_cfg.genesis,
+                                                   anchoring_cfg.local.clone())),
                     Box::new(ConfigurationService::new()),
                 ];
             let blockchain = Blockchain::new(db, services);
+
             let mut node = Node::new(blockchain, cfg.node);
             node.run().unwrap();
         }

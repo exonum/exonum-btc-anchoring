@@ -9,9 +9,9 @@ use details::btc;
 use details::btc::transactions::{BitcoinTx, TxKind};
 
 #[doc(hidden)]
-#[cfg(not(feature="sandbox_tests"))]
+#[cfg(not(feature = "sandbox_tests"))]
 pub use bitcoinrpc::Client as RpcClient;
-#[cfg(feature="sandbox_tests")]
+#[cfg(feature = "sandbox_tests")]
 pub use super::sandbox::SandboxClient as RpcClient;
 
 pub type Result<T> = bitcoinrpc::Result<T>;
@@ -20,19 +20,19 @@ pub type Error = bitcoinrpc::Error;
 // Rpc method `sendtoaddress` uses amount in btc instead of the satoshis.
 const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 
-/// A `Bitcoind` rpc configuration
+/// `Bitcoind` rpc configuration.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
 pub struct AnchoringRpcConfig {
-    /// Rpc url
+    /// Rpc url.
     pub host: String,
-    /// Rpc username
+    /// Rpc username.
     pub username: Option<String>,
-    /// Rpc password
+    /// Rpc password.
     pub password: Option<String>,
 }
 
-/// A client for `Bitcoind` rpc api, for more information visit
-/// this [site](https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list)
+/// Client for the `Bitcoind` rpc api, for more information visit
+/// this [site](https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list).
 #[derive(Debug)]
 pub struct AnchoringRpc(pub RpcClient);
 
@@ -69,6 +69,11 @@ impl AnchoringRpc {
         }
     }
 
+    pub fn get_transaction_confirmations(&self, txid: &btc::TxId) -> Result<Option<u64>> {
+        let info = self.get_transaction_info(&txid.be_hex_string())?;
+        Ok(info.and_then(|info| info.confirmations))
+    }
+
     pub fn send_transaction(&self, tx: BitcoinTx) -> Result<()> {
         let tx_hex = tx.to_hex();
         self.0.sendrawtransaction(&tx_hex)?;
@@ -101,14 +106,12 @@ impl AnchoringRpc {
                                            addr: &str,
                                            limit: u32)
                                            -> Result<Vec<bitcoinrpc::TransactionInfo>> {
-        self.0
-            .listtransactions(limit, 0, true)
-            .map(|v| {
-                     v.into_iter()
-                         .rev()
-                         .filter(|tx| tx.address == Some(addr.into()))
-                         .collect::<Vec<_>>()
-                 })
+        self.0.listtransactions(limit, 0, true).map(|v| {
+            v.into_iter()
+                .rev()
+                .filter(|tx| tx.address == Some(addr.into()))
+                .collect::<Vec<_>>()
+        })
     }
 
     pub fn get_unspent_transactions(&self,

@@ -1,8 +1,8 @@
 extern crate exonum;
 extern crate sandbox;
-extern crate anchoring_btc_service;
+extern crate btc_anchoring_service;
 #[macro_use]
-extern crate anchoring_btc_sandbox;
+extern crate btc_anchoring_sandbox;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -17,13 +17,13 @@ use exonum::messages::{Message, RawTransaction};
 use exonum::storage::StorageValue;
 use sandbox::config_updater::TxConfig;
 
-use anchoring_btc_service::{ANCHORING_SERVICE_NAME, AnchoringConfig};
-use anchoring_btc_service::details::sandbox::Request;
-use anchoring_btc_service::blockchain::dto::MsgAnchoringUpdateLatest;
-use anchoring_btc_service::error::HandlerError;
-use anchoring_btc_service::details::btc::transactions::BitcoinTx;
-use anchoring_btc_sandbox::AnchoringSandbox;
-use anchoring_btc_sandbox::helpers::*;
+use btc_anchoring_service::{ANCHORING_SERVICE_NAME, AnchoringConfig};
+use btc_anchoring_service::details::sandbox::Request;
+use btc_anchoring_service::blockchain::dto::MsgAnchoringUpdateLatest;
+use btc_anchoring_service::error::HandlerError;
+use btc_anchoring_service::details::btc::transactions::BitcoinTx;
+use btc_anchoring_sandbox::AnchoringSandbox;
+use btc_anchoring_sandbox::helpers::*;
 
 /// Generates a configuration that excludes `sandbox node` from consensus.
 /// Then it continues to work as auditor.
@@ -34,7 +34,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
 
     let mut service_cfg = sandbox.current_cfg().clone();
     let priv_keys = sandbox.priv_keys(&anchoring_addr);
-    service_cfg.validators.swap_remove(0);
+    service_cfg.anchoring_keys.swap_remove(0);
 
     let following_addr = service_cfg.redeem_script().1;
     for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
@@ -49,7 +49,7 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
     cfg.service_keys.swap_remove(0);
     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
     let tx = TxConfig::new(&sandbox.service_public_key(0),
-                           &cfg.serialize(),
+                           &cfg.into_bytes(),
                            from_height,
                            sandbox.service_secret_key(0));
     (tx.raw().clone(), service_cfg)
@@ -75,12 +75,12 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[cfg_tx]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().block_hash,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
@@ -213,7 +213,7 @@ fn test_auditing_lect_incorrect_funding_tx() {
                                        17a914dcfbafb4c432a24dd4b268570d26d7841a20fbbd87e7cc39\
                                        0a000000001976a914b3203ee5a42f8f524d14397ef10b84277f78\
                                        4b4a88acd81d1100")
-            .unwrap();
+        .unwrap();
     let lects = (0..3)
         .map(|id| {
                  MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(id as usize),
