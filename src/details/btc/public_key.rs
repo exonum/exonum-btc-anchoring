@@ -2,7 +2,11 @@ use secp256k1::Secp256k1;
 use secp256k1::key;
 use secp256k1::Error;
 
+use exonum::storage::StorageKey;
+
 use super::types::{PublicKey, RawPublicKey};
+
+const PUBLIC_KEY_SIZE: usize = 33;
 
 impl PublicKey {
     pub fn from_secret_key(secp: &Secp256k1, sk: &key::SecretKey) -> Result<PublicKey, Error> {
@@ -10,11 +14,29 @@ impl PublicKey {
         Ok(PublicKey::from(raw))
     }
 
-    pub fn to_bytes(&self) -> [u8; 33] {
+    pub fn to_bytes(&self) -> [u8; PUBLIC_KEY_SIZE] {
         let ctx = Secp256k1::without_caps();
         let vec = self.0.serialize_vec(&ctx, true);
-        let mut bytes = [0; 33];
+        let mut bytes = [0; PUBLIC_KEY_SIZE];
         bytes.copy_from_slice(&vec);
         bytes
+    }
+}
+
+impl StorageKey for PublicKey {
+    fn size(&self) -> usize {
+        PUBLIC_KEY_SIZE
+    }
+
+    fn write(&self, buffer: &mut [u8]) {
+        let ctx = Secp256k1::without_caps();
+        let vec = self.0.serialize_vec(&ctx, true);
+        buffer.copy_from_slice(&vec)
+    }
+
+    fn read(buffer: &[u8]) -> Self {
+        let ctx = Secp256k1::without_caps();
+        let raw = RawPublicKey::from_slice(&ctx, buffer).unwrap();
+        PublicKey(raw)
     }
 }

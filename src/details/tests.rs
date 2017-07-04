@@ -213,8 +213,8 @@ fn test_anchoring_tx_encoding_struct() {
         000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd\
         004cd1e7500000000";
     let tx = AnchoringTx::from_hex(hex).unwrap();
-    let data = tx.clone().serialize();
-    let tx2: AnchoringTx = AnchoringTx::deserialize(data);
+    let data = tx.clone().into_bytes();
+    let tx2: AnchoringTx = AnchoringTx::from_bytes(data.into());
 
     assert_eq!(tx2, tx);
 }

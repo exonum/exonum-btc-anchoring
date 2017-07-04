@@ -37,8 +37,7 @@ impl AnchoringHandler {
                           tx: FundingTx,
                           context: &ServiceContext)
                           -> Result<(), ServiceError> {
-        let cfg = AnchoringSchema::new(context.view())
-            .genesis_anchoring_config()?;
+        let cfg = AnchoringSchema::new(context.snapshot()).genesis_anchoring_config();
         let (_, addr) = cfg.redeem_script();
         if &tx != cfg.funding_tx() {
             let e = HandlerError::IncorrectLect {

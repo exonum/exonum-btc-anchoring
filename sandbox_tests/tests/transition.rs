@@ -17,7 +17,7 @@ use rand::{SeedableRng, StdRng};
 
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{HexValue, Seed, gen_keypair_from_seed};
-use exonum::storage::{Map, StorageValue};
+use exonum::storage::{StorageValue};
 use sandbox::config_updater::TxConfig;
 
 use btc_anchoring_service::{ANCHORING_SERVICE_NAME, AnchoringConfig, AnchoringNodeConfig};
@@ -156,7 +156,7 @@ fn gen_following_cfg_add_two_validators_changed_self_key
     };
 
     let tx = TxConfig::new(&sandbox.p(0),
-                           &consensus_cfg.serialize(),
+                           &consensus_cfg.into_bytes(),
                            from_height,
                            sandbox.s(0));
 
@@ -1456,12 +1456,8 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         let mut service_cfg = sandbox.current_cfg().clone();
         let priv_keys = sandbox.current_priv_keys();
 
-        service_cfg
-            .anchoring_keys
-            .push(anchoring_keypairs[0].0.clone());
-        service_cfg
-            .anchoring_keys
-            .push(anchoring_keypairs[1].0.clone());
+        service_cfg.anchoring_keys.push(anchoring_keypairs[0].0);
+        service_cfg.anchoring_keys.push(anchoring_keypairs[1].0);
         service_cfg.anchoring_keys.swap(0, 3);
 
         let following_addr = service_cfg.redeem_script().1;
@@ -1494,7 +1490,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         };
 
         let tx = TxConfig::new(&sandbox.p(1),
-                               &consensus_cfg.serialize(),
+                               &consensus_cfg.into_bytes(),
                                cfg_change_height,
                                sandbox.s(1));
         // Add validator to exonum sandbox validators map
@@ -1748,12 +1744,11 @@ fn test_anchoring_transit_changed_self_key_observer() {
     sandbox.add_height(&lects);
 
     let anchoring_addr = sandbox.current_addr();
-    let observer = AnchoringChainObserver::new_with_client(sandbox.blockchain_ref().clone(),
+    let mut observer = AnchoringChainObserver::new_with_client(sandbox.blockchain_ref().clone(),
                                                            AnchoringRpc(SandboxClient::default()),
                                                            0);
 
-    let client = observer.client();
-    client.expect(vec![
+    observer.client().expect(vec![
         request! {
             method: "listunspent",
             params: [0, 9999999, [&anchoring_addr.to_base58check()]],
@@ -1774,12 +1769,12 @@ fn test_anchoring_transit_changed_self_key_observer() {
 
     /// Checks that all anchoring transaction successfuly commited to `anchoring_tx_chain` table.
     let blockchain = observer.blockchain().clone();
-    let view = blockchain.view();
-    let anchoring_schema = AnchoringSchema::new(&view);
+    let snapshot = blockchain.snapshot();
+    let anchoring_schema = AnchoringSchema::new(&snapshot);
     let tx_chain_index = anchoring_schema.anchoring_tx_chain();
 
-    assert_eq!(tx_chain_index.get(&0.into()).unwrap(),
+    assert_eq!(tx_chain_index.get(&0),
                Some(first_anchored_tx));
-    assert_eq!(tx_chain_index.get(&20.into()).unwrap(),
+    assert_eq!(tx_chain_index.get(&20),
                Some(third_anchored_tx));
 }

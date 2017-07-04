@@ -172,19 +172,19 @@ macro_rules! implement_tx_wrapper {
     }
 
     impl StorageValue for $name {
-        fn serialize(self) -> Vec<u8> {
-            let mut v = vec![];
+        fn into_bytes(self) -> Vec<u8> {
+            let mut v = Vec::new();
             v.extend(serialize(&self.0).unwrap());
             v
         }
 
-        fn deserialize(v: Vec<u8>) -> Self {
+        fn from_bytes(v: ::std::borrow::Cow<[u8]>) -> Self {
             let tx = deserialize::<RawBitcoinTx>(v.as_ref()).unwrap();
             $name::from(tx)
         }
 
         fn hash(&self) -> Hash {
-            let mut v = vec![];
+            let mut v = Vec::new();
             v.extend(serialize(&self.0).unwrap());
             hash(&v)
         }
@@ -200,14 +200,14 @@ macro_rules! implement_tx_wrapper {
                        to: ::exonum::encoding::Offset)
             -> $name {
             let data = <&[u8] as ::exonum::encoding::Field>::read(buffer, from, to);
-            <$name as StorageValue>::deserialize(data.to_vec())
+            <$name as StorageValue>::from_bytes(data.into())
         }
 
         fn write(&self,
                  buffer: &mut Vec<u8>,
                  from: ::exonum::encoding::Offset,
                  to: ::exonum::encoding::Offset) {
-            <&[u8] as ::exonum::encoding::Field>::write(&self.clone().serialize().as_slice(),
+            <&[u8] as ::exonum::encoding::Field>::write(&self.clone().into_bytes().as_slice(),
                                                              buffer,
                                                              from,
                                                              to);
