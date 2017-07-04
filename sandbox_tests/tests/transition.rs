@@ -129,9 +129,8 @@ fn gen_following_cfg_add_two_validators_changed_self_key
         new_nodes.push(new_node);
     }
     for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
-        node.private_keys
-            .insert(following_addr.to_base58check(),
-                    anchoring_priv_keys[id].clone());
+        node.private_keys.insert(following_addr.to_base58check(),
+                                 anchoring_priv_keys[id].clone());
     }
     sandbox
         .handler()
@@ -153,7 +152,7 @@ fn gen_following_cfg_add_two_validators_changed_self_key
     };
 
     let tx = TxConfig::new(&sandbox.p(0),
-                           &consensus_cfg.serialize(),
+                           &consensus_cfg.into_bytes(),
                            from_height,
                            sandbox.s(0));
 
@@ -193,12 +192,12 @@ fn test_anchoring_transit_changed_self_key_normal() {
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().block_hash,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
@@ -333,12 +332,12 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().block_hash,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
@@ -455,12 +454,12 @@ fn test_anchoring_transit_config_with_funding_tx() {
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().block_hash,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
@@ -621,12 +620,12 @@ fn test_anchoring_transit_config_lost_lect_resend_before_cfg_change() {
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().block_hash,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
@@ -685,12 +684,12 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().block_hash,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
@@ -1244,12 +1243,12 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(0,
-                                          anchored_tx.payload().block_hash,
-                                          &[],
-                                          None,
-                                          &following_multisig.1);
+    let (_, signatures) =
+        sandbox.gen_anchoring_tx_with_signatures(0,
+                                                 anchored_tx.payload().block_hash,
+                                                 &[],
+                                                 None,
+                                                 &following_multisig.1);
     sandbox.add_height(&[]);
     sandbox.broadcast(signatures[0].clone());
     sandbox.add_height(&signatures[0..1]);
@@ -1453,12 +1452,8 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         let mut service_cfg = sandbox.current_cfg().clone();
         let priv_keys = sandbox.current_priv_keys();
 
-        service_cfg
-            .anchoring_keys
-            .push(anchoring_keypairs[0].0.clone());
-        service_cfg
-            .anchoring_keys
-            .push(anchoring_keypairs[1].0.clone());
+        service_cfg.anchoring_keys.push(anchoring_keypairs[0].0);
+        service_cfg.anchoring_keys.push(anchoring_keypairs[1].0);
         service_cfg.anchoring_keys.swap(0, 3);
 
         let following_addr = service_cfg.redeem_script().1;
@@ -1471,9 +1466,8 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         let mut node_cfgs = [sandbox.nodes()[0].clone(), sandbox.nodes()[0].clone()];
         for (idx, cfg) in node_cfgs.iter_mut().enumerate() {
             cfg.private_keys.clear();
-            cfg.private_keys
-                .insert(following_addr.to_base58check(),
-                        anchoring_keypairs[idx].1.clone());
+            cfg.private_keys.insert(following_addr.to_base58check(),
+                                    anchoring_keypairs[idx].1.clone());
         }
         // Add private key for service handler
         sandbox
@@ -1492,7 +1486,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         };
 
         let tx = TxConfig::new(&sandbox.p(1),
-                               &consensus_cfg.serialize(),
+                               &consensus_cfg.into_bytes(),
                                cfg_change_height,
                                sandbox.s(1));
         // Add validator to exonum sandbox validators map

@@ -11,7 +11,7 @@ use exonum::blockchain::{ApiContext, Service, ServiceContext, Transaction};
 use exonum::crypto::Hash;
 use exonum::messages::{FromRaw, RawTransaction};
 use exonum::encoding::Error as StreamStructError;
-use exonum::storage::{Error as StorageError, View};
+use exonum::storage::{Fork, Snapshot};
 use exonum::api::Api;
 
 use api::PublicApi;
@@ -25,7 +25,7 @@ use blockchain::schema::AnchoringSchema;
 use blockchain::dto::{ANCHORING_MESSAGE_LATEST, ANCHORING_MESSAGE_SIGNATURE,
                       MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use error::Error as ServiceError;
-#[cfg(not(feature="sandbox_tests"))]
+#[cfg(not(feature = "sandbox_tests"))]
 use handler::error::Error as HandlerError;
 
 /// Anchoring service id.
@@ -76,8 +76,9 @@ impl Service for AnchoringService {
         ANCHORING_SERVICE_NAME
     }
 
-    fn state_hash(&self, view: &View) -> Result<Vec<Hash>, StorageError> {
-        AnchoringSchema::new(view).state_hash()
+    fn state_hash(&self, snapshot: &Snapshot) -> Vec<Hash> {
+        let schema = AnchoringSchema::new(snapshot);
+        schema.state_hash()
     }
 
     fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, StreamStructError> {
@@ -88,42 +89,36 @@ impl Service for AnchoringService {
         }
     }
 
-    fn handle_genesis_block(&self, view: &View) -> Result<Value, StorageError> {
-        let handler = self.handler.lock().unwrap();
+    fn handle_genesis_block(&self, fork: &mut Fork) -> Value {
+        let mut handler = self.handler.lock().unwrap();
         let cfg = self.genesis.clone();
         let (_, addr) = cfg.redeem_script();
-        if let Some(ref client) = handler.client {
-            client
-                .importaddress(&addr.to_base58check(), "multisig", false, false)
-                .unwrap();
+        if handler.client.is_some() {
+            handler.import_address(&addr).unwrap();
         }
-        AnchoringSchema::new(view).create_genesis_config(&cfg)?;
-        Ok(serde_json::to_value(cfg).unwrap())
+        AnchoringSchema::new(fork).create_genesis_config(&cfg);
+        serde_json::to_value(cfg).unwrap()
     }
 
-    fn handle_commit(&self, state: &mut ServiceContext) -> Result<(), StorageError> {
+    fn handle_commit(&self, state: &mut ServiceContext) {
         let mut handler = self.handler.lock().unwrap();
         match handler.handle_commit(state) {
-            Err(ServiceError::Storage(e)) => Err(e),
-            #[cfg(feature="sandbox_tests")]
+            #[cfg(feature = "sandbox_tests")]
             Err(ServiceError::Handler(e)) => {
                 error!("An error occured: {:?}", e);
                 handler.errors.push(e);
-                Ok(())
             }
-            #[cfg(not(feature="sandbox_tests"))]
+            #[cfg(not(feature = "sandbox_tests"))]
             Err(ServiceError::Handler(e)) => {
                 if let HandlerError::IncorrectLect { .. } = e {
                     panic!("A critical error occured: {}", e);
                 }
                 error!("An error in handler occured: {}", e);
-                Ok(())
             }
             Err(e) => {
                 error!("An error occured: {:?}", e);
-                Ok(())
             }
-            Ok(()) => Ok(()),
+            Ok(()) => (),
         }
     }
 
@@ -164,7 +159,7 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
     for _ in 0..count as usize {
         let (pub_key, priv_key) = btc::gen_btc_keypair_with_rng(network, rng);
 
-        pub_keys.push(pub_key.clone());
+        pub_keys.push(pub_key);
         node_cfgs.push(AnchoringNodeConfig::new(Some(rpc.clone())));
         priv_keys.push(priv_key.clone());
     }

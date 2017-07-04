@@ -6,7 +6,6 @@ use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::Blockchain;
 use exonum::crypto::Hash;
-use exonum::storage::List;
 use exonum::api::{Api, ApiError};
 
 use details::btc;
@@ -78,22 +77,22 @@ impl PublicApi {
     ///
     /// `GET /{api_prefix}/v1/actual_lect/`
     pub fn actual_lect(&self) -> Result<Option<AnchoringInfo>, ApiError> {
-        let view = self.blockchain.view();
-        let schema = AnchoringSchema::new(&view);
-        let actual_cfg = &schema.actual_anchoring_config()?;
-        Ok(schema.collect_lects(actual_cfg)?.map(AnchoringInfo::from))
+        let snapshot = self.blockchain.snapshot();
+        let schema = AnchoringSchema::new(snapshot);
+        let actual_cfg = &schema.actual_anchoring_config();
+        Ok(schema.collect_lects(actual_cfg).map(AnchoringInfo::from))
     }
 
     /// Returns current lect for validator with given `id`.
     ///
     /// `GET /{api_prefix}/v1/actual_lect/:id`
     pub fn current_lect_of_validator(&self, id: u32) -> Result<LectInfo, ApiError> {
-        let view = self.blockchain.view();
-        let schema = AnchoringSchema::new(&view);
+        let snapshot = self.blockchain.snapshot();
+        let schema = AnchoringSchema::new(snapshot);
 
-        let actual_cfg = schema.actual_anchoring_config()?;
+        let actual_cfg = schema.actual_anchoring_config();
         if let Some(key) = actual_cfg.anchoring_keys.get(id as usize) {
-            if let Some(lect) = schema.lects(key).last()? {
+            if let Some(lect) = schema.lects(key).last() {
                 return Ok(LectInfo::from(lect));
             }
         }
@@ -104,19 +103,19 @@ impl PublicApi {
     ///
     /// `GET /{api_prefix}/v1/address/actual`
     pub fn actual_address(&self) -> Result<btc::Address, ApiError> {
-        let view = self.blockchain.view();
-        let schema = AnchoringSchema::new(&view);
-        Ok(schema.actual_anchoring_config()?.redeem_script().1)
+        let snapshot = self.blockchain.snapshot();
+        let schema = AnchoringSchema::new(snapshot);
+        Ok(schema.actual_anchoring_config().redeem_script().1)
     }
 
     /// Returns the following anchoring address if the node is in a transition state.
     ///
     /// `GET /{api_prefix}/v1/address/actual`
     pub fn following_address(&self) -> Result<Option<btc::Address>, ApiError> {
-        let view = self.blockchain.view();
-        let schema = AnchoringSchema::new(&view);
+        let snapshot = self.blockchain.snapshot();
+        let schema = AnchoringSchema::new(snapshot);
         let following_addr = schema
-            .following_anchoring_config()?
+            .following_anchoring_config()
             .map(|cfg| cfg.redeem_script().1);
         Ok(following_addr)
     }

@@ -148,7 +148,7 @@ fn test_api_public_get_lect_unavailable() {
                                        17a914dcfbafb4c432a24dd4b268570d26d7841a20fbbd87e7cc39\
                                        0a000000001976a914b3203ee5a42f8f524d14397ef10b84277f78\
                                        4b4a88acd81d1100")
-            .unwrap();
+        .unwrap();
     let lects = (0..2)
         .map(|id| {
                  MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),

@@ -61,7 +61,7 @@ impl SandboxClient {
             .expect(format!("expected response for method={}, params={:#?}",
                             method,
                             params)
-                            .as_str());
+                        .as_str());
 
         assert_eq!(expected.method, method);
         assert_eq!(expected.params,

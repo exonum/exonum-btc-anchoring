@@ -1,3 +1,5 @@
+use std::borrow::Cow;
+
 use serde_json;
 use serde::{Deserialize, Deserializer};
 
@@ -80,7 +82,7 @@ impl AnchoringConfig {
         let majority_count = self.majority_count();
         let redeem_script = btc::RedeemScript::from_pubkeys(self.anchoring_keys.iter(),
                                                             majority_count)
-                .compressed(self.network);
+            .compressed(self.network);
         let addr = btc::Address::from_script(&redeem_script, self.network);
         (redeem_script, addr)
     }
@@ -131,12 +133,12 @@ fn btc_network_from_str<'de, D>(deserializer: D) -> Result<btc::Network, D::Erro
 }
 
 impl StorageValue for AnchoringConfig {
-    fn serialize(self) -> Vec<u8> {
+    fn into_bytes(self) -> Vec<u8> {
         serde_json::to_vec(&self).unwrap()
     }
 
-    fn deserialize(v: Vec<u8>) -> Self {
-        serde_json::from_slice(v.as_slice()).unwrap()
+    fn from_bytes(value: Cow<[u8]>) -> Self {
+        serde_json::from_slice(value.as_ref()).unwrap()
     }
 
     fn hash(&self) -> Hash {

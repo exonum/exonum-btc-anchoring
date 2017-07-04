@@ -1,4 +1,3 @@
-pub use exonum::storage::Error as StorageError;
 pub use details::error::Error as InternalError;
 pub use handler::error::Error as HandlerError;
 use bitcoinrpc::Error as RpcError;
@@ -6,9 +5,7 @@ use bitcoinrpc::Error as RpcError;
 /// Anchoring btc service Error type.
 #[derive(Debug, Error)]
 pub enum Error {
-    /// Storage error.
-    Storage(StorageError),
-    /// Internal error.
+    /// Internal error
     Internal(InternalError),
     /// Handler error.
     Handler(HandlerError),

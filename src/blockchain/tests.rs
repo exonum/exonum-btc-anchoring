@@ -20,8 +20,8 @@ fn test_lect_content_encoding_struct() {
             .unwrap();
 
     let content = LectContent::new(&hash, tx);
-    let lect_value = content.clone().serialize();
-    assert_eq!(LectContent::deserialize(lect_value), content);
+    let lect_value = content.clone().into_bytes();
+    assert_eq!(LectContent::from_bytes(lect_value.into()), content);
 }
 
 #[test]
