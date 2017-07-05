@@ -31,7 +31,7 @@
 //! You can read the details in [specification][2].
 //!
 //! [1]: https://bitcoin.org/en/glossary/p2sh-multisig
-//! [2]: http://exonum.com/doc/anchoring-spec
+//! [2]: https://github.com/exonum/exonum-doc/blob/master/src/advanced/bitcoin-anchoring.md
 //!
 //! # Examples
 //!
