@@ -57,7 +57,6 @@
 //! ```
 //!
 
-#![doc(html_logo_url = "https://avatars3.githubusercontent.com/u/23138442?v=3&s=200", html_favicon_url = "https://avatars3.githubusercontent.com/u/23138442?v=3&s=200", html_root_url = "http://exonum.com")]
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 
