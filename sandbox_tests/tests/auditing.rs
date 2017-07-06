@@ -44,9 +44,13 @@ fn gen_following_cfg(sandbox: &AnchoringSandbox,
 
     let mut cfg = sandbox.cfg();
     cfg.actual_from = from_height;
-    cfg.validators.swap_remove(0);
+    cfg.previous_cfg_hash = sandbox.cfg().hash();
+    cfg.validator_keys.swap_remove(0);
     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
-    let tx = TxConfig::new(&sandbox.p(0), &cfg.into_bytes(), from_height, sandbox.s(0));
+    let tx = TxConfig::new(&sandbox.service_public_key(0),
+                           &cfg.into_bytes(),
+                           from_height,
+                           sandbox.service_secret_key(0));
     (tx.raw().clone(), service_cfg)
 }
 
@@ -133,11 +137,11 @@ fn test_auditing_no_consensus_in_lect() {
     sandbox.fast_forward_to_height_as_auditor(sandbox.next_check_lect_height());
 
     let lect_tx = BitcoinTx::from(sandbox.current_funding_tx().0);
-    let lect = MsgAnchoringUpdateLatest::new(&sandbox.p(0),
+    let lect = MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(0),
                                              0,
                                              lect_tx,
                                              lects_count(&sandbox, 0),
-                                             sandbox.s(0));
+                                             sandbox.service_secret_key(0));
     sandbox.add_height_as_auditor(&[lect.raw().clone()]);
 
     assert_eq!(sandbox.take_errors()[0],
@@ -161,11 +165,11 @@ fn test_auditing_lect_lost_funding_tx() {
     let lect_tx = BitcoinTx::from(sandbox.current_funding_tx().0);
     let lects = (0..3)
         .map(|id| {
-                 MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),
+                 MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(id as usize),
                                                id,
                                                lect_tx.clone(),
                                                lects_count(&sandbox, id),
-                                               sandbox.s(id as usize))
+                                               sandbox.service_secret_key(id as usize))
              })
         .collect::<Vec<_>>();
     force_commit_lects(&sandbox, lects);
@@ -211,11 +215,11 @@ fn test_auditing_lect_incorrect_funding_tx() {
         .unwrap();
     let lects = (0..3)
         .map(|id| {
-                 MsgAnchoringUpdateLatest::new(&sandbox.p(id as usize),
+                 MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(id as usize),
                                                id,
                                                lect_tx.clone(),
                                                lects_count(&sandbox, id),
-                                               sandbox.s(id as usize))
+                                               sandbox.service_secret_key(id as usize))
              })
         .collect::<Vec<_>>();
     force_commit_lects(&sandbox, lects);
