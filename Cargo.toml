@@ -29,7 +29,7 @@ toml = "0.4.0"
 
 [dependencies.exonum]
 version = "0.1.0"
-git = "ssh://git@github.com/vldm/exonum-core.git"
+path = "../../exonum-core/exonum"
 branch = "clap_factory_dynamic"
 
 [dependencies.configuration_service]
