@@ -3,7 +3,10 @@
 //! we can use in `anchoring` bootstraping process.
 //!
 use toml::Value;
-use exonum::helpers::fabric::{CommandName, Argument, Context, CommandExtension, ServiceFactory};
+use exonum::helpers::fabric::{CommandName, Argument, Context,
+                                CommandExtension, ServiceFactory,
+                                NodePublicConfig, AbstractConfig,
+                                CommonConfigTemplate};
 use exonum::blockchain::Service;
 
 use exonum::node::NodeConfig;
@@ -16,8 +19,7 @@ use std::collections::BTreeMap;
 
 use service::AnchoringService;
 use super::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig, gen_btc_keypair};
-use exonum::helpers::fabric::{NodePublicConfig, AbstractConfig,
-                                CommonConfigTemplate};
+
 
 use details::btc::{ PublicKey, PrivateKey};
 
