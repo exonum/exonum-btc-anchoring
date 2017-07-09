@@ -1,8 +1,7 @@
 [package]
 name = "btc_anchoring_sandbox"
 version = "0.1.0"
-authors = ["Ivan Ivashchenko <ivan.ivashchenko@xdev.re",
-           "Aleksey Sidorov <aleksei.sidorov@xdev.re>"]
+authors = ["Exonum Team <exonum@bitfury.com>"]
 
 [dependencies]
 btc_anchoring_service = {version="0.1", path="../", features=["sandbox_tests"]}
