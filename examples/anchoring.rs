@@ -10,7 +10,7 @@ fn main() {
     exonum::crypto::init();
     helpers::init_logger().unwrap();
     let node = NodeBuilder::new()
-                    .with_service::<AnchoringService>()
-                    .with_service::<ConfigurationService>();
+        .with_service::<AnchoringService>()
+        .with_service::<ConfigurationService>();
     node.run();
 }
