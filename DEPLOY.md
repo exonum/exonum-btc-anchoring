@@ -49,17 +49,52 @@ For quick anchoring demonstration you can use built-in anchoring example.
 $ cargo install --example anchoring
 ```
 
-### Generate testnet config
-After installation you need to generate testnet configuration.
+### Create blockchain with anchoring
+After installation you need to generate configuration.
+For this you need:
+1. Generate common config:
 ```
-$ anchoring generate \
-    --output-dir <destdir> <n> \
-    --anchoring-host <bitcoind RPC host> \
-    --anchoring-user <bitcoind RPC username> \
-    --anchoring-password <bitcoind RPC password> \
-    --anchoring-funds <amount in satoshis> \
+$ anchoring generate-template \
+    <Path where save template config> \
+    <Network in which anchoring shoud work (testnet\bitcoin)> \
     --anchoring-fee <fee is satoshis>
 ```
+2. Share this config with all nodes.
+
+3. Generate config for each nodes:
+```
+$ anchoring generate-config \
+    <Path to saved template config> \
+    <Path where save public node config> \
+    <Path where save private node config> \
+    --anchoring-host <bitcoind RPC host> \
+    [--anchoring-user <bitcoind RPC username>] \
+    [--anchoring-password <bitcoind RPC password>] \
+    --peer-addr <external node listening address>
+```
+
+4. Each node should share "public config".
+5. When you collect all public configs, you cound create your finnal config.
+a) One of admininstrator should create funding transaction, and give it hash to each other.
+```
+$ anchoring finalize 
+    <Path to saved private node config> \
+    <Path where save finalized node config> \
+    [--anchoring-create-funding-tx <Create initial funding tx with given amount in satoshis>] \    
+    --public-configs <Path to node1 public config>\
+    [<Path to node2 public config> ...]
+```
+b) While others, should use this hash.
+```
+$ anchoring finalize 
+    <Path to saved private node config> \
+    <Path where save finalized node config> \
+    [--anchoring-funding-txid <Txid of the initial funding tx>] \    
+    --public-configs <Path to node1 public config>\
+    [<Path to node2 public config> ...]
+```
+This is important, because all network should start from one state.
+
 Which create the configuration of `N` exonum anchoring nodes in destination directory using given `bitcoind` by rpc.
 
 Also in the generated configuration files you may specify public and private api addresses according to this [document][exonum:node_api].
