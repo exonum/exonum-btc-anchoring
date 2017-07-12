@@ -61,7 +61,7 @@ $ anchoring generate-template \
 ```
 2. Share this config with all nodes.
 
-3. Generate config for each nodes:
+3. Generate config for each node:
 ```
 $ anchoring generate-config \
     <Path to saved template config> \
@@ -74,8 +74,9 @@ $ anchoring generate-config \
 ```
 
 4. Each node should share "public config".
-5. When you collect all public configs, you cound create your finnal config.
-a) One of admininstrator should create funding transaction, and give it hash to each other.
+5. When you collect all public configs, you could create your final config.
+
+ - One of administrators should create funding transaction, and give its hash to the others.
 ```
 $ anchoring finalize 
     <Path to saved private node config> \
@@ -84,7 +85,8 @@ $ anchoring finalize
     --public-configs <Path to node1 public config>\
     [<Path to node2 public config> ...]
 ```
-b) While others, should use this hash.
+
+ - While others, should use this hash.
 ```
 $ anchoring finalize 
     <Path to saved private node config> \
@@ -93,7 +95,7 @@ $ anchoring finalize
     --public-configs <Path to node1 public config>\
     [<Path to node2 public config> ...]
 ```
-This is important, because all network should start from one state.
+This is important, because all nodes in the network should start from one state.
 
 Which create the configuration of `N` exonum anchoring nodes in destination directory using given `bitcoind` by rpc.
 

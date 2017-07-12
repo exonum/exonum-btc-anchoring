@@ -26,7 +26,7 @@ use details::btc::transactions::FundingTx;
 use bitcoin::util::base58::FromBase58;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
-/// Anchoring configuration that should be saved into file
+/// Anchoring configuration that should be saved into the file
 pub struct AnchoringServiceConfig {
     /// `AnchoringConfig` is a common for all nodes part.
     pub genesis: AnchoringConfig,
@@ -324,9 +324,7 @@ impl ServiceFactory for AnchoringService {
     fn make_service(run_context: &Context) -> Box<Service> {
         let node_config: NodeConfig = run_context.get("node_config").unwrap();
         let anchoring_cfg: AnchoringServiceConfig = node_config
-            .services_configs
-            .get("anchoring_service")
-            .unwrap()
+            .services_configs["anchoring_service"]
             .clone()
             .try_into()
             .unwrap();
