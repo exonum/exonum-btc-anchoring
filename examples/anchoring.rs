@@ -9,7 +9,6 @@ use btc_anchoring_service::AnchoringService;
 fn main() {
     exonum::crypto::init();
     helpers::init_logger().unwrap();
-    let node = NodeBuilder::new()
-                .with_service::<AnchoringService>();
-        node.run();
+    let node = NodeBuilder::new().with_service::<AnchoringService>();
+    node.run();
 }
