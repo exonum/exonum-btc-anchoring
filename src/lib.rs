@@ -108,6 +108,7 @@
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 
+extern crate toml;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -144,6 +145,7 @@ pub mod handler;
 pub mod error;
 pub mod api;
 pub mod observer;
+pub mod cmd;
 
 pub use details::btc::{Network as BitcoinNetwork, gen_btc_keypair, gen_btc_keypair_with_rng};
 pub use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
