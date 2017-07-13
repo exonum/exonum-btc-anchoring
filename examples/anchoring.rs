@@ -13,12 +13,13 @@
 // limitations under the License.
 
 extern crate exonum;
-extern crate btc_anchoring_service;
-extern crate configuration_service;
+extern crate exonum_configuration;
+extern crate exonum_btc_anchoring;
+
 use exonum::helpers::fabric::NodeBuilder;
 use exonum::helpers;
-use btc_anchoring_service::AnchoringService;
-use configuration_service::ConfigurationService;
+use exonum_configuration::ConfigurationService;
+use exonum_btc_anchoring::AnchoringService;
 
 fn main() {
     exonum::crypto::init();

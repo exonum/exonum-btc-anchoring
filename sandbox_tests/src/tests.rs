@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use btc_anchoring_service::details::sandbox::{Request, SandboxClient};
-use btc_anchoring_service::AnchoringRpc;
+use exonum_btc_anchoring::details::sandbox::{Request, SandboxClient};
+use exonum_btc_anchoring::AnchoringRpc;
 
 use {AnchoringSandbox, gen_sandbox_anchoring_config};
 

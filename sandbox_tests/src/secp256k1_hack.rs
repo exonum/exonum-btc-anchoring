@@ -25,7 +25,7 @@ use secp256k1::key::SecretKey;
 use secp256k1::key;
 use secp256k1::Error;
 
-use btc_anchoring_service::details::btc::transactions::RawBitcoinTx;
+use exonum_btc_anchoring::details::btc::transactions::RawBitcoinTx;
 
 /// The structure with the same memory representation as the `secp256k1::Secp256k1`.
 #[derive(Clone, Copy)]

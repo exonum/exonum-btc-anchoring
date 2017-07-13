@@ -39,11 +39,11 @@
 //!
 //! ```rust,no_run
 //! extern crate exonum;
-//! extern crate btc_anchoring_service;
+//! extern crate exonum_btc_anchoring;
 //! extern crate configuration_service;
 //! use exonum::helpers::fabric::NodeBuilder;
 //! use exonum::helpers;
-//! use btc_anchoring_service::AnchoringService;
+//! use exonum_btc_anchoring::AnchoringService;
 //! use configuration_service::ConfigurationService;
 //!
 //! fn main() {

@@ -1,10 +1,10 @@
 [package]
-name = "btc_anchoring_sandbox"
+name = "exonum-btc-anchoring-sandbox"
 version = "0.1.0"
-authors = ["Exonum Team <exonum@bitfury.com>"]
+authors = ["The Exonum Team <exonum@bitfury.com>"]
 
 [dependencies]
-btc_anchoring_service = {version="0.1", path="../", features=["sandbox_tests"]}
+exonum_btc_anchoring = {version="0.1", path="../", features=["sandbox_tests"]}
 
 bitcoin="0.9.0"
 secp256k1 = "0.6.0"
