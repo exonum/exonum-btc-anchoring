@@ -13,7 +13,7 @@
 // limitations under the License.
 
 extern crate exonum;
-extern crate btc_anchoring_service;
+extern crate exonum_btc_anchoring;
 extern crate tempdir;
 
 use std::thread;
@@ -26,8 +26,8 @@ use exonum::node::Node;
 use exonum::storage::{LevelDB, LevelDBOptions};
 use exonum::helpers::{generate_testnet_config, init_logger};
 
-use btc_anchoring_service::{AnchoringRpc, AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
-                            gen_anchoring_testnet_config};
+use exonum_btc_anchoring::{AnchoringRpc, AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
+                           gen_anchoring_testnet_config};
 
 fn main() {
     // Init crypto engine and pretty logger.

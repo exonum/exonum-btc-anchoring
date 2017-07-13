@@ -30,7 +30,7 @@ before_script:
 - bitcoin-cli -regtest -rpcuser=travis -rpcpassword=travis generate 200
 script:
 - cargo fmt -- --write-mode=diff
-- cargo fmt -p btc_anchoring_sandbox -- --write-mode=diff
+- cargo fmt -p exonum-btc-anchoring-sandbox -- --write-mode=diff
 - cargo +$NIGHTLY_RUST clippy -- -D warnings
 - cargo test --release
 - cargo test --manifest-path sandbox_tests/Cargo.toml

@@ -8,17 +8,17 @@
 
 ## Bitcoind node deployment
 
-First of all install `bitcoind` via your package manager and ensure that you use latest stable version. 
+First of all install `bitcoind` via your package manager and ensure that you use latest stable version.
 You may visit official bitcoin [site][bitcoin:install] for more information about installation.
 
 Then create bitcoind configuration file in according to this [tutorial][bitcoin_wiki:configuration].
 
-For correct work of the service, the `bitcoind` configuration file should contain the following settings: 
+For correct work of the service, the `bitcoind` configuration file should contain the following settings:
 ```ini
-# Run on the test network instead of the real bitcoin network. 
+# Run on the test network instead of the real bitcoin network.
 # If you want to use main network comment line bellow:
 testnet=1
-# server=1 tells Bitcoin-Qt and bitcoind to accept JSON-RPC commands. 
+# server=1 tells Bitcoin-Qt and bitcoind to accept JSON-RPC commands.
 server=1
 # Maintain a full transaction index, used by the getrawtransaction rpc call.
 txindex=1
@@ -79,22 +79,22 @@ Participants need to send some bitcoins to the anchoring address in order to ena
 For this:
  - One of the participants generates initial `funding_tx` by init command:
 ```
-$ anchoring finalize 
+$ anchoring finalize
     <Path to saved private node config> \
     <Path where save finalized node config> \
-    [--anchoring-create-funding-tx <Create initial funding tx with given amount in satoshis>] \    
+    [--anchoring-create-funding-tx <Create initial funding tx with given amount in satoshis>] \
     --public-configs <Path to node1 public config>\
     [<Path to node2 public config> ...]
 ```
-This command generates configuration of node and returns 
+This command generates configuration of node and returns
 txid of generated `funding_tx`:
 
  - While others, should use this `funding_tx`.
 ```
-$ anchoring finalize 
+$ anchoring finalize
     <Path to saved private node config> \
     <Path where save finalized node config> \
-    [--anchoring-funding-txid <Txid of the initial funding tx>] \    
+    [--anchoring-funding-txid <Txid of the initial funding tx>] \
     --public-configs <Path to node1 public config>\
     [<Path to node2 public config> ...]
 ```
@@ -105,7 +105,7 @@ Which create the configuration of `N` exonum anchoring nodes in destination dire
 
 Also in the generated configuration files you may specify public and private api addresses according to this [document][exonum:node_api].
 
-***Warning!** `Bitcoind` node should have some bitcoin amount greater than `<initial_funds>`, 
+***Warning!** `Bitcoind` node should have some bitcoin amount greater than `<initial_funds>`,
 since the initial funding transaction will be created during the testnet generation.
 For testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.*
 
@@ -116,12 +116,12 @@ Launch all exonum nodes in the testnet. To launch node `m`, execute:
 $ anchoring run --node-config <destdir>/<m>.toml --leveldb <destdir>/db/<m>
 ```
 
-If you want to see additional information you may specify log level by environment variable `RUST_LOG="btc_anchoring_service=info"`.
+If you want to see additional information you may specify log level by environment variable `RUST_LOG="exonum_btc_anchoring=info"`.
 
 ## Maintenance
- 
+
 As maintainer, you can change the anchoring [configuration parameters](#change-configuration-parameters).
-These actions must be performed by [Exonum configuration service][exonum:configuration_service]. 
+These actions must be performed by [Exonum configuration service][exonum:configuration_service].
 Visit its [tutorial][exonum:configuration_tutorial] for more explanations.
 
 ### Change configuration parameters
@@ -155,20 +155,20 @@ With these variables you can perform the following actions:
 
 #### Add funds
 
-Send to anchoring wallet some btc and save raw transaction body hex. Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex. 
+Send to anchoring wallet some btc and save raw transaction body hex. Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex.
 
 ***Note!** If the current anchoring chain [becomes unusable][exonum:anchoring_transfering] you may start a new chain by adding corresponding funding transaction.*
 
 #### Change list of validators
 
-***Important warning!** This procedure changes the anchoring address. Exonum node needs to wait until 
+***Important warning!** This procedure changes the anchoring address. Exonum node needs to wait until
 the last anchored transaction gets enough confirmations. It is caused by impossibility to sign
 transaction addressed to old anchoring address by keys from the current configuration. If the
-last anchoring transaction does not get enough confirmations before anchoring address is changed, 
-the following transfering transaction may be lost because of possible bitcoin forks and 
+last anchoring transaction does not get enough confirmations before anchoring address is changed,
+the following transfering transaction may be lost because of possible bitcoin forks and
 transaction malleability. See this [article][exonum:anchoring_transfering] for details.*
 
-* Make sure that difference between the activation height (`actual_from`) and current `Exonum` blockchain height is enough for get sufficient confirmations for the latest anchored transaction. Usually 6 hours are enough for this. 
+* Make sure that difference between the activation height (`actual_from`) and current `Exonum` blockchain height is enough for get sufficient confirmations for the latest anchored transaction. Usually 6 hours are enough for this.
 Calculate how many blocks will be taken during this time and add this number to the `current_height`.
 * If necessary, [generate](#generate-node-keys) a new key pair for anchoring.
 * Change list of validators via editing `anchoring_keys` array.
@@ -186,7 +186,7 @@ The address is encoded using [`base58check`][bitcoin:base58check] encoding and t
 [anchoring_service.node.private_keys]
 2NCJYWui4LGNZguUw41xBANbcHoKxSVxyzr = "cRf74adxyQzJs7V8fHoyrMDazxzCmKAan63Cfhf9i4KL69zRkdS2"
 ```
-Add the line with new address and corresponding private key for it. If node public key is not changed you 
+Add the line with new address and corresponding private key for it. If node public key is not changed you
 must use the old key for the new address otherwise use a new key. After modifying the configuration file
 you need to restart the node for the changes to take effect.
 

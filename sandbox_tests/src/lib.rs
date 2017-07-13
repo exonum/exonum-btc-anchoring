@@ -14,7 +14,7 @@
 
 extern crate exonum;
 extern crate sandbox;
-extern crate btc_anchoring_service;
+extern crate exonum_btc_anchoring;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
@@ -45,14 +45,14 @@ use sandbox::sandbox_tests_helper::{SandboxState, VALIDATOR_0, add_one_height_wi
                                     add_one_height_with_transactions_from_other_validator};
 use sandbox::config_updater::ConfigUpdateService;
 
-use btc_anchoring_service::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpc, AnchoringService,
-                            gen_anchoring_testnet_config_with_rng};
-use btc_anchoring_service::details::sandbox::{Request, SandboxClient};
-use btc_anchoring_service::details::btc;
-use btc_anchoring_service::details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
-use btc_anchoring_service::blockchain::dto::MsgAnchoringSignature;
-use btc_anchoring_service::handler::{AnchoringHandler, collect_signatures};
-use btc_anchoring_service::error::HandlerError;
+use exonum_btc_anchoring::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpc, AnchoringService,
+                           gen_anchoring_testnet_config_with_rng};
+use exonum_btc_anchoring::details::sandbox::{Request, SandboxClient};
+use exonum_btc_anchoring::details::btc;
+use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
+use exonum_btc_anchoring::blockchain::dto::MsgAnchoringSignature;
+use exonum_btc_anchoring::handler::{AnchoringHandler, collect_signatures};
+use exonum_btc_anchoring::error::HandlerError;
 
 #[macro_use]
 mod macros;
