@@ -113,7 +113,7 @@ For testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.*
 
 Launch all exonum nodes in the testnet. To launch node `m`, execute:
 ```
-$ anchoring run --node-config <destdir>/<m>.toml --leveldb-path <destdir>/db/<m>
+$ anchoring run --node-config <destdir>/<m>.toml --leveldb <destdir>/db/<m>
 ```
 
 If you want to see additional information you may specify log level by environment variable `RUST_LOG="btc_anchoring_service=info"`.
