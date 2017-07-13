@@ -25,9 +25,5 @@ pub mod consensus_storage;
 #[cfg(test)]
 mod tests;
 
-<<<<<<< HEAD
-pub use self::schema::{AnchoringSchema, KnownSignatureId};
-=======
 pub use self::schema::AnchoringSchema;
-pub use self::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest, LectContent};
->>>>>>> Add logo and document anchoring messages.
+pub use self::dto::{LectContent, MsgAnchoringSignature, MsgAnchoringUpdateLatest};

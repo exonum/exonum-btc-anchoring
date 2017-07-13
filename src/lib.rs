@@ -45,7 +45,7 @@
 //! use exonum::helpers;
 //! use btc_anchoring_service::AnchoringService;
 //! use configuration_service::ConfigurationService;
-//! 
+//!
 //! fn main() {
 //!     exonum::crypto::init();
 //!     helpers::init_logger().unwrap();
