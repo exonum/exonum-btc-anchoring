@@ -50,7 +50,7 @@ After installation you need to generate configuration.
 For this you need:
 
 #### Generate template config:
-At the first stage, one of the participants creates a template of blockchain consensus configuration and broadcasts its to other members.
+At the first stage, one of the participants creates a template of blockchain consensus configuration and broadcast it to other members.
 ```
 $ anchoring generate-template \
     <Path where save template config> \
@@ -59,7 +59,7 @@ $ anchoring generate-template \
 ```
 
 #### Generate config for each node:
-Then each of participants generates own public and secret node config files.
+Then each of the participants generates own public and secret node config files.
 ```
 $ anchoring generate-config \
     <Path to saved template config> \
@@ -72,12 +72,12 @@ $ anchoring generate-config \
 ```
 Each node should broadcast public config part.
 #### Finalizing configuration
-When administrator collect all public configs, he can could create final node configuration.
+When the administrator collects all public configs, he can create final node configuration.
 
 
 Participants need to send some bitcoins to the anchoring address in order to enable Bitcoin anchoring.
 For this:
- - One of participants generates initial `funding_tx` by init command:
+ - One of the participants generates initial `funding_tx` by init command:
 ```
 $ anchoring finalize 
     <Path to saved private node config> \
@@ -176,7 +176,7 @@ Calculate how many blocks will be taken during this time and add this number to 
 * Make sure that config update procedure is not delayed. That is, do not delay the voting procedure for the new configuration.
 * Look at the new address of the anchoring by the anchoring public [api][exonum:anchoring_public_api].
 
-***Note!** If transfering transaction has been lost you need establishing a new anchoring chain by a new funding transaction.*
+***Note!** If transfering transaction has been lost you need to establish a new anchoring chain by a new funding transaction.*
 
 ### Updating anchoring address in config
 
