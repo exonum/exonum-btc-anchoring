@@ -12,7 +12,7 @@ This crate implements a protocol for blockchain anchoring onto the `Bitcoin` blo
 # Installation guide
 
 Just follow the installation guide of the 
-[`exonum-core`][exonum:install] to install dependencies.
+[`exonum`][exonum:install] to install dependencies.
 
 # Usage
 The anchoring service depends on bitcoind. For the correct work, you need to launch bitcoind with specific configuration, see [deployment guide](DEPLOY.md) for details.
