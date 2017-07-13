@@ -128,9 +128,9 @@ impl PublicApi {
     pub fn following_address(&self) -> Result<Option<btc::Address>, ApiError> {
         let snapshot = self.blockchain.snapshot();
         let schema = AnchoringSchema::new(snapshot);
-        let following_addr = schema
-            .following_anchoring_config()
-            .map(|cfg| cfg.redeem_script().1);
+        let following_addr = schema.following_anchoring_config().map(|cfg| {
+            cfg.redeem_script().1
+        });
         Ok(following_addr)
     }
 
@@ -166,14 +166,13 @@ impl Api for PublicApi {
             let map = req.extensions.get::<Router>().unwrap();
             match map.find("id") {
                 Some(id_str) => {
-                    let id: u32 = id_str
-                        .parse()
-                        .map_err(|e| {
-                                     let msg = format!("An error during parsing of the validator \
-                                                        id occurred: {}",
-                                                       e);
-                                     ApiError::IncorrectRequest(msg.into())
-                                 })?;
+                    let id: u32 = id_str.parse().map_err(|e| {
+                        let msg = format!(
+                            "An error during parsing of the validator id occurred: {}",
+                            e
+                        );
+                        ApiError::IncorrectRequest(msg.into())
+                    })?;
                     let info = _self.current_lect_of_validator(id)?;
                     _self.ok_response(&json!(info))
                 }
@@ -201,14 +200,13 @@ impl Api for PublicApi {
             let map = req.extensions.get::<Router>().unwrap();
             match map.find("height") {
                 Some(height_str) => {
-                    let height: u64 = height_str
-                        .parse()
-                        .map_err(|e| {
-                                     let msg = format!("An error during parsing of the block \
-                                                        height occurred: {}",
-                                                       e);
-                                     ApiError::IncorrectRequest(msg.into())
-                                 })?;
+                    let height: u64 = height_str.parse().map_err(|e| {
+                        let msg = format!(
+                            "An error during parsing of the block height occurred: {}",
+                            e
+                        );
+                        ApiError::IncorrectRequest(msg.into())
+                    })?;
                     let lect = _self.nearest_lect(height)?;
                     _self.ok_response(&json!(lect))
                 }
@@ -220,13 +218,17 @@ impl Api for PublicApi {
         };
 
         router.get("/v1/address/actual", actual_address, "actual_address");
-        router.get("/v1/address/following",
-                   following_address,
-                   "following_address");
+        router.get(
+            "/v1/address/following",
+            following_address,
+            "following_address",
+        );
         router.get("/v1/actual_lect/", actual_lect, "actual_lect");
-        router.get("/v1/actual_lect/:id",
-                   current_lect_of_validator,
-                   "current_lect_of_validator");
+        router.get(
+            "/v1/actual_lect/:id",
+            current_lect_of_validator,
+            "current_lect_of_validator",
+        );
         router.get("/v1/nearest_lect/:height", nearest_lect, "nearest_lect");
     }
 }

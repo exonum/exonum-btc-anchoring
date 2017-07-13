@@ -69,10 +69,11 @@ impl AnchoringService {
     }
 
     #[doc(hidden)]
-    pub fn new_with_client(client: AnchoringRpc,
-                           genesis: AnchoringConfig,
-                           local_cfg: AnchoringNodeConfig)
-                           -> AnchoringService {
+    pub fn new_with_client(
+        client: AnchoringRpc,
+        genesis: AnchoringConfig,
+        local_cfg: AnchoringNodeConfig,
+    ) -> AnchoringService {
         AnchoringService {
             genesis: genesis,
             handler: Arc::new(Mutex::new(AnchoringHandler::new(Some(client), local_cfg))),
@@ -103,7 +104,9 @@ impl Service for AnchoringService {
         match raw.message_type() {
             ANCHORING_MESSAGE_LATEST => Ok(Box::new(MsgAnchoringUpdateLatest::from_raw(raw)?)),
             ANCHORING_MESSAGE_SIGNATURE => Ok(Box::new(MsgAnchoringSignature::from_raw(raw)?)),
-            _ => Err(StreamStructError::IncorrectMessageType { message_type: raw.message_type() }),
+            _ => Err(StreamStructError::IncorrectMessageType {
+                message_type: raw.message_type(),
+            }),
         }
     }
 
@@ -155,13 +158,15 @@ impl Service for AnchoringService {
 ///
 /// Note: Bitcoin node that is used by rpc should have enough bitcoin amount to generate
 /// funding transaction by given `total_funds`.
-pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
-                                                network: btc::Network,
-                                                count: u8,
-                                                total_funds: u64,
-                                                rng: &mut R)
-                                                -> (AnchoringConfig, Vec<AnchoringNodeConfig>)
-    where R: Rng
+pub fn gen_anchoring_testnet_config_with_rng<R>(
+    client: &AnchoringRpc,
+    network: btc::Network,
+    count: u8,
+    total_funds: u64,
+    rng: &mut R,
+) -> (AnchoringConfig, Vec<AnchoringNodeConfig>)
+where
+    R: Rng,
 {
     let network = network.into();
     let rpc = AnchoringRpcConfig {
@@ -189,9 +194,10 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
 
     let genesis_cfg = AnchoringConfig::new_with_funding_tx(network, pub_keys, tx);
     for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
-        node_cfg
-            .private_keys
-            .insert(address.to_base58check(), priv_keys[idx].clone());
+        node_cfg.private_keys.insert(
+            address.to_base58check(),
+            priv_keys[idx].clone(),
+        );
     }
 
     (genesis_cfg, node_cfgs)
@@ -199,11 +205,12 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(client: &AnchoringRpc,
 
 /// Same as [`gen_anchoring_testnet_config_with_rng`](fn.gen_anchoring_testnet_config_with_rng.html)
 /// but it uses default random number generator.
-pub fn gen_anchoring_testnet_config(client: &AnchoringRpc,
-                                    network: btc::Network,
-                                    count: u8,
-                                    total_funds: u64)
-                                    -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
+pub fn gen_anchoring_testnet_config(
+    client: &AnchoringRpc,
+    network: btc::Network,
+    count: u8,
+    total_funds: u64,
+) -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let mut rng = thread_rng();
     gen_anchoring_testnet_config_with_rng(client, network, count, total_funds, &mut rng)
 }

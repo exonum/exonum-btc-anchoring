@@ -187,10 +187,10 @@ impl Payload {
         instructions
             .next()
             .and_then(|instr| if instr == Instruction::Op(All::OP_RETURN) {
-                          instructions.next()
-                      } else {
-                          None
-                      })
+                instructions.next()
+            } else {
+                None
+            })
             .and_then(|instr| {
                 if let Instruction::PushBytes(bytes) = instr {
                     if bytes.len() < PAYLOAD_HEADER_LEN {

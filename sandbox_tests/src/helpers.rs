@@ -36,29 +36,35 @@ use AnchoringSandbox;
 pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 
-pub fn gen_service_tx_lect(sandbox: &Sandbox,
-                           validator: u16,
-                           tx: &RawBitcoinTx,
-                           count: u64)
-                           -> MsgAnchoringUpdateLatest {
-    MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(validator as usize),
-                                  validator,
-                                  BitcoinTx::from(tx.clone()),
-                                  count,
-                                  sandbox.service_secret_key(validator as usize))
+pub fn gen_service_tx_lect(
+    sandbox: &Sandbox,
+    validator: u16,
+    tx: &RawBitcoinTx,
+    count: u64,
+) -> MsgAnchoringUpdateLatest {
+    MsgAnchoringUpdateLatest::new(
+        &sandbox.service_public_key(validator as usize),
+        validator,
+        BitcoinTx::from(tx.clone()),
+        count,
+        sandbox.service_secret_key(validator as usize),
+    )
 }
 
-pub fn gen_service_tx_lect_wrong(sandbox: &Sandbox,
-                                 real_id: u16,
-                                 fake_id: u16,
-                                 tx: &RawBitcoinTx,
-                                 count: u64)
-                                 -> MsgAnchoringUpdateLatest {
-    MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(real_id as usize),
-                                  fake_id,
-                                  BitcoinTx::from(tx.clone()),
-                                  count,
-                                  sandbox.service_secret_key(real_id as usize))
+pub fn gen_service_tx_lect_wrong(
+    sandbox: &Sandbox,
+    real_id: u16,
+    fake_id: u16,
+    tx: &RawBitcoinTx,
+    count: u64,
+) -> MsgAnchoringUpdateLatest {
+    MsgAnchoringUpdateLatest::new(
+        &sandbox.service_public_key(real_id as usize),
+        fake_id,
+        BitcoinTx::from(tx.clone()),
+        count,
+        sandbox.service_secret_key(real_id as usize),
+    )
 }
 
 pub fn dump_lects(sandbox: &Sandbox, id: u16) -> Vec<BitcoinTx> {
@@ -76,7 +82,8 @@ pub fn lects_count(sandbox: &Sandbox, id: u16) -> u64 {
 }
 
 pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
-    where I: IntoIterator<Item = MsgAnchoringUpdateLatest>
+where
+    I: IntoIterator<Item = MsgAnchoringUpdateLatest>,
 {
     let mut blockchain = sandbox.blockchain_mut();
     let mut fork = blockchain.fork();
@@ -101,18 +108,21 @@ pub fn dump_signatures(sandbox: &Sandbox, txid: &btc::TxId) -> Vec<MsgAnchoringS
     signatures
 }
 
-pub fn gen_update_config_tx(sandbox: &Sandbox,
-                            actual_from: u64,
-                            service_cfg: &AnchoringConfig)
-                            -> RawTransaction {
+pub fn gen_update_config_tx(
+    sandbox: &Sandbox,
+    actual_from: u64,
+    service_cfg: &AnchoringConfig,
+) -> RawTransaction {
     let mut cfg = sandbox.cfg();
     cfg.actual_from = actual_from;
     cfg.previous_cfg_hash = sandbox.cfg().hash();
     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
-    let tx = TxConfig::new(&sandbox.service_public_key(0),
-                           &cfg.into_bytes(),
-                           actual_from,
-                           sandbox.service_secret_key(0));
+    let tx = TxConfig::new(
+        &sandbox.service_public_key(0),
+        &cfg.into_bytes(),
+        actual_from,
+        sandbox.service_secret_key(0),
+    );
     tx.raw().clone()
 }
 
@@ -246,10 +256,10 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
 
     let txs = (0..4)
         .map(|idx| {
-                 gen_service_tx_lect(sandbox, idx, &anchored_tx, 1)
-                     .raw()
-                     .clone()
-             })
+            gen_service_tx_lect(sandbox, idx, &anchored_tx, 1)
+                .raw()
+                .clone()
+        })
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
     sandbox.add_height(&txs);
@@ -313,10 +323,10 @@ pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
 
     let txs = (0..4)
         .map(|idx| {
-                 gen_service_tx_lect(sandbox, idx, &other_lect, 2)
-                     .raw()
-                     .clone()
-             })
+            gen_service_tx_lect(sandbox, idx, &other_lect, 2)
+                .raw()
+                .clone()
+        })
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
 
@@ -348,10 +358,10 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
 
     let txs = (0..4)
         .map(|idx| {
-                 gen_service_tx_lect(sandbox, idx, &other_lect, 2)
-                     .raw()
-                     .clone()
-             })
+            gen_service_tx_lect(sandbox, idx, &other_lect, 2)
+                .raw()
+                .clone()
+        })
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
 
@@ -402,14 +412,14 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     ]);
     sandbox.add_height(&[]);
 
-    let (_, signatures) = sandbox
-        .gen_anchoring_tx_with_signatures(10,
-                                          sandbox.last_hash(),
-                                          &[],
-                                          None,
-                                          &btc::Address::from_base58check(&anchoring_addr
-                                                                              .to_base58check())
-                                              .unwrap());
+    let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
+        10,
+        sandbox.last_hash(),
+        &[],
+        None,
+        &btc::Address::from_base58check(&anchoring_addr.to_base58check())
+            .unwrap(),
+    );
     let anchored_tx = sandbox.latest_anchored_tx();
 
     sandbox.broadcast(signatures[0].clone());
@@ -418,10 +428,10 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
 
     let txs = (0..4)
         .map(|idx| {
-                 gen_service_tx_lect(sandbox, idx, &anchored_tx, 2)
-                     .raw()
-                     .clone()
-             })
+            gen_service_tx_lect(sandbox, idx, &anchored_tx, 2)
+                .raw()
+                .clone()
+        })
         .collect::<Vec<_>>();
     sandbox.broadcast(txs[0].clone());
     client.expect(vec![
@@ -453,13 +463,19 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
         },
     ]);
 
-    let (_, signatures) =
-        sandbox
-            .gen_anchoring_tx_with_signatures(0, sandbox.last_hash(), &[], None, &anchoring_addr);
+    let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
+        0,
+        sandbox.last_hash(),
+        &[],
+        None,
+        &anchoring_addr,
+    );
     sandbox.add_height(&[]);
 
     sandbox.broadcast(signatures[0].clone());
-    client.expect(vec![confirmations_request(&sandbox.current_funding_tx(), 50)]);
+    client.expect(
+        vec![confirmations_request(&sandbox.current_funding_tx(), 50)],
+    );
     sandbox.add_height(&signatures[0..1]);
 }
 
@@ -483,12 +499,13 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[cfg_tx]);
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) =
-        sandbox.gen_anchoring_tx_with_signatures(0,
-                                                 anchored_tx.payload().block_hash,
-                                                 &[],
-                                                 None,
-                                                 &following_multisig.1);
+    let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
+        0,
+        anchored_tx.payload().block_hash,
+        &[],
+        None,
+        &following_multisig.1,
+    );
     let transition_tx = sandbox.latest_anchored_tx();
     // Tx gets enough confirmations.
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
@@ -500,10 +517,10 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
 
     let lects = (0..4)
         .map(|id| {
-                 gen_service_tx_lect(sandbox, id, &transition_tx, 2)
-                     .raw()
-                     .clone()
-             })
+            gen_service_tx_lect(sandbox, id, &transition_tx, 2)
+                .raw()
+                .clone()
+        })
         .collect::<Vec<_>>();
     sandbox.broadcast(lects[0].clone());
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
@@ -527,9 +544,10 @@ pub fn init_logger() {
 
 /// Generates a configuration that excludes `sandbox node` from consensus.
 /// Then it continues to work as auditor.
-fn gen_following_cfg_exclude_validator(sandbox: &AnchoringSandbox,
-                                       from_height: u64)
-                                       -> (RawTransaction, AnchoringConfig) {
+fn gen_following_cfg_exclude_validator(
+    sandbox: &AnchoringSandbox,
+    from_height: u64,
+) -> (RawTransaction, AnchoringConfig) {
 
     let mut service_cfg = sandbox.current_cfg().clone();
     let priv_keys = sandbox.current_priv_keys();
@@ -537,8 +555,10 @@ fn gen_following_cfg_exclude_validator(sandbox: &AnchoringSandbox,
 
     let following_addr = service_cfg.redeem_script().1;
     for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
-        node.private_keys
-            .insert(following_addr.to_base58check(), priv_keys[id].clone());
+        node.private_keys.insert(
+            following_addr.to_base58check(),
+            priv_keys[id].clone(),
+        );
     }
 
     let mut cfg = sandbox.cfg();
@@ -546,9 +566,11 @@ fn gen_following_cfg_exclude_validator(sandbox: &AnchoringSandbox,
     cfg.previous_cfg_hash = sandbox.cfg().hash();
     cfg.validator_keys.swap_remove(0);
     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
-    let tx = TxConfig::new(&sandbox.service_public_key(0),
-                           &cfg.into_bytes(),
-                           from_height,
-                           sandbox.service_secret_key(0));
+    let tx = TxConfig::new(
+        &sandbox.service_public_key(0),
+        &cfg.into_bytes(),
+        from_height,
+        sandbox.service_secret_key(0),
+    );
     (tx.raw().clone(), service_cfg)
 }

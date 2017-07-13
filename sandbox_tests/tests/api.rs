@@ -81,7 +81,9 @@ impl ApiSandbox {
         let response = self.request_get("/v1/address/following").unwrap();
         let body = response_body(response);
         let addr_str: Option<String> = serde_json::from_value(body).unwrap();
-        addr_str.map(|addr_str| btc::Address::from_base58check(&addr_str).unwrap())
+        addr_str.map(|addr_str| {
+            btc::Address::from_base58check(&addr_str).unwrap()
+        })
     }
 
     fn get_current_lect(&self) -> Option<AnchoringInfo> {
@@ -106,11 +108,15 @@ impl ApiSandbox {
 }
 
 fn request_get<A: AsRef<str>>(router: &Router, route: A) -> IronResult<IronResponse> {
-    info!("GET request:'{}'",
-          format!("http://127.0.0.1:8000{}", route.as_ref()));
-    iron_test::request::get(&format!("http://127.0.0.1:8000{}", route.as_ref()),
-                            Headers::new(),
-                            router)
+    info!(
+        "GET request:'{}'",
+        format!("http://127.0.0.1:8000{}", route.as_ref())
+    );
+    iron_test::request::get(
+        &format!("http://127.0.0.1:8000{}", route.as_ref()),
+        Headers::new(),
+        router,
+    )
 }
 
 fn response_body(response: IronResponse) -> serde_json::Value {
@@ -134,7 +140,9 @@ fn test_api_public_common() {
     anchor_first_block(&sandbox);
 
     let lects = (0..4)
-        .map(|idx| gen_service_tx_lect(&sandbox, idx, &sandbox.latest_anchored_tx(), 1))
+        .map(|idx| {
+            gen_service_tx_lect(&sandbox, idx, &sandbox.latest_anchored_tx(), 1)
+        })
         .collect::<Vec<_>>();
 
     let api_sandbox = ApiSandbox::new(&sandbox);
@@ -146,8 +154,10 @@ fn test_api_public_common() {
             hash: Message::hash(lect),
             content: AnchoringInfo::from(lect.tx()),
         };
-        assert_eq!(api_sandbox.get_current_lect_of_validator(id as u32),
-                   lect_info);
+        assert_eq!(
+            api_sandbox.get_current_lect_of_validator(id as u32),
+            lect_info
+        );
     }
 }
 
@@ -183,12 +193,14 @@ fn test_api_public_get_lect_unavailable() {
         .unwrap();
     let lects = (0..2)
         .map(|id| {
-                 MsgAnchoringUpdateLatest::new(&sandbox.service_public_key(id as usize),
-                                               id,
-                                               lect_tx.clone(),
-                                               lects_count(&sandbox, id),
-                                               sandbox.service_secret_key(id as usize))
-             })
+            MsgAnchoringUpdateLatest::new(
+                &sandbox.service_public_key(id as usize),
+                id,
+                lect_tx.clone(),
+                lects_count(&sandbox, id),
+                sandbox.service_secret_key(id as usize),
+            )
+        })
         .collect::<Vec<_>>();
     force_commit_lects(&sandbox, lects);
 
@@ -262,10 +274,11 @@ fn test_api_anchoring_observer_normal() {
     // Anchoring transaction for block with height 10.
     let second_anchored_tx = sandbox.latest_anchored_tx();
 
-    let mut observer =
-        AnchoringChainObserver::new_with_client(sandbox.blockchain_ref().clone(),
-                                                AnchoringRpc(SandboxClient::default()),
-                                                0);
+    let mut observer = AnchoringChainObserver::new_with_client(
+        sandbox.blockchain_ref().clone(),
+        AnchoringRpc(SandboxClient::default()),
+        0,
+    );
     observer.client().expect(vec![
         request! {
             method: "listunspent",
@@ -285,12 +298,16 @@ fn test_api_anchoring_observer_normal() {
     let api_sandbox = ApiSandbox::new_with_blockchain(observer.blockchain().clone());
 
     // Check that `first_anchored_tx` anchors the block at height 0.
-    assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(0),
-               Some(first_anchored_tx));
+    assert_eq!(
+        api_sandbox.get_nearest_anchoring_tx_for_height(0),
+        Some(first_anchored_tx)
+    );
     // Check that closest anchoring transaction for height 1 is
     // `second_anchored_tx` that anchors the block at height 10.
-    assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(1),
-               Some(second_anchored_tx));
+    assert_eq!(
+        api_sandbox.get_nearest_anchoring_tx_for_height(1),
+        Some(second_anchored_tx)
+    );
     // Check that there are no anchoring transactions for heights that greater than 10
     assert_eq!(api_sandbox.get_nearest_anchoring_tx_for_height(11), None);
 }

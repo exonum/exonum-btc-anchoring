@@ -65,10 +65,11 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn anchoring_key<'a>(&self,
-                             cfg: &'a AnchoringConfig,
-                             state: &ServiceContext)
-                             -> &'a btc::PublicKey {
+    pub fn anchoring_key<'a>(
+        &self,
+        cfg: &'a AnchoringConfig,
+        state: &ServiceContext,
+    ) -> &'a btc::PublicKey {
         let validator_id = state
             .validator_state()
             .as_ref()
@@ -79,9 +80,10 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn client(&self) -> &AnchoringRpc {
-        self.client
-            .as_ref()
-            .expect("Bitcoind client needs to be present for validator node")
+        self.client.as_ref().expect(
+            "Bitcoind client needs to be present \
+             for validator node",
+        )
     }
 
     #[doc(hidden)]
@@ -105,8 +107,12 @@ impl AnchoringHandler {
     pub fn import_address(&mut self, addr: &btc::Address) -> Result<(), ServiceError> {
         let addr_str = addr.to_base58check();
         if !self.known_addresses.contains(&addr_str) {
-            self.client()
-                .importaddress(&addr_str, "multisig", false, false)?;
+            self.client().importaddress(
+                &addr_str,
+                "multisig",
+                false,
+                false,
+            )?;
 
             trace!("Add address to known, addr={}", addr_str);
             self.known_addresses.insert(addr_str);
@@ -116,9 +122,10 @@ impl AnchoringHandler {
 
     /// Adds a `private_key` for the corresponding anchoring `address`.
     pub fn add_private_key(&mut self, address: &btc::Address, private_key: btc::PrivateKey) {
-        self.node
-            .private_keys
-            .insert(address.to_base58check(), private_key);
+        self.node.private_keys.insert(
+            address.to_base58check(),
+            private_key,
+        );
     }
 
     #[doc(hidden)]
@@ -129,19 +136,20 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn following_config(&self,
-                            state: &ServiceContext)
-                            -> Result<Option<AnchoringConfig>, ServiceError> {
+    pub fn following_config(
+        &self,
+        state: &ServiceContext,
+    ) -> Result<Option<AnchoringConfig>, ServiceError> {
         let schema = AnchoringSchema::new(state.snapshot());
         let cfg = schema.following_anchoring_config();
         Ok(cfg)
     }
 
-    fn following_config_is_transition
-        (&self,
-         actual_addr: &btc::Address,
-         state: &ServiceContext)
-         -> Result<Option<(AnchoringConfig, btc::Address)>, ServiceError> {
+    fn following_config_is_transition(
+        &self,
+        actual_addr: &btc::Address,
+        state: &ServiceContext,
+    ) -> Result<Option<(AnchoringConfig, btc::Address)>, ServiceError> {
         if let Some(following) = self.following_config(state)? {
             let following_addr = following.redeem_script().1;
             if actual_addr != &following_addr {
@@ -152,9 +160,10 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn current_state(&mut self,
-                         state: &ServiceContext)
-                         -> Result<AnchoringState, ServiceError> {
+    pub fn current_state(
+        &mut self,
+        state: &ServiceContext,
+    ) -> Result<AnchoringState, ServiceError> {
         let actual = self.actual_config(state)?;
         let actual_addr = actual.redeem_script().1;
         let anchoring_schema = AnchoringSchema::new(state.snapshot());
@@ -174,16 +183,16 @@ impl AnchoringHandler {
             lect
         } else {
             let prev_cfg = anchoring_schema.previous_anchoring_config().unwrap();
-            let is_recovering = if let Some(prev_lect) = anchoring_schema
-                   .collect_lects(&prev_cfg) {
-                match TxKind::from(prev_lect) {
-                    TxKind::FundingTx(_) => prev_cfg.redeem_script().1 != actual_addr,
-                    TxKind::Anchoring(tx) => tx.output_address(actual.network) != actual_addr,
-                    TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
-                }
-            } else {
-                true
-            };
+            let is_recovering =
+                if let Some(prev_lect) = anchoring_schema.collect_lects(&prev_cfg) {
+                    match TxKind::from(prev_lect) {
+                        TxKind::FundingTx(_) => prev_cfg.redeem_script().1 != actual_addr,
+                        TxKind::Anchoring(tx) => tx.output_address(actual.network) != actual_addr,
+                        TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
+                    }
+                } else {
+                    true
+                };
 
             if is_recovering {
                 let state = AnchoringState::Recovering {
@@ -302,11 +311,12 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn collect_lects_for_validator(&self,
-                                       anchoring_key: &btc::PublicKey,
-                                       anchoring_cfg: &AnchoringConfig,
-                                       state: &ServiceContext)
-                                       -> LectKind {
+    pub fn collect_lects_for_validator(
+        &self,
+        anchoring_key: &btc::PublicKey,
+        anchoring_cfg: &AnchoringConfig,
+        state: &ServiceContext,
+    ) -> LectKind {
         let anchoring_schema = AnchoringSchema::new(state.snapshot());
 
         let our_lect = if let Some(lect) = anchoring_schema.lect(anchoring_key) {
@@ -362,10 +372,11 @@ impl AnchoringHandler {
     /// We list unspent transaction by 'listunspent' and search among
     /// them only one that prev_hash is exists in our `lects` or it equals first `funding_tx`
     /// if all `lects` have disappeared.
-    pub fn find_lect(&self,
-                     multisig: &MultisigAddress,
-                     state: &ServiceContext)
-                     -> Result<Option<BitcoinTx>, ServiceError> {
+    pub fn find_lect(
+        &self,
+        multisig: &MultisigAddress,
+        state: &ServiceContext,
+    ) -> Result<Option<BitcoinTx>, ServiceError> {
         let lects: Vec<_> = self.client().unspent_transactions(&multisig.addr)?;
         for lect in lects {
             if self.transaction_is_lect(&lect, multisig, state)? {
@@ -376,10 +387,11 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn update_our_lect(&mut self,
-                           multisig: &MultisigAddress,
-                           state: &mut ServiceContext)
-                           -> Result<Option<BitcoinTx>, ServiceError> {
+    pub fn update_our_lect(
+        &mut self,
+        multisig: &MultisigAddress,
+        state: &mut ServiceContext,
+    ) -> Result<Option<BitcoinTx>, ServiceError> {
         let key = self.anchoring_key(multisig.common, state);
         trace!("Update our lect");
         if let Some(lect) = self.find_lect(multisig, state)? {
@@ -402,33 +414,39 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn avaliable_funding_tx(&self,
-                                multisig: &MultisigAddress)
-                                -> Result<Option<FundingTx>, ServiceError> {
+    pub fn avaliable_funding_tx(
+        &self,
+        multisig: &MultisigAddress,
+    ) -> Result<Option<FundingTx>, ServiceError> {
         let funding_tx = multisig.common.funding_tx();
         // Do not need to check funding_tx to the different address.
         if funding_tx.find_out(&multisig.addr).is_none() {
             return Ok(None);
         }
 
-        trace!("Checking funding_tx={:#?}, addr={} availability",
-               funding_tx,
-               multisig.addr.to_base58check());
+        trace!(
+            "Checking funding_tx={:#?}, addr={} availability",
+            funding_tx,
+            multisig.addr.to_base58check()
+        );
         if let Some(info) = funding_tx.has_unspent_info(self.client(), &multisig.addr)? {
-            trace!("avaliable_funding_tx={:#?}, confirmations={}",
-                   funding_tx,
-                   info.confirmations);
+            trace!(
+                "avaliable_funding_tx={:#?}, confirmations={}",
+                funding_tx,
+                info.confirmations
+            );
             return Ok(Some(funding_tx.clone()));
         }
         Ok(None)
     }
 
     #[doc(hidden)]
-    fn transaction_is_lect(&self,
-                           lect: &BitcoinTx,
-                           multisig: &MultisigAddress,
-                           state: &ServiceContext)
-                           -> Result<bool, ServiceError> {
+    fn transaction_is_lect(
+        &self,
+        lect: &BitcoinTx,
+        multisig: &MultisigAddress,
+        state: &ServiceContext,
+    ) -> Result<bool, ServiceError> {
         let schema = AnchoringSchema::new(state.snapshot());
         let key = self.anchoring_key(multisig.common, state);
 
@@ -449,12 +467,12 @@ impl AnchoringHandler {
                 }
 
                 let txid = tx.prev_hash();
-                let prev_lect = if let Some(tx) = self.client()
-                       .get_transaction(&txid.be_hex_string())? {
-                    tx
-                } else {
-                    return Ok(false);
-                };
+                let prev_lect =
+                    if let Some(tx) = self.client().get_transaction(&txid.be_hex_string())? {
+                        tx
+                    } else {
+                        return Ok(false);
+                    };
 
                 trace!("Check prev lect={:#?}", prev_lect);
 
@@ -484,25 +502,31 @@ impl AnchoringHandler {
             self.proposal_tx = None;
         }
 
-        info!("LECT ====== txid={}, total_count={}",
-              lect.txid(),
-              lects_count);
+        info!(
+            "LECT ====== txid={}, total_count={}",
+            lect.txid(),
+            lects_count
+        );
 
-        let lect_msg = MsgAnchoringUpdateLatest::new(state.public_key(),
-                                                     self.validator_id(state),
-                                                     lect.clone(),
-                                                     lects_count,
-                                                     state.secret_key());
+        let lect_msg = MsgAnchoringUpdateLatest::new(
+            state.public_key(),
+            self.validator_id(state),
+            lect.clone(),
+            lects_count,
+            state.secret_key(),
+        );
         state.add_transaction(Box::new(lect_msg));
     }
 }
 
 /// Transition lects cannot be recovered without breaking of current anchoring chain.
-fn actual_lect_is_transition<T>(actual: &AnchoringConfig,
-                                actual_lect: &AnchoringTx,
-                                schema: &AnchoringSchema<T>)
-                                -> bool
-    where T: AsRef<Snapshot>
+fn actual_lect_is_transition<T>(
+    actual: &AnchoringConfig,
+    actual_lect: &AnchoringTx,
+    schema: &AnchoringSchema<T>,
+) -> bool
+where
+    T: AsRef<Snapshot>,
 {
     // If tx contains prev_tx_chain it can not be a transition
     if actual_lect.payload().prev_tx_chain.is_some() {

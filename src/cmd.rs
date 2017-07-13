@@ -53,31 +53,37 @@ struct GenerateNodeConfig;
 impl CommandExtension for GenerateNodeConfig {
     fn args(&self) -> Vec<Argument> {
         vec![
-            Argument::new_named("ANCHORING_RPC_HOST",
-                                true,
-                                "Host of bitcoind.",
-                                None,
-                                "anchoring-host",
-                                false),
-            Argument::new_named("ANCHORING_RPC_USER",
-                                false,
-                                "User to login into bitcoind.",
-                                None,
-                                "anchoring-user",
-                                false),
-            Argument::new_named("ANCHORING_RPC_PASSWD",
-                                false,
-                                "Password to login into bitcoind.",
-                                None,
-                                "anchoring-password",
-                                false),
+            Argument::new_named(
+                "ANCHORING_RPC_HOST",
+                true,
+                "Host of bitcoind.",
+                None,
+                "anchoring-host",
+                false
+            ),
+            Argument::new_named(
+                "ANCHORING_RPC_USER",
+                false,
+                "User to login into bitcoind.",
+                None,
+                "anchoring-user",
+                false
+            ),
+            Argument::new_named(
+                "ANCHORING_RPC_PASSWD",
+                false,
+                "Password to login into bitcoind.",
+                None,
+                "anchoring-password",
+                false
+            ),
         ]
     }
 
     fn execute(&self, mut context: Context) -> Result<Context, Box<Error>> {
-        let host = context
-            .arg("ANCHORING_RPC_HOST")
-            .expect("Expected ANCHORING_RPC_HOST");
+        let host = context.arg("ANCHORING_RPC_HOST").expect(
+            "Expected ANCHORING_RPC_HOST",
+        );
         let user = context.arg("ANCHORING_RPC_USER").ok();
         let passwd = context.arg("ANCHORING_RPC_PASSWD").ok();
 
@@ -99,9 +105,14 @@ impl CommandExtension for GenerateNodeConfig {
         let (p, s) = gen_btc_keypair(network);
         let mut services_public_configs: BTreeMap<String, Value> =
             context.get("services_public_configs").unwrap_or_default();
-        services_public_configs
-            .extend(vec![("anchoring_pub_key".to_owned(), Value::try_from(p.to_hex()).unwrap())]
-                        .into_iter());
+        services_public_configs.extend(
+            vec![
+                (
+                    "anchoring_pub_key".to_owned(),
+                    Value::try_from(p.to_hex()).unwrap()
+                ),
+            ].into_iter(),
+        );
 
         let rpc_config = AnchoringRpcConfig {
             host: host,
@@ -113,11 +124,18 @@ impl CommandExtension for GenerateNodeConfig {
             context.get("services_secret_configs").unwrap_or_default();
         services_secret_configs.extend(
             vec![
-                ("anchoring_sec_key".to_owned(),
-                 Value::try_from(s.to_base58check()).unwrap()),
-                ("anchoring_pub_key".to_owned(),
-                 Value::try_from(p.to_hex()).unwrap()),
-                ("rpc_config".to_owned(), Value::try_from(rpc_config).unwrap()),
+                (
+                    "anchoring_sec_key".to_owned(),
+                    Value::try_from(s.to_base58check()).unwrap()
+                ),
+                (
+                    "anchoring_pub_key".to_owned(),
+                    Value::try_from(p.to_hex()).unwrap()
+                ),
+                (
+                    "rpc_config".to_owned(),
+                    Value::try_from(rpc_config).unwrap()
+                ),
             ].into_iter(),
         );
 
@@ -132,24 +150,30 @@ struct GenerateCommonConfig;
 impl CommandExtension for GenerateCommonConfig {
     fn args(&self) -> Vec<Argument> {
         vec![
-            Argument::new_named("ANCHORING_FREQUENCY",
-                                false,
-                                "The frequency of anchoring in blocks",
-                                None,
-                                "anchoring-frequency",
-                                false),
-            Argument::new_named("ANCHORING_UTXO_CONFIRMATIONS",
-                                false,
-                                "The minimum number of confirmations for anchoring transactions",
-                                None,
-                                "anchoring-utxo-confirmations",
-                                false),
-            Argument::new_named("ANCHORING_FEE",
-                                true,
-                                "Fee that anchoring nodes should use.",
-                                None,
-                                "anchoring-fee",
-                                false),
+            Argument::new_named(
+                "ANCHORING_FREQUENCY",
+                false,
+                "The frequency of anchoring in blocks",
+                None,
+                "anchoring-frequency",
+                false
+            ),
+            Argument::new_named(
+                "ANCHORING_UTXO_CONFIRMATIONS",
+                false,
+                "The minimum number of confirmations for anchoring transactions",
+                None,
+                "anchoring-utxo-confirmations",
+                false
+            ),
+            Argument::new_named(
+                "ANCHORING_FEE",
+                true,
+                "Fee that anchoring nodes should use.",
+                None,
+                "anchoring-fee",
+                false
+            ),
             Argument::new_positional("NETWORK", true, "Anchoring network name."),
         ]
     }
@@ -159,25 +183,34 @@ impl CommandExtension for GenerateCommonConfig {
         let anchoring_utxo_confirmations: u64 = context
             .arg::<u64>("ANCHORING_UTXO_CONFIRMATIONS")
             .unwrap_or(5);
-        let fee: u64 = context
-            .arg::<u64>("ANCHORING_FEE")
-            .expect("Expected `ANCHORING_FEE` in cmd.");
-        let network = context
-            .arg::<String>("NETWORK")
-            .expect("No network name found.");
+        let fee: u64 = context.arg::<u64>("ANCHORING_FEE").expect(
+            "Expected `ANCHORING_FEE` \
+             in cmd.",
+        );
+        let network = context.arg::<String>("NETWORK").expect(
+            "No network name found.",
+        );
 
-        let mut values: BTreeMap<String, Value> =
-            context
-                .get("services_config")
-                .expect("Expected services_config in context.");
+        let mut values: BTreeMap<String, Value> = context.get("services_config").expect(
+            "Expected services_config \
+             in context.",
+        );
 
         values.extend(
             vec![
-                ("anchoring_frequency".to_owned(), Value::try_from(anchoring_frequency).unwrap()),
-                ("anchoring_utxo_confirmations".to_owned(),
-                 Value::try_from(anchoring_utxo_confirmations).unwrap()),
+                (
+                    "anchoring_frequency".to_owned(),
+                    Value::try_from(anchoring_frequency).unwrap()
+                ),
+                (
+                    "anchoring_utxo_confirmations".to_owned(),
+                    Value::try_from(anchoring_utxo_confirmations).unwrap()
+                ),
                 ("anchoring_fee".to_owned(), Value::try_from(fee).unwrap()),
-                ("anchoring_network".to_owned(), Value::try_from(network).unwrap()),
+                (
+                    "anchoring_network".to_owned(),
+                    Value::try_from(network).unwrap()
+                ),
             ].into_iter(),
         );
         context.set("services_config", values);
@@ -190,18 +223,22 @@ struct Finalize;
 impl CommandExtension for Finalize {
     fn args(&self) -> Vec<Argument> {
         vec![
-            Argument::new_named("ANCHORING_FUNDING_TXID",
-                                false,
-                                "Txid of the initial funding tx",
-                                None,
-                                "anchoring-funding-txid",
-                                false),
-            Argument::new_named("ANCHORING_CREATE_FUNDING_TX",
-                                false,
-                                "Create initial funding tx with given amount in satoshis",
-                                None,
-                                "anchoring-create-funding-tx",
-                                false),
+            Argument::new_named(
+                "ANCHORING_FUNDING_TXID",
+                false,
+                "Txid of the initial funding tx",
+                None,
+                "anchoring-funding-txid",
+                false
+            ),
+            Argument::new_named(
+                "ANCHORING_CREATE_FUNDING_TX",
+                false,
+                "Create initial funding tx with given amount in satoshis",
+                None,
+                "anchoring-create-funding-tx",
+                false
+            ),
         ]
     }
 
@@ -296,28 +333,29 @@ impl CommandExtension for Finalize {
             AnchoringConfig::new_with_funding_tx(network, pub_keys, tx)
         } else {
             let txid = funding_txid.expect("Funding txid not fount");
-            let tx = client
-                .get_transaction(&txid)
-                .unwrap()
-                .expect("Funding tx with the given id not fount");
+            let tx = client.get_transaction(&txid).unwrap().expect(
+                "Funding tx with the \
+                 given id not fount",
+            );
             AnchoringConfig::new_with_funding_tx(network, pub_keys, tx.into())
         };
 
-        anchoring_config
-            .private_keys
-            .insert(address.to_base58check(), priv_key.clone());
+        anchoring_config.private_keys.insert(
+            address.to_base58check(),
+            priv_key.clone(),
+        );
 
         genesis_cfg.fee = fee;
         genesis_cfg.frequency = frequency;
         genesis_cfg.utxo_confirmations = utxo_confirmations;
 
-        node_config
-            .services_configs
-            .insert("anchoring_service".to_owned(),
-                    Value::try_from(AnchoringServiceConfig {
-                                        genesis: genesis_cfg,
-                                        node: anchoring_config,
-                                    }).expect("could not serialize anchoring service config"));
+        node_config.services_configs.insert(
+            "anchoring_service".to_owned(),
+            Value::try_from(AnchoringServiceConfig {
+                genesis: genesis_cfg,
+                node: anchoring_config,
+            }).expect("could not serialize anchoring service config"),
+        );
         context.set("node_config", node_config);
         Ok(context)
     }
@@ -329,11 +367,11 @@ impl ServiceFactory for AnchoringService {
     fn command(command: CommandName) -> Option<Box<CommandExtension>> {
         use exonum::helpers::fabric;
         Some(match command {
-                 v if v == fabric::GenerateNodeConfig::name() => Box::new(GenerateNodeConfig),
-                 v if v == fabric::GenerateCommonConfig::name() => Box::new(GenerateCommonConfig),
-                 v if v == fabric::Finalize::name() => Box::new(Finalize),
-                 _ => return None,
-             })
+            v if v == fabric::GenerateNodeConfig::name() => Box::new(GenerateNodeConfig),
+            v if v == fabric::GenerateCommonConfig::name() => Box::new(GenerateCommonConfig),
+            v if v == fabric::Finalize::name() => Box::new(Finalize),
+            _ => return None,
+        })
     }
     fn make_service(run_context: &Context) -> Box<Service> {
         let node_config: NodeConfig = run_context.get("node_config").unwrap();
@@ -342,6 +380,9 @@ impl ServiceFactory for AnchoringService {
             .clone()
             .try_into()
             .unwrap();
-        Box::new(AnchoringService::new(anchoring_cfg.genesis, anchoring_cfg.node))
+        Box::new(AnchoringService::new(
+            anchoring_cfg.genesis,
+            anchoring_cfg.node,
+        ))
     }
 }

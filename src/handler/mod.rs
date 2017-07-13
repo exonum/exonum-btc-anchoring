@@ -85,11 +85,13 @@ pub enum LectKind {
 
 #[doc(hidden)]
 /// The function extracts signatures from messages and order them by inputs.
-pub fn collect_signatures<I>(proposal: &AnchoringTx,
-                             common: &AnchoringConfig,
-                             msgs: I)
-                             -> Option<HashMap<u32, Vec<btc::Signature>>>
-    where I: IntoIterator<Item = MsgAnchoringSignature>
+pub fn collect_signatures<I>(
+    proposal: &AnchoringTx,
+    common: &AnchoringConfig,
+    msgs: I,
+) -> Option<HashMap<u32, Vec<btc::Signature>>>
+where
+    I: IntoIterator<Item = MsgAnchoringSignature>,
 {
     let mut signatures = HashMap::new();
     for input in proposal.inputs() {
@@ -115,10 +117,12 @@ pub fn collect_signatures<I>(proposal: &AnchoringTx,
             .take(majority_count)
             .collect::<Vec<_>>();
 
-        trace!("signatures for input={}, count={}, majority_count={}",
-               input,
-               signatures.len(),
-               majority_count);
+        trace!(
+            "signatures for input={}, count={}, majority_count={}",
+            input,
+            signatures.len(),
+            majority_count
+        );
         if signatures.len() < majority_count {
             return None;
         }

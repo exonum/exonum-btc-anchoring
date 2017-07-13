@@ -27,7 +27,8 @@ use super::{PublicKey, RedeemScript};
 
 impl RedeemScript {
     pub fn from_pubkeys<'a, I>(pubkeys: I, majority_count: u8) -> RedeemScript
-        where I: IntoIterator<Item = &'a PublicKey>
+    where
+        I: IntoIterator<Item = &'a PublicKey>,
     {
         let mut builder = Builder::new().push_int(majority_count as i64);
         let mut total_count = 0;
@@ -47,7 +48,8 @@ impl RedeemScript {
     }
 
     pub fn from_addresses<'a, I>(addrs: I, majority_count: u8) -> RedeemScript
-        where I: Iterator<Item = &'a String>
+    where
+        I: Iterator<Item = &'a String>,
     {
         let mut builder = Builder::new().push_int(majority_count as i64);
         let mut total_count = 0;

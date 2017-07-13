@@ -65,7 +65,8 @@ impl AnchoringConfig {
     /// Do not forget to send funding transaction to the final multisig address
     /// and add it to the final configuration.
     pub fn new<I>(network: btc::Network, anchoring_keys: I) -> AnchoringConfig
-        where I: IntoIterator<Item = btc::PublicKey>
+    where
+        I: IntoIterator<Item = btc::PublicKey>,
     {
         AnchoringConfig {
             anchoring_keys: anchoring_keys.into_iter().collect(),
@@ -76,11 +77,13 @@ impl AnchoringConfig {
 
     /// Creates default anchoring configuration from given public keys and funding transaction
     /// which were created earlier by other way.
-    pub fn new_with_funding_tx<I>(network: btc::Network,
-                                  anchoring_keys: I,
-                                  tx: FundingTx)
-                                  -> AnchoringConfig
-        where I: IntoIterator<Item = btc::PublicKey>
+    pub fn new_with_funding_tx<I>(
+        network: btc::Network,
+        anchoring_keys: I,
+        tx: FundingTx,
+    ) -> AnchoringConfig
+    where
+        I: IntoIterator<Item = btc::PublicKey>,
     {
         AnchoringConfig {
             anchoring_keys: anchoring_keys.into_iter().collect(),
@@ -94,9 +97,9 @@ impl AnchoringConfig {
     /// Creates compressed `RedeemScript` from public keys in config.
     pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
-        let redeem_script = btc::RedeemScript::from_pubkeys(self.anchoring_keys.iter(),
-                                                            majority_count)
-            .compressed(self.network);
+        let redeem_script =
+            btc::RedeemScript::from_pubkeys(self.anchoring_keys.iter(), majority_count)
+                .compressed(self.network);
         let addr = btc::Address::from_script(&redeem_script, self.network);
         (redeem_script, addr)
     }
@@ -118,14 +121,16 @@ impl AnchoringConfig {
     ///
     /// If funding transaction is not specified.
     pub fn funding_tx(&self) -> &FundingTx {
-        self.funding_tx
-            .as_ref()
-            .expect("You need to specify suitable funding_tx")
+        self.funding_tx.as_ref().expect(
+            "You need to specify suitable \
+             funding_tx",
+        )
     }
 }
 
 fn btc_network_to_str<S>(network: &btc::Network, ser: S) -> Result<S::Ok, S::Error>
-    where S: ::serde::Serializer
+where
+    S: ::serde::Serializer,
 {
     match *network {
         btc::Network::Bitcoin => ser.serialize_str("bitcoin"),
@@ -134,7 +139,8 @@ fn btc_network_to_str<S>(network: &btc::Network, ser: S) -> Result<S::Ok, S::Err
 }
 
 fn btc_network_from_str<'de, D>(deserializer: D) -> Result<btc::Network, D::Error>
-    where D: Deserializer<'de>
+where
+    D: Deserializer<'de>,
 {
     let s: String = Deserialize::deserialize(deserializer)?;
 

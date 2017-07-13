@@ -78,7 +78,8 @@ pub struct AnchoringSchema<T> {
 }
 
 impl<T> AnchoringSchema<T>
-    where T: AsRef<Snapshot>
+where
+    T: AsRef<Snapshot>,
 {
     /// Creates anchoring schema for the given `snapshot`.
     pub fn new(snapshot: T) -> AnchoringSchema<T> {
@@ -211,10 +212,11 @@ impl<T> AnchoringSchema<T>
 
     /// Returns position in `lects` table of validator with the given `anchoring_key`
     /// for transaction with the given `txid`.
-    pub fn find_lect_position(&self,
-                              anchoring_key: &btc::PublicKey,
-                              txid: &btc::TxId)
-                              -> Option<u64> {
+    pub fn find_lect_position(
+        &self,
+        anchoring_key: &btc::PublicKey,
+        txid: &btc::TxId,
+    ) -> Option<u64> {
         self.lect_indexes(anchoring_key).get(txid)
     }
 
@@ -244,9 +246,10 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
     /// Mutable variant of the [`signatures`][1] index.
     ///
     /// [1]: struct.AnchoringSchema.html#method.signatures
-    pub fn signatures_mut(&mut self,
-                          txid: &btc::TxId)
-                          -> ListIndex<&mut Fork, MsgAnchoringSignature> {
+    pub fn signatures_mut(
+        &mut self,
+        txid: &btc::TxId,
+    ) -> ListIndex<&mut Fork, MsgAnchoringSignature> {
         let prefix = self.gen_table_prefix(2, txid);
         ListIndex::new(prefix, &mut self.view)
     }
@@ -254,9 +257,10 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
     /// Mutable variant of the [`lects`][1] index.
     ///
     /// [1]: struct.AnchoringSchema.html#method.lects
-    pub fn lects_mut(&mut self,
-                     validator_key: &btc::PublicKey)
-                     -> ProofListIndex<&mut Fork, LectContent> {
+    pub fn lects_mut(
+        &mut self,
+        validator_key: &btc::PublicKey,
+    ) -> ProofListIndex<&mut Fork, LectContent> {
         let prefix = self.gen_table_prefix(3, validator_key);
         ProofListIndex::new(prefix, &mut self.view)
     }
@@ -264,9 +268,10 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
     /// Mutable variant of the [`lect_indexes`][1] index.
     ///
     /// [1]: struct.AnchoringSchema.html#method.lect_indexes
-    pub fn lect_indexes_mut(&mut self,
-                            validator_key: &btc::PublicKey)
-                            -> MapIndex<&mut Fork, btc::TxId, u64> {
+    pub fn lect_indexes_mut(
+        &mut self,
+        validator_key: &btc::PublicKey,
+    ) -> MapIndex<&mut Fork, btc::TxId, u64> {
         let prefix = self.gen_table_prefix(4, validator_key);
         MapIndex::new(prefix, &mut self.view)
     }
@@ -275,8 +280,9 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
     /// Mutable variant of the [`known_signatures`][1] index.
     ///
     /// [1]: struct.AnchoringSchema.html#method.known_signatures
-    pub fn known_signatures_mut(&mut self)
-                                -> MapIndex<&mut Fork, KnownSignatureId, MsgAnchoringSignature> {
+    pub fn known_signatures_mut(
+        &mut self,
+    ) -> MapIndex<&mut Fork, KnownSignatureId, MsgAnchoringSignature> {
         let prefix = self.gen_table_prefix(6, &());
         MapIndex::new(prefix, &mut self.view)
     }
@@ -306,7 +312,8 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
 
     /// Adds `lect` from validator with the given `public key`.
     pub fn add_lect<Tx>(&mut self, validator_key: &btc::PublicKey, tx: Tx, msg_hash: Hash)
-        where Tx: Into<BitcoinTx>
+    where
+        Tx: Into<BitcoinTx>,
     {
         let (tx, txid, idx) = {
             let mut lects = self.lects_mut(validator_key);
@@ -326,8 +333,10 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         let ntxid = msg.tx().nid();
         let signature_id = KnownSignatureId::from(&msg);
         if let Some(sign_msg) = self.known_signatures().get(&signature_id) {
-            warn!("Received another signature for given tx propose msg={:#?}",
-                  sign_msg);
+            warn!(
+                "Received another signature for given tx propose msg={:#?}",
+                sign_msg
+            );
         } else {
             self.signatures_mut(&ntxid).push(msg.clone());
             self.known_signatures_mut().put(&signature_id, msg);

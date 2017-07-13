@@ -26,10 +26,11 @@ use super::error::Error as HandlerError;
 
 #[doc(hidden)]
 impl AnchoringHandler {
-    pub fn handle_auditing_state(&mut self,
-                                 cfg: AnchoringConfig,
-                                 state: &ServiceContext)
-                                 -> Result<(), ServiceError> {
+    pub fn handle_auditing_state(
+        &mut self,
+        cfg: AnchoringConfig,
+        state: &ServiceContext,
+    ) -> Result<(), ServiceError> {
         trace!("Auditing state");
         if state.height() % self.node.check_lect_frequency == 0 {
             let r = match self.collect_lects(state)? {
@@ -47,10 +48,11 @@ impl AnchoringHandler {
         Ok(())
     }
 
-    fn check_funding_lect(&self,
-                          tx: FundingTx,
-                          context: &ServiceContext)
-                          -> Result<(), ServiceError> {
+    fn check_funding_lect(
+        &self,
+        tx: FundingTx,
+        context: &ServiceContext,
+    ) -> Result<(), ServiceError> {
         let cfg = AnchoringSchema::new(context.snapshot()).genesis_anchoring_config();
         let (_, addr) = cfg.redeem_script();
         if &tx != cfg.funding_tx() {
@@ -62,8 +64,10 @@ impl AnchoringHandler {
         }
         if tx.find_out(&addr).is_none() {
             let e = HandlerError::IncorrectLect {
-                reason: format!("Initial funding_tx has no outputs with address={}",
-                                addr.to_base58check()),
+                reason: format!(
+                    "Initial funding_tx has no outputs with address={}",
+                    addr.to_base58check()
+                ),
                 tx: tx.into(),
             };
             return Err(e.into());

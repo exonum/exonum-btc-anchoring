@@ -51,13 +51,17 @@ impl Context {
         unsafe {
             // We can assume the return value because it's not possible to construct
             // an invalid signature from a valid `Message` and `SecretKey`
-            assert_eq!(ffi::secp256k1_ecdsa_sign(self.ctx,
-                                                 &mut ret,
-                                                 msg.as_ptr(),
-                                                 sk.as_ptr(),
-                                                 ffi::secp256k1_nonce_function_rfc6979,
-                                                 nonce_array.as_ptr() as *const c_void),
-                       1);
+            assert_eq!(
+                ffi::secp256k1_ecdsa_sign(
+                    self.ctx,
+                    &mut ret,
+                    msg.as_ptr(),
+                    sk.as_ptr(),
+                    ffi::secp256k1_nonce_function_rfc6979,
+                    nonce_array.as_ptr() as *const c_void,
+                ),
+                1
+            );
         }
         Ok(Signature::from(ret))
     }
@@ -70,21 +74,23 @@ fn get_ffi_context(ctx: &mut Secp256k1) -> Context {
     }
 }
 
-fn sign_with_nonce(ctx: &mut Secp256k1,
-                   msg: &Message,
-                   sk: &key::SecretKey,
-                   nonce: u64)
-                   -> Result<Signature, Error> {
+fn sign_with_nonce(
+    ctx: &mut Secp256k1,
+    msg: &Message,
+    sk: &key::SecretKey,
+    nonce: u64,
+) -> Result<Signature, Error> {
     let ctx = get_ffi_context(ctx);
     ctx.sign(msg, sk, nonce)
 }
 
-pub fn sign_tx_input_with_nonce(tx: &RawBitcoinTx,
-                                input: usize,
-                                subscript: &Script,
-                                sec_key: &SecretKey,
-                                nonce: u64)
-                                -> Vec<u8> {
+pub fn sign_tx_input_with_nonce(
+    tx: &RawBitcoinTx,
+    input: usize,
+    subscript: &Script,
+    sec_key: &SecretKey,
+    nonce: u64,
+) -> Vec<u8> {
     let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
     // Make signature
     let mut context = Secp256k1::new();

@@ -42,7 +42,8 @@ pub struct SandboxClient {
 
 impl SandboxClient {
     pub fn new<S>(host: S, username: Option<String>, password: Option<String>) -> SandboxClient
-        where S: Into<String>
+    where
+        S: Into<String>,
     {
         SandboxClient {
             rpc: AnchoringRpcConfig {
@@ -65,38 +66,45 @@ impl SandboxClient {
     }
 
     fn request<T>(&self, method: &str, params: Params) -> Result<T>
-        where T: ::std::fmt::Debug,
-              for<'de> T: Deserialize<'de>
+    where
+        T: ::std::fmt::Debug,
+        for<'de> T: Deserialize<'de>,
     {
-        let expected = self.requests
-            .lock()
-            .unwrap()
-            .pop_front()
-            .expect(format!("expected response for method={}, params={:#?}",
-                            method,
-                            params)
-                        .as_str());
+        let expected = self.requests.lock().unwrap().pop_front().expect(
+            format!(
+                "expected response for method={}, \
+                 params={:#?}",
+                method,
+                params
+            ).as_str(),
+        );
 
         assert_eq!(expected.method, method);
-        assert_eq!(expected.params,
-                   params,
-                   "Invalid params for method {}!",
-                   method);
+        assert_eq!(
+            expected.params,
+            params,
+            "Invalid params for method {}!",
+            method
+        );
 
         let response = expected.response?;
-        trace!("method: {}, params={:?}, respose={:#}",
-               method,
-               params,
-               response);
+        trace!(
+            "method: {}, params={:?}, respose={:#}",
+            method,
+            params,
+            response
+        );
         from_value(response).map_err(|e| Error::Other(RpcError::Json(e)))
     }
 
     pub fn expect<I: IntoIterator<Item = Request>>(&self, requests: I) {
         {
             let requests = self.requests.lock().unwrap();
-            assert!(requests.is_empty(),
-                    "Send unexpected requests: {:#?}",
-                    requests.deref());
+            assert!(
+                requests.is_empty(),
+                "Send unexpected requests: {:#?}",
+                requests.deref()
+            );
         }
         self.requests.lock().unwrap().extend(requests);
     }
@@ -128,19 +136,20 @@ impl SandboxClient {
         let params = json!([txid, 1]).as_array().cloned().unwrap();
         self.request("getrawtransaction", params)
     }
-    pub fn createrawtransaction<T, O>(&self,
-                                      transactions: T,
-                                      outputs: O,
-                                      data: Option<String>)
-                                      -> Result<String>
-        where T: AsRef<[TransactionInput]>,
-              O: AsRef<[TransactionOutput]>
+    pub fn createrawtransaction<T, O>(
+        &self,
+        transactions: T,
+        outputs: O,
+        data: Option<String>,
+    ) -> Result<String>
+    where
+        T: AsRef<[TransactionInput]>,
+        O: AsRef<[TransactionOutput]>,
     {
         let mut map = BTreeMap::new();
-        map.extend(outputs
-                       .as_ref()
-                       .iter()
-                       .map(|x| (x.address.clone(), x.value.clone())));
+        map.extend(outputs.as_ref().iter().map(|x| {
+            (x.address.clone(), x.value.clone())
+        }));
         if let Some(data) = data {
             map.insert("data".into(), data);
         }
@@ -155,13 +164,15 @@ impl SandboxClient {
         let params = json!([pub_key]).as_array().cloned().unwrap();
         self.request("dumpprivkey", params)
     }
-    pub fn signrawtransaction<O, K>(&self,
-                                    txhex: &str,
-                                    outputs: O,
-                                    priv_keys: K)
-                                    -> Result<SignTxOutput>
-        where O: AsRef<[DependentOutput]>,
-              K: AsRef<[String]>
+    pub fn signrawtransaction<O, K>(
+        &self,
+        txhex: &str,
+        outputs: O,
+        priv_keys: K,
+    ) -> Result<SignTxOutput>
+    where
+        O: AsRef<[DependentOutput]>,
+        K: AsRef<[String]>,
     {
         let params = json!([txhex, outputs.as_ref(), priv_keys.as_ref()])
             .as_array()
@@ -170,33 +181,41 @@ impl SandboxClient {
         self.request("signrawtransaction", params)
     }
     pub fn sendrawtransaction(&self, txhex: &str) -> Result<String> {
-        self.request("sendrawtransaction",
-                     vec![serde_json::to_value(txhex).unwrap()])
+        self.request(
+            "sendrawtransaction",
+            vec![serde_json::to_value(txhex).unwrap()],
+        )
     }
     pub fn decoderawtransaction(&self, txhex: &str) -> Result<RawTransactionInfo> {
-        self.request("decoderawtransaction",
-                     vec![serde_json::to_value(txhex).unwrap()])
+        self.request(
+            "decoderawtransaction",
+            vec![serde_json::to_value(txhex).unwrap()],
+        )
     }
     pub fn addwitnessaddress(&self, addr: &str) -> Result<String> {
-        self.request("addwitnessaddress",
-                     vec![serde_json::to_value(addr).unwrap()])
+        self.request(
+            "addwitnessaddress",
+            vec![serde_json::to_value(addr).unwrap()],
+        )
     }
-    pub fn listtransactions(&self,
-                            count: u32,
-                            from: u32,
-                            include_watch_only: bool)
-                            -> Result<Vec<TransactionInfo>> {
+    pub fn listtransactions(
+        &self,
+        count: u32,
+        from: u32,
+        include_watch_only: bool,
+    ) -> Result<Vec<TransactionInfo>> {
         let params = json!(["*", count, from, include_watch_only])
             .as_array()
             .cloned()
             .unwrap();
         self.request("listtransactions", params)
     }
-    pub fn listunspent<'a, V: AsRef<[&'a str]>>(&self,
-                                                min_confirmations: u32,
-                                                max_confirmations: u32,
-                                                addresses: V)
-                                                -> Result<Vec<UnspentTransactionInfo>> {
+    pub fn listunspent<'a, V: AsRef<[&'a str]>>(
+        &self,
+        min_confirmations: u32,
+        max_confirmations: u32,
+        addresses: V,
+    ) -> Result<Vec<UnspentTransactionInfo>> {
         let params = json!([min_confirmations, max_confirmations, addresses.as_ref()])
             .as_array()
             .cloned()
@@ -223,11 +242,12 @@ impl SandboxClient {
         self.request("generate", params)
     }
 
-    pub fn generatetoaddress(&self,
-                             nblocks: u64,
-                             addr: &str,
-                             maxtries: u64)
-                             -> Result<Vec<String>> {
+    pub fn generatetoaddress(
+        &self,
+        nblocks: u64,
+        addr: &str,
+        maxtries: u64,
+    ) -> Result<Vec<String>> {
         let params = json!([nblocks, addr, maxtries])
             .as_array()
             .cloned()

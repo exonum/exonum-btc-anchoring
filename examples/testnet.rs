@@ -63,8 +63,8 @@ fn main() {
         let mut node_threads = Vec::new();
         for idx in 0..count as usize {
             // Create anchoring service for node[idx]
-            let service = AnchoringService::new(anchoring_common.clone(),
-                                                anchoring_nodes[idx].clone());
+            let service =
+                AnchoringService::new(anchoring_common.clone(), anchoring_nodes[idx].clone());
             // Create database for node[idx]
             let db = {
                 let mut options = LevelDBOptions::new();
@@ -76,10 +76,10 @@ fn main() {
             let blockchain = Blockchain::new(Box::new(db), vec![Box::new(service)]);
             let node_cfg = node_cfgs[idx].clone();
             let node_thread = thread::spawn(move || {
-                                                // Run it in separate thread
-                                                let mut node = Node::new(blockchain, node_cfg);
-                                                node.run_handler().expect("Unable to run node");
-                                            });
+                // Run it in separate thread
+                let mut node = Node::new(blockchain, node_cfg);
+                node.run_handler().expect("Unable to run node");
+            });
             node_threads.push(node_thread);
         }
         node_threads

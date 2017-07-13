@@ -76,11 +76,12 @@ pub fn gen_anchoring_keys(count: usize) -> (Vec<btc::PublicKey>, Vec<btc::Privat
     (validators, priv_keys)
 }
 
-pub fn make_signatures(redeem_script: &btc::RedeemScript,
-                       proposal: &AnchoringTx,
-                       inputs: &[u32],
-                       priv_keys: &[btc::PrivateKey])
-                       -> HashMap<u32, Vec<btc::Signature>> {
+pub fn make_signatures(
+    redeem_script: &btc::RedeemScript,
+    proposal: &AnchoringTx,
+    inputs: &[u32],
+    priv_keys: &[btc::PrivateKey],
+) -> HashMap<u32, Vec<btc::Signature>> {
     let majority_count = (priv_keys.len() as u8) * 2 / 3 + 1;
 
     let mut signatures = inputs
@@ -113,16 +114,17 @@ pub fn make_signatures(redeem_script: &btc::RedeemScript,
         .collect::<HashMap<_, _>>()
 }
 
-fn send_anchoring_tx(client: &AnchoringRpc,
-                     redeem_script: &btc::RedeemScript,
-                     to: &btc::Address,
-                     block_height: u64,
-                     block_hash: Hash,
-                     priv_keys: &[btc::PrivateKey],
-                     anchoring_tx: AnchoringTx,
-                     additional_funds: &[FundingTx],
-                     fee: u64)
-                     -> AnchoringTx {
+fn send_anchoring_tx(
+    client: &AnchoringRpc,
+    redeem_script: &btc::RedeemScript,
+    to: &btc::Address,
+    block_height: u64,
+    block_hash: Hash,
+    priv_keys: &[btc::PrivateKey],
+    anchoring_tx: AnchoringTx,
+    additional_funds: &[FundingTx],
+    fee: u64,
+) -> AnchoringTx {
     let tx = {
         let mut builder = TransactionBuilder::with_prev_tx(&anchoring_tx, 0)
             .fee(fee)
@@ -381,10 +383,14 @@ fn test_redeem_script_from_pubkeys() {
 
     let redeem_script = btc::RedeemScript::from_pubkeys(&keys, 3);
     assert_eq!(redeem_script.to_hex(), redeem_script_hex);
-    assert_eq!(redeem_script.to_address(Network::Testnet),
-               "2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1");
-    assert_eq!(btc::RedeemScript::from_hex(redeem_script_hex).unwrap(),
-               redeem_script);
+    assert_eq!(
+        redeem_script.to_address(Network::Testnet),
+        "2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1"
+    );
+    assert_eq!(
+        btc::RedeemScript::from_hex(redeem_script_hex).unwrap(),
+        redeem_script
+    );
 
     let compressed_redeem_script = redeem_script.compressed(Network::Testnet);
     assert_eq!(compressed_redeem_script.to_hex(),
@@ -392,8 +398,10 @@ fn test_redeem_script_from_pubkeys() {
                1c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a52103280883dc31ccaee34218819\
                aaa245480c35a33acd91283586ff6d1284ed681e52103e2bc790a6e32bf5a766919ff55b1f9e9914e13\
                aed84f502c0e4171976e19deb054ae");
-    assert_eq!(compressed_redeem_script.compressed(Network::Testnet),
-               compressed_redeem_script);
+    assert_eq!(
+        compressed_redeem_script.compressed(Network::Testnet),
+        compressed_redeem_script
+    );
 }
 
 #[test]
@@ -404,9 +412,9 @@ fn test_sign_raw_transaction() {
         e0ef03baf0603fd4b0cd004cd1e7500000000")
             .unwrap();
 
-    let priv_key =
-        RawPrivateKey::from_base58check("cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE")
-            .unwrap();
+    let priv_key = RawPrivateKey::from_base58check(
+        "cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE",
+    ).unwrap();
     let pub_key = {
         let context = Secp256k1::new();
         RawPublicKey::from_secret_key(&context, priv_key.secret_key()).unwrap()
@@ -424,11 +432,13 @@ fn test_sign_raw_transaction() {
     assert_eq!(actual_signature.to_hex(),
                "304502210092f1fd6367677ef63dfddfb69cb3644ab10a7c497e5cd391e1d36284dca6a570022021dc\
                2132349afafb9273600698d806f6d5f55756fcc058fba4e49c066116124e01");
-    assert!(verify_tx_input(&unsigned_tx,
-                            0,
-                            &redeem_script,
-                            &pub_key,
-                            &actual_signature[0..actual_signature.len() - 1]));
+    assert!(verify_tx_input(
+        &unsigned_tx,
+        0,
+        &redeem_script,
+        &pub_key,
+        &actual_signature[0..actual_signature.len() - 1],
+    ));
 }
 
 #[test]
@@ -441,8 +451,10 @@ fn test_redeem_script_pubkey() {
         f08e756ae")
             .unwrap();
 
-    assert_eq!(redeem_script.script_pubkey(btc::Network::Testnet).to_hex(),
-               "a914544fa2db1f36b091bbee603c0bc7675fe34655ff87");
+    assert_eq!(
+        redeem_script.script_pubkey(btc::Network::Testnet).to_hex(),
+        "a914544fa2db1f36b091bbee603c0bc7675fe34655ff87"
+    );
 }
 
 #[test]
@@ -492,9 +504,12 @@ fn test_anchoring_tx_sign() {
 
     let tx = TransactionBuilder::with_prev_tx(&prev_tx, 0)
         .add_funds(&funding_tx, 0)
-        .payload(10,
-                 Hash::from_hex("164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9")
-                     .unwrap())
+        .payload(
+            10,
+            Hash::from_hex(
+                "164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9",
+            ).unwrap(),
+        )
         .fee(1000)
         .send_to(btc::Address::from_script(&redeem_script, Network::Testnet))
         .into_transaction()
@@ -512,7 +527,12 @@ fn test_anchoring_tx_sign() {
 
     for (input, signs) in &signatures {
         for (id, signature) in signs.iter().enumerate() {
-            assert!(tx.verify_input(&redeem_script, *input, &pub_keys[id], signature.as_ref()));
+            assert!(tx.verify_input(
+                &redeem_script,
+                *input,
+                &pub_keys[id],
+                signature.as_ref(),
+            ));
         }
     }
 }
@@ -543,8 +563,10 @@ fn test_anchoring_tx_output_address() {
         .collect::<Vec<_>>();
     let redeem_script = btc::RedeemScript::from_pubkeys(&pub_keys, 3).compressed(Network::Testnet);
 
-    assert_eq!(tx.output_address(Network::Testnet).to_base58check(),
-               redeem_script.to_address(Network::Testnet));
+    assert_eq!(
+        tx.output_address(Network::Testnet).to_base58check(),
+        redeem_script.to_address(Network::Testnet)
+    );
 }
 
 #[test]
@@ -566,7 +588,9 @@ fn test_anchoring_tx_prev_chain() {
         .fee(1000)
         .payload(0, Hash::default())
         .prev_tx_chain(Some(prev_tx.id()))
-        .send_to(btc::Address::from_base58check("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1").unwrap())
+        .send_to(
+            btc::Address::from_base58check("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1").unwrap(),
+        )
         .into_transaction()
         .unwrap();
 
@@ -627,8 +651,10 @@ fn test_tx_verify_sighash_type_correct() {
     let pub_key = &pub_keys[0];
     let btc_signature = tx.sign_input(&redeem_script, 0, &priv_keys[0]);
 
-    assert_eq!(*btc_signature.last().unwrap(),
-               SigHashType::All.as_u32() as u8);
+    assert_eq!(
+        *btc_signature.last().unwrap(),
+        SigHashType::All.as_u32() as u8
+    );
     assert!(tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature));
 }
 
@@ -642,7 +668,12 @@ fn test_tx_verify_incorrect_signature() {
     let mut btc_signature = tx.sign_input(&redeem_script, 0, &priv_keys[0]);
     btc_signature[8] = btc_signature[8].wrapping_add(63);
 
-    assert!(!tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature));
+    assert!(!tx.verify_input(
+        &redeem_script,
+        0,
+        &pub_key,
+        &btc_signature,
+    ));
 }
 
 /// Verifies that non-strict DER signatures do not pass verification
@@ -661,8 +692,18 @@ fn test_tx_verify_non_strict_der_signature() {
     btc_signature_2[1] = btc_signature_2[1].wrapping_add(1);
 
     assert!(btc_signature_1 != btc_signature_2);
-    assert!(tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature_1));
-    assert!(!tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature_2));
+    assert!(tx.verify_input(
+        &redeem_script,
+        0,
+        &pub_key,
+        &btc_signature_1,
+    ));
+    assert!(!tx.verify_input(
+        &redeem_script,
+        0,
+        &pub_key,
+        &btc_signature_2,
+    ));
 }
 
 #[test]
@@ -748,10 +789,12 @@ fn test_rpc_anchoring_tx_chain() {
         let tx = tx.send(&client, &redeem_script, signatures).unwrap();
         trace!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
-        assert!(funding_tx
-                    .has_unspent_info(&client, &addr)
-                    .unwrap()
-                    .is_none());
+        assert!(
+            funding_tx
+                .has_unspent_info(&client, &addr)
+                .unwrap()
+                .is_none()
+        );
         let lect_tx = client
             .unspent_transactions(&addr)
             .unwrap()
@@ -771,15 +814,17 @@ fn test_rpc_anchoring_tx_chain() {
     let mut out_funds = utxo_tx.amount();
     trace!("out_funds={}", out_funds);
     while out_funds >= fee {
-        utxo_tx = send_anchoring_tx(&client,
-                                    &redeem_script,
-                                    &addr,
-                                    block_height,
-                                    block_hash,
-                                    &priv_keys,
-                                    utxo_tx,
-                                    &[],
-                                    fee);
+        utxo_tx = send_anchoring_tx(
+            &client,
+            &redeem_script,
+            &addr,
+            block_height,
+            block_hash,
+            &priv_keys,
+            utxo_tx,
+            &[],
+            fee,
+        );
 
         let payload = utxo_tx.payload();
         assert_eq!(payload.block_height, block_height);
@@ -789,15 +834,17 @@ fn test_rpc_anchoring_tx_chain() {
 
     // Try to add funding input
     let funding_tx = FundingTx::create(&client, &addr, fee * 3).unwrap();
-    utxo_tx = send_anchoring_tx(&client,
-                                &redeem_script,
-                                &addr,
-                                block_height,
-                                block_hash,
-                                &priv_keys,
-                                utxo_tx,
-                                &[funding_tx],
-                                fee);
+    utxo_tx = send_anchoring_tx(
+        &client,
+        &redeem_script,
+        &addr,
+        block_height,
+        block_hash,
+        &priv_keys,
+        utxo_tx,
+        &[funding_tx],
+        fee,
+    );
 
     // Send to next addr
     let (validators2, priv_keys2) = gen_anchoring_keys(6);
@@ -807,25 +854,29 @@ fn test_rpc_anchoring_tx_chain() {
         .unwrap();
 
     trace!("new_multisig_address={:#?}", redeem_script2);
-    utxo_tx = send_anchoring_tx(&client,
-                                &redeem_script,
-                                &addr2,
-                                block_height,
-                                block_hash,
-                                &priv_keys,
-                                utxo_tx,
-                                &[],
-                                fee);
+    utxo_tx = send_anchoring_tx(
+        &client,
+        &redeem_script,
+        &addr2,
+        block_height,
+        block_hash,
+        &priv_keys,
+        utxo_tx,
+        &[],
+        fee,
+    );
 
-    send_anchoring_tx(&client,
-                      &redeem_script2,
-                      &addr2,
-                      block_height,
-                      block_hash,
-                      &priv_keys2,
-                      utxo_tx,
-                      &[],
-                      fee);
+    send_anchoring_tx(
+        &client,
+        &redeem_script2,
+        &addr2,
+        block_height,
+        block_hash,
+        &priv_keys2,
+        utxo_tx,
+        &[],
+        fee,
+    );
 }
 
 #[test]
@@ -865,10 +916,12 @@ fn test_rpc_anchoring_tx_chain_insufficient_funds() {
         let tx = tx.send(&client, &redeem_script, signatures).unwrap();
         trace!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
-        assert!(funding_tx
-                    .has_unspent_info(&client, &addr)
-                    .unwrap()
-                    .is_none());
+        assert!(
+            funding_tx
+                .has_unspent_info(&client, &addr)
+                .unwrap()
+                .is_none()
+        );
         let lect_tx = client
             .unspent_transactions(&addr)
             .unwrap()
@@ -888,15 +941,17 @@ fn test_rpc_anchoring_tx_chain_insufficient_funds() {
     let mut out_funds = utxo_tx.amount();
     trace!("out_funds={}", out_funds);
     while out_funds >= fee {
-        utxo_tx = send_anchoring_tx(&client,
-                                    &redeem_script,
-                                    &addr,
-                                    block_height,
-                                    block_hash,
-                                    &priv_keys,
-                                    utxo_tx,
-                                    &[],
-                                    fee);
+        utxo_tx = send_anchoring_tx(
+            &client,
+            &redeem_script,
+            &addr,
+            block_height,
+            block_hash,
+            &priv_keys,
+            utxo_tx,
+            &[],
+            fee,
+        );
 
         let payload = utxo_tx.payload();
         assert_eq!(payload.block_height, block_height);
@@ -905,13 +960,15 @@ fn test_rpc_anchoring_tx_chain_insufficient_funds() {
     }
 
     // Try to send tx without funds
-    send_anchoring_tx(&client,
-                      &redeem_script,
-                      &addr,
-                      block_height,
-                      block_hash,
-                      &priv_keys,
-                      utxo_tx,
-                      &[],
-                      fee);
+    send_anchoring_tx(
+        &client,
+        &redeem_script,
+        &addr,
+        block_height,
+        block_hash,
+        &priv_keys,
+        utxo_tx,
+        &[],
+        fee,
+    );
 }
