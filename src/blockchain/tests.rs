@@ -46,11 +46,13 @@ fn test_msg_update_latest_json_serde() {
         e03f742abac0b3108134d900000000")
             .unwrap();
 
-    let msg = MsgAnchoringUpdateLatest::new_with_signature(&PublicKey::zero(),
-                                                           0,
-                                                           tx,
-                                                           0,
-                                                           &Signature::zero());
+    let msg = MsgAnchoringUpdateLatest::new_with_signature(
+        &PublicKey::zero(),
+        0,
+        tx,
+        0,
+        &Signature::zero(),
+    );
     let json = serde_json::to_value(&msg).unwrap();
     let msg2: MsgAnchoringUpdateLatest = serde_json::from_value(json).unwrap();
     assert_eq!(msg2, msg);
@@ -67,12 +69,14 @@ fn test_sighash_type_all_in_msg_signature() {
         f28dbcfc132319a162421d24022074f8a1c182088389bfae8646d9d99dea5b47db8f795d02efcc41ab4da0a8e1\
         1b01")
             .unwrap();
-    let msg = MsgAnchoringSignature::new_with_signature(&PublicKey::zero(),
-                                                        0,
-                                                        tx,
-                                                        0,
-                                                        &btc_signature,
-                                                        &Signature::zero());
+    let msg = MsgAnchoringSignature::new_with_signature(
+        &PublicKey::zero(),
+        0,
+        tx,
+        0,
+        &btc_signature,
+        &Signature::zero(),
+    );
 
     assert!(msg.verify_content());
 }
@@ -90,12 +94,14 @@ fn test_sighash_type_single_in_msg_signature() {
             .unwrap();
     *btc_signature.last_mut().unwrap() = SigHashType::Single.as_u32() as u8;
 
-    let msg = MsgAnchoringSignature::new_with_signature(&PublicKey::zero(),
-                                                        0,
-                                                        tx,
-                                                        0,
-                                                        &btc_signature,
-                                                        &Signature::zero());
+    let msg = MsgAnchoringSignature::new_with_signature(
+        &PublicKey::zero(),
+        0,
+        tx,
+        0,
+        &btc_signature,
+        &Signature::zero(),
+    );
     assert!(!msg.verify_content());
 }
 
@@ -111,12 +117,14 @@ fn test_signed_input_in_msg_signature_tx_body() {
     assert!(signed_tx.nid() != signed_tx.id());
     assert_eq!(signed_tx.nid(), tx.id());
 
-    let msg = MsgAnchoringSignature::new_with_signature(&PublicKey::zero(),
-                                                        0,
-                                                        signed_tx,
-                                                        0,
-                                                        &btc_signatures[&0][0],
-                                                        &Signature::zero());
+    let msg = MsgAnchoringSignature::new_with_signature(
+        &PublicKey::zero(),
+        0,
+        signed_tx,
+        0,
+        &btc_signatures[&0][0],
+        &Signature::zero(),
+    );
     assert!(!msg.verify_content());
 }
 
@@ -128,11 +136,13 @@ fn test_nonexistent_input_in_msg_signature_tx_body() {
     let tx = dummy_anchoring_tx(&redeem_script);
     let btc_signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
 
-    let msg = MsgAnchoringSignature::new_with_signature(&PublicKey::zero(),
-                                                        0,
-                                                        tx,
-                                                        1,
-                                                        &btc_signatures[&0][0],
-                                                        &Signature::zero());
+    let msg = MsgAnchoringSignature::new_with_signature(
+        &PublicKey::zero(),
+        0,
+        tx,
+        1,
+        &btc_signatures[&0][0],
+        &Signature::zero(),
+    );
     assert!(!msg.verify_content());
 }

@@ -72,9 +72,10 @@ impl AnchoringRpc {
         }
     }
 
-    pub fn get_transaction_info(&self,
-                                txid: &str)
-                                -> Result<Option<bitcoinrpc::RawTransactionInfo>> {
+    pub fn get_transaction_info(
+        &self,
+        txid: &str,
+    ) -> Result<Option<bitcoinrpc::RawTransactionInfo>> {
         let r = self.0.getrawtransaction_verbose(txid);
         match r {
             Ok(tx) => Ok(Some(tx)),
@@ -101,25 +102,32 @@ impl AnchoringRpc {
         Ok(self.get_transaction(&utxo_txid)?.unwrap())
     }
 
-    pub fn create_multisig_address<'a, I>(&self,
-                                          network: btc::Network,
-                                          count: u8,
-                                          pub_keys: I)
-                                          -> Result<(btc::RedeemScript, btc::Address)>
-        where I: IntoIterator<Item = &'a btc::PublicKey>
+    pub fn create_multisig_address<'a, I>(
+        &self,
+        network: btc::Network,
+        count: u8,
+        pub_keys: I,
+    ) -> Result<(btc::RedeemScript, btc::Address)>
+    where
+        I: IntoIterator<Item = &'a btc::PublicKey>,
     {
         let redeem_script = btc::RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
         let addr = btc::Address::from_script(&redeem_script, network);
 
-        self.0
-            .importaddress(&addr.to_base58check(), "multisig", false, false)?;
+        self.0.importaddress(
+            &addr.to_base58check(),
+            "multisig",
+            false,
+            false,
+        )?;
         Ok((redeem_script, addr))
     }
 
-    pub fn get_last_anchoring_transactions(&self,
-                                           addr: &str,
-                                           limit: u32)
-                                           -> Result<Vec<bitcoinrpc::TransactionInfo>> {
+    pub fn get_last_anchoring_transactions(
+        &self,
+        addr: &str,
+        limit: u32,
+    ) -> Result<Vec<bitcoinrpc::TransactionInfo>> {
         self.0.listtransactions(limit, 0, true).map(|v| {
             v.into_iter()
                 .rev()
@@ -128,16 +136,21 @@ impl AnchoringRpc {
         })
     }
 
-    pub fn get_unspent_transactions(&self,
-                                    min_conf: u32,
-                                    max_conf: u32,
-                                    addr: &str)
-                                    -> Result<Vec<bitcoinrpc::UnspentTransactionInfo>> {
+    pub fn get_unspent_transactions(
+        &self,
+        min_conf: u32,
+        max_conf: u32,
+        addr: &str,
+    ) -> Result<Vec<bitcoinrpc::UnspentTransactionInfo>> {
         self.0.listunspent(min_conf, max_conf, [addr])
     }
 
     pub fn unspent_transactions(&self, addr: &btc::Address) -> Result<Vec<BitcoinTx>> {
-        let unspent_txs = self.get_unspent_transactions(0, 9999999, &addr.to_base58check())?;
+        let unspent_txs = self.get_unspent_transactions(
+            0,
+            9999999,
+            &addr.to_base58check(),
+        )?;
         let mut txs = Vec::new();
         for info in unspent_txs {
             if let Some(raw_tx) = self.get_transaction(&info.txid)? {

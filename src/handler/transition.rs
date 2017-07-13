@@ -25,19 +25,22 @@ use super::{AnchoringHandler, LectKind, MultisigAddress};
 
 #[doc(hidden)]
 impl AnchoringHandler {
-    pub fn handle_transition_state(&mut self,
-                                   from: AnchoringConfig,
-                                   to: AnchoringConfig,
-                                   state: &mut ServiceContext)
-                                   -> Result<(), ServiceError> {
+    pub fn handle_transition_state(
+        &mut self,
+        from: AnchoringConfig,
+        to: AnchoringConfig,
+        state: &mut ServiceContext,
+    ) -> Result<(), ServiceError> {
         let multisig: MultisigAddress = {
             let mut multisig = self.multisig_address(&from);
             multisig.addr = to.redeem_script().1;
             multisig
         };
-        trace!("Transition state, addr={}, following_config={:#?}",
-               multisig.addr.to_base58check(),
-               to);
+        trace!(
+            "Transition state, addr={}, following_config={:#?}",
+            multisig.addr.to_base58check(),
+            to
+        );
 
         // Similar we update lect each n blocks
         if state.height() % self.node.check_lect_frequency == 0 {
@@ -50,9 +53,11 @@ impl AnchoringHandler {
             self.try_finalize_proposal_tx(proposal, &multisig, state)?;
         } else {
             // Or try to create proposal
-            match self.collect_lects_for_validator(self.anchoring_key(multisig.common, state),
-                                                   multisig.common,
-                                                   state) {
+            match self.collect_lects_for_validator(
+                self.anchoring_key(multisig.common, state),
+                multisig.common,
+                state,
+            ) {
                 LectKind::Anchoring(lect) => {
                     if lect.output_address(multisig.common.network) == multisig.addr {
                         return Ok(());
@@ -63,10 +68,12 @@ impl AnchoringHandler {
                         let height = multisig.common.latest_anchoring_height(state.height());
                         self.create_proposal_tx(lect, &multisig, height, state)?;
                     } else {
-                        warn!("Insufficient confirmations for create transition transaction, \
-                               tx={:#?}, confirmations={}",
-                              lect,
-                              confirmations);
+                        warn!(
+                            "Insufficient confirmations for create transition transaction, \
+                             tx={:#?}, confirmations={}",
+                            lect,
+                            confirmations
+                        );
                     }
                 }
                 LectKind::Funding(_) => panic!("We must not to change genesis configuration!"),
@@ -78,13 +85,16 @@ impl AnchoringHandler {
         Ok(())
     }
 
-    pub fn handle_waiting_state(&mut self,
-                                lect: BitcoinTx,
-                                confirmations: Option<u64>)
-                                -> Result<(), ServiceError> {
-        trace!("Waiting for enough confirmations for the lect={:#?}, current={:?}",
-               lect,
-               confirmations);
+    pub fn handle_waiting_state(
+        &mut self,
+        lect: BitcoinTx,
+        confirmations: Option<u64>,
+    ) -> Result<(), ServiceError> {
+        trace!(
+            "Waiting for enough confirmations for the lect={:#?}, current={:?}",
+            lect,
+            confirmations
+        );
         if confirmations.is_none() {
             trace!("Resend transition transaction, txid={}", lect.txid());
             self.client().send_transaction(lect)?;
@@ -92,11 +102,12 @@ impl AnchoringHandler {
         Ok(())
     }
 
-    pub fn handle_recovering_state(&mut self,
-                                   prev_cfg: AnchoringConfig,
-                                   actual_cfg: AnchoringConfig,
-                                   state: &mut ServiceContext)
-                                   -> Result<(), ServiceError> {
+    pub fn handle_recovering_state(
+        &mut self,
+        prev_cfg: AnchoringConfig,
+        actual_cfg: AnchoringConfig,
+        state: &mut ServiceContext,
+    ) -> Result<(), ServiceError> {
         let multisig: MultisigAddress = self.multisig_address(&actual_cfg);
 
         if state.height() % self.node.check_lect_frequency == 0 {
@@ -104,8 +115,10 @@ impl AnchoringHandler {
             self.update_our_lect(&multisig, state)?;
         }
 
-        trace!("Starting a new tx chain to addr={} from scratch",
-               multisig.addr.to_base58check());
+        trace!(
+            "Starting a new tx chain to addr={} from scratch",
+            multisig.addr.to_base58check()
+        );
 
         let lect_txid = {
             let anchoring_schema = AnchoringSchema::new(state.snapshot());
@@ -117,7 +130,11 @@ impl AnchoringHandler {
                 genesis_cfg.funding_tx().id()
             }
         };
-        self.try_create_anchoring_tx_chain(&multisig, Some(lect_txid), state)?;
+        self.try_create_anchoring_tx_chain(
+            &multisig,
+            Some(lect_txid),
+            state,
+        )?;
 
         // Try to finalize new tx chain propose if it exist
         if let Some(proposal) = self.proposal_tx.clone() {

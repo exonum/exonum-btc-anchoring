@@ -29,10 +29,11 @@ use super::{AnchoringHandler, LectKind, MultisigAddress, collect_signatures};
 
 #[doc(hidden)]
 impl AnchoringHandler {
-    pub fn handle_anchoring_state(&mut self,
-                                  cfg: AnchoringConfig,
-                                  context: &mut ServiceContext)
-                                  -> Result<(), ServiceError> {
+    pub fn handle_anchoring_state(
+        &mut self,
+        cfg: AnchoringConfig,
+        context: &mut ServiceContext,
+    ) -> Result<(), ServiceError> {
         let multisig = self.multisig_address(&cfg);
         trace!("Anchoring state, addr={}", multisig.addr.to_base58check());
 
@@ -51,13 +52,16 @@ impl AnchoringHandler {
     }
 
 
-    pub fn try_create_proposal_tx(&mut self,
-                                  multisig: &MultisigAddress,
-                                  context: &mut ServiceContext)
-                                  -> Result<(), ServiceError> {
-        let lect = self.collect_lects_for_validator(self.anchoring_key(multisig.common, context),
-                                                    multisig.common,
-                                                    context);
+    pub fn try_create_proposal_tx(
+        &mut self,
+        multisig: &MultisigAddress,
+        context: &mut ServiceContext,
+    ) -> Result<(), ServiceError> {
+        let lect = self.collect_lects_for_validator(
+            self.anchoring_key(multisig.common, context),
+            multisig.common,
+            context,
+        );
         match lect {
             LectKind::Funding(_) => self.try_create_anchoring_tx_chain(multisig, None, context),
             LectKind::Anchoring(tx) => {
@@ -77,11 +81,12 @@ impl AnchoringHandler {
     }
 
     // Create first anchoring tx proposal from funding tx in AnchoringNodeConfig
-    pub fn try_create_anchoring_tx_chain(&mut self,
-                                         multisig: &MultisigAddress,
-                                         prev_tx_chain: Option<btc::TxId>,
-                                         context: &mut ServiceContext)
-                                         -> Result<(), ServiceError> {
+    pub fn try_create_anchoring_tx_chain(
+        &mut self,
+        multisig: &MultisigAddress,
+        prev_tx_chain: Option<btc::TxId>,
+        context: &mut ServiceContext,
+    ) -> Result<(), ServiceError> {
         trace!("Create tx chain");
         if let Some(funding_tx) = self.avaliable_funding_tx(multisig)? {
             // Create anchoring proposal
@@ -99,9 +104,11 @@ impl AnchoringHandler {
                 .send_to(multisig.addr.clone())
                 .into_transaction()?;
 
-            trace!("initial_proposal={:#?}, txhex={}",
-                   proposal,
-                   proposal.0.to_hex());
+            trace!(
+                "initial_proposal={:#?}, txhex={}",
+                proposal,
+                proposal.0.to_hex()
+            );
 
             // Sign proposal
             self.sign_proposal_tx(proposal, multisig, context)?;
@@ -111,12 +118,13 @@ impl AnchoringHandler {
         Ok(())
     }
 
-    pub fn create_proposal_tx(&mut self,
-                              lect: AnchoringTx,
-                              multisig: &MultisigAddress,
-                              height: u64,
-                              context: &mut ServiceContext)
-                              -> Result<(), ServiceError> {
+    pub fn create_proposal_tx(
+        &mut self,
+        lect: AnchoringTx,
+        multisig: &MultisigAddress,
+        height: u64,
+        context: &mut ServiceContext,
+    ) -> Result<(), ServiceError> {
         let hash = Schema::new(context.snapshot())
             .block_hashes_by_height()
             .get(height)
@@ -128,102 +136,126 @@ impl AnchoringHandler {
                 .payload(height, hash)
                 .send_to(multisig.addr.clone());
             if let Some(funds) = self.avaliable_funding_tx(multisig)? {
-                let out = funds
-                    .find_out(&multisig.addr)
-                    .expect("Funding tx has proper multisig output");
+                let out = funds.find_out(&multisig.addr).expect(
+                    "Funding tx has proper \
+                     multisig output",
+                );
                 builder = builder.add_funds(&funds, out);
             }
             builder.into_transaction()?
         };
 
-        trace!("proposal={:#?}, to={:?}, height={}, hash={}",
-               proposal,
-               multisig.addr,
-               height,
-               hash.to_hex());
+        trace!(
+            "proposal={:#?}, to={:?}, height={}, hash={}",
+            proposal,
+            multisig.addr,
+            height,
+            hash.to_hex()
+        );
         self.sign_proposal_tx(proposal, multisig, context)
     }
 
-    pub fn sign_proposal_tx(&mut self,
-                            proposal: AnchoringTx,
-                            multisig: &MultisigAddress,
-                            context: &mut ServiceContext)
-                            -> Result<(), ServiceError> {
+    pub fn sign_proposal_tx(
+        &mut self,
+        proposal: AnchoringTx,
+        multisig: &MultisigAddress,
+        context: &mut ServiceContext,
+    ) -> Result<(), ServiceError> {
         for input in proposal.inputs() {
             let signature = proposal.sign_input(&multisig.redeem_script, input, &multisig.priv_key);
 
-            let sign_msg = MsgAnchoringSignature::new(context.public_key(),
-                                                      self.validator_id(context),
-                                                      proposal.clone(),
-                                                      input,
-                                                      &signature,
-                                                      context.secret_key());
+            let sign_msg = MsgAnchoringSignature::new(
+                context.public_key(),
+                self.validator_id(context),
+                proposal.clone(),
+                input,
+                &signature,
+                context.secret_key(),
+            );
 
-            trace!("Sign input msg={:#?}, sighex={}",
-                   sign_msg,
-                   signature.to_hex());
+            trace!(
+                "Sign input msg={:#?}, sighex={}",
+                sign_msg,
+                signature.to_hex()
+            );
             context.add_transaction(Box::new(sign_msg));
         }
         self.proposal_tx = Some(proposal);
         Ok(())
     }
 
-    pub fn try_finalize_proposal_tx(&mut self,
-                                    proposal: AnchoringTx,
-                                    multisig: &MultisigAddress,
-                                    context: &mut ServiceContext)
-                                    -> Result<(), ServiceError> {
+    pub fn try_finalize_proposal_tx(
+        &mut self,
+        proposal: AnchoringTx,
+        multisig: &MultisigAddress,
+        context: &mut ServiceContext,
+    ) -> Result<(), ServiceError> {
         trace!("Try finalize proposal tx");
         let txid = proposal.id();
 
         let proposal_height = proposal.payload().block_height;
         if multisig.common.latest_anchoring_height(context.height()) !=
-           multisig.common.latest_anchoring_height(proposal_height) {
-            warn!("Unable to finalize anchoring tx for height={}",
-                  proposal_height);
+            multisig.common.latest_anchoring_height(proposal_height)
+        {
+            warn!(
+                "Unable to finalize anchoring tx for height={}",
+                proposal_height
+            );
             self.proposal_tx = None;
             return Ok(());
         }
 
         let anchoring_schema = AnchoringSchema::new(context.snapshot());
         let signatures = anchoring_schema.signatures(&txid);
-        if let Some(signatures) = collect_signatures(&proposal,
-                                                     multisig.common,
-                                                     signatures.iter()) {
+        if let Some(signatures) = collect_signatures(
+            &proposal,
+            multisig.common,
+            signatures.iter(),
+        )
+        {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
             if self.client()
-                   .get_transaction_info(&new_lect.txid())?
-                   .is_none() {
+                .get_transaction_info(&new_lect.txid())?
+                .is_none()
+            {
                 self.client().send_transaction(new_lect.clone().into())?;
-                trace!("Sended signed_tx={:#?}, to={}",
-                       new_lect,
-                       new_lect
-                           .output_address(multisig.common.network)
-                           .to_base58check());
+                trace!(
+                    "Sended signed_tx={:#?}, to={}",
+                    new_lect,
+                    new_lect
+                        .output_address(multisig.common.network)
+                        .to_base58check()
+                );
             }
 
-            info!("ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
-                  new_lect.payload().block_height,
-                  new_lect.txid(),
-                  new_lect.amount());
+            info!(
+                "ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
+                new_lect.payload().block_height,
+                new_lect.txid(),
+                new_lect.amount()
+            );
 
-            info!("LECT ====== txid={}, total_count={}",
-                  new_lect.txid(),
-                  AnchoringSchema::new(context.snapshot())
-                      .lects(self.anchoring_key(multisig.common, context))
-                      .len());
+            info!(
+                "LECT ====== txid={}, total_count={}",
+                new_lect.txid(),
+                AnchoringSchema::new(context.snapshot())
+                    .lects(self.anchoring_key(multisig.common, context))
+                    .len()
+            );
 
             self.proposal_tx = None;
 
             let lects_count = AnchoringSchema::new(context.snapshot())
                 .lects(self.anchoring_key(multisig.common, context))
                 .len();
-            let lect_msg = MsgAnchoringUpdateLatest::new(context.public_key(),
-                                                         self.validator_id(context),
-                                                         new_lect.into(),
-                                                         lects_count,
-                                                         context.secret_key());
+            let lect_msg = MsgAnchoringUpdateLatest::new(
+                context.public_key(),
+                self.validator_id(context),
+                new_lect.into(),
+                lects_count,
+                context.secret_key(),
+            );
             context.add_transaction(Box::new(lect_msg));
         } else {
             warn!("Insufficient signatures for proposal={:#?}", proposal);

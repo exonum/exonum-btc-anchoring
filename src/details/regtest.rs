@@ -39,8 +39,9 @@ pub struct RegTestNode {
 
 impl RegTestNode {
     pub fn new<D, S>(dir: D, bind: S, rpc_port: u16) -> io::Result<RegTestNode>
-        where D: AsRef<Path>,
-              S: AsRef<str>
+    where
+        D: AsRef<Path>,
+        S: AsRef<str>,
     {
         let dir = dir.as_ref();
         // create config dir
@@ -72,9 +73,9 @@ impl RegTestNode {
             thread::sleep(Duration::from_secs(2));
             if client.getinfo().is_ok() {
                 return Ok(RegTestNode {
-                              process: process,
-                              client: client,
-                          });
+                    process: process,
+                    client: client,
+                });
             }
         }
         Err(io::ErrorKind::TimedOut.into())
@@ -91,12 +92,16 @@ impl RegTestNode {
         self.client.generate(n, 99999)
     }
 
-    pub fn generate_to_address(&self,
-                               n: u64,
-                               addr: &Address)
-                               -> Result<Vec<String>, bitcoinrpc::Error> {
-        self.client
-            .generatetoaddress(n, &addr.to_base58check(), 99999)
+    pub fn generate_to_address(
+        &self,
+        n: u64,
+        addr: &Address,
+    ) -> Result<Vec<String>, bitcoinrpc::Error> {
+        self.client.generatetoaddress(
+            n,
+            &addr.to_base58check(),
+            99999,
+        )
     }
 
     pub fn client(&self) -> &AnchoringRpc {

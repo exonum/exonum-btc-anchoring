@@ -82,8 +82,9 @@ pub struct AnchoringSandbox {
 }
 
 /// Generates config for 4 validators and 4000 funds
-pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
-                                    -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
+pub fn gen_sandbox_anchoring_config(
+    client: &mut AnchoringRpc,
+) -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let requests = vec![
         request! {
             method: "importaddress",
@@ -113,16 +114,19 @@ pub fn gen_sandbox_anchoring_config(client: &mut AnchoringRpc)
     ];
     client.expect(requests);
     let mut rng: StdRng = SeedableRng::from_seed([1, 2, 3, 4].as_ref());
-    gen_anchoring_testnet_config_with_rng(client,
-                                          btc::Network::Testnet,
-                                          4,
-                                          ANCHORING_FUNDS,
-                                          &mut rng)
+    gen_anchoring_testnet_config_with_rng(
+        client,
+        btc::Network::Testnet,
+        4,
+        ANCHORING_FUNDS,
+        &mut rng,
+    )
 }
 
 impl AnchoringSandbox {
     pub fn initialize<'a, I>(priv_keys: I) -> AnchoringSandbox
-        where I: IntoIterator<Item = &'a (&'a str, Vec<&'a str>)>
+    where
+        I: IntoIterator<Item = &'a (&'a str, Vec<&'a str>)>,
     {
         let mut client = AnchoringRpc(SandboxClient::default());
         let (mut common, mut nodes) = gen_sandbox_anchoring_config(&mut client);
@@ -133,8 +137,10 @@ impl AnchoringSandbox {
         common.utxo_confirmations = ANCHORING_UTXO_CONFIRMATIONS;
         for &&(addr, ref keys) in &priv_keys {
             for (id, key) in keys.iter().enumerate() {
-                nodes[id].private_keys.insert(addr.to_string(),
-                                              btc::PrivateKey::from_base58check(key).unwrap());
+                nodes[id].private_keys.insert(
+                    addr.to_string(),
+                    btc::PrivateKey::from_base58check(key).unwrap(),
+                );
             }
         }
 
@@ -148,10 +154,11 @@ impl AnchoringSandbox {
             params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
         },
         ]);
-        let service = AnchoringService::new_with_client(AnchoringRpc(client.clone()),
-                                                        common.clone(),
-                                                        nodes[ANCHORING_VALIDATOR as usize]
-                                                            .clone());
+        let service = AnchoringService::new_with_client(
+            AnchoringRpc(client.clone()),
+            common.clone(),
+            nodes[ANCHORING_VALIDATOR as usize].clone(),
+        );
         let service_handler = service.handler();
         let sandbox = sandbox_with_services(vec![
             Box::new(service),
@@ -268,29 +275,30 @@ impl AnchoringSandbox {
             .clone()
     }
 
-    pub fn gen_anchoring_tx_with_signatures(&self,
-                                            height: u64,
-                                            block_hash: Hash,
-                                            funds: &[FundingTx],
-                                            prev_tx_chain: Option<btc::TxId>,
-                                            addr: &btc::Address)
-                                            -> (AnchoringTx, Vec<RawTransaction>) {
+    pub fn gen_anchoring_tx_with_signatures(
+        &self,
+        height: u64,
+        block_hash: Hash,
+        funds: &[FundingTx],
+        prev_tx_chain: Option<btc::TxId>,
+        addr: &btc::Address,
+    ) -> (AnchoringTx, Vec<RawTransaction>) {
         let (propose_tx, signed_tx, signs) = {
             let (prev_tx, prev_tx_input) = self.state
                 .borrow()
                 .latest_anchored_tx
                 .clone()
                 .map(|x| {
-                         let tx = (x.0).0;
-                         let input = 0;
-                         (tx, input)
-                     })
+                    let tx = (x.0).0;
+                    let input = 0;
+                    (tx, input)
+                })
                 .unwrap_or_else(|| {
-                                    let cfg = self.current_cfg();
-                                    let tx = cfg.funding_tx().clone();
-                                    let input = tx.find_out(&cfg.redeem_script().1).unwrap();
-                                    (tx.0.clone(), input)
-                                });
+                    let cfg = self.current_cfg();
+                    let tx = cfg.funding_tx().clone();
+                    let input = tx.find_out(&cfg.redeem_script().1).unwrap();
+                    (tx.0.clone(), input)
+                });
 
             let mut builder = TransactionBuilder::with_prev_tx(&prev_tx, prev_tx_input)
                 .payload(height, block_hash)
@@ -317,7 +325,8 @@ impl AnchoringSandbox {
     }
 
     pub fn finalize_tx<I>(&self, tx: AnchoringTx, signs: I) -> AnchoringTx
-        where I: IntoIterator<Item = MsgAnchoringSignature>
+    where
+        I: IntoIterator<Item = MsgAnchoringSignature>,
     {
         let collected_signs = collect_signatures(&tx, &self.current_cfg(), signs).unwrap();
         tx.finalize(&self.current_redeem_script(), collected_signs)
@@ -331,27 +340,32 @@ impl AnchoringSandbox {
         for (validator, priv_key) in priv_keys.iter().enumerate() {
             for input in tx.inputs() {
                 let signature = tx.sign_input(&redeem_script, input, priv_key);
-                signs.push(MsgAnchoringSignature::new(&self.sandbox.service_public_key(validator),
-                                                      validator as u16,
-                                                      tx.clone(),
-                                                      input,
-                                                      &signature,
-                                                      self.sandbox.service_secret_key(validator)));
+                signs.push(MsgAnchoringSignature::new(
+                    &self.sandbox.service_public_key(validator),
+                    validator as u16,
+                    tx.clone(),
+                    input,
+                    &signature,
+                    self.sandbox.service_secret_key(validator),
+                ));
             }
         }
         signs
     }
 
     pub fn add_height<'a, I>(&self, txs: I)
-        where I: IntoIterator<Item = &'a RawTransaction>
+    where
+        I: IntoIterator<Item = &'a RawTransaction>,
     {
         add_one_height_with_transactions(&self.sandbox, &self.state.borrow().sandbox_state, txs)
     }
 
     pub fn add_height_as_auditor(&self, txs: &[RawTransaction]) {
-        add_one_height_with_transactions_from_other_validator(&self.sandbox,
-                                                              &self.state.borrow().sandbox_state,
-                                                              txs)
+        add_one_height_with_transactions_from_other_validator(
+            &self.sandbox,
+            &self.state.borrow().sandbox_state,
+            txs,
+        )
     }
 
     pub fn fast_forward_to_height(&self, height: u64) {

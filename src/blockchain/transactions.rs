@@ -30,22 +30,28 @@ impl MsgAnchoringSignature {
         // Do not verify signatures other than SigHashType::All
         let sighash_type_all = SigHashType::All.as_u32() as u8;
         if self.signature().last() != Some(&sighash_type_all) {
-            warn!("Received msg with incorrect signature type, content={:#?}",
-                  self);
+            warn!(
+                "Received msg with incorrect signature type, content={:#?}",
+                self
+            );
             return false;
         }
         let tx = self.tx();
         // Check that the signature is provided for an existing anchoring tx input
         if tx.input.len() as u32 <= self.input() {
-            warn!("Received msg for non-existing input index, content={:#?}",
-                  self);
+            warn!(
+                "Received msg for non-existing input index, content={:#?}",
+                self
+            );
             return false;
         }
         // Check that input scriptSigs are empty
         for input in &tx.input {
             if !input.script_sig.is_empty() {
-                warn!("Received msg with non empty input scriptSigs, content={:#?}",
-                      self);
+                warn!(
+                    "Received msg with non empty input scriptSigs, content={:#?}",
+                    self
+                );
                 return false;
             }
         }
@@ -60,10 +66,10 @@ impl MsgAnchoringSignature {
         let id = self.validator();
         let actual_cfg = core_schema.actual_configuration();
         // Verify from field
-        if actual_cfg
-               .validator_keys
-               .get(id as usize)
-               .map(|k| k.service_key) != Some(*self.from()) {
+        if actual_cfg.validator_keys.get(id as usize).map(
+            |k| k.service_key,
+        ) != Some(*self.from())
+        {
             warn!("Received msg from non-validator, content={:#?}", self);
             return false;
         }
@@ -80,8 +86,10 @@ impl MsgAnchoringSignature {
                 addr
             };
             if tx_addr != addr {
-                warn!("Received msg with incorrect output address, content={:#?}",
-                      self);
+                warn!(
+                    "Received msg with incorrect output address, content={:#?}",
+                    self
+                );
                 return false;
             }
             if !verify_anchoring_tx_payload(&tx, &core_schema) {
@@ -125,9 +133,10 @@ impl MsgAnchoringUpdateLatest {
         let actual_cfg = core_schema.actual_configuration();
 
         if actual_cfg
-               .validator_keys
-               .get(self.validator() as usize)
-               .map(|k| k.service_key) != Some(*self.from()) {
+            .validator_keys
+            .get(self.validator() as usize)
+            .map(|k| k.service_key) != Some(*self.from())
+        {
             warn!("Received lect from non validator, content={:#?}", self);
             return None;
         }
@@ -141,17 +150,20 @@ impl MsgAnchoringUpdateLatest {
                     return None;
                 }
                 if !verify_anchoring_tx_prev_hash(&tx, &anchoring_schema) {
-                    warn!("Received lect with prev_lect without 2/3+ confirmations, \
-                            content={:#?}",
-                          self);
+                    warn!(
+                        "Received lect with prev_lect without 2/3+ confirmations, content={:#?}",
+                        self
+                    );
                     return None;
                 }
             }
             TxKind::FundingTx(tx) => {
                 let anchoring_cfg = anchoring_schema.genesis_anchoring_config();
                 if !verify_funding_tx(&tx, &anchoring_cfg) {
-                    warn!("Received lect with incorrect funding_tx, content={:#?}",
-                          self);
+                    warn!(
+                        "Received lect with incorrect funding_tx, content={:#?}",
+                        self
+                    );
                     return None;
                 }
             }
@@ -181,7 +193,8 @@ impl Transaction for MsgAnchoringUpdateLatest {
 }
 
 fn verify_anchoring_tx_prev_hash<T>(tx: &AnchoringTx, anchoring_schema: &AnchoringSchema<T>) -> bool
-    where T: AsRef<Snapshot>
+where
+    T: AsRef<Snapshot>,
 {
     // If tx has `prev_tx_chain` should be used it instead of `prev_hash`.
     let prev_txid = tx.payload().prev_tx_chain.unwrap_or_else(|| tx.prev_hash());
@@ -208,16 +221,23 @@ fn verify_anchoring_tx_prev_hash<T>(tx: &AnchoringTx, anchoring_schema: &Anchori
         let mut prev_lects_count = 0;
         for key in &anchoring_cfg.anchoring_keys {
             if let Some(prev_lect_idx) = anchoring_schema.find_lect_position(key, &prev_txid) {
-                let prev_lect = anchoring_schema
-                    .lects(key)
-                    .get(prev_lect_idx)
-                    .expect(&format!("Lect with index {} is absent in lects table for validator \
-                                     {}",
-                                     prev_lect_idx,
-                                     key.to_hex()));
-                assert_eq!(prev_txid,
-                           prev_lect.tx().id(),
-                           "Inconsistent reference to previous lect in Exonum");
+                let prev_lect = anchoring_schema.lects(key).get(prev_lect_idx).expect(
+                    &format!(
+                        "Lect with \
+                         index {} is \
+                         absent in \
+                         lects table \
+                         for validator \
+                         {}",
+                        prev_lect_idx,
+                        key.to_hex()
+                    ),
+                );
+                assert_eq!(
+                    prev_txid,
+                    prev_lect.tx().id(),
+                    "Inconsistent reference to previous lect in Exonum"
+                );
 
                 prev_lects_count += 1;
             }
@@ -228,7 +248,8 @@ fn verify_anchoring_tx_prev_hash<T>(tx: &AnchoringTx, anchoring_schema: &Anchori
 }
 
 fn verify_anchoring_tx_payload<T>(tx: &AnchoringTx, schema: &Schema<T>) -> bool
-    where T: AsRef<Snapshot>
+where
+    T: AsRef<Snapshot>,
 {
     let payload = tx.payload();
     schema.block_hashes_by_height().get(payload.block_height) == Some(payload.block_hash)

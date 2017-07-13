@@ -51,10 +51,11 @@ pub struct AnchoringChainObserver {
 
 impl AnchoringChainObserver {
     /// Constructs observer for the given `blockchain`.
-    pub fn new(blockchain: Blockchain,
-               rpc: AnchoringRpcConfig,
-               observer: AnchoringObserverConfig)
-               -> AnchoringChainObserver {
+    pub fn new(
+        blockchain: Blockchain,
+        rpc: AnchoringRpcConfig,
+        observer: AnchoringObserverConfig,
+    ) -> AnchoringChainObserver {
         AnchoringChainObserver {
             blockchain: blockchain,
             client: AnchoringRpc::new(rpc),
@@ -63,10 +64,11 @@ impl AnchoringChainObserver {
     }
 
     #[doc(hidden)]
-    pub fn new_with_client(blockchain: Blockchain,
-                           client: AnchoringRpc,
-                           check_frequency: Milliseconds)
-                           -> AnchoringChainObserver {
+    pub fn new_with_client(
+        blockchain: Blockchain,
+        client: AnchoringRpc,
+        check_frequency: Milliseconds,
+    ) -> AnchoringChainObserver {
         AnchoringChainObserver {
             blockchain: blockchain,
             client: client,
@@ -76,13 +78,17 @@ impl AnchoringChainObserver {
 
     /// Runs obesrver in infinity loop.
     pub fn run(&mut self) -> Result<(), ServiceError> {
-        info!("Launching anchoring chain observer with polling frequency {} ms",
-              self.check_frequency);
+        info!(
+            "Launching anchoring chain observer with polling frequency {} ms",
+            self.check_frequency
+        );
         let duration = Duration::from_millis(self.check_frequency);
         loop {
             if let Err(e) = self.check_anchoring_chain() {
-                error!("An error during `check_anchoring_chain` occured, msg={:?}",
-                       e);
+                error!(
+                    "An error during `check_anchoring_chain` occured, msg={:?}",
+                    e
+                );
             }
             sleep(duration);
         }
@@ -120,11 +126,12 @@ impl AnchoringChainObserver {
         &self.blockchain
     }
 
-    fn update_anchoring_chain(&self,
-                              fork: &mut Fork,
-                              actual_cfg: &AnchoringConfig,
-                              mut lect: AnchoringTx)
-                              -> Result<(), ServiceError> {
+    fn update_anchoring_chain(
+        &self,
+        fork: &mut Fork,
+        actual_cfg: &AnchoringConfig,
+        mut lect: AnchoringTx,
+    ) -> Result<(), ServiceError> {
         let mut anchoring_schema = AnchoringSchema::new(fork);
 
         loop {
@@ -141,13 +148,16 @@ impl AnchoringChainObserver {
 
             let confirmations = self.client.get_transaction_confirmations(&lect.id())?;
             if confirmations.as_ref() >= Some(&actual_cfg.utxo_confirmations) {
-                trace!("Adds transaction to chain, height={}, content={:#?}",
-                       payload.block_height,
-                       lect);
+                trace!(
+                    "Adds transaction to chain, height={}, content={:#?}",
+                    payload.block_height,
+                    lect
+                );
 
-                anchoring_schema
-                    .anchoring_tx_chain_mut()
-                    .put(&height, lect.clone().into());
+                anchoring_schema.anchoring_tx_chain_mut().put(
+                    &height,
+                    lect.clone().into(),
+                );
             }
 
             let prev_txid = payload.prev_tx_chain.unwrap_or_else(|| lect.prev_hash());
@@ -165,14 +175,17 @@ impl AnchoringChainObserver {
         }
     }
 
-    fn find_lect(&self,
-                 fork: &Fork,
-                 actual_cfg: &AnchoringConfig)
-                 -> Result<Option<AnchoringTx>, ServiceError> {
+    fn find_lect(
+        &self,
+        fork: &Fork,
+        actual_cfg: &AnchoringConfig,
+    ) -> Result<Option<AnchoringTx>, ServiceError> {
         let actual_addr = actual_cfg.redeem_script().1;
 
-        trace!("Tries to find lect for the addr: {}",
-               actual_addr.to_base58check());
+        trace!(
+            "Tries to find lect for the addr: {}",
+            actual_addr.to_base58check()
+        );
 
         let unspent_txs: Vec<_> = self.client.unspent_transactions(&actual_addr)?;
         for tx in unspent_txs {
@@ -185,11 +198,12 @@ impl AnchoringChainObserver {
         Ok(None)
     }
 
-    fn transaction_is_lect(&self,
-                           fork: &Fork,
-                           actual_cfg: &AnchoringConfig,
-                           tx: &BitcoinTx)
-                           -> Result<bool, ServiceError> {
+    fn transaction_is_lect(
+        &self,
+        fork: &Fork,
+        actual_cfg: &AnchoringConfig,
+        tx: &BitcoinTx,
+    ) -> Result<bool, ServiceError> {
         let txid = tx.id();
         let anchoring_schema = AnchoringSchema::new(fork);
 
