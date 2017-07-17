@@ -379,9 +379,6 @@ impl ServiceFactory for AnchoringService {
             .clone()
             .try_into()
             .unwrap();
-        Box::new(AnchoringService::new(
-            anch_cfg.genesis,
-            anch_cfg.node,
-        ))
+        Box::new(AnchoringService::new(anch_cfg.genesis, anch_cfg.node))
     }
 }

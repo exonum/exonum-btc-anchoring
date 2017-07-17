@@ -8,7 +8,7 @@
 
 ## Bitcoind node deployment
 
-First of all install `bitcoind` via your package manager and ensure that you use latest stable version.
+First of all install `bitcoind` via your package manager and ensure that you use the latest stable version. 
 You may visit official bitcoin [site][bitcoin:install] for more information about installation.
 
 Then create bitcoind configuration file in according to this [tutorial][bitcoin_wiki:configuration].
@@ -89,7 +89,7 @@ $ anchoring finalize
 This command generates configuration of node and returns
 txid of generated `funding_tx`:
 
- - While others, should use this `funding_tx`.
+ - While others should use this `funding_tx`.
 ```
 $ anchoring finalize
     <Path to saved private node config> \

@@ -35,8 +35,8 @@ use exonum::crypto::{Hash, HexValue};
 use exonum::messages::Message;
 
 use exonum_btc_anchoring::details::sandbox::Request;
-use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, FundingTx,
-                                                       TransactionBuilder, verify_tx_input};
+use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder,
+                                                       verify_tx_input};
 use exonum_btc_anchoring::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use exonum_btc_anchoring_sandbox::AnchoringSandbox;
 use exonum_btc_anchoring_sandbox::helpers::*;

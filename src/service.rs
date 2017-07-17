@@ -110,7 +110,7 @@ impl Service for AnchoringService {
         }
     }
 
-    fn handle_genesis_block(&self, fork: &mut Fork) -> Value {
+    fn initialize(&self, fork: &mut Fork) -> Value {
         let mut handler = self.handler.lock().unwrap();
         let cfg = self.genesis.clone();
         let (_, addr) = cfg.redeem_script();
