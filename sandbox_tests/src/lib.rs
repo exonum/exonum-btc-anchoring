@@ -357,7 +357,7 @@ impl AnchoringSandbox {
     where
         I: IntoIterator<Item = &'a RawTransaction>,
     {
-        add_one_height_with_transactions(&self.sandbox, &self.state.borrow().sandbox_state, txs)
+        add_one_height_with_transactions(&self.sandbox, &self.state.borrow().sandbox_state, txs);
     }
 
     pub fn add_height_as_auditor(&self, txs: &[RawTransaction]) {
@@ -365,7 +365,7 @@ impl AnchoringSandbox {
             &self.sandbox,
             &self.state.borrow().sandbox_state,
             txs,
-        )
+        );
     }
 
     pub fn fast_forward_to_height(&self, height: u64) {

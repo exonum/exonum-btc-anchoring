@@ -11,9 +11,6 @@ keywords = ["exonum", "blockchain", "bitcoin", "anchoring"]
 categories = ["database-implementations"]
 description = "An Exonum service that provides anchoring to Bitcoin blockchain."
 
-[workspace]
-members = ["sandbox_tests"]
-
 [badges]
 travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 

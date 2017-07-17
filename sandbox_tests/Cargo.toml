@@ -19,7 +19,11 @@ libc = "0.2.21"
 router = "0.5.1"
 iron = "0.5.1"
 iron-test = "0.5.0"
-exonum ="0.1.0"
+
+[dependencies.exonum]
+version = "0.1.0"
+git = "https://github.com/exonum/exonum.git"
+tag = "v0.1"
 
 [dependencies.sandbox]
 version = "0.1.0"
