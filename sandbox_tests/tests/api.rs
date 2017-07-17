@@ -14,14 +14,14 @@
 
 extern crate exonum;
 extern crate sandbox;
-extern crate btc_anchoring_service;
+extern crate exonum_btc_anchoring;
 #[macro_use]
-extern crate btc_anchoring_sandbox;
+extern crate exonum_btc_anchoring_sandbox;
 extern crate serde;
 #[macro_use]
 extern crate serde_json;
 extern crate bitcoin;
-extern crate bitcoinrpc;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
 extern crate secp256k1;
 #[macro_use]
 extern crate log;
@@ -39,15 +39,15 @@ use exonum::messages::Message;
 use exonum::api::Api;
 use exonum::blockchain::Blockchain;
 
-use btc_anchoring_service::observer::AnchoringChainObserver;
-use btc_anchoring_service::api::{AnchoringInfo, LectInfo, PublicApi};
-use btc_anchoring_service::blockchain::dto::MsgAnchoringUpdateLatest;
-use btc_anchoring_service::details::btc;
-use btc_anchoring_service::details::btc::transactions::{AnchoringTx, BitcoinTx};
-use btc_anchoring_service::details::sandbox::{Request, SandboxClient};
-use btc_anchoring_service::details::rpc::AnchoringRpc;
-use btc_anchoring_sandbox::AnchoringSandbox;
-use btc_anchoring_sandbox::helpers::*;
+use exonum_btc_anchoring::observer::AnchoringChainObserver;
+use exonum_btc_anchoring::api::{AnchoringInfo, LectInfo, PublicApi};
+use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
+use exonum_btc_anchoring::details::btc;
+use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, BitcoinTx};
+use exonum_btc_anchoring::details::sandbox::{Request, SandboxClient};
+use exonum_btc_anchoring::details::rpc::AnchoringRpc;
+use exonum_btc_anchoring_sandbox::AnchoringSandbox;
+use exonum_btc_anchoring_sandbox::helpers::*;
 
 struct ApiSandbox {
     pub router: Router,
@@ -181,7 +181,8 @@ fn test_api_public_get_lect_unavailable() {
 
     let sandbox = AnchoringSandbox::initialize(&[]);
 
-    let lect_tx = BitcoinTx::from_hex("020000000152f2e44424d6cc16ce29566b54468084d1d15329b28e\
+    let lect_tx = BitcoinTx::from_hex(
+        "020000000152f2e44424d6cc16ce29566b54468084d1d15329b28e\
                                        8fc7cb9d9d783b8a76d3010000006b4830450221009e5ae44ba558\
                                        6e4aadb9e1bc5369cc9fe9f16c12ff94454ac90414f1c5a3df9002\
                                        20794b24afab7501ba12ea504853a31359d718c2a7ff6dd2688e95\
@@ -189,8 +190,8 @@ fn test_api_public_get_lect_unavailable() {
                                        d093e3095560b71de245aaf45d57feffffff028096980000000000\
                                        17a914dcfbafb4c432a24dd4b268570d26d7841a20fbbd87e7cc39\
                                        0a000000001976a914b3203ee5a42f8f524d14397ef10b84277f78\
-                                       4b4a88acd81d1100")
-        .unwrap();
+                                       4b4a88acd81d1100",
+    ).unwrap();
     let lects = (0..2)
         .map(|id| {
             MsgAnchoringUpdateLatest::new(

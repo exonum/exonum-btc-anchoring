@@ -39,12 +39,12 @@
 //!
 //! ```rust,no_run
 //! extern crate exonum;
-//! extern crate btc_anchoring_service;
-//! extern crate configuration_service;
+//! extern crate exonum_btc_anchoring;
+//! extern crate exonum_configuration;
 //! use exonum::helpers::fabric::NodeBuilder;
 //! use exonum::helpers;
-//! use btc_anchoring_service::AnchoringService;
-//! use configuration_service::ConfigurationService;
+//! use exonum_btc_anchoring::AnchoringService;
+//! use exonum_configuration::ConfigurationService;
 //!
 //! fn main() {
 //!     exonum::crypto::init();
@@ -66,7 +66,7 @@ extern crate serde;
 extern crate serde_json;
 #[macro_use]
 extern crate serde_derive;
-extern crate bitcoinrpc;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
 extern crate bitcoin;
 extern crate secp256k1;
 extern crate byteorder;

@@ -24,12 +24,12 @@ use exonum::helpers;
 use sandbox::sandbox::Sandbox;
 use sandbox::config_updater::TxConfig;
 
-use btc_anchoring_service::{ANCHORING_SERVICE_NAME, AnchoringConfig};
-use btc_anchoring_service::details::btc;
-use btc_anchoring_service::details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
-use btc_anchoring_service::details::sandbox::Request;
-use btc_anchoring_service::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
-use btc_anchoring_service::blockchain::schema::AnchoringSchema;
+use exonum_btc_anchoring::{ANCHORING_SERVICE_NAME, AnchoringConfig};
+use exonum_btc_anchoring::details::btc;
+use exonum_btc_anchoring::details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
+use exonum_btc_anchoring::details::sandbox::Request;
+use exonum_btc_anchoring::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use exonum_btc_anchoring::blockchain::schema::AnchoringSchema;
 
 use AnchoringSandbox;
 

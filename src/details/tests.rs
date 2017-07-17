@@ -52,11 +52,12 @@ pub fn anchoring_client() -> AnchoringRpc {
 
 pub fn dummy_anchoring_tx(redeem_script: &btc::RedeemScript) -> AnchoringTx {
     let addr = btc::Address::from_script(redeem_script, Network::Testnet);
-    let input_tx = AnchoringTx::from_hex("01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f\
+    let input_tx = AnchoringTx::from_hex(
+        "01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f\
         5c98f369a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd417\
         7a52c9a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd2\
-        6b91c6e03f742abac0b3108134d900000000")
-            .unwrap();
+        6b91c6e03f742abac0b3108134d900000000",
+    ).unwrap();
     TransactionBuilder::with_prev_tx(&input_tx, 0)
         .fee(1000)
         .payload(0, Hash::zero())
@@ -182,7 +183,8 @@ fn test_txid_serde_hex() {
 
 #[test]
 fn test_anchoring_txid() {
-    let tx = AnchoringTx::from_hex("010000000195a4472606ae658f1b9cbebd43f440def00c94341a3515024855\
+    let tx = AnchoringTx::from_hex(
+        "010000000195a4472606ae658f1b9cbebd43f440def00c94341a3515024855\
         a1da8d80932800000000fd3d020047304402204e11d63db849f253095e1e0a400f2f0c01894083e97bfaef644b\
         1407b9fe5c4102207cc99ca986dfd99230e6641564d1f70009c5ec9a37da815c4e024c3ba837c0130148304502\
         2100d32536daa6e13989ebc7c908c27a0608517d5d967c8b6069dc047faa01e2a096022030f9c46738d9b701dd\
@@ -198,8 +200,8 @@ fn test_anchoring_txid() {
         8ea8fe2cb785c63425872102d9fea63c62d7cafcd4a3d20d77e06cf80cb25f3277ffce27d99c98f439323cee56\
         aeffffffff02000000000000000017a914ab6db56dbd716114594a0d3f072ec447f6d8fc698700000000000000\
         002c6a2a0128020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd004cd1e\
-        7500000000")
-            .unwrap();
+        7500000000",
+    ).unwrap();
 
     let txid_hex = "0e4167aeb4769de5ad8d64d1b2342330c2b6aadc0ed9ad0d26ae8eafb18d9c87";
     let txid = btc::TxId::from_hex(txid_hex).unwrap();
@@ -393,11 +395,13 @@ fn test_redeem_script_from_pubkeys() {
     );
 
     let compressed_redeem_script = redeem_script.compressed(Network::Testnet);
-    assert_eq!(compressed_redeem_script.to_hex(),
-               "5321027db7837e51888e94c094703030d162c682c8dba312210f44ff440fbd5e5c24732102bdd27289\
+    assert_eq!(
+        compressed_redeem_script.to_hex(),
+        "5321027db7837e51888e94c094703030d162c682c8dba312210f44ff440fbd5e5c24732102bdd27289\
                1c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a52103280883dc31ccaee34218819\
                aaa245480c35a33acd91283586ff6d1284ed681e52103e2bc790a6e32bf5a766919ff55b1f9e9914e13\
-               aed84f502c0e4171976e19deb054ae");
+               aed84f502c0e4171976e19deb054ae"
+    );
     assert_eq!(
         compressed_redeem_script.compressed(Network::Testnet),
         compressed_redeem_script
@@ -406,11 +410,12 @@ fn test_redeem_script_from_pubkeys() {
 
 #[test]
 fn test_sign_raw_transaction() {
-    let unsigned_tx = BitcoinTx::from_hex("01000000015d1b8ba33a162d8f6e7c5707fbb557e726c32f30f77f2\
+    let unsigned_tx = BitcoinTx::from_hex(
+        "01000000015d1b8ba33a162d8f6e7c5707fbb557e726c32f30f77f2\
         ba348a48c3c5d71ee0b0000000000ffffffff02b80b00000000000017a914889fc9c82819c7a728974ffa78cc8\
         84e3e9e68838700000000000000002c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505\
-        e0ef03baf0603fd4b0cd004cd1e7500000000")
-            .unwrap();
+        e0ef03baf0603fd4b0cd004cd1e7500000000",
+    ).unwrap();
 
     let priv_key = RawPrivateKey::from_base58check(
         "cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE",
@@ -420,18 +425,21 @@ fn test_sign_raw_transaction() {
         RawPublicKey::from_secret_key(&context, priv_key.secret_key()).unwrap()
     };
 
-    let redeem_script = btc::RedeemScript::from_hex("5321027db7837e51888e94c094703030d162c682c8dba\
+    let redeem_script = btc::RedeemScript::from_hex(
+        "5321027db7837e51888e94c094703030d162c682c8dba\
         312210f44ff440fbd5e5c24732102bdd272891c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a40\
         1a52103280883dc31ccaee34218819aaa245480c35a33acd91283586ff6d1284ed681e52103e2bc790a6e32bf5\
-        a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb054ae")
-            .unwrap();
+        a766919ff55b1f9e9914e13aed84f502c0e4171976e19deb054ae",
+    ).unwrap();
     let mut actual_signature =
         sign_tx_input(&unsigned_tx, 0, &redeem_script, priv_key.secret_key());
     actual_signature.push(SigHashType::All.as_u32() as u8);
 
-    assert_eq!(actual_signature.to_hex(),
-               "304502210092f1fd6367677ef63dfddfb69cb3644ab10a7c497e5cd391e1d36284dca6a570022021dc\
-               2132349afafb9273600698d806f6d5f55756fcc058fba4e49c066116124e01");
+    assert_eq!(
+        actual_signature.to_hex(),
+        "304502210092f1fd6367677ef63dfddfb69cb3644ab10a7c497e5cd391e1d36284dca6a570022021dc\
+               2132349afafb9273600698d806f6d5f55756fcc058fba4e49c066116124e01"
+    );
     assert!(verify_tx_input(
         &unsigned_tx,
         0,
@@ -443,13 +451,14 @@ fn test_sign_raw_transaction() {
 
 #[test]
 fn test_redeem_script_pubkey() {
-    let redeem_script = btc::RedeemScript::from_hex("55210351d8beec8ef4faef9a299640f2f2c8427b4c5ec\
+    let redeem_script = btc::RedeemScript::from_hex(
+        "55210351d8beec8ef4faef9a299640f2f2c8427b4c5ec\
         655da3bdf9c78bb02debce7052103c39016fa9182f84d367d382b561a3db2154041926e4e461607a903ce2b78d\
         bf72103cba17beba839abbc377f8ff8a908199d544ef821509a45ec3b5684e733e4d73b2102014c953a69d452a\
         8c385d1c68e985d697d04f79bf0ddb11e2852e40b9bb880a4210389cbc7829f40deff4acef55babf7dc486a805\
         ad0f4533e665dee4dd6d38157a32103c60e0aeb3d87b05f49341aa88a347237ab2cff3e91a78d23880080d05f8\
-        f08e756ae")
-            .unwrap();
+        f08e756ae",
+    ).unwrap();
 
     assert_eq!(
         redeem_script.script_pubkey(btc::Network::Testnet).to_hex(),
@@ -481,7 +490,8 @@ fn test_anchoring_tx_sign() {
     let redeem_script = btc::RedeemScript::from_pubkeys(pub_keys.iter(), 3)
         .compressed(Network::Testnet);
 
-    let prev_tx = AnchoringTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d\
+    let prev_tx = AnchoringTx::from_hex(
+        "01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d\
         06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4\
         b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e19852014\
         7304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b701271987\
@@ -492,15 +502,16 @@ fn test_anchoring_tx_sign() {
         2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d\
         5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f572\
         83ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402\
-        a019e2d3ea82f7f841c308d830a9600000000")
-            .unwrap();
-    let funding_tx = FundingTx::from_hex("01000000019532a4022a22226a6f694c3f21216b2c9f5c1c79007eb7\
+        a019e2d3ea82f7f841c308d830a9600000000",
+    ).unwrap();
+    let funding_tx = FundingTx::from_hex(
+        "01000000019532a4022a22226a6f694c3f21216b2c9f5c1c79007eb7\
         d3be06bc2f1f9e52fb000000006a47304402203661efd05ca422fad958b534dbad2e1c7db42bbd1e73e9b91f43\
         a2f7be2f92040220740cf883273978358f25ca5dd5700cce5e65f4f0a0be2e1a1e19a8f168095400012102ae1b\
         03b0f596be41a247080437a50f4d8e825b170770dcb4e5443a2eb2ecab2afeffffff02a00f00000000000017a9\
         14bff50e89fa259d83f78f2e796f57283ca10d6e678716e1ff05000000001976a91402f5d7475a10a9c24cea32\
-        575bd8993d3fabbfd388ac089e1000")
-            .unwrap();
+        575bd8993d3fabbfd388ac089e1000",
+    ).unwrap();
 
     let tx = TransactionBuilder::with_prev_tx(&prev_tx, 0)
         .add_funds(&funding_tx, 0)
@@ -539,7 +550,8 @@ fn test_anchoring_tx_sign() {
 
 #[test]
 fn test_anchoring_tx_output_address() {
-    let tx = AnchoringTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8\
+    let tx = AnchoringTx::from_hex(
+        "01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d06db8\
         c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4b0378\
         bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e1985201473044\
         02203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b7012719871c36d\
@@ -550,8 +562,8 @@ fn test_anchoring_tx_output_address() {
         56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d5786a\
         4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f57283ca1\
         0d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402a019e\
-        2d3ea82f7f841c308d830a9600000000")
-            .unwrap();
+        2d3ea82f7f841c308d830a9600000000",
+    ).unwrap();
 
     let pub_keys = [
         "03475ab0e9cfc6015927e662f6f8f088de12287cee1a3237aeb497d1763064690c",
@@ -571,7 +583,8 @@ fn test_anchoring_tx_output_address() {
 
 #[test]
 fn test_anchoring_tx_prev_chain() {
-    let prev_tx = AnchoringTx::from_hex("01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d\
+    let prev_tx = AnchoringTx::from_hex(
+        "01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d\
         06db8c87fb1103ba000000000fd670100483045022100e6ef3de83437c8dc33a8099394b7434dfb40c73631fc4\
         b0378bd6fb98d8f42b002205635b265f2bfaa6efc5553a2b9e98c2eabdfad8e8de6cdb5d0d74e37f1e19852014\
         7304402203bb845566633b726e41322743677694c42b37a1a9953c5b0b44864d9b9205ca10220651b701271987\
@@ -582,8 +595,8 @@ fn test_anchoring_tx_prev_chain() {
         2236b56ff5da548dfe116daf2982608d898d9ecb3dceb4921036e4777c8d19ccaa67334491e777f221d37fd85d\
         5786a4e5214b281cf0133d65e54aeffffffff02b80b00000000000017a914bff50e89fa259d83f78f2e796f572\
         83ca10d6e678700000000000000002c6a2a01280000000000000000f1cb806d27e367f1cac835c22c8cc24c402\
-        a019e2d3ea82f7f841c308d830a9600000000")
-            .unwrap();
+        a019e2d3ea82f7f841c308d830a9600000000",
+    ).unwrap();
     let tx = TransactionBuilder::with_prev_tx(&prev_tx, 0)
         .fee(1000)
         .payload(0, Hash::default())
@@ -600,13 +613,14 @@ fn test_anchoring_tx_prev_chain() {
 
 #[test]
 fn test_tx_kind_funding() {
-    let tx = BitcoinTx::from_hex("01000000019532a4022a22226a6f694c3f21216b2c9f5c1c79007eb7d3be06bc\
+    let tx = BitcoinTx::from_hex(
+        "01000000019532a4022a22226a6f694c3f21216b2c9f5c1c79007eb7d3be06bc\
         2f1f9e52fb000000006a47304402203661efd05ca422fad958b534dbad2e1c7db42bbd1e73e9b91f43a2f7be2f\
         92040220740cf883273978358f25ca5dd5700cce5e65f4f0a0be2e1a1e19a8f168095400012102ae1b03b0f596\
         be41a247080437a50f4d8e825b170770dcb4e5443a2eb2ecab2afeffffff02a00f00000000000017a914bff50e\
         89fa259d83f78f2e796f57283ca10d6e678716e1ff05000000001976a91402f5d7475a10a9c24cea32575bd899\
-        3d3fabbfd388ac089e1000")
-            .unwrap();
+        3d3fabbfd388ac089e1000",
+    ).unwrap();
     match TxKind::from(tx) {
         TxKind::FundingTx(_) => {}
         _ => panic!("Wrong tx kind!"),
@@ -615,12 +629,13 @@ fn test_tx_kind_funding() {
 
 #[test]
 fn test_tx_kind_anchoring() {
-    let tx = BitcoinTx::from_hex("010000000141d7585a6cb11e78c27fab0e8f8f8ede9285d6601fd4c4ab72cdadb\
+    let tx = BitcoinTx::from_hex(
+        "010000000141d7585a6cb11e78c27fab0e8f8f8ede9285d6601fd4c4ab72cdadb\
                                   b3b7af8030000000000ffffffff02000000000000000017a914e084a290cf2699\
                                   8909b4fa5b42088918eeefee97870000000000000000326a3045584f4e554d010\
                                   0020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603\
-                                  fd4b0cd004cd1e7500000000")
-            .unwrap();
+                                  fd4b0cd004cd1e7500000000",
+    ).unwrap();
     match TxKind::from(tx) {
         TxKind::Anchoring(_) => {}
         _ => panic!("Wrong tx kind!"),
@@ -629,13 +644,14 @@ fn test_tx_kind_anchoring() {
 
 #[test]
 fn test_tx_kind_other() {
-    let tx = BitcoinTx::from_hex("0100000001cea827387bc0bb1b5e6afa6e6d557123e4432e47bad8c2d94214a9\
+    let tx = BitcoinTx::from_hex(
+        "0100000001cea827387bc0bb1b5e6afa6e6d557123e4432e47bad8c2d94214a9\
         cd1e2e074b010000006a473044022034d463312dd75445ad078b1159a75c0b148388b36686b69da8aecca863e6\
         3dc3022071ef86a064bd15f11ec89059072bbd3e3d3bb6c5e9b10712e0e2dc6710520bb00121035e63a48d3425\
         0dbbcc58fdc0ab63b901769e71035e19e0eee1a87d433a96723afeffffff0296a6f80b000000001976a914b5d7\
         055cfdacc803e5547b981faa693c5aaa813b88aca0860100000000001976a914f5548cb02bb197f071934a0ea3\
-        eeb5878cb59dff88ac03a21000")
-            .unwrap();
+        eeb5878cb59dff88ac03a21000",
+    ).unwrap();
     match TxKind::from(tx) {
         TxKind::Other(_) => {}
         _ => panic!("Wrong tx kind!"),
