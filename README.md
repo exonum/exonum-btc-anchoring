@@ -1,6 +1,6 @@
 # Exonum Anchoring Service to Bitcoin
 
-[![Build Status](https://travis-ci.org/exonum/exonum-btc-anchoring.svg?token=XsvDzZa3zu2eW4sVWuqN&branch=master)](https://travis-ci.org/exonum/exonum-btc-anchoring)
+[![Build Status](https://travis-ci.org/exonum/exonum-btc-anchoring.svg?branch=master)](https://travis-ci.org/exonum/exonum-btc-anchoring)
 
 This crate implements a service for [Exonum] blockchain that provides a protocol for anchoring onto
 the Bitcoin blockchain that utilizes the native Bitcoin capabilities of creating multisig
