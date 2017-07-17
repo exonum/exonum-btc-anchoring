@@ -181,7 +181,8 @@ fn test_api_public_get_lect_unavailable() {
 
     let sandbox = AnchoringSandbox::initialize(&[]);
 
-    let lect_tx = BitcoinTx::from_hex("020000000152f2e44424d6cc16ce29566b54468084d1d15329b28e\
+    let lect_tx = BitcoinTx::from_hex(
+        "020000000152f2e44424d6cc16ce29566b54468084d1d15329b28e\
                                        8fc7cb9d9d783b8a76d3010000006b4830450221009e5ae44ba558\
                                        6e4aadb9e1bc5369cc9fe9f16c12ff94454ac90414f1c5a3df9002\
                                        20794b24afab7501ba12ea504853a31359d718c2a7ff6dd2688e95\
@@ -189,8 +190,8 @@ fn test_api_public_get_lect_unavailable() {
                                        d093e3095560b71de245aaf45d57feffffff028096980000000000\
                                        17a914dcfbafb4c432a24dd4b268570d26d7841a20fbbd87e7cc39\
                                        0a000000001976a914b3203ee5a42f8f524d14397ef10b84277f78\
-                                       4b4a88acd81d1100")
-        .unwrap();
+                                       4b4a88acd81d1100",
+    ).unwrap();
     let lects = (0..2)
         .map(|id| {
             MsgAnchoringUpdateLatest::new(

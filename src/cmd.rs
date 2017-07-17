@@ -375,13 +375,13 @@ impl ServiceFactory for AnchoringService {
     }
     fn make_service(run_context: &Context) -> Box<Service> {
         let node_config: NodeConfig = run_context.get("node_config").unwrap();
-        let anchoring_cfg: AnchoringServiceConfig = node_config.services_configs["anchoring_service"]
+        let anch_cfg: AnchoringServiceConfig = node_config.services_configs["anchoring_service"]
             .clone()
             .try_into()
             .unwrap();
         Box::new(AnchoringService::new(
-            anchoring_cfg.genesis,
-            anchoring_cfg.node,
+            anch_cfg.genesis,
+            anch_cfg.node,
         ))
     }
 }

@@ -26,10 +26,10 @@ params = "0.6.0"
 mount = "0.3.0"
 toml = "0.4.0"
 
-[dependencies.exonum-bitcoinrpc]
+[dependencies.exonum_bitcoinrpc]
 version = "0.1.0"
 git = "ssh://git@github.com/exonum/bitcoinrpc.git"
-rev="0943d53ed6df38a71153a38dcadac397172873c6"
+rev = "0943d53ed6df38a71153a38dcadac397172873c6"
 
 [dependencies.exonum]
 git = "ssh://git@github.com/exonum/exonum.git"
