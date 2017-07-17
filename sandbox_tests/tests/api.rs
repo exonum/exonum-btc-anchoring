@@ -21,7 +21,7 @@ extern crate serde;
 #[macro_use]
 extern crate serde_json;
 extern crate bitcoin;
-extern crate bitcoinrpc;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
 extern crate secp256k1;
 #[macro_use]
 extern crate log;

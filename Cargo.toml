@@ -3,12 +3,13 @@ name = "btc_anchoring_service"
 version = "0.1.0"
 authors = ["Exonum Team <exonum@bitfury.com>"]
 readme	= "README.md"
+repository = "https://github.com/exonum/exonum-btc-anchoring/"
 
 [workspace]
 members = ["sandbox_tests"]
 
 [dependencies]
-bitcoinrpc = {version="0.1", path="3rdparty/bitcoinrpc"}
+exonum_bitcoinrpc = {version="0.1", path="3rdparty/bitcoinrpc"}
 bitcoin="0.9.0"
 secp256k1 = "0.6.0"
 serde = "1.0.0"

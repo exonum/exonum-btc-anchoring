@@ -1,5 +1,5 @@
 [package]
-name = "bitcoinrpc"
+name = "exonum_bitcoinrpc"
 version = "0.1.0"
 authors = ["Exonum Team <exonum@bitfury.com>"]
 
@@ -12,6 +12,6 @@ bitcoin = "0.9.0"
 hex = "0.2"
 env_logger = "0.3"
 
-[dependencies.jsonrpc-v1]
+[dependencies.exonum-jsonrpc-v1]
 version="0.2"
 path="../jsonrpc-v1"
