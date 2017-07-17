@@ -1,4 +1,4 @@
-extern crate jsonrpc_v1;
+extern crate exonum_jsonrpc_v1 as jsonrpc_v1;
 #[macro_use]
 extern crate serde_derive;
 extern crate serde;

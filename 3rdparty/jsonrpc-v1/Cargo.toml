@@ -1,17 +1,17 @@
 [package]
-name = "jsonrpc-v1"
+name = "exonum-jsonrpc-v1"
 version	= "0.2.0"
-authors	= ["Andrew Poelstra <apoelstra@wpsoftware.net>", "Jean Pierre De Jesus Dudey Diaz <jeandudey@hotmail.com>"]
+authors	= ["Andrew Poelstra <apoelstra@wpsoftware.net>",
+"Jean Pierre De Jesus Dudey Diaz <jeandudey@hotmail.com>",
+"Exonum Team <exonum@bitfury.com>"]
 license	= "CC0-1.0"
-homepage = "https://github.com/jeandudey/jsonrpc-v1/"
-repository = "https://github.com/jeandudey/jsonrpc-v1/"
-documentation = "http://jeandudey.github.io/jsonrpc-v1/"
+repository = "https://github.com/exonum/exonum-btc-anchoring/"
 description	= "Rust support for the JSON-RPC 1.0 protocol"
 keywords = [ "protocol", "json", "http", "jsonrpc" ]
 readme	= "README.md"
 
 [lib]
-name = "jsonrpc_v1"
+name = "exonum_jsonrpc_v1"
 path = "src/lib.rs"
 
 [dependencies]
