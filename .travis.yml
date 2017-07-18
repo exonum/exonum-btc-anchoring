@@ -1,10 +1,13 @@
 language: rust
+
 rust:
   - stable
+
 cache: cargo
 sudo: required
 dist: trusty
 group: deprecated-2017Q2
+
 env:
   global:
   - ANCHORING_RELAY_HOST=http://127.0.0.1:18332
@@ -14,6 +17,7 @@ env:
   - NIGHTLY_RUST=nightly-2017-06-13
   - CLIPPY_VERS=0.0.139
   - RUSTFMT_VERS=0.9.0
+
 before_install:
 - rustfmt -V | grep $RUSTFMT_VERS || cargo install rustfmt --vers $RUSTFMT_VERS --force
 - rustup toolchain install $NIGHTLY_RUST
@@ -21,22 +25,26 @@ before_install:
 - sudo add-apt-repository -y ppa:chris-lea/libsodium
 - sudo apt-add-repository -y ppa:bitcoin/bitcoin
 - sudo apt-get -qq update
+
 install:
 - sudo apt-get -qq --yes install gcc g++ make libsodium-dev libleveldb-dev libssl-dev
 - sudo apt-get -qq --yes install bitcoind
+
 before_script:
 - bitcoind -regtest -server -rpcuser=travis -rpcpassword=travis -daemon
 - sleep 10
 - bitcoin-cli -regtest -rpcuser=travis -rpcpassword=travis generate 200
+
 script:
 - cargo fmt -- --write-mode=diff
 - cargo fmt -p exonum-btc-anchoring-sandbox -- --write-mode=diff
 - cargo +$NIGHTLY_RUST clippy -- -D warnings
 - cargo test --release
 - cargo test --manifest-path sandbox_tests/Cargo.toml
+
 after_script:
 - bitcoin-cli -regtest -rpcuser=travis -rpcpassword=travis stop
+
 notifications:
   slack:
-    rooms:
-      secure: jR9W2Gz4RPs5RCswXU/+MH2UpDzXFfvBTZ6YAdDO+g+xIV9BRVQoAHcM5eDi3+WBUXww/yQYldEN26kUH/TjnRnk48ThTBjfTyf3Iu/g4z9WTX7YorFsDzuDk03kIZ+g0hgZnugmVC2QwOB7hyacHCLtEsNhkYsQ6FVpf5yzFLIsQNtKwhkza/gPmFUmqxSht6S4Qe6oYLOU08LppQQd0U2vzP03mHEd8zXD08F3+06t58sE0AvFJGHRP6SukNXXopfEQ4rsx1TtzNrSSn0QU/BPLzofl5lmJ8dajtDSh12/f4ag4Fvf+/RLrQrcPb1+yW9G7Ip+OuhuaRSoBBvbkwtE3B2jHknReM4uA0PMLat5RrN0MmtgRjLCavEj9ORIkd1JJ1RmbC26DIJWd+kaLhZ6+C3vfK5A/aIQa9Shn2xD5bjOcsSpPmgiJ10HeoWDc9YLfaXQd3ezOk+Ye9nWhMnbgIlUX8qq89o9IN0Ikdj/62yTbBBmIovLhjxleu/EbKDlcDW/9I3+b5H766+/8RorBXztARuJ8BeBUfWeENgEC+8poQXG1b2TEIurmYOGSfZEsY1WjdU2PZ/f3TyU/eE55rvnPyWyINV/TtSKDyl5bfNbEM28BbbDjzYY7450JcTvuvlKpqCYG9M3Te3Hrb3nbQJfeXbtMeQv307gm1k=
+    secure: liTyhEuzF4d+w8OEa91QOGKCGEqHqUz4DQoXig0Ys36vsYkiFOghgniaDFNfif1c+WT2N8RRnuz9FCpdK5LZm8s/eM6dnVQvVXp1r3YjwNv+VFOQQvdHsU/sb7os0SiIyyDzvPz3rChglx5dsML6RnpkabOsn1mWk/NGlqIxp3PiQUACvnmWhIbrjoxvCi7HjUh64x7txJxcv6WISxQaIiUNidI6OZKhHpQOixC6LekxpKBNRroqXvvPJ5KAQOcYS5ztaTDLTz4HmOfCFa5CYLbwq6CxlmYpIuDupWAPCabQI98Bf0cdLTCsdHUbnAOLGYpdPqRkS79ygFWQz6I2ZVVjll9bnIL4vHZsbHKflDTglWdQhlhxb/rG1OhGdJJKHzlaAqDS+q4Pv1HWvj38LPrubOgN22Bi0+KT8YGV9mmzsz/bFW0FoZQMoKM33tNRURndHKwTryGtoHZo5Ljj0jifxLuqmUk5BwYQC/9bbaBRl99q7hOKuG4NNXPEbjv0fqrkft1/IqiWBGzjWsnlLLvkTl8QtEMu98AvNgW1nt/TsQV8io80reLDIMYbyZn4ItkEEXlZoQjWmsj2yvgpwOvHWSuSO4IQnHIBmbdptHiRUbx1zh+FKqpn8IhyNNuMBFzptV9Aa3S9xG/G5xChDut5KF2uX2VQNHpcAyzktvQ=
