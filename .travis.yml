@@ -19,23 +19,15 @@ before_install:
 - rustup toolchain install $NIGHTLY_RUST
 - cargo +$NIGHTLY_RUST clippy -V | grep $CLIPPY_VERS || cargo +$NIGHTLY_RUST install clippy --vers $CLIPPY_VERS --force
 - sudo add-apt-repository -y ppa:chris-lea/libsodium
-- sudo apt-add-repository -y ppa:bitcoin/bitcoin
 - sudo apt-get -qq update
 install:
 - sudo apt-get -qq --yes install gcc g++ make libsodium-dev libleveldb-dev libssl-dev
-- sudo apt-get -qq --yes install bitcoind
-before_script:
-- bitcoind -regtest -server -rpcuser=travis -rpcpassword=travis -daemon
-- sleep 10
-- bitcoin-cli -regtest -rpcuser=travis -rpcpassword=travis generate 200
 script:
 - cargo fmt -- --write-mode=diff
 - cargo fmt -p exonum-btc-anchoring-sandbox -- --write-mode=diff
 - cargo +$NIGHTLY_RUST clippy -- -D warnings
 - cargo test --release
 - cargo test --manifest-path sandbox_tests/Cargo.toml
-after_script:
-- bitcoin-cli -regtest -rpcuser=travis -rpcpassword=travis stop
 notifications:
   slack:
     rooms:
