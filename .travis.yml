@@ -7,9 +7,6 @@ dist: trusty
 group: deprecated-2017Q2
 env:
   global:
-  - ANCHORING_RELAY_HOST=http://127.0.0.1:18332
-  - ANCHORING_USER=travis
-  - ANCHORING_PASSWORD=travis
   - RUST_LOG=off
   - NIGHTLY_RUST=nightly-2017-06-13
   - CLIPPY_VERS=0.0.139
