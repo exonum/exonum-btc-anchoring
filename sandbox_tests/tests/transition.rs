@@ -151,7 +151,7 @@ fn gen_following_cfg_add_two_validators_changed_self_key(
     }
 
     for keypair in &anchoring_keypairs {
-        anchoring_cfg.anchoring_keys.push(keypair.0.clone());
+        anchoring_cfg.anchoring_keys.push(keypair.0);
         anchoring_priv_keys.push(keypair.1.clone());
     }
 
