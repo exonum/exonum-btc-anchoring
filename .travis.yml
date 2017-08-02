@@ -20,12 +20,13 @@ env:
   - RUST_LOG=off
   - CLIPPY_VERS=0.0.142
   - RUSTFMT_VERS=0.9.0
+  - LIBSODIUM_VERS=1.0.13
 install:
 - |
   if [ ! -f "$HOME/.local/lib/libsodium.a" ]; then
-    wget https://download.libsodium.org/libsodium/releases/libsodium-1.0.13.tar.gz
-    tar xvf libsodium-1.0.13.tar.gz
-    cd libsodium-1.0.13
+    wget https://github.com/jedisct1/libsodium/releases/download/$LIBSODIUM_VERS/libsodium-$LIBSODIUM_VERS.tar.gz
+    tar xvf libsodium-$LIBSODIUM_VERS.tar.gz
+    cd libsodium-$LIBSODIUM_VERS
     ./configure --prefix=$HOME/.local
     make
     make install
