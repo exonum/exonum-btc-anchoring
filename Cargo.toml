@@ -18,7 +18,7 @@ travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 exonum = "0.1"
 exonum-configuration = "0.1"
 exonum_bitcoinrpc = "0.1"
-bitcoin="0.9.1"
+bitcoin="0.10.0"
 secp256k1 = "0.6.0"
 serde = "1.0.0"
 serde_derive = "1.0.0"
@@ -39,7 +39,3 @@ toml = "0.4.0"
 [features]
 default = []
 sandbox_tests = []
-
-# Avoid vulnerabilities from old hyper
-[replace]
-"bitcoin:0.9.1" = { git = "https://github.com/alekseysidorov/rust-bitcoin.git", rev="bcd0d0480d1ef596402b40cf76fe46259f94074e" }
