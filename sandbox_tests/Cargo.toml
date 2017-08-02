@@ -6,8 +6,8 @@ authors = ["The Exonum Team <exonum@bitfury.com>"]
 [dependencies]
 exonum-btc-anchoring = {version="0.1", path="../", features=["sandbox_tests"]}
 
-exonum_bitcoinrpc = "0.1"
-bitcoin="0.9.0"
+# exonum_bitcoinrpc = "0.1"
+bitcoin="0.10.0"
 secp256k1 = "0.6.0"
 serde = "1.0.0"
 serde_derive = "1.0.0"
@@ -29,6 +29,11 @@ tag = "v0.1"
 version = "0.1.0"
 git = "https://github.com/exonum/exonum.git"
 tag = "v0.1"
+
+# Fix vulnerability
+[dependencies.exonum_bitcoinrpc]
+git = "https://github.com/exonum/bitcoinrpc.git"
+rev = "a37aa380ce935f4e1e4e9f8221d9275524bb4aae"
 
 [replace]
 "exonum:0.1.0" = { git = "https://github.com/exonum/exonum.git", tag="v0.1" }
