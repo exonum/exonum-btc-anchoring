@@ -28,7 +28,7 @@ install:
     tar xvf libsodium-$LIBSODIUM_VERS.tar.gz
     cd libsodium-$LIBSODIUM_VERS
     ./configure --prefix=$HOME/.local
-    make
+    make -j $(nproc)
     make install
     cd ..
   fi
