@@ -124,7 +124,7 @@ impl PublicApi {
 
     /// Returns the following anchoring address if the node is in a transition state.
     ///
-    /// `GET /{api_prefix}/v1/address/actual`
+    /// `GET /{api_prefix}/v1/address/following`
     pub fn following_address(&self) -> Result<Option<btc::Address>, ApiError> {
         let snapshot = self.blockchain.snapshot();
         let schema = AnchoringSchema::new(snapshot);
