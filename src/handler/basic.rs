@@ -242,7 +242,7 @@ impl AnchoringHandler {
                 TxKind::FundingTx(tx) => {
                     if tx.find_out(&actual_addr).is_some() {
                         trace!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
-                        /// Wait until funding_tx got enough confirmation
+                        // Wait until funding_tx got enough confirmation
                         let confirmations = get_confirmations(self.client(), &tx.txid())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
@@ -395,7 +395,7 @@ impl AnchoringHandler {
         let key = self.anchoring_key(multisig.common, state);
         trace!("Update our lect");
         if let Some(lect) = self.find_lect(multisig, state)? {
-            /// New lect with different signatures set.
+            // New lect with different signatures set.
             let (our_lect, lects_count) = {
                 let schema = AnchoringSchema::new(state.snapshot());
                 let our_lect = schema.lect(key);

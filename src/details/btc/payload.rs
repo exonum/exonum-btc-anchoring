@@ -99,7 +99,7 @@ impl PayloadV1 {
         let kind = self.kind();
         buf[0] = kind as u8;
 
-        let mut buf = &mut buf[1..];
+        let buf = &mut buf[1..];
         debug_assert_eq!(buf.len(), self.len());
         // Serialize data
         match *self {
