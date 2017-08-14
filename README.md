@@ -21,12 +21,16 @@ Just follow the installation guide of the [`exonum`][exonum:install] to install 
 The anchoring service depends on bitcoind. For the correct work, you need to launch bitcoind with
 specific configuration, see [deployment guide](DEPLOY.md) for details.
 
-To run tests you need to install `bitcoind` and specify following enviroment variables.
+If you want to run rpc-tests, do the following:
+* Install and configure `bitcoind`.
+* Specify following enviroment variables. 
 ```shell
 ANCHORING_RELAY_HOST=<bitcoind-rpc-listen-address>
 ANCHORING_USER=<rpc-user>
 ANCHORING_PASSWORD=<rpc-password>
 ```
+* Enable feature `rpc_tests` in cargo.
+
 Additional tests are situated in `sandbox_tests` subfolder.
 
 ## Licence

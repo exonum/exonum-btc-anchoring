@@ -200,7 +200,7 @@ impl AnchoringTx {
         pub_key: &PublicKey,
         signature: &[u8],
     ) -> bool {
-        /// Cuts off btc related sighash type byte
+        // Cuts off btc related sighash type byte
         let signature = &signature[0..signature.len() - 1];
         verify_tx_input(self, input as usize, redeem_script, pub_key, signature)
     }

@@ -102,7 +102,7 @@ where
         let input = msg.input();
         let validator = msg.validator() as usize;
 
-        let mut signatures_by_input = signatures.get_mut(&input).unwrap();
+        let signatures_by_input = signatures.get_mut(&input).unwrap();
         signatures_by_input[validator] = Some(msg.signature().to_vec());
     }
 
