@@ -38,6 +38,17 @@ pub type Height = u64;
 pub struct AnchoringObserverConfig {
     /// A frequency of anchoring chain checks.
     pub check_frequency: Milliseconds,
+    /// If this option enabled observer thread will launch with in the public api handler.
+    pub enabled: bool,
+}
+
+impl Default for AnchoringObserverConfig {
+    fn default() -> AnchoringObserverConfig {
+        AnchoringObserverConfig {
+            check_frequency: 10_000,
+            enabled: false,
+        }
+    }
 }
 
 /// Anchoring chain observer. Periodically checks the state of the anchor chain and keeps

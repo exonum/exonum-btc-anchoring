@@ -255,48 +255,41 @@ impl CommandExtension for Finalize {
             .get("anchoring_sec_key")
             .expect("Anchoring secret key not found")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let pub_key: String = services_secret_configs
             .get("anchoring_pub_key")
             .expect("Anchoring public key not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let rpc: AnchoringRpcConfig = services_secret_configs
             .get("rpc_config")
             .expect("Anchoring rpc config not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let network: String = common_config
             .services_config
             .get("anchoring_network")
             .expect("Anchoring network not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let utxo_confirmations: u64 = common_config
             .services_config
             .get("anchoring_utxo_confirmations")
             .expect("Anchoring utxo confirmations not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let frequency: u64 = common_config
             .services_config
             .get("anchoring_frequency")
             .expect("Anchoring frequency not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let fee: u64 = common_config
             .services_config
             .get("anchoring_fee")
             .expect("Anchoring fee not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
 
         let network = match network.as_str() {
             "testnet" => Network::Testnet,
@@ -305,7 +298,7 @@ impl CommandExtension for Finalize {
         };
 
         let priv_key: PrivateKey = PrivateKey::from_base58check(&sec_key).unwrap();
-        //\TODO: validate config keys
+        //TODO: validate config keys
         let _pub_key: PublicKey = HexValue::from_hex(&pub_key).unwrap();
         let pub_keys: Vec<PublicKey> = public_config_list
             .iter()

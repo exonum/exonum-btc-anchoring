@@ -30,7 +30,7 @@ pub struct AnchoringNodeConfig {
     /// Frequency of lect check in blocks.
     pub check_lect_frequency: u64,
     /// Anchoring observer config.
-    pub observer: Option<AnchoringObserverConfig>,
+    pub observer: AnchoringObserverConfig,
 }
 
 impl AnchoringNodeConfig {
@@ -47,7 +47,7 @@ impl Default for AnchoringNodeConfig {
     fn default() -> AnchoringNodeConfig {
         AnchoringNodeConfig {
             rpc: None,
-            observer: None,
+            observer: AnchoringObserverConfig::default(),
             private_keys: BTreeMap::new(),
             check_lect_frequency: 30,
         }

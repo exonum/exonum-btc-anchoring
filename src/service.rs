@@ -229,13 +229,15 @@ impl PublicApiHandler {
         let api = PublicApi { blockchain: blockchain.clone() };
         api.wire(&mut router);
 
-        let observer = config.observer.clone().map(|observer_cfg| {
+        let observer = if config.observer.enabled {
             let rpc_cfg = config.rpc.clone().expect("Rpc config is not setted");
             let mut observer =
-                AnchoringChainObserver::new(blockchain.clone(), rpc_cfg, observer_cfg);
+                AnchoringChainObserver::new(blockchain.clone(), rpc_cfg, config.observer.clone());
 
-            thread::spawn(move || { observer.run().unwrap(); })
-        });
+            Some(thread::spawn(move || { observer.run().unwrap(); }))
+        } else {
+            None
+        };
 
         PublicApiHandler { router, observer }
     }
