@@ -48,7 +48,7 @@ fn main() {
     let count = 4;
     // Inner exonum network start port (4000, 4001, 4002, ..)
     let start_port = 4000;
-    let total_funds = 10000;
+    let total_funds = 10_000;
     let tmpdir_handle = TempDir::new("exonum_anchoring").unwrap();
     let destdir = tmpdir_handle.path();
 

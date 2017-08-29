@@ -13,16 +13,12 @@
 // limitations under the License.
 
 extern crate exonum;
-extern crate sandbox;
 extern crate exonum_btc_anchoring;
 #[macro_use]
 extern crate exonum_btc_anchoring_sandbox;
-extern crate serde;
 #[macro_use]
 extern crate serde_json;
 extern crate bitcoin;
-extern crate exonum_bitcoinrpc as bitcoinrpc;
-extern crate secp256k1;
 
 use std::ops::Deref;
 
@@ -141,7 +137,7 @@ fn test_anchoring_second_block_additional_funds() {
     client.expect(vec![
         request! {
         method: "listunspent",
-        params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+        params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
         response: [
             listunspent_entry(&sandbox.latest_anchored_tx(), &anchoring_addr, 1),
             listunspent_entry(&funds, &anchoring_addr, 75)
@@ -191,7 +187,7 @@ fn test_anchoring_second_block_lect_lost() {
     client.expect(vec![
         request! {
         method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&prev_anchored_tx, &anchoring_addr, 0)
             ]
@@ -214,7 +210,7 @@ fn test_anchoring_second_block_lect_lost() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&prev_anchored_tx, &anchoring_addr, 0)
             ]
@@ -274,7 +270,7 @@ fn test_anchoring_find_lect_chain_normal() {
     let request = vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&current_anchored_tx, &anchoring_addr, 0)
             ]
@@ -334,7 +330,7 @@ fn test_anchoring_find_lect_chain_wrong() {
 
         request.push(request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(current_anchored_tx, &anchoring_addr, 0)
             ]

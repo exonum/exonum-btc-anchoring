@@ -81,7 +81,8 @@ impl CommandExtension for GenerateNodeConfig {
             Argument::new_named(
                 "ANCHORING_OBSERVER_CHECK_INTERVAL",
                 false,
-                "This option enables anchoring chain observer with the given check interval (in milliseconds).",
+                "This option enables anchoring chain observer with the given check interval \
+                (in milliseconds).",
                 None,
                 "anchoring-observer-check-interval",
                 false

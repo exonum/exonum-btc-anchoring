@@ -18,7 +18,7 @@ sudo: false
 env:
   global:
   - RUST_LOG=off
-  - CLIPPY_VERS=0.0.142
+  - CLIPPY_VERS=0.0.154
   - RUSTFMT_VERS=0.9.0
   - LIBSODIUM_VERS=1.0.13
 install:
@@ -56,13 +56,13 @@ jobs:
     - cargo fmt -- --write-mode=diff
     - cd sandbox_tests && cargo fmt -- --write-mode=diff
   - stage: test
-    rust: nightly-2017-07-05
+    rust: nightly-2017-08-24
     env:
     - FEATURE=clippy
     script:
     - cargo clippy -- -D warnings
   - stage: test
-    rust: nightly-2017-07-05
+    rust: nightly-2017-08-24
     env:
     - FEATURE=clippy
     - SANDBOX=true

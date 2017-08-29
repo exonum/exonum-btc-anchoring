@@ -129,40 +129,40 @@ pub fn gen_update_config_tx(
 pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> Request {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     request! {
-            method: "getrawtransaction",
-            params: [&tx.txid(), 1],
-            response: {
-                "hash":&tx.txid(),
-                "hex":&tx.to_hex(),
-                "confirmations": confirmations,
-                "locktime":1088682,
-                "size":223,
-                "txid":&tx.to_hex(),
-                "version":1,
-                "vin":[{"scriptSig":{"asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bac\
-                    c2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d\
-                    07b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f8\
-                    76","hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd\
-                    28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012\
-                    102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"},
-                    "sequence":429496729,
-                    "txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645",
-                    "vout":0}],
-                "vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],
-                    "asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL",
-                    "hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87",
-                    "reqSigs":1,
-                    "type":"scripthash"},
-                    "value":0.00004},
-                    {"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],
-                    "asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERI\
-                        FY OP_CHECKSIG",
-                    "hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
-                    "reqSigs":1,"type":"pubkeyhash"},
-                    "value":1.00768693}],
-                "vsize":223
-            }
+        method: "getrawtransaction",
+        params: [&tx.txid(), 1],
+        response: {
+            "hash":&tx.txid(),
+            "hex":&tx.to_hex(),
+            "confirmations": confirmations,
+            "locktime":1_088_682,
+            "size":223,
+            "txid":&tx.to_hex(),
+            "version":1,
+            "vin":[{"scriptSig":{"asm":"3044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bac\
+                c2ac6e145fd28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d\
+                07b33e8a[ALL] 02c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f8\
+                76","hex":"473044022075b9f164d9fe44c348c7a18381314c3e6cf22c48e08bacc2ac6e145fd\
+                28f73800220448290b7c54ae465a34bb64a1427794428f7d99cc73204a5e501541d07b33e8a012\
+                102c5f412387bffcc44dec76b28b948bfd7483ec939858c4a65bace07794e97f876"},
+                "sequence":429_496_729,
+                "txid":"094d7f6acedd8eb4f836ff483157a97155373974ac0ba3278a60e7a0a5efd645",
+                "vout":0}],
+            "vout":[{"n":0,"scriptPubKey":{"addresses":["2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga"],
+                "asm":"OP_HASH160 db891024f2aa265e3b1998617e8b18ed3b0495fc OP_EQUAL",
+                "hex":"a914db891024f2aa265e3b1998617e8b18ed3b0495fc87",
+                "reqSigs":1,
+                "type":"scripthash"},
+                "value":0.00004},
+                {"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],
+                "asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a OP_EQUALVERI\
+                    FY OP_CHECKSIG",
+                "hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
+                "reqSigs":1,"type":"pubkeyhash"},
+                "value":1.00768693}],
+            "vsize":223
         }
+    }
 }
 
 pub fn get_transaction_request(raw: &RawBitcoinTx) -> Request {
@@ -223,7 +223,7 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
             confirmations_request(&sandbox.current_funding_tx(), 50),
             request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&sandbox.current_funding_tx(), &anchoring_addr, 50)
             ]
@@ -238,18 +238,18 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
 
     sandbox.broadcast(signatures[0].clone());
     client.expect(vec![
-            confirmations_request(&sandbox.current_funding_tx(), 50),
-            request! {
-                method: "getrawtransaction",
-                params: [&anchored_tx.txid(), 1],
-                error: RpcError::NoInformation("Unable to find tx".to_string())
-            },
-            request! {
-                method: "sendrawtransaction",
-                params: [anchored_tx.to_hex()],
-                response: anchored_tx.to_hex()
-            },
-        ]);
+        confirmations_request(&sandbox.current_funding_tx(), 50),
+        request! {
+            method: "getrawtransaction",
+            params: [&anchored_tx.txid(), 1],
+            error: RpcError::NoInformation("Unable to find tx".to_string())
+        },
+        request! {
+            method: "sendrawtransaction",
+            params: [anchored_tx.to_hex()],
+            response: anchored_tx.to_hex()
+        },
+    ]);
 
     let signatures = signatures.into_iter().map(|tx| tx).collect::<Vec<_>>();
     sandbox.add_height(&signatures);
@@ -273,19 +273,19 @@ pub fn anchor_first_block_lect_normal(sandbox: &AnchoringSandbox) {
     let anchoring_addr = sandbox.current_addr();
 
     sandbox.client().expect(vec![
-            request! {
-                method: "listunspent",
-                params: [0, 9999999, [&anchoring_addr.to_base58check()]],
-                response: [
-                    listunspent_entry(&anchored_tx, &anchoring_addr, 0),
-                ]
-            },
-            request! {
-                method: "getrawtransaction",
-                params: [&anchored_tx.txid(), 0],
-                response: &anchored_tx.to_hex()
-            },
-        ]);
+        request! {
+            method: "listunspent",
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
+            response: [
+                listunspent_entry(&anchored_tx, &anchoring_addr, 0),
+            ]
+        },
+        request! {
+            method: "getrawtransaction",
+            params: [&anchored_tx.txid(), 0],
+            response: &anchored_tx.to_hex()
+        },
+    ]);
     sandbox.add_height(&[]);
 }
 
@@ -312,7 +312,7 @@ pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&other_lect, &anchoring_addr, 0)
             ]
@@ -347,7 +347,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&other_lect, &anchoring_addr, 0)
             ]
@@ -369,7 +369,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
         confirmations_request(&sandbox.current_funding_tx(), 50),
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&other_lect, &anchoring_addr, 100)
             ]
@@ -404,7 +404,7 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&sandbox.latest_anchored_tx(), &anchoring_addr, 1)
             ]
@@ -437,7 +437,7 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&anchored_tx, &anchoring_addr, 100)
             ]
@@ -456,7 +456,7 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
         confirmations_request(&sandbox.current_funding_tx(), 50),
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&sandbox.current_funding_tx(), &anchoring_addr, 50)
             ]

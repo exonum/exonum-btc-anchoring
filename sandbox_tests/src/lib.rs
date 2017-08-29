@@ -18,7 +18,6 @@
 extern crate exonum;
 extern crate sandbox;
 extern crate exonum_btc_anchoring;
-extern crate serde;
 #[macro_use]
 extern crate serde_json;
 extern crate bitcoin;
