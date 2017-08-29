@@ -36,8 +36,8 @@ pub type Height = u64;
 /// Anchoring observer configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AnchoringObserverConfig {
-    /// A frequency of anchoring chain checks.
-    pub check_frequency: Milliseconds,
+    /// An interval of anchoring chain checks.
+    pub check_interval: Milliseconds,
     /// If this option enabled observer thread will launch with in the public api handler.
     pub enabled: bool,
 }
@@ -45,7 +45,7 @@ pub struct AnchoringObserverConfig {
 impl Default for AnchoringObserverConfig {
     fn default() -> AnchoringObserverConfig {
         AnchoringObserverConfig {
-            check_frequency: 10_000,
+            check_interval: 10_000,
             enabled: false,
         }
     }
@@ -57,7 +57,7 @@ impl Default for AnchoringObserverConfig {
 pub struct AnchoringChainObserver {
     blockchain: Blockchain,
     client: AnchoringRpc,
-    check_frequency: Milliseconds,
+    check_interval: Milliseconds,
 }
 
 impl AnchoringChainObserver {
@@ -68,9 +68,9 @@ impl AnchoringChainObserver {
         observer: AnchoringObserverConfig,
     ) -> AnchoringChainObserver {
         AnchoringChainObserver {
-            blockchain: blockchain,
+            blockchain,
             client: AnchoringRpc::new(rpc),
-            check_frequency: observer.check_frequency,
+            check_interval: observer.check_interval,
         }
     }
 
@@ -78,22 +78,22 @@ impl AnchoringChainObserver {
     pub fn new_with_client(
         blockchain: Blockchain,
         client: AnchoringRpc,
-        check_frequency: Milliseconds,
+        check_interval: Milliseconds,
     ) -> AnchoringChainObserver {
         AnchoringChainObserver {
-            blockchain: blockchain,
-            client: client,
-            check_frequency: check_frequency,
+            blockchain,
+            client,
+            check_interval,
         }
     }
 
     /// Runs obesrver in infinity loop.
     pub fn run(&mut self) -> Result<(), ServiceError> {
         info!(
-            "Launching anchoring chain observer with polling frequency {} ms",
-            self.check_frequency
+            "Launching anchoring chain observer with polling interval {} ms",
+            self.check_interval
         );
-        let duration = Duration::from_millis(self.check_frequency);
+        let duration = Duration::from_millis(self.check_interval);
         loop {
             if let Err(e) = self.check_anchoring_chain() {
                 error!(
