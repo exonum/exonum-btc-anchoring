@@ -56,13 +56,13 @@ jobs:
     - cargo fmt -- --write-mode=diff
     - cd sandbox_tests && cargo fmt -- --write-mode=diff
   - stage: test
-    rust: nightly-2017-08-24
+    rust: nightly-2017-08-27
     env:
     - FEATURE=clippy
     script:
     - cargo clippy -- -D warnings
   - stage: test
-    rust: nightly-2017-08-24
+    rust: nightly-2017-08-27
     env:
     - FEATURE=clippy
     - SANDBOX=true
