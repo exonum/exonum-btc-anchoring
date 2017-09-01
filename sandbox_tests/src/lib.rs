@@ -39,6 +39,7 @@ use bitcoin::util::base58::{FromBase58, ToBase58};
 
 use exonum::crypto::Hash;
 use exonum::messages::{Message, RawTransaction};
+use exonum::helpers::{ValidatorId, Height};
 
 use sandbox::sandbox_with_services;
 use sandbox::sandbox::Sandbox;
@@ -63,7 +64,7 @@ mod tests;
 pub mod helpers;
 pub mod secp256k1_hack;
 
-pub const ANCHORING_VALIDATOR: u16 = VALIDATOR_0;
+pub const ANCHORING_VALIDATOR: ValidatorId = VALIDATOR_0;
 pub const ANCHORING_FREQUENCY: u64 = 10;
 pub const ANCHORING_UTXO_CONFIRMATIONS: u64 = 24;
 pub const ANCHORING_FUNDS: u64 = 4000;
@@ -159,7 +160,7 @@ impl AnchoringSandbox {
         let service = AnchoringService::new_with_client(
             AnchoringRpc(client.clone()),
             common.clone(),
-            nodes[ANCHORING_VALIDATOR as usize].clone(),
+            nodes[ANCHORING_VALIDATOR.0 as usize].clone(),
         );
         let service_handler = service.handler();
         let sandbox = sandbox_with_services(vec![
@@ -236,19 +237,19 @@ impl AnchoringSandbox {
         self.current_cfg().funding_tx().clone()
     }
 
-    pub fn next_check_lect_height(&self) -> u64 {
+    pub fn next_check_lect_height(&self) -> Height {
         let height = self.sandbox.current_height();
         let frequency = self.state.borrow().nodes[0].check_lect_frequency as u64;
-        height - height % frequency + frequency
+        Height(height.0 - height.0 % frequency + frequency)
     }
 
-    pub fn next_anchoring_height(&self) -> u64 {
+    pub fn next_anchoring_height(&self) -> Height {
         let height = self.sandbox.current_height();
         let frequency = self.current_cfg().frequency as u64;
-        height - height % frequency + frequency
+        Height(height.0 - height.0 % frequency + frequency)
     }
 
-    pub fn latest_anchoring_height(&self) -> u64 {
+    pub fn latest_anchoring_height(&self) -> Height {
         let height = self.sandbox.current_height();
         self.current_cfg().latest_anchoring_height(height)
     }
@@ -279,7 +280,7 @@ impl AnchoringSandbox {
 
     pub fn gen_anchoring_tx_with_signatures(
         &self,
-        height: u64,
+        height: Height,
         block_hash: Hash,
         funds: &[FundingTx],
         prev_tx_chain: Option<btc::TxId>,
@@ -340,11 +341,12 @@ impl AnchoringSandbox {
         let priv_keys = self.priv_keys(&addr);
         let mut signs = Vec::new();
         for (validator, priv_key) in priv_keys.iter().enumerate() {
+            let validator = ValidatorId(validator as u16);
             for input in tx.inputs() {
                 let signature = tx.sign_input(&redeem_script, input, priv_key);
                 signs.push(MsgAnchoringSignature::new(
                     &self.sandbox.service_public_key(validator),
-                    validator as u16,
+                    validator,
                     tx.clone(),
                     input,
                     &signature,
@@ -370,14 +372,14 @@ impl AnchoringSandbox {
         );
     }
 
-    pub fn fast_forward_to_height(&self, height: u64) {
-        for _ in self.sandbox.current_height()..height {
+    pub fn fast_forward_to_height(&self, height: Height) {
+        for _ in self.sandbox.current_height().0..height.0 {
             self.add_height(&[]);
         }
     }
 
-    pub fn fast_forward_to_height_as_auditor(&self, height: u64) {
-        for _ in self.sandbox.current_height()..height {
+    pub fn fast_forward_to_height_as_auditor(&self, height: Height) {
+        for _ in self.sandbox.current_height().0..height.0 {
             self.add_height_as_auditor(&[]);
         }
     }

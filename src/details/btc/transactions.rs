@@ -31,7 +31,7 @@ use secp256k1::{Message, Secp256k1, Signature};
 use bitcoinrpc;
 
 use exonum::crypto::{FromHexError, Hash, HexValue, hash};
-use exonum::node::Height;
+use exonum::helpers::Height;
 use exonum::storage::StorageValue;
 
 use details::rpc::{AnchoringRpc, Error as RpcError, RpcClient};
@@ -74,7 +74,7 @@ pub struct TransactionBuilder {
     inputs: Vec<(RawBitcoinTx, u32)>,
     output: Option<btc::Address>,
     fee: Option<u64>,
-    payload: Option<(u64, Hash)>,
+    payload: Option<(Height, Hash)>,
     prev_tx_chain: Option<TxId>,
 }
 
@@ -316,7 +316,7 @@ impl TransactionBuilder {
         self
     }
 
-    pub fn payload(mut self, height: u64, hash: Hash) -> TransactionBuilder {
+    pub fn payload(mut self, height: Height, hash: Hash) -> TransactionBuilder {
         self.payload = Some((height, hash));
         self
     }

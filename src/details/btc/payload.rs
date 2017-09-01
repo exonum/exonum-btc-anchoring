@@ -18,6 +18,7 @@ use bitcoin::blockdata::script::{Builder, Instruction, Script};
 use bitcoin::blockdata::opcodes::All;
 
 use exonum::crypto::Hash;
+use exonum::helpers::Height;
 
 use details::btc;
 
@@ -44,7 +45,7 @@ const PAYLOAD_V1_KIND_RECOVER: u8 = 1;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Payload {
     /// Anchored block height
-    pub block_height: u64,
+    pub block_height: Height,
     /// Anchored block hash
     pub block_hash: Hash,
     /// `Txid` of previous transactions chain if it has been lost.
@@ -53,14 +54,14 @@ pub struct Payload {
 
 #[derive(Debug)]
 enum PayloadV1 {
-    Regular(u64, Hash),
-    Recover(u64, Hash, btc::TxId),
+    Regular(Height, Hash),
+    Recover(Height, Hash, btc::TxId),
 }
 
 #[derive(Debug, Default)]
 pub struct PayloadV1Builder {
     block_hash: Option<Hash>,
-    block_height: Option<u64>,
+    block_height: Option<Height>,
     prev_tx_chain: Option<btc::TxId>,
 }
 
@@ -79,7 +80,7 @@ impl PayloadV1 {
 
                 let block_height = LittleEndian::read_u64(&data[0..8]);
                 let block_hash = Hash::from_slice(&data[8..40]).unwrap();
-                Some(PayloadV1::Regular(block_height, block_hash))
+                Some(PayloadV1::Regular(Height(block_height), block_hash))
             }
             PAYLOAD_V1_KIND_RECOVER => {
                 if data.len() != 72 {
@@ -89,7 +90,7 @@ impl PayloadV1 {
                 let block_height = LittleEndian::read_u64(&data[0..8]);
                 let block_hash = Hash::from_slice(&data[8..40]).unwrap();
                 let txid = btc::TxId::from_slice(&data[40..72]).unwrap();
-                Some(PayloadV1::Recover(block_height, block_hash, txid))
+                Some(PayloadV1::Recover(Height(block_height), block_hash, txid))
             }
             _ => None,
         }
@@ -104,11 +105,11 @@ impl PayloadV1 {
         // Serialize data
         match *self {
             PayloadV1::Regular(height, hash) => {
-                LittleEndian::write_u64(&mut buf[0..8], height);
+                LittleEndian::write_u64(&mut buf[0..8], height.0);
                 buf[8..40].copy_from_slice(hash.as_ref());
             }
             PayloadV1::Recover(height, hash, txid) => {
-                LittleEndian::write_u64(&mut buf[0..8], height);
+                LittleEndian::write_u64(&mut buf[0..8], height.0);
                 buf[8..40].copy_from_slice(hash.as_ref());
                 buf[40..72].copy_from_slice(txid.as_ref());
             }
@@ -153,7 +154,7 @@ impl PayloadV1Builder {
         }
     }
 
-    pub fn block_height(mut self, height: u64) -> PayloadV1Builder {
+    pub fn block_height(mut self, height: Height) -> PayloadV1Builder {
         self.block_height = Some(height);
         self
     }
@@ -238,6 +239,7 @@ mod tests {
     use bitcoin::blockdata::script::Script;
 
     use exonum::crypto::hash;
+    use exonum::helpers::Height;
 
     use details::btc;
     use details::btc::HexValueEx;
@@ -249,7 +251,7 @@ mod tests {
         let block_hash = hash(&[]);
         let payload_script = PayloadBuilder::new()
             .block_hash(block_hash)
-            .block_height(1234)
+            .block_height(Height(1234))
             .into_script();
 
         assert_eq!(
@@ -269,7 +271,7 @@ mod tests {
         let block_hash = hash(&[]);
         let payload = Payload::from_script(&payload_script).unwrap();
         assert_eq!(payload.block_hash, block_hash);
-        assert_eq!(payload.block_height, 1234);
+        assert_eq!(payload.block_height, Height(1234));
         assert_eq!(payload.prev_tx_chain, None);
     }
 
@@ -279,7 +281,7 @@ mod tests {
         let prev_txid = btc::TxId::from_slice(block_hash.as_ref()).unwrap();
         let payload_script = PayloadBuilder::new()
             .block_hash(block_hash)
-            .block_height(1234)
+            .block_height(Height(1234))
             .prev_tx_chain(Some(prev_txid))
             .into_script();
 
@@ -304,7 +306,7 @@ mod tests {
         let prev_txid = btc::TxId::from_slice(block_hash.as_ref()).unwrap();
         let payload = Payload::from_script(&payload_script).unwrap();
         assert_eq!(payload.block_hash, block_hash);
-        assert_eq!(payload.block_height, 1234);
+        assert_eq!(payload.block_height, Height(1234));
         assert_eq!(payload.prev_tx_chain, Some(prev_txid));
     }
 

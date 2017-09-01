@@ -16,7 +16,6 @@ travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 
 [dependencies]
 exonum = "0.1.0"
-exonum-configuration = "0.1.0"
 exonum_bitcoinrpc = "0.1.0"
 
 bitcoin="0.10.0"
@@ -43,5 +42,11 @@ rpc_tests = []
 [replace]
 # Fix vulnerability
 "exonum_bitcoinrpc:0.1.0" = { git = "https://github.com/exonum/bitcoinrpc.git", rev = "0b0d79bde9959539af24b405b6fb81513f67879a" }
+"exonum:0.1.0" = { git = "https://github.com/exonum/exonum.git", rev = "64518cec0b091d2eeca6c62356b78dc37d5942ee" }
+"exonum-configuration:0.1.0" = { git = "https://github.com/alekseysidorov/exonum-configuration.git", rev = "7a98569f3b84573c25da3477bff88a80bb399668" }
 
+[[example]]
+name = "anchoring"
 
+[dev-dependencies]
+exonum-configuration = "0.1.0"

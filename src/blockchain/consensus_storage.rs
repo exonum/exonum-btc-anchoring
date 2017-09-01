@@ -19,6 +19,7 @@ use serde::{Deserialize, Deserializer};
 
 use exonum::storage::StorageValue;
 use exonum::crypto::{Hash, hash};
+use exonum::helpers::Height;
 
 use details::btc;
 use details::btc::transactions::FundingTx;
@@ -106,8 +107,8 @@ impl AnchoringConfig {
 
     #[doc(hidden)]
     /// Returns the latest height below the given `height` which needs to be anchored.
-    pub fn latest_anchoring_height(&self, height: u64) -> u64 {
-        height - height % self.frequency as u64
+    pub fn latest_anchoring_height(&self, height: Height) -> Height {
+        Height(height.0 - height.0 % self.frequency as u64)
     }
 
     #[doc(hidden)]

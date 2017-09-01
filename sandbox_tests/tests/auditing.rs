@@ -26,6 +26,7 @@ use bitcoin::util::base58::ToBase58;
 use exonum::crypto::HexValue;
 use exonum::messages::{Message, RawTransaction};
 use exonum::storage::StorageValue;
+use exonum::helpers::{Height, ValidatorId};
 use sandbox::config_updater::TxConfig;
 
 use exonum_btc_anchoring::{ANCHORING_SERVICE_NAME, AnchoringConfig};
@@ -33,14 +34,14 @@ use exonum_btc_anchoring::details::sandbox::Request;
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
 use exonum_btc_anchoring::error::HandlerError;
 use exonum_btc_anchoring::details::btc::transactions::BitcoinTx;
-use exonum_btc_anchoring_sandbox::AnchoringSandbox;
+use exonum_btc_anchoring_sandbox::{AnchoringSandbox, ANCHORING_VALIDATOR};
 use exonum_btc_anchoring_sandbox::helpers::*;
 
 /// Generates a configuration that excludes `sandbox node` from consensus.
 /// Then it continues to work as auditor.
 fn gen_following_cfg(
     sandbox: &AnchoringSandbox,
-    from_height: u64,
+    from_height: Height,
 ) -> (RawTransaction, AnchoringConfig) {
     let anchoring_addr = sandbox.current_addr();
 
@@ -62,17 +63,17 @@ fn gen_following_cfg(
     cfg.validator_keys.swap_remove(0);
     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
     let tx = TxConfig::new(
-        &sandbox.service_public_key(0),
+        &sandbox.service_public_key(ANCHORING_VALIDATOR),
         &cfg.into_bytes(),
         from_height,
-        sandbox.service_secret_key(0),
+        sandbox.service_secret_key(ANCHORING_VALIDATOR),
     );
     (tx.raw().clone(), service_cfg)
 }
 
 // Invoke this method after anchor_first_block_lect_normal
 pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
-    let cfg_change_height = 12;
+    let cfg_change_height = Height(12);
     let (cfg_tx, following_cfg) = gen_following_cfg(sandbox, cfg_change_height);
     let (_, following_addr) = following_cfg.redeem_script();
 
@@ -91,7 +92,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
 
     let following_multisig = following_cfg.redeem_script();
     let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
-        0,
+        Height::zero(),
         anchored_tx.payload().block_hash,
         &[],
         None,
@@ -108,7 +109,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
 
     let lects = (0..4)
         .map(|id| {
-            gen_service_tx_lect(sandbox, id, &transition_tx, 2)
+            gen_service_tx_lect(sandbox, ValidatorId(id), &transition_tx, 2)
                 .raw()
                 .clone()
         })
@@ -155,11 +156,11 @@ fn test_auditing_no_consensus_in_lect() {
 
     let lect_tx = BitcoinTx::from(sandbox.current_funding_tx().0);
     let lect = MsgAnchoringUpdateLatest::new(
-        &sandbox.service_public_key(0),
-        0,
+        &sandbox.service_public_key(ANCHORING_VALIDATOR),
+        ANCHORING_VALIDATOR,
         lect_tx,
-        lects_count(&sandbox, 0),
-        sandbox.service_secret_key(0),
+        lects_count(&sandbox, ANCHORING_VALIDATOR),
+        sandbox.service_secret_key(ANCHORING_VALIDATOR),
     );
     sandbox.add_height_as_auditor(&[lect.raw().clone()]);
 
@@ -185,13 +186,14 @@ fn test_auditing_lect_lost_funding_tx() {
 
     let lect_tx = BitcoinTx::from(sandbox.current_funding_tx().0);
     let lects = (0..3)
-        .map(|id| {
+        .map(ValidatorId)
+        .map(|validator_id| {
             MsgAnchoringUpdateLatest::new(
-                &sandbox.service_public_key(id as usize),
-                id,
+                &sandbox.service_public_key(validator_id),
+                validator_id,
                 lect_tx.clone(),
-                lects_count(&sandbox, id),
-                sandbox.service_secret_key(id as usize),
+                lects_count(&sandbox, validator_id),
+                sandbox.service_secret_key(validator_id),
             )
         })
         .collect::<Vec<_>>();
@@ -240,13 +242,14 @@ fn test_auditing_lect_incorrect_funding_tx() {
         4b4a88acd81d1100",
     ).unwrap();
     let lects = (0..3)
+        .map(ValidatorId)
         .map(|id| {
             MsgAnchoringUpdateLatest::new(
-                &sandbox.service_public_key(id as usize),
+                &sandbox.service_public_key(id),
                 id,
                 lect_tx.clone(),
                 lects_count(&sandbox, id),
-                sandbox.service_secret_key(id as usize),
+                sandbox.service_secret_key(id),
             )
         })
         .collect::<Vec<_>>();

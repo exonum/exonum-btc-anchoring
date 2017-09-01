@@ -18,6 +18,7 @@ use exonum::blockchain::{Schema, Transaction};
 use exonum::messages::Message;
 use exonum::crypto::HexValue;
 use exonum::storage::{Fork, Snapshot};
+use exonum::helpers::Height;
 
 use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use blockchain::schema::AnchoringSchema;
@@ -63,20 +64,17 @@ impl MsgAnchoringSignature {
         let anchoring_schema = AnchoringSchema::new(&view);
 
         let tx = self.tx();
-        let id = self.validator();
+        let id = self.validator().0 as usize;
         let actual_cfg = core_schema.actual_configuration();
         // Verify from field
-        if actual_cfg.validator_keys.get(id as usize).map(
-            |k| k.service_key,
-        ) != Some(*self.from())
-        {
+        if actual_cfg.validator_keys.get(id).map(|k| k.service_key) != Some(*self.from()) {
             warn!("Received msg from non-validator, content={:#?}", self);
             return false;
         }
 
         // Verify signature
         let anchoring_cfg = anchoring_schema.actual_anchoring_config();
-        if let Some(pub_key) = anchoring_cfg.anchoring_keys.get(id as usize) {
+        if let Some(pub_key) = anchoring_cfg.anchoring_keys.get(id) {
             let (redeem_script, addr) = anchoring_cfg.redeem_script();
             let tx_addr = tx.output_address(anchoring_cfg.network);
             // Use following address if it exists
@@ -128,21 +126,17 @@ impl MsgAnchoringUpdateLatest {
         let core_schema = Schema::new(view);
 
         let tx = self.tx();
-        let id = self.validator();
+        let id = self.validator().0 as usize;
         // Verify lect with actual cfg
         let actual_cfg = core_schema.actual_configuration();
 
-        if actual_cfg
-            .validator_keys
-            .get(self.validator() as usize)
-            .map(|k| k.service_key) != Some(*self.from())
-        {
+        if actual_cfg.validator_keys.get(id).map(|k| k.service_key) != Some(*self.from()) {
             warn!("Received lect from non validator, content={:#?}", self);
             return None;
         }
 
         let anchoring_cfg = anchoring_schema.actual_anchoring_config();
-        let key = &anchoring_cfg.anchoring_keys[id as usize];
+        let key = &anchoring_cfg.anchoring_keys[id];
         match TxKind::from(tx.clone()) {
             TxKind::Anchoring(tx) => {
                 if !verify_anchoring_tx_payload(&tx, &core_schema) {
@@ -203,7 +197,7 @@ where
         let cfg_height = anchoring_schema.known_txs().get(&prev_txid).and_then(|tx| {
             let height = match TxKind::from(tx) {
                 TxKind::Anchoring(tx) => tx.payload().block_height,
-                TxKind::FundingTx(_) => 0,
+                TxKind::FundingTx(_) => Height::zero(),
                 TxKind::Other(tx) => panic!("Incorrect lect content={:#?}", tx),
             };
             Some(height)
@@ -252,7 +246,7 @@ where
     T: AsRef<Snapshot>,
 {
     let payload = tx.payload();
-    schema.block_hashes_by_height().get(payload.block_height) == Some(payload.block_hash)
+    schema.block_hashes_by_height().get(payload.block_height.0) == Some(payload.block_hash)
 }
 
 fn verify_funding_tx(tx: &FundingTx, anchoring_cfg: &AnchoringConfig) -> bool {

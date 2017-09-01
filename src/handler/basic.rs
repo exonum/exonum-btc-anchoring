@@ -18,6 +18,7 @@ use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::ServiceContext;
 use exonum::storage::Snapshot;
+use exonum::helpers::{ValidatorId, Height};
 
 use error::Error as ServiceError;
 use handler::error::Error as HandlerError;
@@ -56,7 +57,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn validator_id(&self, context: &ServiceContext) -> u16 {
+    pub fn validator_id(&self, context: &ServiceContext) -> ValidatorId {
         context
             .validator_state()
             .as_ref()
@@ -75,7 +76,7 @@ impl AnchoringHandler {
             .as_ref()
             .expect("Request `validator_id` only from validator node.")
             .id();
-        &cfg.anchoring_keys[validator_id as usize]
+        &cfg.anchoring_keys[validator_id.0 as usize]
     }
 
     #[doc(hidden)]
@@ -477,7 +478,7 @@ impl AnchoringHandler {
                 trace!("Check prev lect={:#?}", prev_lect);
 
                 let lect_height = match TxKind::from(prev_lect) {
-                    TxKind::FundingTx(_) => 0,
+                    TxKind::FundingTx(_) => Height::zero(),
                     TxKind::Anchoring(tx) => tx.payload().block_height,
                     TxKind::Other(_) => return Ok(false),
                 };

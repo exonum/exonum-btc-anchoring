@@ -16,6 +16,7 @@ use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::{Schema, ServiceContext};
 use exonum::crypto::HexValue;
+use exonum::helpers::Height;
 
 use error::Error as ServiceError;
 use details::btc;
@@ -37,7 +38,7 @@ impl AnchoringHandler {
         let multisig = self.multisig_address(&cfg);
         trace!("Anchoring state, addr={}", multisig.addr.to_base58check());
 
-        if context.height() % self.node.check_lect_frequency == 0 {
+        if context.height().0 % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
             self.update_our_lect(&multisig, context)?;
         }
@@ -93,7 +94,7 @@ impl AnchoringHandler {
             let height = multisig.common.latest_anchoring_height(context.height());
             let hash = Schema::new(context.snapshot())
                 .block_hashes_by_height()
-                .get(height)
+                .get(height.0)
                 .unwrap();
 
             let out = funding_tx.find_out(&multisig.addr).unwrap();
@@ -122,12 +123,12 @@ impl AnchoringHandler {
         &mut self,
         lect: AnchoringTx,
         multisig: &MultisigAddress,
-        height: u64,
+        height: Height,
         context: &mut ServiceContext,
     ) -> Result<(), ServiceError> {
         let hash = Schema::new(context.snapshot())
             .block_hashes_by_height()
-            .get(height)
+            .get(height.0)
             .unwrap();
 
         let proposal = {

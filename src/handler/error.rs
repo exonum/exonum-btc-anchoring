@@ -15,12 +15,14 @@
 use std::fmt;
 use std::error;
 
+use exonum::helpers::Height;
+
 use details::btc::transactions::BitcoinTx;
 
 #[derive(Debug, PartialEq)]
 pub enum Error {
     IncorrectLect { reason: String, tx: BitcoinTx },
-    LectNotFound { height: u64 },
+    LectNotFound { height: Height },
 }
 
 impl fmt::Display for Error {

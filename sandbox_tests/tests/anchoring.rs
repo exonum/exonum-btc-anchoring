@@ -29,12 +29,13 @@ use bitcoin::network::constants::Network;
 
 use exonum::crypto::{Hash, HexValue};
 use exonum::messages::Message;
+use exonum::helpers::{Height, ValidatorId};
 
 use exonum_btc_anchoring::details::sandbox::Request;
 use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder,
                                                        verify_tx_input};
 use exonum_btc_anchoring::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
-use exonum_btc_anchoring_sandbox::AnchoringSandbox;
+use exonum_btc_anchoring_sandbox::{AnchoringSandbox, ANCHORING_VALIDATOR};
 use exonum_btc_anchoring_sandbox::helpers::*;
 use exonum_btc_anchoring_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
 
@@ -147,8 +148,8 @@ fn test_anchoring_second_block_additional_funds() {
     sandbox.add_height(&[]);
 
     let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
-        10,
-        block_hash_on_height(&sandbox, 10),
+        Height(10),
+        block_hash_on_height(&sandbox, Height(10)),
         &[funds],
         None,
         &anchoring_addr,
@@ -161,7 +162,12 @@ fn test_anchoring_second_block_additional_funds() {
     client.expect(send_raw_transaction_requests(anchored_tx));
 
     sandbox.add_height(&signatures);
-    sandbox.broadcast(gen_service_tx_lect(&sandbox, 0, anchored_tx, 2));
+    sandbox.broadcast(gen_service_tx_lect(
+        &sandbox,
+        ANCHORING_VALIDATOR,
+        anchored_tx,
+        2,
+    ));
 }
 
 // We anchor second block after successfuly anchored first
@@ -198,6 +204,7 @@ fn test_anchoring_second_block_lect_lost() {
     sandbox.add_height(&[]);
 
     let txs = (0..4)
+        .map(ValidatorId)
         .map(|id| {
             gen_service_tx_lect(&sandbox, id, &prev_anchored_tx, 3)
                 .raw()
@@ -239,6 +246,7 @@ fn test_anchoring_find_lect_chain_normal() {
     let prev_anchored_tx = {
         let mut txs = Vec::new();
         for height in 0..3 {
+            let height = Height(height);
             sandbox.gen_anchoring_tx_with_signatures(
                 height,
                 block_hash_on_height(&sandbox, height),
@@ -248,12 +256,13 @@ fn test_anchoring_find_lect_chain_normal() {
             );
             let tx = sandbox.latest_anchored_tx().clone();
             let lects = (1..4)
+                .map(ValidatorId)
                 .map(|id| {
                     MsgAnchoringUpdateLatest::new(
                         &sandbox.service_public_key(id),
-                        id as u16,
+                        id,
                         tx.clone().into(),
-                        lects_count(&sandbox, id as u16),
+                        lects_count(&sandbox, id),
                         sandbox.service_secret_key(id),
                     )
                 })
@@ -281,7 +290,7 @@ fn test_anchoring_find_lect_chain_normal() {
     client.expect(request);
     sandbox.add_height(&[]);
 
-    let lect = gen_service_tx_lect(&sandbox, 0, &current_anchored_tx, 2);
+    let lect = gen_service_tx_lect(&sandbox, ANCHORING_VALIDATOR, &current_anchored_tx, 2);
     sandbox.broadcast(lect);
 }
 
@@ -312,6 +321,7 @@ fn test_anchoring_find_lect_chain_wrong() {
         ).unwrap();
         let mut txs = vec![tx.clone()];
         for height in 1..4 {
+            let height = Height(height);
             tx = TransactionBuilder::with_prev_tx(&tx, 0)
                 .fee(100)
                 .payload(height, block_hash_on_height(&sandbox, height))
@@ -354,13 +364,18 @@ fn test_anchoring_lect_correct_validator() {
     let sandbox = AnchoringSandbox::initialize(&[]);
     anchor_first_block(&sandbox);
 
-    let msg_lect = gen_service_tx_lect_wrong(&sandbox, 0, 0, &sandbox.latest_anchored_tx(), 2)
-        .raw()
+    let msg_lect = gen_service_tx_lect_wrong(
+        &sandbox,
+        ANCHORING_VALIDATOR,
+        ANCHORING_VALIDATOR,
+        &sandbox.latest_anchored_tx(),
+        2,
+    ).raw()
         .clone();
     // Commit `msg_lect` into blockchain
     sandbox.add_height(&[msg_lect]);
     // Ensure that service accepts it
-    let lects_after = dump_lects(&sandbox, 0);
+    let lects_after = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(
         lects_after.last().unwrap(),
         sandbox.latest_anchored_tx().deref()
@@ -377,16 +392,20 @@ fn test_anchoring_lect_wrong_validator() {
     let sandbox = AnchoringSandbox::initialize(&[]);
     anchor_first_block(&sandbox);
 
-    let msg_lect_wrong =
-        gen_service_tx_lect_wrong(&sandbox, 2, 0, &sandbox.latest_anchored_tx(), 2)
-            .raw()
-            .clone();
+    let msg_lect_wrong = gen_service_tx_lect_wrong(
+        &sandbox,
+        ValidatorId(2),
+        ANCHORING_VALIDATOR,
+        &sandbox.latest_anchored_tx(),
+        2,
+    ).raw()
+        .clone();
 
-    let lects_before = dump_lects(&sandbox, 0);
+    let lects_before = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     // Commit `msg_lect_wrong` into blockchain
     sandbox.add_height(&[msg_lect_wrong]);
     // Ensure that service ignore it
-    let lects_after = dump_lects(&sandbox, 0);
+    let lects_after = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(lects_after, lects_before);
 }
 
@@ -400,16 +419,20 @@ fn test_anchoring_lect_nonexistent_validator() {
     let sandbox = AnchoringSandbox::initialize(&[]);
     anchor_first_block(&sandbox);
 
-    let msg_lect_wrong =
-        gen_service_tx_lect_wrong(&sandbox, 2, 1000, &sandbox.latest_anchored_tx(), 2)
-            .raw()
-            .clone();
+    let msg_lect_wrong = gen_service_tx_lect_wrong(
+        &sandbox,
+        ValidatorId(2),
+        ValidatorId(1000),
+        &sandbox.latest_anchored_tx(),
+        2,
+    ).raw()
+        .clone();
 
-    let lects_before = dump_lects(&sandbox, 2);
+    let lects_before = dump_lects(&sandbox, ValidatorId(2));
     // Commit `msg_lect_wrong` into blockchain
     sandbox.add_height(&[msg_lect_wrong]);
     // Ensure that service ignore it
-    let lects_after = dump_lects(&sandbox, 0);
+    let lects_after = dump_lects(&sandbox, ValidatorId(2));
     assert_eq!(lects_after, lects_before);
 }
 
@@ -432,15 +455,15 @@ fn test_anchoring_signature_wrong_validator() {
         tx
     };
 
+    let validator_1 = ValidatorId(1);
     let msg_signature_wrong = MsgAnchoringSignature::new(
-        &sandbox.service_public_key(1),
-        1,
+        &sandbox.service_public_key(validator_1),
+        validator_1,
         tx.clone(),
         0,
         signatures[0].signature(),
-        sandbox.service_secret_key(1),
+        sandbox.service_secret_key(validator_1),
     );
-
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_wrong` into blockchain
@@ -465,18 +488,22 @@ fn test_anchoring_signature_nonexistent_tx() {
     let (redeem_script, addr) = sandbox.current_cfg().redeem_script();
     let tx = TransactionBuilder::with_prev_tx(&sandbox.latest_anchored_tx(), 0)
         .fee(100)
-        .payload(0, block_hash_on_height(&sandbox, 0))
+        .payload(
+            Height::zero(),
+            block_hash_on_height(&sandbox, Height::zero()),
+        )
         .send_to(addr.clone())
         .into_transaction()
         .unwrap();
     let signature = tx.sign_input(&redeem_script, 0, &sandbox.priv_keys(&addr)[1]);
+    let validator_1 = ValidatorId(1);
     let msg_sign = MsgAnchoringSignature::new(
-        &sandbox.service_public_key(1),
-        1,
+        &sandbox.service_public_key(validator_1),
+        validator_1,
         tx.clone(),
         0,
         signature.as_ref(),
-        sandbox.service_secret_key(1),
+        sandbox.service_secret_key(validator_1),
     );
 
 
@@ -504,20 +531,20 @@ fn test_anchoring_signature_incorrect_payload() {
     let (redeem_script, addr) = sandbox.current_cfg().redeem_script();
     let tx = TransactionBuilder::with_prev_tx(&sandbox.latest_anchored_tx(), 0)
         .fee(100)
-        .payload(0, Hash::zero())
+        .payload(Height::zero(), Hash::zero())
         .send_to(addr.clone())
         .into_transaction()
         .unwrap();
     let signature = tx.sign_input(&redeem_script, 0, &sandbox.priv_keys(&addr)[1]);
+    let validator_1 = ValidatorId(1);
     let msg_sign = MsgAnchoringSignature::new(
-        &sandbox.service_public_key(1),
-        1,
+        &sandbox.service_public_key(validator_1),
+        validator_1,
         tx.clone(),
         0,
         signature.as_ref(),
-        sandbox.service_secret_key(1),
+        sandbox.service_secret_key(validator_1),
     );
-
 
     let signatures_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_sign` into blockchain
@@ -542,13 +569,13 @@ fn test_anchoring_lect_funding_tx() {
     anchor_first_block_lect_normal(&sandbox);
 
     let tx = sandbox.current_funding_tx();
-    let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
-    let lects_before = dump_lects(&sandbox, 0);
+    let msg_lect = gen_service_tx_lect(&sandbox, ANCHORING_VALIDATOR, &tx, 2);
+    let lects_before = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     // Commit `msg_lect` into blockchain
     client.expect(vec![confirmations_request(&tx, 50)]);
     sandbox.add_height(&[msg_lect.raw().clone()]);
     // Ensure that service accepts it
-    let lects_after = dump_lects(&sandbox, 0);
+    let lects_after = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(lects_before.len(), 2);
     assert_eq!(lects_after[2], tx.0);
 }
@@ -576,12 +603,12 @@ fn test_anchoring_lect_incorrect_funding_tx() {
         4abfec4f4cb19d942202529b8653a0a58d870c170f0c000000001976a9147bb8844ee71cbd2bc735411f4e2997\
         1f697fed0a88ac81131100",
     ).unwrap();
-    let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
-    let lects_before = dump_lects(&sandbox, 0);
+    let msg_lect = gen_service_tx_lect(&sandbox, ANCHORING_VALIDATOR, &tx, 2);
+    let lects_before = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     // Commit `msg_lect` into blockchain
     sandbox.add_height(&[msg_lect.raw().clone()]);
     // Ensure that service ignores it
-    let lects_after = dump_lects(&sandbox, 0);
+    let lects_after = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(lects_before, lects_after);
 }
 
@@ -599,16 +626,16 @@ fn test_anchoring_lect_incorrect_anchoring_payload() {
 
     let tx = TransactionBuilder::with_prev_tx(&sandbox.current_funding_tx(), 0)
         .fee(1000)
-        .payload(0, Hash::zero())
+        .payload(Height::zero(), Hash::zero())
         .send_to(sandbox.current_addr())
         .into_transaction()
         .unwrap();
-    let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
-    let lects_before = dump_lects(&sandbox, 0);
+    let msg_lect = gen_service_tx_lect(&sandbox, ANCHORING_VALIDATOR, &tx, 2);
+    let lects_before = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     // Commit `msg_lect` into blockchain
     sandbox.add_height(&[msg_lect.raw().clone()]);
     // Ensure that service ignores it
-    let lects_after = dump_lects(&sandbox, 0);
+    let lects_after = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(lects_before, lects_after);
 }
 
@@ -627,25 +654,28 @@ fn test_anchoring_lect_unknown_prev_tx() {
     let tx = {
         let prev_tx = TransactionBuilder::with_prev_tx(&sandbox.current_funding_tx(), 0)
             .fee(100)
-            .payload(0, Hash::zero())
+            .payload(Height::zero(), Hash::zero())
             .send_to(sandbox.current_addr())
             .into_transaction()
             .unwrap();
 
         TransactionBuilder::with_prev_tx(&prev_tx, 0)
             .fee(100)
-            .payload(0, block_hash_on_height(&sandbox, 0))
+            .payload(
+                Height::zero(),
+                block_hash_on_height(&sandbox, Height::zero()),
+            )
             .send_to(sandbox.current_addr())
             .into_transaction()
             .unwrap()
     };
 
-    let msg_lect = gen_service_tx_lect(&sandbox, 0, &tx, 2);
-    let lects_before = dump_lects(&sandbox, 0);
+    let msg_lect = gen_service_tx_lect(&sandbox, ANCHORING_VALIDATOR, &tx, 2);
+    let lects_before = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     // Commit `msg_lect` into blockchain
     sandbox.add_height(&[msg_lect.raw().clone()]);
     // Ensure that service ignores it
-    let lects_after = dump_lects(&sandbox, 0);
+    let lects_after = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(lects_after, lects_before);
 }
 
@@ -668,15 +698,15 @@ fn test_anchoring_signature_nonexistent_validator() {
         tx
     };
 
+    let validator_1 = ValidatorId(1);
     let msg_signature_wrong = MsgAnchoringSignature::new(
-        &sandbox.service_public_key(1),
-        1000,
+        &sandbox.service_public_key(validator_1),
+        ValidatorId(1000),
         tx.clone(),
         0,
         signatures[0].signature(),
-        sandbox.service_secret_key(1),
+        sandbox.service_secret_key(validator_1),
     );
-
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_wrong` into blockchain
@@ -724,13 +754,14 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
         different_signature.push(SigHashType::All.as_u32() as u8);
         assert_ne!(different_signature, signature_msgs[1].signature());
 
+        let validator_1 = ValidatorId(1);
         MsgAnchoringSignature::new(
-            &sandbox.service_public_key(1),
-            1,
+            &sandbox.service_public_key(validator_1),
+            validator_1,
             tx.clone(),
             0,
             different_signature.as_ref(),
-            sandbox.service_secret_key(1),
+            sandbox.service_secret_key(validator_1),
         )
     };
     assert_ne!(signature_msgs[1], msg_signature_different);
@@ -763,13 +794,14 @@ fn test_anchoring_signature_input_from_different_validator() {
         tx
     };
 
+    let validator_1 = ValidatorId(1);
     let msg_signature_wrong = MsgAnchoringSignature::new(
-        &sandbox.service_public_key(1),
-        2,
+        &sandbox.service_public_key(validator_1),
+        ValidatorId(2),
         tx.clone(),
         0,
         signatures[2].signature(),
-        sandbox.service_secret_key(1),
+        sandbox.service_secret_key(validator_1),
     );
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
@@ -804,7 +836,7 @@ fn test_anchoring_signature_unknown_output_address() {
 
         TransactionBuilder::with_prev_tx(&sandbox.latest_anchored_tx(), 0)
             .fee(1000)
-            .payload(0, Hash::zero())
+            .payload(Height::zero(), Hash::zero())
             .send_to(addr)
             .into_transaction()
             .unwrap()
@@ -822,12 +854,12 @@ fn test_anchoring_signature_unknown_output_address() {
     ));
 
     let msg_signature_wrong = MsgAnchoringSignature::new(
-        &sandbox.service_public_key(0),
-        0,
+        &sandbox.service_public_key(ANCHORING_VALIDATOR),
+        ANCHORING_VALIDATOR,
         tx.clone(),
         0,
         &signature,
-        sandbox.service_secret_key(0),
+        sandbox.service_secret_key(ANCHORING_VALIDATOR),
     );
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
