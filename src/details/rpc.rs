@@ -148,7 +148,7 @@ impl AnchoringRpc {
     pub fn unspent_transactions(&self, addr: &btc::Address) -> Result<Vec<BitcoinTx>> {
         let unspent_txs = self.get_unspent_transactions(
             0,
-            9999999,
+            9_999_999,
             &addr.to_base58check(),
         )?;
         let mut txs = Vec::new();

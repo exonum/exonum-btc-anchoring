@@ -76,11 +76,8 @@ extern crate log;
 extern crate derive_error;
 
 extern crate rand;
-extern crate tempdir;
 extern crate iron;
 extern crate router;
-extern crate params;
-extern crate bodyparser;
 #[macro_use]
 extern crate exonum;
 

@@ -17,12 +17,9 @@ extern crate sandbox;
 extern crate exonum_btc_anchoring;
 #[macro_use]
 extern crate exonum_btc_anchoring_sandbox;
-extern crate serde;
 #[macro_use]
 extern crate serde_json;
 extern crate bitcoin;
-extern crate exonum_bitcoinrpc as bitcoinrpc;
-extern crate secp256k1;
 extern crate rand;
 
 use bitcoin::util::base58::ToBase58;
@@ -283,7 +280,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+            params: [0, 9_999_999, [&following_multisig.1.to_base58check()]],
             response: [
                 listunspent_entry(&transition_tx, &following_addr, 30),
             ]
@@ -319,7 +316,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
     sandbox.add_height(&signatures[0..1]);
 
     // We reached a new anchoring height and we should create a new `anchoring_tx`.
-    client.expect(vec![confirmations_request(&transition_tx, 10000)]);
+    client.expect(vec![confirmations_request(&transition_tx, 10_000)]);
     sandbox.add_height(&[]);
 
     let signatures = {
@@ -339,7 +336,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
     let anchored_tx = sandbox.latest_anchored_tx();
     sandbox.broadcast(signatures[0].raw().clone());
     client.expect(vec![
-        confirmations_request(&transition_tx, 20000),
+        confirmations_request(&transition_tx, 20_000),
         confirmations_request(&anchored_tx, 0),
     ]);
     sandbox.add_height(&signatures);
@@ -459,7 +456,7 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+            params: [0, 9_999_999, [&following_multisig.1.to_base58check()]],
             response: [
                 listunspent_entry(&anchored_tx, &following_addr, 0)
             ]
@@ -487,13 +484,13 @@ fn test_anchoring_transit_config_with_funding_tx() {
 
     let funding_tx = FundingTx::from_hex(
         "0200000001a4f68040d03b137746fd10351c163ed4e826fd70d3db9c6\
-                                          457c63a5e8571a47c010000006a47304402202d09a52acc5b9a40c1d8\
-                                          9dc39c877c394b7b6804cda2bd6549bb7c66b9a1b73b02206b8a9d2ff\
-                                          830c639050b96f97461d0f833c9e3632aaba5d704d1656de95248ca01\
-                                          2103e82393d87254777a79476a92f5a4debeba4b5dea4d7f0df8f8319\
-                                          be605327bebfeffffff02a08601000000000017a914ee6737f9c8f5a7\
-                                          3bece543883a670ff3056d353387418ea107000000001976a91454cf1\
-                                          d2fe5f7aa552c419c07914af8dea318888988ac222e1100",
+        457c63a5e8571a47c010000006a47304402202d09a52acc5b9a40c1d8\
+        9dc39c877c394b7b6804cda2bd6549bb7c66b9a1b73b02206b8a9d2ff\
+        830c639050b96f97461d0f833c9e3632aaba5d704d1656de95248ca01\
+        2103e82393d87254777a79476a92f5a4debeba4b5dea4d7f0df8f8319\
+        be605327bebfeffffff02a08601000000000017a914ee6737f9c8f5a7\
+        3bece543883a670ff3056d353387418ea107000000001976a91454cf1\
+        d2fe5f7aa552c419c07914af8dea318888988ac222e1100",
     ).unwrap();
     let (cfg_tx, following_cfg) =
         gen_following_cfg(&sandbox, cfg_change_height, Some(funding_tx.clone()));
@@ -553,7 +550,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+            params: [0, 9_999_999, [&following_multisig.1.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 20),
                 listunspent_entry(&transition_tx, &following_addr, 20),
@@ -573,7 +570,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
         confirmations_request(&transition_tx, 1000),
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+            params: [0, 9_999_999, [&following_multisig.1.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 30),
                 listunspent_entry(&transition_tx, &following_addr, 30)
@@ -603,10 +600,10 @@ fn test_anchoring_transit_config_with_funding_tx() {
 
     // We reached a new anchoring height and we should create a new `anchoring_tx`.
     client.expect(vec![
-        confirmations_request(&transition_tx, 10000),
+        confirmations_request(&transition_tx, 10_000),
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+            params: [0, 9_999_999, [&following_multisig.1.to_base58check()]],
             response: [
                 listunspent_entry(&transition_tx, &following_addr, 30),
                 listunspent_entry(&funding_tx, &following_addr, 30),
@@ -633,7 +630,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
     sandbox.broadcast(signatures[0].raw().clone());
     sandbox.broadcast(signatures[1].raw().clone());
     client.expect(vec![
-        confirmations_request(&transition_tx, 20000),
+        confirmations_request(&transition_tx, 20_000),
         confirmations_request(&anchored_tx, 0),
     ]);
     sandbox.add_height(&signatures);
@@ -648,7 +645,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
     sandbox.broadcast(lects[0].clone());
     sandbox.add_height(&lects);
 
-    assert_eq!(anchored_tx.amount(), 101000);
+    assert_eq!(anchored_tx.amount(), 10_1000);
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -819,13 +816,13 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
 
     let funding_tx = FundingTx::from_hex(
         "0200000001cc68f92d3a37bfcb956e5d2dd0d1a38e5755892e26dfba4\
-                                          f6c5607590fe9ba9b010000006a473044022073ef329fbe124b158980\
-                                          ba33970550bc915f8fa9af464aa4e60fa33ecc8b76ac022036aa7ded6\
-                                          d720c2ba086f091c648e3a633b313189b3a873653d5e95c29b0476c01\
-                                          2103c799495eac26b9fcf31da64e70ebf3a3a073edb4e26136655c426\
-                                          823ca49f8ebfeffffff02c106a007000000001976a914f950ca6e1756\
-                                          d97f075b3a4f24ba890ee075083788aca08601000000000017a9142bf\
-                                          681d557af5259acdb53b40a99ab426f40330f87252e1100",
+        f6c5607590fe9ba9b010000006a473044022073ef329fbe124b158980\
+        ba33970550bc915f8fa9af464aa4e60fa33ecc8b76ac022036aa7ded6\
+        d720c2ba086f091c648e3a633b313189b3a873653d5e95c29b0476c01\
+        2103c799495eac26b9fcf31da64e70ebf3a3a073edb4e26136655c426\
+        823ca49f8ebfeffffff02c106a007000000001976a914f950ca6e1756\
+        d97f075b3a4f24ba890ee075083788aca08601000000000017a9142bf\
+        681d557af5259acdb53b40a99ab426f40330f87252e1100",
     ).unwrap();
     let (cfg_tx, following_cfg) =
         gen_following_cfg_unchanged_self_key(&sandbox, cfg_change_height, Some(funding_tx.clone()));
@@ -852,7 +849,7 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -877,7 +874,7 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -888,7 +885,7 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -896,7 +893,7 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
         get_transaction_request(&funding_tx),
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -931,13 +928,13 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
 
     let funding_tx = FundingTx::from_hex(
         "0200000001b658a16511311568670756f3912f890441d5ea069eadf50\
-                                          f73bcaeaf6fa91ac4000000006b483045022100da8016735aa4a31e34\
-                                          e9a52876491952d5bcbc53dba6ee86501ad6665806d5fe02204b0df7d\
-                                          5678c53ba0507a588ffd239d3ec1150ea218323534bd65feab3067886\
-                                          012102da41e6c40a472b97a09dea858d8bc69c805ecc180d0955132c9\
-                                          8a2ad04111401feffffff02213c8f07000000001976a914dfd62142b0\
-                                          5559d396b2e036b4916e9873cfb79188aca08601000000000017a914e\
-                                          e6737f9c8f5a73bece543883a670ff3056d3533877b2e1100",
+        f73bcaeaf6fa91ac4000000006b483045022100da8016735aa4a31e34\
+        e9a52876491952d5bcbc53dba6ee86501ad6665806d5fe02204b0df7d\
+        5678c53ba0507a588ffd239d3ec1150ea218323534bd65feab3067886\
+        012102da41e6c40a472b97a09dea858d8bc69c805ecc180d0955132c9\
+        8a2ad04111401feffffff02213c8f07000000001976a914dfd62142b0\
+        5559d396b2e036b4916e9873cfb79188aca08601000000000017a914e\
+        e6737f9c8f5a73bece543883a670ff3056d3533877b2e1100",
     ).unwrap();
     let (cfg_tx, following_cfg) =
         gen_following_cfg(&sandbox, cfg_change_height, Some(funding_tx.clone()));
@@ -964,7 +961,7 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -989,7 +986,7 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1000,7 +997,7 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1008,7 +1005,7 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
         get_transaction_request(&funding_tx),
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1045,13 +1042,13 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
 
     let funding_tx = FundingTx::from_hex(
         "0200000001b658a16511311568670756f3912f890441d5ea069eadf50\
-                                          f73bcaeaf6fa91ac4000000006b483045022100da8016735aa4a31e34\
-                                          e9a52876491952d5bcbc53dba6ee86501ad6665806d5fe02204b0df7d\
-                                          5678c53ba0507a588ffd239d3ec1150ea218323534bd65feab3067886\
-                                          012102da41e6c40a472b97a09dea858d8bc69c805ecc180d0955132c9\
-                                          8a2ad04111401feffffff02213c8f07000000001976a914dfd62142b0\
-                                          5559d396b2e036b4916e9873cfb79188aca08601000000000017a914e\
-                                          e6737f9c8f5a73bece543883a670ff3056d3533877b2e1100",
+        f73bcaeaf6fa91ac4000000006b483045022100da8016735aa4a31e34\
+        e9a52876491952d5bcbc53dba6ee86501ad6665806d5fe02204b0df7d\
+        5678c53ba0507a588ffd239d3ec1150ea218323534bd65feab3067886\
+        012102da41e6c40a472b97a09dea858d8bc69c805ecc180d0955132c9\
+        8a2ad04111401feffffff02213c8f07000000001976a914dfd62142b0\
+        5559d396b2e036b4916e9873cfb79188aca08601000000000017a914e\
+        e6737f9c8f5a73bece543883a670ff3056d3533877b2e1100",
     ).unwrap();
     let (cfg_tx, following_cfg) = gen_following_cfg(&sandbox, first_cfg_change_height, None);
     let (_, following_addr) = following_cfg.redeem_script();
@@ -1093,7 +1090,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1101,7 +1098,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
         get_transaction_request(&funding_tx),
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1124,7 +1121,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1135,7 +1132,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1172,13 +1169,13 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
 
     let funding_tx = FundingTx::from_hex(
         "0200000001e4333634a7b42fb770802a219f175bca28e63bab7457a50\
-                                          77785cff95c411c0c010000006b483045022100b2a37136c2fd7f86da\
-                                          af62e824470d7e95a2083df9cb78a1afb04ad5e98f035202201886fdc\
-                                          78413f02baf99fce4bc00238911e25d959da95798349e16b1fb330e4c\
-                                          0121027f096c405b55de7746866dec411582c322c9875824d0545765e\
-                                          4635cb3581d82feffffff0231d58807000000001976a914ff2f437f7f\
-                                          71ca7af810013b05a52bbd17a9774088aca08601000000000017a914f\
-                                          975aeb4dffaf76ec07ef3dd5b8b778863feea3487542f1100",
+        77785cff95c411c0c010000006b483045022100b2a37136c2fd7f86da\
+        af62e824470d7e95a2083df9cb78a1afb04ad5e98f035202201886fdc\
+        78413f02baf99fce4bc00238911e25d959da95798349e16b1fb330e4c\
+        0121027f096c405b55de7746866dec411582c322c9875824d0545765e\
+        4635cb3581d82feffffff0231d58807000000001976a914ff2f437f7f\
+        71ca7af810013b05a52bbd17a9774088aca08601000000000017a914f\
+        975aeb4dffaf76ec07ef3dd5b8b778863feea3487542f1100",
     ).unwrap();
     let initial_funding_tx = sandbox.current_funding_tx();
 
@@ -1229,7 +1226,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1237,7 +1234,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
         get_transaction_request(&funding_tx),
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1260,7 +1257,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1271,7 +1268,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
@@ -1395,7 +1392,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [following_addr]],
+            params: [0, 9_999_999, [following_addr]],
             response: []
         },
         confirmations_request(&funding_tx, 1),
@@ -1407,7 +1404,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
         confirmations_request(&funding_tx, 100),
         request! {
             method: "listunspent",
-            params: [0, 9999999, [following_addr]],
+            params: [0, 9_999_999, [following_addr]],
             response: []
         },
     ]);
@@ -1449,7 +1446,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
         confirmations_request(&transition_tx, 30),
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+            params: [0, 9_999_999, [&following_multisig.1.to_base58check()]],
             response: [
                 listunspent_entry(&transition_tx, &following_addr, 30)
             ]
@@ -1492,7 +1489,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+            params: [0, 9_999_999, [&following_multisig.1.to_base58check()]],
             response: [
                 listunspent_entry(&anchored_tx, &following_addr, 0)
             ]
@@ -1653,7 +1650,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_addr.to_base58check()]],
+            params: [0, 9_999_999, [&following_addr.to_base58check()]],
             response: [
                 listunspent_entry(&transition_tx, &following_addr, 0)
             ]
@@ -1781,7 +1778,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
     client.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&following_multisig.1.to_base58check()]],
+            params: [0, 9_999_999, [&following_multisig.1.to_base58check()]],
             response: [
                 listunspent_entry(&transition_tx, &following_addr, 30),
             ]
@@ -1817,7 +1814,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
     sandbox.add_height(&signatures[0..1]);
 
     // We reached a new anchoring height and we should create a new `anchoring_tx`.
-    client.expect(vec![confirmations_request(&transition_tx, 10000)]);
+    client.expect(vec![confirmations_request(&transition_tx, 10_000)]);
     sandbox.add_height(&[]);
 
     let signatures = {
@@ -1837,7 +1834,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
     let third_anchored_tx = sandbox.latest_anchored_tx();
     sandbox.broadcast(signatures[0].raw().clone());
     client.expect(vec![
-        confirmations_request(&transition_tx, 20000),
+        confirmations_request(&transition_tx, 20_000),
         confirmations_request(&third_anchored_tx, 0),
     ]);
     sandbox.add_height(&signatures);
@@ -1862,7 +1859,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
     observer.client().expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9999999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&third_anchored_tx, &anchoring_addr, 10)
             ]
@@ -1878,7 +1875,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
 
     observer.check_anchoring_chain().unwrap();
 
-    /// Checks that all anchoring transaction successfuly commited to `anchoring_tx_chain` table.
+    // Checks that all anchoring transaction successfuly commited to `anchoring_tx_chain` table.
     let blockchain = observer.blockchain().clone();
     let snapshot = blockchain.snapshot();
     let anchoring_schema = AnchoringSchema::new(&snapshot);

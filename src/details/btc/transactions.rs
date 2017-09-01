@@ -136,7 +136,7 @@ impl FundingTx {
         let txid = self.txid();
         let txs = client.listunspent(
             0,
-            9999999,
+            9_999_999,
             [addr.to_base58check().as_ref()],
         )?;
         Ok(txs.into_iter().find(|txinfo| txinfo.txid == txid))
@@ -374,7 +374,7 @@ where
                 prev_hash: unspent_tx.bitcoin_hash(),
                 prev_index: utxo_vout,
                 script_sig: Script::new(),
-                sequence: 0xFFFFFFFF,
+                sequence: 0xFFFF_FFFF,
             }
         })
         .collect::<Vec<_>>();

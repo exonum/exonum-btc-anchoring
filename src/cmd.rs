@@ -38,6 +38,7 @@ use details::btc::{PrivateKey, PublicKey};
 use AnchoringRpc;
 use details::btc::transactions::FundingTx;
 use bitcoin::util::base58::FromBase58;
+use observer::AnchoringObserverConfig;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 /// Anchoring configuration that should be saved into the file
@@ -77,6 +78,15 @@ impl CommandExtension for GenerateNodeConfig {
                 "anchoring-password",
                 false
             ),
+            Argument::new_named(
+                "ANCHORING_OBSERVER_CHECK_INTERVAL",
+                false,
+                "This option enables anchoring chain observer with the given check interval \
+                (in milliseconds).",
+                None,
+                "anchoring-observer-check-interval",
+                false
+            ),
         ]
     }
 
@@ -86,6 +96,7 @@ impl CommandExtension for GenerateNodeConfig {
         );
         let user = context.arg("ANCHORING_RPC_USER").ok();
         let passwd = context.arg("ANCHORING_RPC_PASSWD").ok();
+        let observer_check_interval = context.arg("ANCHORING_OBSERVER_CHECK_INTERVAL").ok();
 
         let config: CommonConfigTemplate = context.get("common_config").unwrap();
 
@@ -119,6 +130,14 @@ impl CommandExtension for GenerateNodeConfig {
             username: user,
             password: passwd,
         };
+        let observer_config = {
+            let mut observer_config = AnchoringObserverConfig::default();
+            if let Some(interval) = observer_check_interval {
+                observer_config.enabled = true;
+                observer_config.check_interval = interval;
+            }
+            observer_config
+        };
         //TODO: Replace this by structure.
         let mut services_secret_configs: BTreeMap<String, Value> =
             context.get("services_secret_configs").unwrap_or_default();
@@ -135,6 +154,10 @@ impl CommandExtension for GenerateNodeConfig {
                 (
                     "rpc_config".to_owned(),
                     Value::try_from(rpc_config).unwrap()
+                ),
+                (
+                    "observer_config".to_owned(),
+                    Value::try_from(observer_config).unwrap()
                 ),
             ].into_iter(),
         );
@@ -251,52 +274,52 @@ impl CommandExtension for Finalize {
 
         let funding_txid = context.arg::<String>("ANCHORING_FUNDING_TXID").ok();
         let create_funding_tx_with_amount = context.arg::<u64>("ANCHORING_CREATE_FUNDING_TX").ok();
+        // Local config section
         let sec_key: String = services_secret_configs
             .get("anchoring_sec_key")
             .expect("Anchoring secret key not found")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let pub_key: String = services_secret_configs
             .get("anchoring_pub_key")
             .expect("Anchoring public key not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let rpc: AnchoringRpcConfig = services_secret_configs
             .get("rpc_config")
             .expect("Anchoring rpc config not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
+        let observer: AnchoringObserverConfig = services_secret_configs
+            .get("observer_config")
+            .expect("Anchoring rpc config not fount")
+            .clone()
+            .try_into()?;
+        // Global config section
         let network: String = common_config
             .services_config
             .get("anchoring_network")
             .expect("Anchoring network not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let utxo_confirmations: u64 = common_config
             .services_config
             .get("anchoring_utxo_confirmations")
             .expect("Anchoring utxo confirmations not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let frequency: u64 = common_config
             .services_config
             .get("anchoring_frequency")
             .expect("Anchoring frequency not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
         let fee: u64 = common_config
             .services_config
             .get("anchoring_fee")
             .expect("Anchoring fee not fount")
             .clone()
-            .try_into()
-            .unwrap();
+            .try_into()?;
 
         let network = match network.as_str() {
             "testnet" => Network::Testnet,
@@ -305,7 +328,7 @@ impl CommandExtension for Finalize {
         };
 
         let priv_key: PrivateKey = PrivateKey::from_base58check(&sec_key).unwrap();
-        //\TODO: validate config keys
+        //TODO: validate config keys
         let _pub_key: PublicKey = HexValue::from_hex(&pub_key).unwrap();
         let pub_keys: Vec<PublicKey> = public_config_list
             .iter()
@@ -321,6 +344,7 @@ impl CommandExtension for Finalize {
             .collect();
         let client = AnchoringRpc::new(rpc.clone());
         let mut anchoring_config = AnchoringNodeConfig::new(Some(rpc));
+        anchoring_config.observer = observer;
 
         let majority_count = ::majority_count(public_config_list.len() as u8);
         let (_, address) = client
