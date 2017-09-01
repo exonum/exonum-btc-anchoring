@@ -43,7 +43,7 @@ impl AnchoringHandler {
         );
 
         // Similar we update lect each n blocks
-        if state.height() % self.node.check_lect_frequency == 0 {
+        if state.height().0 % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
             self.update_our_lect(&multisig, state)?;
         }
@@ -110,7 +110,7 @@ impl AnchoringHandler {
     ) -> Result<(), ServiceError> {
         let multisig: MultisigAddress = self.multisig_address(&actual_cfg);
 
-        if state.height() % self.node.check_lect_frequency == 0 {
+        if state.height().0 % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
             self.update_our_lect(&multisig, state)?;
         }

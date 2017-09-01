@@ -14,6 +14,7 @@
 
 use exonum::crypto::{HexValue, PublicKey, Signature, hash};
 use exonum::storage::StorageValue;
+use exonum::helpers::ValidatorId;
 
 use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::constants::Network;
@@ -50,7 +51,7 @@ fn test_msg_update_latest_json_serde() {
 
     let msg = MsgAnchoringUpdateLatest::new_with_signature(
         &PublicKey::zero(),
-        0,
+        ValidatorId(0),
         tx,
         0,
         &Signature::zero(),
@@ -75,7 +76,7 @@ fn test_sighash_type_all_in_msg_signature() {
     ).unwrap();
     let msg = MsgAnchoringSignature::new_with_signature(
         &PublicKey::zero(),
-        0,
+        ValidatorId(0),
         tx,
         0,
         &btc_signature,
@@ -102,7 +103,7 @@ fn test_sighash_type_single_in_msg_signature() {
 
     let msg = MsgAnchoringSignature::new_with_signature(
         &PublicKey::zero(),
-        0,
+        ValidatorId(0),
         tx,
         0,
         &btc_signature,
@@ -125,7 +126,7 @@ fn test_signed_input_in_msg_signature_tx_body() {
 
     let msg = MsgAnchoringSignature::new_with_signature(
         &PublicKey::zero(),
-        0,
+        ValidatorId(0),
         signed_tx,
         0,
         &btc_signatures[&0][0],
@@ -144,7 +145,7 @@ fn test_nonexistent_input_in_msg_signature_tx_body() {
 
     let msg = MsgAnchoringSignature::new_with_signature(
         &PublicKey::zero(),
-        0,
+        ValidatorId(0),
         tx,
         1,
         &btc_signatures[&0][0],

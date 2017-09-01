@@ -30,7 +30,7 @@ impl RedeemScript {
     where
         I: IntoIterator<Item = &'a PublicKey>,
     {
-        let mut builder = Builder::new().push_int(majority_count as i64);
+        let mut builder = Builder::new().push_int(i64::from(majority_count));
         let mut total_count = 0;
 
         let context = Secp256k1::without_caps();
@@ -51,7 +51,7 @@ impl RedeemScript {
     where
         I: Iterator<Item = &'a String>,
     {
-        let mut builder = Builder::new().push_int(majority_count as i64);
+        let mut builder = Builder::new().push_int(i64::from(majority_count));
         let mut total_count = 0;
         for addr in addrs {
             let bytes = Vec::<u8>::from_base58check(addr).unwrap();

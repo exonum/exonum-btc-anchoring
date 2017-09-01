@@ -34,6 +34,7 @@ use exonum::crypto::HexValue;
 use exonum::messages::Message;
 use exonum::api::Api;
 use exonum::blockchain::Blockchain;
+use exonum::helpers::{ValidatorId, Height};
 
 use exonum_btc_anchoring::observer::AnchoringChainObserver;
 use exonum_btc_anchoring::api::{AnchoringInfo, LectInfo, PublicApi};
@@ -137,7 +138,7 @@ fn test_api_public_common() {
 
     let lects = (0..4)
         .map(|idx| {
-            gen_service_tx_lect(&sandbox, idx, &sandbox.latest_anchored_tx(), 1)
+            gen_service_tx_lect(&sandbox, ValidatorId(idx), &sandbox.latest_anchored_tx(), 1)
         })
         .collect::<Vec<_>>();
 
@@ -190,12 +191,13 @@ fn test_api_public_get_lect_unavailable() {
     ).unwrap();
     let lects = (0..2)
         .map(|id| {
+            let validator_id = ValidatorId(id);
             MsgAnchoringUpdateLatest::new(
-                &sandbox.service_public_key(id as usize),
-                id,
+                &sandbox.service_public_key(validator_id),
+                validator_id,
                 lect_tx.clone(),
-                lects_count(&sandbox, id),
-                sandbox.service_secret_key(id as usize),
+                lects_count(&sandbox, validator_id),
+                sandbox.service_secret_key(validator_id),
             )
         })
         .collect::<Vec<_>>();
@@ -225,7 +227,7 @@ fn test_api_public_get_following_address_existent() {
 
     let mut cfg = sandbox.current_cfg().clone();
     cfg.anchoring_keys.swap_remove(1);
-    let cfg_tx = gen_update_config_tx(&sandbox, 12, &cfg);
+    let cfg_tx = gen_update_config_tx(&sandbox, Height(12), &cfg);
     let following_addr = cfg.redeem_script().1;
 
     anchor_first_block(&sandbox);

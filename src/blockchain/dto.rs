@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use exonum::crypto::{Hash, PublicKey};
+use exonum::helpers::ValidatorId;
 
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
 use service::ANCHORING_SERVICE_ID;
@@ -30,7 +31,7 @@ message! {
         /// Public key of validator.
         field from:           &PublicKey   [00 => 32]
         /// Public key index in anchoring public keys list.
-        field validator:      u16          [32 => 34]
+        field validator:      ValidatorId  [32 => 34]
         /// Transaction content.
         field tx:             AnchoringTx  [34 => 42]
         /// Signed input.
@@ -50,7 +51,7 @@ message! {
         /// Public key of validator.
         field from:           &PublicKey   [00 => 32]
         /// Public key index in anchoring public keys list.
-        field validator:      u16          [32 => 34]
+        field validator:      ValidatorId  [32 => 34]
         /// Lect content.
         field tx:             BitcoinTx    [34 => 42]
         /// Current lects count in the `lects` table for the current validator.

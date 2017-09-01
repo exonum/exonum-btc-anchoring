@@ -20,6 +20,7 @@ use serde_json::value::from_value;
 use exonum::blockchain::{Schema, StoredConfiguration, gen_prefix};
 use exonum::storage::{Fork, ListIndex, MapIndex, ProofListIndex, Snapshot, StorageKey};
 use exonum::crypto::Hash;
+use exonum::helpers::{Height, ValidatorId};
 
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::{LectContent, MsgAnchoringSignature};
@@ -33,7 +34,7 @@ pub struct KnownSignatureId {
     /// Normalized txid of the `AnchoringTx`.
     pub txid: btc::TxId,
     /// Identifier of the anchoring node in the current configuration.
-    pub validator_id: u16,
+    pub validator_id: ValidatorId,
     /// Transaction input for the signature.
     pub input: u32,
 }
@@ -45,13 +46,13 @@ impl StorageKey for KnownSignatureId {
 
     fn write(&self, buffer: &mut [u8]) {
         buffer[0..32].copy_from_slice(self.txid.as_ref());
-        BigEndian::write_u16(&mut buffer[32..34], self.validator_id);
+        BigEndian::write_u16(&mut buffer[32..34], self.validator_id.0);
         BigEndian::write_u32(&mut buffer[34..38], self.input);
     }
 
     fn read(buffer: &[u8]) -> Self {
         let txid = btc::TxId::read(&buffer[0..32]);
-        let validator_id = u16::read(&buffer[32..34]);
+        let validator_id = ValidatorId(u16::read(&buffer[32..34]));
         let input = u32::read(&buffer[34..38]);
         KnownSignatureId {
             txid,
@@ -155,12 +156,12 @@ where
 
     /// Returns the anchoring configuration from the genesis block.
     pub fn genesis_anchoring_config(&self) -> AnchoringConfig {
-        self.anchoring_config_by_height(0)
+        self.anchoring_config_by_height(Height::zero())
     }
 
     /// Returns the configuration that is the actual for the given `height`.
     /// For non-existent heights, it will return the configuration closest to them.
-    pub fn anchoring_config_by_height(&self, height: u64) -> AnchoringConfig {
+    pub fn anchoring_config_by_height(&self, height: Height) -> AnchoringConfig {
         let schema = Schema::new(&self.view);
         let stored = schema.configuration_by_height(height);
         self.parse_config(&stored)

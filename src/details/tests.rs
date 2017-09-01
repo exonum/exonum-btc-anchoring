@@ -25,7 +25,7 @@ use bitcoin::blockdata::transaction::SigHashType;
 use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
 
-use exonum::helpers;
+use exonum::helpers::{self, Height};
 use exonum::crypto::{Hash, HexValue};
 use exonum::storage::StorageValue;
 use exonum::encoding::Field;
@@ -45,7 +45,7 @@ pub fn dummy_anchoring_tx(redeem_script: &btc::RedeemScript) -> AnchoringTx {
     ).unwrap();
     TransactionBuilder::with_prev_tx(&input_tx, 0)
         .fee(1000)
-        .payload(0, Hash::zero())
+        .payload(Height::zero(), Hash::zero())
         .send_to(addr)
         .into_transaction()
         .unwrap()
@@ -458,7 +458,7 @@ fn test_anchoring_tx_sign() {
     let tx = TransactionBuilder::with_prev_tx(&prev_tx, 0)
         .add_funds(&funding_tx, 0)
         .payload(
-            10,
+            Height(10),
             Hash::from_hex(
                 "164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9",
             ).unwrap(),
@@ -541,7 +541,7 @@ fn test_anchoring_tx_prev_chain() {
     ).unwrap();
     let tx = TransactionBuilder::with_prev_tx(&prev_tx, 0)
         .fee(1000)
-        .payload(0, Hash::default())
+        .payload(Height::zero(), Hash::default())
         .prev_tx_chain(Some(prev_tx.id()))
         .send_to(
             btc::Address::from_base58check("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1").unwrap(),
@@ -687,7 +687,7 @@ mod rpc {
     use bitcoin::network::constants::Network;
     use bitcoin::util::base58::ToBase58;
 
-    use exonum::helpers;
+    use exonum::helpers::{self, Height};
     use exonum::crypto::{Hash, hash};
 
     use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
@@ -711,7 +711,7 @@ mod rpc {
         client: &AnchoringRpc,
         redeem_script: &btc::RedeemScript,
         to: &btc::Address,
-        block_height: u64,
+        block_height: Height,
         block_hash: Hash,
         priv_keys: &[btc::PrivateKey],
         anchoring_tx: AnchoringTx,
@@ -794,7 +794,7 @@ mod rpc {
         trace!("multisig_address={:#?}", redeem_script);
 
         let fee = 1000;
-        let block_height = 2;
+        let block_height = Height(2);
         let block_hash = hash(&[1, 3, 5]);
 
         // Make anchoring txs chain
@@ -922,7 +922,7 @@ mod rpc {
         trace!("multisig_address={:#?}", redeem_script);
 
         let fee = 1000;
-        let block_height = 2;
+        let block_height = Height(2);
         let block_hash = hash(&[1, 3, 5]);
 
         // Make anchoring txs chain
