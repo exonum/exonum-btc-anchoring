@@ -1,12 +1,12 @@
 [package]
 name = "exonum-btc-anchoring-sandbox"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["The Exonum Team <exonum@bitfury.com>"]
 
 [dependencies]
-exonum = "0.1.0"
-exonum-btc-anchoring = {version="0.1", path="../", features=["sandbox_tests"]}
-exonum_bitcoinrpc = "0.1.0"
+exonum = "0.2.0"
+exonum-btc-anchoring = {version="0.2", path="../", features=["sandbox_tests"]}
+exonum_bitcoinrpc = "0.1.1"
 
 bitcoin="0.10.0"
 secp256k1 = "0.6.0"
@@ -23,10 +23,7 @@ iron-test = "0.5.0"
 
 [dependencies.sandbox]
 git = "https://github.com/exonum/exonum.git"
-rev = "64518cec0b091d2eeca6c62356b78dc37d5942ee"
+tag = "v0.2"
 
 [replace]
-"exonum:0.1.0" = { git = "https://github.com/exonum/exonum.git", rev = "64518cec0b091d2eeca6c62356b78dc37d5942ee" }
-# Fix vulnerability
-"exonum_bitcoinrpc:0.1.0" = { git = "https://github.com/exonum/bitcoinrpc.git", rev = "0b0d79bde9959539af24b405b6fb81513f67879a" }
-
+"exonum:0.2.0" = { git = "https://github.com/exonum/exonum.git", tag = "v0.2" }
