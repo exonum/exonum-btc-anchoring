@@ -92,10 +92,7 @@ impl AnchoringHandler {
         // Checks with access to the `bitcoind`
         if let Some(ref client) = self.client {
             if client.get_transaction(&tx.txid())?.is_none() {
-                let e = HandlerError::IncorrectLect {
-                    reason: "Lect not found in the bitcoin blockchain".to_string(),
-                    tx: tx.into(),
-                };
+                let e = HandlerError::LectNotFound { height: tx.payload().block_height };
                 return Err(e.into());
             }
         }
