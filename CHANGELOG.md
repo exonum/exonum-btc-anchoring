@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## 0.2.1 - 2017-10-13
+
+### Fixed
+- Do not emit panic if lect does not found in bitcoin blockchain. (#88)
+
 ## 0.2 - 2017-09-14
 
 ### Added
