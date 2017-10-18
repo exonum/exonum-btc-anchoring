@@ -1,4 +1,5 @@
 language: rust
+
 addons:
   apt:
     packages:
@@ -6,8 +7,10 @@ addons:
     - g++
     - libleveldb-dev
     - libssl-dev
+
 rust:
 - stable
+
 cache:
   directories:
   - "$HOME/.cargo"
@@ -15,12 +18,15 @@ cache:
   - "$TRAVIS_BUILD_DIR/target"
   - "$TRAVIS_BUILD_DIR/sandbox_tests/target"
 sudo: false
+
 env:
   global:
   - RUST_LOG=off
   - CLIPPY_VERS=0.0.154
   - RUSTFMT_VERS=0.9.0
   - LIBSODIUM_VERS=1.0.13
+  - DEADLINKS_VERS=0.2.1
+
 install:
 - |
   if [ ! -f "$HOME/.local/lib/libsodium.a" ]; then
@@ -39,15 +45,26 @@ install:
     cargo clippy --version | grep $CLIPPY_VERS || cargo install clippy --force --vers $CLIPPY_VERS
   fi
 - |
+  if [[ "$FEATURE" == "non-fatal-checks" ]]; then
+    cargo-deadlinks -V | grep $DEADLINKS_VERS || cargo install cargo-deadlinks --vers $DEADLINKS_VERS --force
+  fi
+- |
   if [[ "$FEATURE" == "fmt" ]]; then
     cargo-audit -V || cargo install cargo-audit --force
     rustfmt -V | grep $RUSTFMT_VERS || cargo install rustfmt --vers $RUSTFMT_VERS --force
     cargo update
   fi
 - cargo install --list
+
 script: skip
+
 jobs:
   include:
+  - stage: test
+    env:
+    - FEATURE=non-fatal-checks
+    script:
+    - cargo doc --no-deps && cargo deadlinks --dir target/doc || true
   - stage: test
     env:
     - FEATURE=fmt
@@ -79,6 +96,7 @@ jobs:
     - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then cargo test; fi
     - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then cargo test --features rpc_tests;
       fi
+
 notifications:
   slack:
     secure: YHS1dJE+g28M3iW9MG2ShgVd20nHbFLd5i7TbID59RnYl/SAKlGUeTtUTjK0VpnzaTX1ETLSXGcjj7Xx1sI7I/4f1obyMWMEUg7k+JfnkYOcYCiHCymt3L/QK1n8HNbprkrEx8VDO79BzTtB9az0DhQDpf18hJ8VYr3PNxkGgENJNIMf8y1r5/qrp6Tww+/Nw60I1dhdSQCvvZStbQCW47f2pHHcASnUvEpy9CSYjnfgUappMZkZVuYlY8vaV0yB8OrKZSV2nrJwGaoNXkbkYJtCcd4/ZSSGM+hz2dGjmvinjAOpyrUO+TzOHoKBad1/3VRj9ZX5L5CTBfkaeoLEJibdmRu/+0KvtFQFrqskap4CpnKjEh8aeAuYZEWhPy52IQehRF0kyo5ZPwe0pvFZM3KdaMEOT03Pnkqb/UxmsWa/91hC/EIRhWXKk4Y0UWtwhrdnbyKPquasBgZR+0Prh41s966S3MxohsVYPC23jk3vHOZFmNpmoEQsMh5FZgoQUNesVarv8tmQBS5t3kYXRDmrH9J8aLts0ovDT+i1ovmjnog9VOfsEmk8FBlTdkTxtt/x5n0Zf8oEhrgvMp5rB2JvhvxG1iT+GBcJia57yuuOaC0ermGtQqEvSpkQon2IPUtbusaUlt1jEXe3fR91Y11S3PZdX3nuAFnGHyE1pyc=
