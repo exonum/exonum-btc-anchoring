@@ -5,9 +5,12 @@ addons:
     packages:
     - gcc
     - g++
-    - libleveldb-dev
     - libssl-dev
-
+    - libelf-dev
+    - libdw-dev
+    - binutils-dev
+    - libiberty-dev
+    - libsnappy-dev
 rust:
 - stable
 
@@ -21,21 +24,32 @@ sudo: false
 
 env:
   global:
-  - RUST_LOG=off
   - CLIPPY_VERS=0.0.166
   - RUSTFMT_VERS=0.9.0
-  - LIBSODIUM_VERS=1.0.13
+  - SODIUM_VERS=1.0.13
+  - ROCKSDB_VERS=5.6.1
   - DEADLINKS_VERS=0.2.1
-
+  - RUSTFLAGS="-C link-dead-code"
+  - RUST_LOG=off
+  - ROCKSDB_LIB_DIR=$HOME/.local/lib
+  - SNAPPY_LIB_DIR=/usr/lib/x86_64-linux-gnu
 install:
 - |
   if [ ! -f "$HOME/.local/lib/libsodium.a" ]; then
-    wget https://github.com/jedisct1/libsodium/releases/download/$LIBSODIUM_VERS/libsodium-$LIBSODIUM_VERS.tar.gz
-    tar xvf libsodium-$LIBSODIUM_VERS.tar.gz
-    cd libsodium-$LIBSODIUM_VERS
+    wget https://github.com/jedisct1/libsodium/releases/download/$SODIUM_VERS/libsodium-$SODIUM_VERS.tar.gz
+    tar xvf libsodium-$SODIUM_VERS.tar.gz
+    cd libsodium-$SODIUM_VERS
     ./configure --prefix=$HOME/.local
     make -j $(nproc)
     make install
+    cd ..
+  fi
+- |
+  if [ ! -f "$HOME/.local/lib/librocksdb.so" ]; then
+    wget -O rocksdb-$ROCKSDB_VERS.tar.gz https://github.com/facebook/rocksdb/archive/v$ROCKSDB_VERS.tar.gz
+    tar xvf rocksdb-$ROCKSDB_VERS.tar.gz
+    cd rocksdb-$ROCKSDB_VERS
+    INSTALL_PATH=$HOME/.local make install-shared
     cd ..
   fi
 - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.local/lib
@@ -52,10 +66,10 @@ install:
   if [[ "$FEATURE" == "fmt" ]]; then
     cargo-audit -V || cargo install cargo-audit --force
     rustfmt -V | grep $RUSTFMT_VERS || cargo install rustfmt --vers $RUSTFMT_VERS --force
-    cargo update
   fi
 - cargo install --list
-
+- cd $TRAVIS_BUILD_DIR
+- cargo update
 script: skip
 
 jobs:
@@ -93,10 +107,14 @@ jobs:
     - cargo test
   - stage: test
     script:
-    - if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then cargo test; fi
-    - if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then cargo test --features rpc_tests;
+    - | 
+      if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then 
+        cargo test; 
       fi
-
+    - |
+      if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then 
+        cargo test --features rpc_tests;
+      fi
 notifications:
   slack:
     secure: YHS1dJE+g28M3iW9MG2ShgVd20nHbFLd5i7TbID59RnYl/SAKlGUeTtUTjK0VpnzaTX1ETLSXGcjj7Xx1sI7I/4f1obyMWMEUg7k+JfnkYOcYCiHCymt3L/QK1n8HNbprkrEx8VDO79BzTtB9az0DhQDpf18hJ8VYr3PNxkGgENJNIMf8y1r5/qrp6Tww+/Nw60I1dhdSQCvvZStbQCW47f2pHHcASnUvEpy9CSYjnfgUappMZkZVuYlY8vaV0yB8OrKZSV2nrJwGaoNXkbkYJtCcd4/ZSSGM+hz2dGjmvinjAOpyrUO+TzOHoKBad1/3VRj9ZX5L5CTBfkaeoLEJibdmRu/+0KvtFQFrqskap4CpnKjEh8aeAuYZEWhPy52IQehRF0kyo5ZPwe0pvFZM3KdaMEOT03Pnkqb/UxmsWa/91hC/EIRhWXKk4Y0UWtwhrdnbyKPquasBgZR+0Prh41s966S3MxohsVYPC23jk3vHOZFmNpmoEQsMh5FZgoQUNesVarv8tmQBS5t3kYXRDmrH9J8aLts0ovDT+i1ovmjnog9VOfsEmk8FBlTdkTxtt/x5n0Zf8oEhrgvMp5rB2JvhvxG1iT+GBcJia57yuuOaC0ermGtQqEvSpkQon2IPUtbusaUlt1jEXe3fR91Y11S3PZdX3nuAFnGHyE1pyc=
