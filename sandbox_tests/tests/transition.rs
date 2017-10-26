@@ -26,6 +26,8 @@ use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;
 use rand::{SeedableRng, StdRng};
 
+use std::sync::Arc;
+
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{HexValue, Seed, gen_keypair_from_seed};
 use exonum::storage::StorageValue;
@@ -206,7 +208,7 @@ fn gen_following_cfg_add_two_validators_changed_self_key(
         sandbox.service_secret_key(ANCHORING_VALIDATOR),
     );
 
-    (tx.raw().clone(), anchoring_cfg, new_nodes)
+    (Arc::clone(tx.raw()), anchoring_cfg, new_nodes)
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -252,7 +254,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -260,12 +262,10 @@ fn test_anchoring_transit_changed_self_key_normal() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
-                .raw()
-                .clone()
+            Arc::clone(gen_service_tx_lect(&sandbox, id, &transition_tx, 2).raw())
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -292,16 +292,17 @@ fn test_anchoring_transit_changed_self_key_normal() {
     ]);
     sandbox.add_height(&[]);
 
-    let transition_lect = gen_service_tx_lect(
-        &sandbox,
-        ANCHORING_VALIDATOR,
-        &transition_tx,
-        lects_count(&sandbox, ANCHORING_VALIDATOR),
-    ).raw()
-        .clone();
+    let transition_lect = Arc::clone(
+        gen_service_tx_lect(
+            &sandbox,
+            ANCHORING_VALIDATOR,
+            &transition_tx,
+            lects_count(&sandbox, ANCHORING_VALIDATOR),
+        ).raw(),
+    );
     client.expect(vec![confirmations_request(&transition_tx, 1000)]);
 
-    sandbox.broadcast(transition_lect.clone());
+    sandbox.broadcast(Arc::clone(&transition_lect));
     sandbox.add_height(&[transition_lect]);
 
     let signatures = {
@@ -316,7 +317,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
             )
             .1
     };
-    sandbox.broadcast(signatures[0].raw().clone());
+    sandbox.broadcast(Arc::clone(signatures[0].raw()));
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -339,7 +340,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
             .1
     };
     let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].raw().clone());
+    sandbox.broadcast(Arc::clone(signatures[0].raw()));
     client.expect(vec![
         confirmations_request(&transition_tx, 20_000),
         confirmations_request(&anchored_tx, 0),
@@ -349,12 +350,12 @@ fn test_anchoring_transit_changed_self_key_normal() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &anchored_tx, lects_count(&sandbox, id))
-                .raw()
-                .clone()
+            Arc::clone(
+                gen_service_tx_lect(&sandbox, id, &anchored_tx, lects_count(&sandbox, id)).raw(),
+            )
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
     sandbox.add_height(&lects);
 }
 
@@ -402,7 +403,7 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -410,12 +411,10 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
-                .raw()
-                .clone()
+            Arc::clone(gen_service_tx_lect(&sandbox, id, &transition_tx, 2).raw())
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -437,13 +436,13 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
         &following_multisig.1,
     );
     let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
     client.expect(vec![confirmations_request(&transition_tx, 40)]);
     sandbox.add_height(&signatures[0..1]);
 
     let signatures = signatures
         .into_iter()
-        .map(|tx| tx.raw().clone())
+        .map(|tx| Arc::clone(tx.raw()))
         .collect::<Vec<_>>();
     client.expect(vec![
         confirmations_request(&transition_tx, 100),
@@ -454,12 +453,10 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &anchored_tx, 3)
-                .raw()
-                .clone()
+            Arc::clone(gen_service_tx_lect(&sandbox, id, &anchored_tx, 3).raw())
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 
     client.expect(vec![
         request! {
@@ -529,7 +526,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -537,12 +534,10 @@ fn test_anchoring_transit_config_with_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
-                .raw()
-                .clone()
+            Arc::clone(gen_service_tx_lect(&sandbox, id, &transition_tx, 2).raw())
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -571,13 +566,14 @@ fn test_anchoring_transit_config_with_funding_tx() {
     ]);
     sandbox.add_height(&[]);
 
-    let transition_lect = gen_service_tx_lect(
-        &sandbox,
-        ANCHORING_VALIDATOR,
-        &transition_tx,
-        lects_count(&sandbox, ANCHORING_VALIDATOR),
-    ).raw()
-        .clone();
+    let transition_lect = Arc::clone(
+        gen_service_tx_lect(
+            &sandbox,
+            ANCHORING_VALIDATOR,
+            &transition_tx,
+            lects_count(&sandbox, ANCHORING_VALIDATOR),
+        ).raw(),
+    );
     client.expect(vec![
         confirmations_request(&transition_tx, 1000),
         request! {
@@ -590,7 +586,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
         },
     ]);
 
-    sandbox.broadcast(transition_lect.clone());
+    sandbox.broadcast(Arc::clone(&transition_lect));
     sandbox.add_height(&[transition_lect]);
 
     let signatures = {
@@ -605,8 +601,8 @@ fn test_anchoring_transit_config_with_funding_tx() {
             )
             .1
     };
-    sandbox.broadcast(signatures[0].raw().clone());
-    sandbox.broadcast(signatures[1].raw().clone());
+    sandbox.broadcast(Arc::clone(signatures[0].raw()));
+    sandbox.broadcast(Arc::clone(signatures[1].raw()));
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures[0..2]);
 
@@ -639,8 +635,8 @@ fn test_anchoring_transit_config_with_funding_tx() {
             .1
     };
     let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].raw().clone());
-    sandbox.broadcast(signatures[1].raw().clone());
+    sandbox.broadcast(Arc::clone(signatures[0].raw()));
+    sandbox.broadcast(Arc::clone(signatures[1].raw()));
     client.expect(vec![
         confirmations_request(&transition_tx, 20_000),
         confirmations_request(&anchored_tx, 0),
@@ -650,12 +646,12 @@ fn test_anchoring_transit_config_with_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &anchored_tx, lects_count(&sandbox, id))
-                .raw()
-                .clone()
+            Arc::clone(
+                gen_service_tx_lect(&sandbox, id, &anchored_tx, lects_count(&sandbox, id)).raw(),
+            )
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
     sandbox.add_height(&lects);
 
     assert_eq!(anchored_tx.amount(), 10_1000);
@@ -705,7 +701,7 @@ fn test_anchoring_transit_config_lost_lect_resend_before_cfg_change() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -713,12 +709,10 @@ fn test_anchoring_transit_config_lost_lect_resend_before_cfg_change() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
-                .raw()
-                .clone()
+            Arc::clone(gen_service_tx_lect(&sandbox, id, &transition_tx, 2).raw())
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -771,7 +765,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -779,12 +773,10 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
-                .raw()
-                .clone()
+            Arc::clone(gen_service_tx_lect(&sandbox, id, &transition_tx, 2).raw())
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -809,7 +801,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
         None,
         &following_multisig.1,
     );
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
     client.expect(vec![confirmations_request(&transition_tx, 40)]);
     sandbox.add_height(&signatures[0..1]);
 }
@@ -885,7 +877,7 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
     );
     let new_chain_tx = sandbox.latest_anchored_tx();
 
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
     client.expect(vec![
         request! {
             method: "listunspent",
@@ -919,12 +911,10 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &new_chain_tx, 2)
-                .raw()
-                .clone()
+            Arc::clone(gen_service_tx_lect(&sandbox, id, &new_chain_tx, 2).raw())
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -998,7 +988,7 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
     );
     let new_chain_tx = sandbox.latest_anchored_tx();
 
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
     client.expect(vec![
         request! {
             method: "listunspent",
@@ -1032,12 +1022,12 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id))
-                .raw()
-                .clone()
+            Arc::clone(
+                gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id)).raw(),
+            )
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -1134,7 +1124,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
     );
     let new_chain_tx = sandbox.latest_anchored_tx();
 
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
     client.expect(vec![
         request! {
             method: "listunspent",
@@ -1161,12 +1151,12 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id))
-                .raw()
-                .clone()
+            Arc::clone(
+                gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id)).raw(),
+            )
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -1271,7 +1261,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
     );
     let new_chain_tx = sandbox.latest_anchored_tx();
 
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
     client.expect(vec![
         request! {
             method: "listunspent",
@@ -1298,12 +1288,12 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id))
-                .raw()
-                .clone()
+            Arc::clone(
+                gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id)).raw(),
+            )
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 }
 
 // We send `MsgAnchoringSignature` with current output_address
@@ -1345,7 +1335,7 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
         &following_multisig.1,
     );
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
     sandbox.add_height(&signatures[0..1]);
 
     // Gen transaction with different `output_addr`
@@ -1364,7 +1354,7 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
     // Try to commit tx
     let different_signatures = different_signatures
         .into_iter()
-        .map(|tx| tx.raw().clone())
+        .map(|tx| Arc::clone(tx.raw()))
         .collect::<Vec<_>>();
     sandbox.add_height(&different_signatures);
     // Ensure that service ignores tx
@@ -1439,7 +1429,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -1447,12 +1437,10 @@ fn test_anchoring_transit_config_after_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
-                .raw()
-                .clone()
+            Arc::clone(gen_service_tx_lect(&sandbox, id, &transition_tx, 2).raw())
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -1483,13 +1471,13 @@ fn test_anchoring_transit_config_after_funding_tx() {
         &following_multisig.1,
     );
     let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
     client.expect(vec![confirmations_request(&transition_tx, 40)]);
     sandbox.add_height(&signatures[0..1]);
 
     let signatures = signatures
         .into_iter()
-        .map(|tx| tx.raw().clone())
+        .map(|tx| Arc::clone(tx.raw()))
         .collect::<Vec<_>>();
     client.expect(vec![
         confirmations_request(&transition_tx, 100),
@@ -1500,12 +1488,10 @@ fn test_anchoring_transit_config_after_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &anchored_tx, 3)
-                .raw()
-                .clone()
+            Arc::clone(gen_service_tx_lect(&sandbox, id, &anchored_tx, 3).raw())
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 
     client.expect(vec![
         request! {
@@ -1616,7 +1602,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             (validator_keypair.1).0,
             (validator_keypair.1).1,
         );
-        (tx.raw().clone(), service_cfg, node_cfgs, following_addr)
+        (Arc::clone(tx.raw()), service_cfg, node_cfgs, following_addr)
     };
 
     let client = sandbox.client();
@@ -1639,9 +1625,9 @@ fn test_anchoring_transit_after_exclude_from_validator() {
     let lects = (0..3)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &transition_tx, lects_count(&sandbox, id))
-                .raw()
-                .clone()
+            Arc::clone(
+                gen_service_tx_lect(&sandbox, id, &transition_tx, lects_count(&sandbox, id)).raw(),
+            )
         })
         .collect::<Vec<_>>();
 
@@ -1666,13 +1652,14 @@ fn test_anchoring_transit_after_exclude_from_validator() {
     // Check transition tx
     sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
 
-    let lect = gen_service_tx_lect(
-        &sandbox,
-        ANCHORING_VALIDATOR,
-        &transition_tx,
-        lects_count(&sandbox, ANCHORING_VALIDATOR),
-    ).raw()
-        .clone();
+    let lect = Arc::clone(
+        gen_service_tx_lect(
+            &sandbox,
+            ANCHORING_VALIDATOR,
+            &transition_tx,
+            lects_count(&sandbox, ANCHORING_VALIDATOR),
+        ).raw(),
+    );
 
     client.expect(vec![
         request! {
@@ -1687,7 +1674,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
     ]);
     sandbox.add_height(&[]);
 
-    sandbox.broadcast(lect.clone());
+    sandbox.broadcast(Arc::clone(&lect));
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&[lect]);
 
@@ -1707,7 +1694,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             .1
     };
     let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
     // Commit anchoring transaction to bitcoin blockchain
     client.expect(vec![
         confirmations_request(&transition_tx, 1000),
@@ -1731,7 +1718,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         lects_count(&sandbox, ANCHORING_VALIDATOR),
     );
     sandbox.broadcast(lect.clone());
-    sandbox.add_height(&[lect.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(lect.raw())]);
 
     let lects = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(lects.last().unwrap(), &lect.tx());
@@ -1781,7 +1768,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -1789,12 +1776,10 @@ fn test_anchoring_transit_changed_self_key_observer() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &transition_tx, 2)
-                .raw()
-                .clone()
+            Arc::clone(gen_service_tx_lect(&sandbox, id, &transition_tx, 2).raw())
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -1821,16 +1806,17 @@ fn test_anchoring_transit_changed_self_key_observer() {
     ]);
     sandbox.add_height(&[]);
 
-    let transition_lect = gen_service_tx_lect(
-        &sandbox,
-        ANCHORING_VALIDATOR,
-        &transition_tx,
-        lects_count(&sandbox, ANCHORING_VALIDATOR),
-    ).raw()
-        .clone();
+    let transition_lect = Arc::clone(
+        gen_service_tx_lect(
+            &sandbox,
+            ANCHORING_VALIDATOR,
+            &transition_tx,
+            lects_count(&sandbox, ANCHORING_VALIDATOR),
+        ).raw(),
+    );
     client.expect(vec![confirmations_request(&transition_tx, 1000)]);
 
-    sandbox.broadcast(transition_lect.clone());
+    sandbox.broadcast(Arc::clone(&transition_lect));
     sandbox.add_height(&[transition_lect]);
 
     let signatures = {
@@ -1845,7 +1831,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
             )
             .1
     };
-    sandbox.broadcast(signatures[0].raw().clone());
+    sandbox.broadcast(Arc::clone(signatures[0].raw()));
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -1868,7 +1854,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
             .1
     };
     let third_anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].raw().clone());
+    sandbox.broadcast(Arc::clone(signatures[0].raw()));
     client.expect(vec![
         confirmations_request(&transition_tx, 20_000),
         confirmations_request(&third_anchored_tx, 0),
@@ -1878,12 +1864,13 @@ fn test_anchoring_transit_changed_self_key_observer() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &third_anchored_tx, lects_count(&sandbox, id))
-                .raw()
-                .clone()
+            Arc::clone(
+                gen_service_tx_lect(&sandbox, id, &third_anchored_tx, lects_count(&sandbox, id))
+                    .raw(),
+            )
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
     sandbox.add_height(&lects);
 
     let anchoring_addr = sandbox.current_addr();

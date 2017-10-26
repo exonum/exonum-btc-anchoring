@@ -167,7 +167,7 @@ impl AnchoringChainObserver {
 
                 anchoring_schema.anchoring_tx_chain_mut().put(
                     &height,
-                    lect.clone().into(),
+                    lect.clone(),
                 );
             }
 
