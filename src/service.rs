@@ -82,7 +82,7 @@ impl AnchoringService {
 
     /// Returns an internal handler
     pub fn handler(&self) -> Arc<Mutex<AnchoringHandler>> {
-        self.handler.clone()
+        Arc::clone(&self.handler)
     }
 }
 
@@ -168,7 +168,6 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(
 where
     R: Rng,
 {
-    let network = network.into();
     let rpc = AnchoringRpcConfig {
         host: client.url().into(),
         username: client.username().clone(),
@@ -188,7 +187,7 @@ where
 
     let majority_count = ::majority_count(count);
     let (_, address) = client
-        .create_multisig_address(network.into(), majority_count, pub_keys.iter())
+        .create_multisig_address(network, majority_count, pub_keys.iter())
         .unwrap();
     let tx = FundingTx::create(client, &address, total_funds).unwrap();
 

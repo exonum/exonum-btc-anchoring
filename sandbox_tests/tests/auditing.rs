@@ -21,6 +21,8 @@ extern crate sandbox;
 #[macro_use]
 extern crate serde_json;
 
+use std::sync::Arc;
+
 use bitcoin::util::base58::ToBase58;
 
 use exonum::crypto::HexValue;
@@ -68,7 +70,7 @@ fn gen_following_cfg(
         from_height,
         sandbox.service_secret_key(ANCHORING_VALIDATOR),
     );
-    (tx.raw().clone(), service_cfg)
+    (Arc::clone(tx.raw()), service_cfg)
 }
 
 // Invoke this method after anchor_first_block_lect_normal
@@ -102,19 +104,19 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     // Tx gets enough confirmations.
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
 
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
         .map(|id| {
-            gen_service_tx_lect(sandbox, ValidatorId(id), &transition_tx, 2)
-                .raw()
-                .clone()
+            Arc::clone(
+                gen_service_tx_lect(sandbox, ValidatorId(id), &transition_tx, 2).raw(),
+            )
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(Arc::clone(&lects[0]));
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&lects);
     sandbox.fast_forward_to_height(cfg_change_height);
@@ -162,7 +164,7 @@ fn test_auditing_no_consensus_in_lect() {
         lects_count(&sandbox, ANCHORING_VALIDATOR),
         sandbox.service_secret_key(ANCHORING_VALIDATOR),
     );
-    sandbox.add_height_as_auditor(&[lect.raw().clone()]);
+    sandbox.add_height_as_auditor(&[Arc::clone(lect.raw())]);
 
     assert_eq!(
         sandbox.take_errors()[0],
@@ -212,7 +214,7 @@ fn test_auditing_lect_lost_funding_tx() {
         sandbox.take_errors()[0],
         HandlerError::IncorrectLect {
             reason: String::from("Initial funding_tx not found in the bitcoin blockchain"),
-            tx: lect_tx.into(),
+            tx: lect_tx,
         }
     );
 }
@@ -261,7 +263,7 @@ fn test_auditing_lect_incorrect_funding_tx() {
         sandbox.take_errors()[0],
         HandlerError::IncorrectLect {
             reason: String::from("Initial funding_tx from cfg is different than in lect"),
-            tx: lect_tx.into(),
+            tx: lect_tx,
         }
     );
 }
