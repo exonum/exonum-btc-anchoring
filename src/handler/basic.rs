@@ -358,7 +358,7 @@ impl AnchoringHandler {
                 TxKind::Other(tx) => {
                     let e = HandlerError::IncorrectLect {
                         reason: "Incorrect lect transaction".to_string(),
-                        tx: tx.into(),
+                        tx,
                     };
                     return Err(e.into());
                 }
@@ -408,7 +408,7 @@ impl AnchoringHandler {
                 self.send_updated_lect(lect.clone(), lects_count, state);
             }
 
-            Ok(Some(lect.into()))
+            Ok(Some(lect))
         } else {
             Ok(None)
         }

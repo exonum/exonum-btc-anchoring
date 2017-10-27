@@ -21,6 +21,7 @@ extern crate serde_json;
 extern crate bitcoin;
 
 use std::ops::Deref;
+use std::sync::Arc;
 
 use bitcoin::util::base58::ToBase58;
 use bitcoin::blockdata::script::Script;
@@ -155,8 +156,8 @@ fn test_anchoring_second_block_additional_funds() {
         &anchoring_addr,
     );
 
-    sandbox.broadcast(signatures[0].clone());
-    sandbox.broadcast(signatures[1].clone());
+    sandbox.broadcast(Arc::clone(&signatures[0]));
+    sandbox.broadcast(Arc::clone(&signatures[1]));
 
     let anchored_tx = &sandbox.latest_anchored_tx();
     client.expect(send_raw_transaction_requests(anchored_tx));
@@ -206,12 +207,12 @@ fn test_anchoring_second_block_lect_lost() {
     let txs = (0..4)
         .map(ValidatorId)
         .map(|id| {
-            gen_service_tx_lect(&sandbox, id, &prev_anchored_tx, 3)
-                .raw()
-                .clone()
+            Arc::clone(
+                gen_service_tx_lect(&sandbox, id, &prev_anchored_tx, 3).raw(),
+            )
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(txs[0].clone());
+    sandbox.broadcast(Arc::clone(&txs[0]));
 
     // Trying to resend lost lect tx
     client.expect(vec![
@@ -364,14 +365,15 @@ fn test_anchoring_lect_correct_validator() {
     let sandbox = AnchoringSandbox::initialize(&[]);
     anchor_first_block(&sandbox);
 
-    let msg_lect = gen_service_tx_lect_wrong(
-        &sandbox,
-        ANCHORING_VALIDATOR,
-        ANCHORING_VALIDATOR,
-        &sandbox.latest_anchored_tx(),
-        2,
-    ).raw()
-        .clone();
+    let msg_lect = Arc::clone(
+        gen_service_tx_lect_wrong(
+            &sandbox,
+            ANCHORING_VALIDATOR,
+            ANCHORING_VALIDATOR,
+            &sandbox.latest_anchored_tx(),
+            2,
+        ).raw(),
+    );
     // Commit `msg_lect` into blockchain
     sandbox.add_height(&[msg_lect]);
     // Ensure that service accepts it
@@ -392,14 +394,15 @@ fn test_anchoring_lect_wrong_validator() {
     let sandbox = AnchoringSandbox::initialize(&[]);
     anchor_first_block(&sandbox);
 
-    let msg_lect_wrong = gen_service_tx_lect_wrong(
-        &sandbox,
-        ValidatorId(2),
-        ANCHORING_VALIDATOR,
-        &sandbox.latest_anchored_tx(),
-        2,
-    ).raw()
-        .clone();
+    let msg_lect_wrong = Arc::clone(
+        gen_service_tx_lect_wrong(
+            &sandbox,
+            ValidatorId(2),
+            ANCHORING_VALIDATOR,
+            &sandbox.latest_anchored_tx(),
+            2,
+        ).raw(),
+    );
 
     let lects_before = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     // Commit `msg_lect_wrong` into blockchain
@@ -419,14 +422,15 @@ fn test_anchoring_lect_nonexistent_validator() {
     let sandbox = AnchoringSandbox::initialize(&[]);
     anchor_first_block(&sandbox);
 
-    let msg_lect_wrong = gen_service_tx_lect_wrong(
-        &sandbox,
-        ValidatorId(2),
-        ValidatorId(1000),
-        &sandbox.latest_anchored_tx(),
-        2,
-    ).raw()
-        .clone();
+    let msg_lect_wrong = Arc::clone(
+        gen_service_tx_lect_wrong(
+            &sandbox,
+            ValidatorId(2),
+            ValidatorId(1000),
+            &sandbox.latest_anchored_tx(),
+            2,
+        ).raw(),
+    );
 
     let lects_before = dump_lects(&sandbox, ValidatorId(2));
     // Commit `msg_lect_wrong` into blockchain
@@ -467,7 +471,7 @@ fn test_anchoring_signature_wrong_validator() {
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_wrong` into blockchain
-    sandbox.add_height(&[msg_signature_wrong.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_signature_wrong.raw())]);
     // Ensure that service ignore it
     let signs_after = dump_signatures(&sandbox, &tx.id());
     assert_eq!(signs_before, signs_after);
@@ -509,7 +513,7 @@ fn test_anchoring_signature_nonexistent_tx() {
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_sign` into blockchain
-    sandbox.add_height(&[msg_sign.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_sign.raw())]);
     // Ensure that service adds it
     let signs_after = dump_signatures(&sandbox, &tx.id());
     assert!(signs_before.is_empty());
@@ -548,7 +552,7 @@ fn test_anchoring_signature_incorrect_payload() {
 
     let signatures_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_sign` into blockchain
-    sandbox.add_height(&[msg_sign.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_sign.raw())]);
     // Ensure that service ignores it
     let signatures_after = dump_signatures(&sandbox, &tx.id());
     assert!(signatures_before.is_empty());
@@ -573,7 +577,7 @@ fn test_anchoring_lect_funding_tx() {
     let lects_before = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     // Commit `msg_lect` into blockchain
     client.expect(vec![confirmations_request(&tx, 50)]);
-    sandbox.add_height(&[msg_lect.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_lect.raw())]);
     // Ensure that service accepts it
     let lects_after = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(lects_before.len(), 2);
@@ -606,7 +610,7 @@ fn test_anchoring_lect_incorrect_funding_tx() {
     let msg_lect = gen_service_tx_lect(&sandbox, ANCHORING_VALIDATOR, &tx, 2);
     let lects_before = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     // Commit `msg_lect` into blockchain
-    sandbox.add_height(&[msg_lect.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_lect.raw())]);
     // Ensure that service ignores it
     let lects_after = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(lects_before, lects_after);
@@ -633,7 +637,7 @@ fn test_anchoring_lect_incorrect_anchoring_payload() {
     let msg_lect = gen_service_tx_lect(&sandbox, ANCHORING_VALIDATOR, &tx, 2);
     let lects_before = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     // Commit `msg_lect` into blockchain
-    sandbox.add_height(&[msg_lect.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_lect.raw())]);
     // Ensure that service ignores it
     let lects_after = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(lects_before, lects_after);
@@ -673,7 +677,7 @@ fn test_anchoring_lect_unknown_prev_tx() {
     let msg_lect = gen_service_tx_lect(&sandbox, ANCHORING_VALIDATOR, &tx, 2);
     let lects_before = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     // Commit `msg_lect` into blockchain
-    sandbox.add_height(&[msg_lect.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_lect.raw())]);
     // Ensure that service ignores it
     let lects_after = dump_lects(&sandbox, ANCHORING_VALIDATOR);
     assert_eq!(lects_after, lects_before);
@@ -710,7 +714,7 @@ fn test_anchoring_signature_nonexistent_validator() {
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_wrong` into blockchain
-    sandbox.add_height(&[msg_signature_wrong.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_signature_wrong.raw())]);
     // Ensure that service ignores it
     let signs_after = dump_signatures(&sandbox, &tx.id());
     assert_eq!(signs_before, signs_after);
@@ -768,7 +772,7 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_different` into blockchain
-    sandbox.add_height(&[msg_signature_different.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_signature_different.raw())]);
     // Ensure that service ignores it
     let signs_after = dump_signatures(&sandbox, &tx.id());
     assert_eq!(signs_before, signs_after);
@@ -809,7 +813,7 @@ fn test_anchoring_signature_input_from_different_validator() {
     client.expect(vec![
         confirmations_request(&sandbox.current_funding_tx(), 50),
     ]);
-    sandbox.add_height(&[msg_signature_wrong.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_signature_wrong.raw())]);
     // Ensure that service ignores it
     let signs_after = dump_signatures(&sandbox, &tx.id());
     assert_eq!(signs_before, signs_after);
@@ -864,7 +868,7 @@ fn test_anchoring_signature_unknown_output_address() {
 
     let signs_before = dump_signatures(&sandbox, &tx.id());
     // Commit `msg_signature_wrong` into blockchain
-    sandbox.add_height(&[msg_signature_wrong.raw().clone()]);
+    sandbox.add_height(&[Arc::clone(msg_signature_wrong.raw())]);
     // Ensure that service ignores it
     let signs_after = dump_signatures(&sandbox, &tx.id());
     assert_eq!(signs_before, signs_after);
