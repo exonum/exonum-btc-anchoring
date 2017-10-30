@@ -25,5 +25,5 @@ pub mod consensus_storage;
 #[cfg(test)]
 mod tests;
 
-pub use self::schema::AnchoringSchema;
+pub use self::schema::{AnchoringSchema, KnownSignatureId};
 pub use self::dto::{LectContent, MsgAnchoringSignature, MsgAnchoringUpdateLatest};

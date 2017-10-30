@@ -109,7 +109,7 @@ where
 
     /// Returns the table of known signatures, where key is the tuple `(txid, validator_id, input)`.
     ///
-    /// [Read more.](struct.KnownSignatureId.html)
+    /// [Read more](struct.KnownSignatureId.html).
     pub fn known_signatures(&self) -> MapIndex<&T, KnownSignatureId, MsgAnchoringSignature> {
         let prefix = self.gen_table_prefix(6, &());
         MapIndex::new(prefix, &self.view)
