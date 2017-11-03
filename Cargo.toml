@@ -1,6 +1,6 @@
 [package]
 name = "exonum-btc-anchoring"
-version = "0.2.1"
+version = "0.3.0"
 authors = ["The Exonum Team <exonum@bitfury.com>"]
 homepage = "https://exonum.com/doc/advanced/bitcoin-anchoring/"
 repository = "https://github.com/exonum/exonum-btc-anchoring"
@@ -15,7 +15,7 @@ description = "An Exonum service that provides anchoring to Bitcoin blockchain."
 travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 
 [dependencies]
-exonum = "0.2.0"
+exonum = "0.3.0"
 exonum_bitcoinrpc = "0.1.1"
 
 bitcoin="0.10.0"
@@ -27,7 +27,7 @@ byteorder = "1.0.0"
 log = "0.3.0"
 clap = "2.22.1"
 rand = "0.3.0"
-derive-error = "0.0.3"
+derive-error = "0.0.4"
 router = "0.5.1"
 iron = "0.5.1"
 mount = "0.3.0"
@@ -35,17 +35,9 @@ toml = "0.4.0"
 tempdir = "0.3.5"
 
 [dev-dependencies]
-exonum-configuration = "0.2.0"
+exonum-configuration = "0.3.0"
 
 [features]
 default = []
 sandbox_tests = []
 rpc_tests = []
-
-[replace."exonum:0.2.0"]
-git = "https://github.com/aleksuss/exonum.git"
-branch = "rocksdb-fork-cf"
-
-[replace."exonum-configuration:0.2.0"]
-git = "https://github.com/aleksuss/exonum-configuration.git"
-branch = "rocksdb"
