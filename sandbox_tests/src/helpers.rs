@@ -15,18 +15,16 @@
 use bitcoin::util::base58::{FromBase58, ToBase58};
 use serde_json::Value;
 
-use std::sync::Arc;
-
 use exonum::messages::{Message, RawTransaction};
 use exonum::crypto::{Hash, HexValue};
 use exonum::blockchain::Schema;
 use exonum::storage::StorageValue;
-use exonum::helpers::{self, ValidatorId, Height};
+use exonum::helpers::{self, Height, ValidatorId};
 
 use sandbox::sandbox::Sandbox;
 use sandbox::config_updater::TxConfig;
 
-use exonum_btc_anchoring::{ANCHORING_SERVICE_NAME, AnchoringConfig};
+use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
 use exonum_btc_anchoring::details::sandbox::Request;
@@ -126,7 +124,7 @@ pub fn gen_update_config_tx(
         actual_from,
         sandbox.service_secret_key(ANCHORING_VALIDATOR),
     );
-    Arc::clone(tx.raw())
+    tx.raw().clone()
 }
 
 pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> Request {
@@ -223,15 +221,15 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
 
 
     client.expect(vec![
-            confirmations_request(&sandbox.current_funding_tx(), 50),
-            request! {
+        confirmations_request(&sandbox.current_funding_tx(), 50),
+        request! {
             method: "listunspent",
             params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
                 listunspent_entry(&sandbox.current_funding_tx(), &anchoring_addr, 50)
             ]
         },
-        ]);
+    ]);
 
     let hash = sandbox.last_hash();
     let (_, signatures) =
@@ -239,7 +237,7 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
     let anchored_tx = sandbox.latest_anchored_tx();
     sandbox.add_height(&[]);
 
-    sandbox.broadcast(Arc::clone(&signatures[0]));
+    sandbox.broadcast(signatures[0].raw().clone());
     client.expect(vec![
         confirmations_request(&sandbox.current_funding_tx(), 50),
         request! {
@@ -259,12 +257,12 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
 
     let txs = (0..4)
         .map(|idx| {
-            Arc::clone(
-                gen_service_tx_lect(sandbox, ValidatorId(idx), &anchored_tx, 1).raw(),
-            )
+            gen_service_tx_lect(sandbox, ValidatorId(idx), &anchored_tx, 1)
+                .raw()
+                .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(Arc::clone(&txs[0]));
+    sandbox.broadcast(txs[0].clone());
     sandbox.add_height(&txs);
 }
 
@@ -320,18 +318,18 @@ pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
                 listunspent_entry(&other_lect, &anchoring_addr, 0)
             ]
         },
-        get_transaction_request(&other_lect)
+        get_transaction_request(&other_lect),
     ]);
     sandbox.add_height(&[]);
 
     let txs = (0..4)
         .map(|idx| {
-            Arc::clone(
-                gen_service_tx_lect(sandbox, ValidatorId(idx), &other_lect, 2).raw(),
-            )
+            gen_service_tx_lect(sandbox, ValidatorId(idx), &other_lect, 2)
+                .raw()
+                .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(Arc::clone(&txs[0]));
+    sandbox.broadcast(txs[0].clone());
 
     sandbox.add_height(&txs);
     sandbox.set_latest_anchored_tx(Some((other_lect.clone(), other_signatures.clone())));
@@ -355,18 +353,18 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
                 listunspent_entry(&other_lect, &anchoring_addr, 0)
             ]
         },
-        get_transaction_request(&other_lect)
+        get_transaction_request(&other_lect),
     ]);
     sandbox.add_height(&[]);
 
     let txs = (0..4)
         .map(|idx| {
-            Arc::clone(
-                gen_service_tx_lect(sandbox, ValidatorId(idx), &other_lect, 2).raw(),
-            )
+            gen_service_tx_lect(sandbox, ValidatorId(idx), &other_lect, 2)
+                .raw()
+                .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(Arc::clone(&txs[0]));
+    sandbox.broadcast(txs[0].clone());
 
     client.expect(vec![
         confirmations_request(&sandbox.current_funding_tx(), 50),
@@ -430,18 +428,18 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     );
     let anchored_tx = sandbox.latest_anchored_tx();
 
-    sandbox.broadcast(Arc::clone(&signatures[0]));
+    sandbox.broadcast(signatures[0].clone());
     client.expect(vec![confirmations_request(&anchored_tx.clone(), 0)]);
     sandbox.add_height(&signatures);
 
     let txs = (0..4)
         .map(|idx| {
-            Arc::clone(
-                gen_service_tx_lect(sandbox, ValidatorId(idx), &anchored_tx, 2).raw(),
-            )
+            gen_service_tx_lect(sandbox, ValidatorId(idx), &anchored_tx, 2)
+                .raw()
+                .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(Arc::clone(&txs[0]));
+    sandbox.broadcast(txs[0].clone());
     client.expect(vec![
         request! {
             method: "listunspent",
@@ -450,7 +448,7 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
                 listunspent_entry(&anchored_tx, &anchoring_addr, 100)
             ]
         },
-        get_transaction_request(&anchored_tx)
+        get_transaction_request(&anchored_tx),
     ]);
     sandbox.add_height(&txs);
 }
@@ -480,10 +478,10 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
     );
     sandbox.add_height(&[]);
 
-    sandbox.broadcast(Arc::clone(&signatures[0]));
-    client.expect(
-        vec![confirmations_request(&sandbox.current_funding_tx(), 50)],
-    );
+    sandbox.broadcast(signatures[0].clone());
+    client.expect(vec![
+        confirmations_request(&sandbox.current_funding_tx(), 50),
+    ]);
     sandbox.add_height(&signatures[0..1]);
 }
 
@@ -518,28 +516,26 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     // Tx gets enough confirmations.
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
     sandbox.add_height(&[]);
-    sandbox.broadcast(Arc::clone(&signatures[0]));
+    sandbox.broadcast(signatures[0].clone());
 
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
         .map(|id| {
-            Arc::clone(
-                gen_service_tx_lect(sandbox, ValidatorId(id), &transition_tx, 2).raw(),
-            )
+            gen_service_tx_lect(sandbox, ValidatorId(id), &transition_tx, 2)
+                .raw()
+                .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(Arc::clone(&lects[0]));
+    sandbox.broadcast(lects[0].clone());
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&lects);
     sandbox.fast_forward_to_height(cfg_change_height);
 
     sandbox.set_anchoring_cfg(following_cfg);
     sandbox.nodes_mut().swap_remove(0);
-    client.expect(vec![
-        get_transaction_request(&transition_tx)
-    ]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height_as_auditor(&[]);
 
     assert_eq!(sandbox.handler().errors, Vec::new());
@@ -556,7 +552,6 @@ fn gen_following_cfg_exclude_validator(
     sandbox: &AnchoringSandbox,
     from_height: Height,
 ) -> (RawTransaction, AnchoringConfig) {
-
     let mut service_cfg = sandbox.current_cfg().clone();
     let priv_keys = sandbox.current_priv_keys();
     service_cfg.anchoring_keys.swap_remove(0);
@@ -580,5 +575,5 @@ fn gen_following_cfg_exclude_validator(
         from_height,
         sandbox.service_secret_key(ANCHORING_VALIDATOR),
     );
-    (Arc::clone(tx.raw()), service_cfg)
+    (tx.raw().clone(), service_cfg)
 }

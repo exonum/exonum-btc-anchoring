@@ -21,8 +21,6 @@ extern crate sandbox;
 #[macro_use]
 extern crate serde_json;
 
-use std::sync::Arc;
-
 use bitcoin::util::base58::ToBase58;
 
 use exonum::crypto::HexValue;
@@ -70,7 +68,7 @@ fn gen_following_cfg(
         from_height,
         sandbox.service_secret_key(ANCHORING_VALIDATOR),
     );
-    (Arc::clone(tx.raw()), service_cfg)
+    (tx.raw().clone(), service_cfg)
 }
 
 // Invoke this method after anchor_first_block_lect_normal
@@ -104,19 +102,19 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     // Tx gets enough confirmations.
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
     sandbox.add_height(&[]);
-    sandbox.broadcast(Arc::clone(&signatures[0]));
+    sandbox.broadcast(signatures[0].clone());
 
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
         .map(|id| {
-            Arc::clone(
-                gen_service_tx_lect(sandbox, ValidatorId(id), &transition_tx, 2).raw(),
-            )
+            gen_service_tx_lect(sandbox, ValidatorId(id), &transition_tx, 2)
+                .raw()
+                .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(Arc::clone(&lects[0]));
+    sandbox.broadcast(lects[0].clone());
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&lects);
     sandbox.fast_forward_to_height(cfg_change_height);
@@ -164,7 +162,7 @@ fn test_auditing_no_consensus_in_lect() {
         lects_count(&sandbox, ANCHORING_VALIDATOR),
         sandbox.service_secret_key(ANCHORING_VALIDATOR),
     );
-    sandbox.add_height_as_auditor(&[Arc::clone(lect.raw())]);
+    sandbox.add_height_as_auditor(&[lect.raw().clone()]);
 
     assert_eq!(
         sandbox.take_errors()[0],

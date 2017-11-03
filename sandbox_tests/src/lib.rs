@@ -322,7 +322,7 @@ impl AnchoringSandbox {
 
         let signs = signs
             .into_iter()
-            .map(|tx| Arc::clone(tx.raw()))
+            .map(|tx| tx.raw().clone())
             .collect::<Vec<_>>();
         (propose_tx, signs)
     }
