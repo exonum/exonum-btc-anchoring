@@ -43,15 +43,15 @@
 //! extern crate exonum_configuration;
 //! use exonum::helpers::fabric::NodeBuilder;
 //! use exonum::helpers;
-//! use exonum_btc_anchoring::AnchoringService;
-//! use exonum_configuration::ConfigurationService;
+//! use exonum_btc_anchoring::AnchoringServiceFactory;
+//! use exonum_configuration::ConfigurationServiceFactory;
 //!
 //! fn main() {
 //!     exonum::crypto::init();
 //!     helpers::init_logger().unwrap();
 //!     let node = NodeBuilder::new()
-//!         .with_service::<AnchoringService>()
-//!         .with_service::<ConfigurationService>();
+//!        .with_service(Box::new(ConfigurationServiceFactory))
+//!        .with_service(Box::new(AnchoringServiceFactory));
 //!     node.run();
 //! }
 //! ```
@@ -60,26 +60,26 @@
 #![deny(missing_docs)]
 #![deny(missing_debug_implementations)]
 
-extern crate toml;
-extern crate serde;
-#[macro_use]
-extern crate serde_json;
-#[macro_use]
-extern crate serde_derive;
-extern crate exonum_bitcoinrpc as bitcoinrpc;
 extern crate bitcoin;
-extern crate secp256k1;
 extern crate byteorder;
 #[macro_use]
-extern crate log;
-#[macro_use]
 extern crate derive_error;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
+#[macro_use]
+extern crate log;
+extern crate secp256k1;
+extern crate serde;
+#[macro_use]
+extern crate serde_derive;
+#[macro_use]
+extern crate serde_json;
+extern crate toml;
 
-extern crate rand;
-extern crate iron;
-extern crate router;
 #[macro_use]
 extern crate exonum;
+extern crate iron;
+extern crate rand;
+extern crate router;
 
 #[doc(hidden)]
 pub mod details;
@@ -96,12 +96,13 @@ pub mod api;
 pub mod observer;
 pub mod cmd;
 
-pub use details::btc::{Network as BitcoinNetwork, gen_btc_keypair, gen_btc_keypair_with_rng};
+pub use details::btc::{gen_btc_keypair, gen_btc_keypair_with_rng, Network as BitcoinNetwork};
 pub use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
 pub use blockchain::consensus_storage::AnchoringConfig;
 pub use local_storage::AnchoringNodeConfig;
-pub use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME, AnchoringService,
-                  gen_anchoring_testnet_config, gen_anchoring_testnet_config_with_rng};
+pub use service::{gen_anchoring_testnet_config, gen_anchoring_testnet_config_with_rng,
+                  AnchoringService, ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
+pub use cmd::AnchoringServiceFactory;
 pub use handler::AnchoringHandler;
 pub use error::Error;
 
