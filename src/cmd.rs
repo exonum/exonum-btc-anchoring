@@ -385,13 +385,10 @@ impl CommandExtension for Finalize {
     }
 }
 
-/// An anchoring service creator for the `NodeBuilder`.
-#[derive(Debug)]
-pub struct AnchoringServiceFactory;
 
-impl ServiceFactory for AnchoringServiceFactory {
+impl ServiceFactory for AnchoringService {
     #[allow(unused_variables)]
-    fn command(&mut self, command: CommandName) -> Option<Box<CommandExtension>> {
+    fn command(command: CommandName) -> Option<Box<CommandExtension>> {
         use exonum::helpers::fabric;
         Some(match command {
             v if v == fabric::GenerateNodeConfig::name() => Box::new(GenerateNodeConfig),
@@ -400,7 +397,7 @@ impl ServiceFactory for AnchoringServiceFactory {
             _ => return None,
         })
     }
-    fn make_service(&mut self, run_context: &Context) -> Box<Service> {
+    fn make_service(run_context: &Context) -> Box<Service> {
         let node_config: NodeConfig = run_context.get("node_config").unwrap();
         let anch_cfg: AnchoringServiceConfig = node_config.services_configs["anchoring_service"]
             .clone()
