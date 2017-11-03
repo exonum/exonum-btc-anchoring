@@ -2,6 +2,8 @@ language: rust
 
 addons:
   apt:
+    sources:
+    - sourceline: 'ppa:giskou/librocksdb'
     packages:
     - gcc
     - g++
@@ -11,6 +13,9 @@ addons:
     - binutils-dev
     - libiberty-dev
     - libsnappy-dev
+    - librocksdb
+    - libsnappy-dev
+
 rust:
 - stable
 
@@ -31,8 +36,9 @@ env:
   - DEADLINKS_VERS=0.2.1
   - RUSTFLAGS="-C link-dead-code"
   - RUST_LOG=off
-  - ROCKSDB_LIB_DIR=$HOME/.local/lib
+  - ROCKSDB_LIB_DIR=/usr/lib/x86_64-linux-gnu
   - SNAPPY_LIB_DIR=/usr/lib/x86_64-linux-gnu
+
 install:
 - |
   if [ ! -f "$HOME/.local/lib/libsodium.a" ]; then
@@ -42,14 +48,6 @@ install:
     ./configure --prefix=$HOME/.local
     make -j $(nproc)
     make install
-    cd ..
-  fi
-- |
-  if [ ! -f "$HOME/.local/lib/librocksdb.so" ]; then
-    wget -O rocksdb-$ROCKSDB_VERS.tar.gz https://github.com/facebook/rocksdb/archive/v$ROCKSDB_VERS.tar.gz
-    tar xvf rocksdb-$ROCKSDB_VERS.tar.gz
-    cd rocksdb-$ROCKSDB_VERS
-    INSTALL_PATH=$HOME/.local make install-shared
     cd ..
   fi
 - export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.local/lib
@@ -70,6 +68,7 @@ install:
 - cargo install --list
 - cd $TRAVIS_BUILD_DIR
 - cargo update
+
 script: skip
 
 jobs:
@@ -107,12 +106,12 @@ jobs:
     - cargo test
   - stage: test
     script:
-    - | 
-      if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then 
-        cargo test; 
+    - |
+      if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
+        cargo test;
       fi
     - |
-      if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then 
+      if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
         cargo test --features rpc_tests;
       fi
 notifications:
