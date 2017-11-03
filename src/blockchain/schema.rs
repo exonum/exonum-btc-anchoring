@@ -17,7 +17,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
-use exonum::blockchain::{gen_prefix, Schema, StoredConfiguration};
+use exonum::blockchain::{Schema, StoredConfiguration, gen_prefix};
 use exonum::storage::{Fork, ListIndex, MapIndex, ProofListIndex, Snapshot, StorageKey};
 use exonum::crypto::Hash;
 use exonum::helpers::{Height, ValidatorId};
@@ -26,7 +26,7 @@ use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::{LectContent, MsgAnchoringSignature};
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
-use service::ANCHORING_SERVICE_NAME;
+use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 
 /// Unique identifier of signature for the `AnchoringTx`.
 #[derive(Debug)]
@@ -90,39 +90,41 @@ where
     /// Returns table that contains signatures for the anchoring transaction with
     /// the given normalized `txid`.
     pub fn signatures(&self, txid: &btc::TxId) -> ListIndex<&T, MsgAnchoringSignature> {
-        ListIndex::with_prefix("btc_anchoring.signatures", gen_prefix(txid), &self.view)
+        let prefix = self.gen_table_prefix(2, txid);
+        ListIndex::new(prefix, &self.view)
     }
 
     /// Returns table that saves a list of lects for the validator with the given `validator_key`.
     pub fn lects(&self, validator_key: &btc::PublicKey) -> ProofListIndex<&T, LectContent> {
-        ProofListIndex::with_prefix("btc_anchoring.lects", gen_prefix(validator_key), &self.view)
+        let prefix = self.gen_table_prefix(3, validator_key);
+        ProofListIndex::new(prefix, &self.view)
     }
 
     /// Returns table that keeps the lect index for every anchoring txid for the validator
     /// with given `validator_key`.
     pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapIndex<&T, btc::TxId, u64> {
-        MapIndex::with_prefix(
-            "btc_anchoring.lect_indexes",
-            gen_prefix(validator_key),
-            &self.view,
-        )
+        let prefix = self.gen_table_prefix(4, validator_key);
+        MapIndex::new(prefix, &self.view)
     }
 
     /// Returns the table of known signatures, where key is the tuple `(txid, validator_id, input)`.
     ///
     /// [Read more](struct.KnownSignatureId.html).
     pub fn known_signatures(&self) -> MapIndex<&T, KnownSignatureId, MsgAnchoringSignature> {
-        MapIndex::new("btc_anchoring.known_signatures", &self.view)
+        let prefix = self.gen_table_prefix(6, &());
+        MapIndex::new(prefix, &self.view)
     }
 
     /// Returns the table that keeps the anchoring transaction for any known txid.
     pub fn known_txs(&self) -> MapIndex<&T, btc::TxId, BitcoinTx> {
-        MapIndex::new("btc_anchoring.known_txs", &self.view)
+        let prefix = self.gen_table_prefix(7, &());
+        MapIndex::new(prefix, &self.view)
     }
 
     /// Returns table that maps anchoring transactions to their heights.
     pub fn anchoring_tx_chain(&self) -> MapIndex<&T, u64, AnchoringTx> {
-        MapIndex::new("btc_anchoring.tx_chain", &self.view)
+        let prefix = self.gen_table_prefix(128, &());
+        MapIndex::new(prefix, &self.view)
     }
 
     /// Returns the actual anchoring configuration.
@@ -235,6 +237,10 @@ where
         from_value(cfg.services[ANCHORING_SERVICE_NAME].clone())
             .expect("Anchoring config does not exist")
     }
+
+    fn gen_table_prefix<K: StorageKey>(&self, ord: u8, suf: &K) -> Vec<u8> {
+        gen_prefix(ANCHORING_SERVICE_ID, ord, suf)
+    }
 }
 
 impl<'a> AnchoringSchema<&'a mut Fork> {
@@ -245,7 +251,8 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         &mut self,
         txid: &btc::TxId,
     ) -> ListIndex<&mut Fork, MsgAnchoringSignature> {
-        ListIndex::with_prefix("btc_anchoring.signatures", gen_prefix(txid), &mut self.view)
+        let prefix = self.gen_table_prefix(2, txid);
+        ListIndex::new(prefix, &mut self.view)
     }
 
     /// Mutable variant of the [`lects`][1] index.
@@ -255,11 +262,8 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         &mut self,
         validator_key: &btc::PublicKey,
     ) -> ProofListIndex<&mut Fork, LectContent> {
-        ProofListIndex::with_prefix(
-            "btc_anchoring.lects",
-            gen_prefix(validator_key),
-            &mut self.view,
-        )
+        let prefix = self.gen_table_prefix(3, validator_key);
+        ProofListIndex::new(prefix, &mut self.view)
     }
 
     /// Mutable variant of the [`lect_indexes`][1] index.
@@ -269,12 +273,10 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         &mut self,
         validator_key: &btc::PublicKey,
     ) -> MapIndex<&mut Fork, btc::TxId, u64> {
-        MapIndex::with_prefix(
-            "btc_anchoring.lect_indexes",
-            gen_prefix(validator_key),
-            &mut self.view,
-        )
+        let prefix = self.gen_table_prefix(4, validator_key);
+        MapIndex::new(prefix, &mut self.view)
     }
+
 
     /// Mutable variant of the [`known_signatures`][1] index.
     ///
@@ -282,21 +284,24 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
     pub fn known_signatures_mut(
         &mut self,
     ) -> MapIndex<&mut Fork, KnownSignatureId, MsgAnchoringSignature> {
-        MapIndex::new("btc_anchoring.known_signatures", &mut self.view)
+        let prefix = self.gen_table_prefix(6, &());
+        MapIndex::new(prefix, &mut self.view)
     }
 
     /// Mutable variant of the [`known_txs`][1] index.
     ///
     /// [1]: struct.AnchoringSchema.html#method.known_txs
     pub fn known_txs_mut(&mut self) -> MapIndex<&mut Fork, btc::TxId, BitcoinTx> {
-        MapIndex::new("btc_anchoring.known_txs", &mut self.view)
+        let prefix = self.gen_table_prefix(7, &());
+        MapIndex::new(prefix, &mut self.view)
     }
 
     /// Mutable variant of the [`signatures`][1] index.
     ///
     /// [1]: struct.AnchoringSchema.html#method.anchoring_tx_chain
     pub fn anchoring_tx_chain_mut(&mut self) -> MapIndex<&mut Fork, u64, AnchoringTx> {
-        MapIndex::new("btc_anchoring.tx_chain", &mut self.view)
+        let prefix = self.gen_table_prefix(128, &());
+        MapIndex::new(prefix, &mut self.view)
     }
 
     /// Creates and commits the genesis anchoring configuration from the proposed `cfg`.

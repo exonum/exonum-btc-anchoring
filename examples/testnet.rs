@@ -23,7 +23,7 @@ use tempdir::TempDir;
 
 use exonum::blockchain::Blockchain;
 use exonum::node::Node;
-use exonum::storage::{RocksDB, RocksDBOptions};
+use exonum::storage::{LevelDB, LevelDBOptions};
 use exonum::helpers::{generate_testnet_config, init_logger};
 
 use exonum_btc_anchoring::{AnchoringRpc, AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
@@ -67,17 +67,17 @@ fn main() {
                 AnchoringService::new(anchoring_common.clone(), anchoring_nodes[idx].clone());
             // Create database for node[idx]
             let db = {
-                let mut options = RocksDBOptions::default();
+                let mut options = LevelDBOptions::new();
                 let path = destdir.join(idx.to_string());
-                options.create_if_missing(true);
-                RocksDB::open(&path, options).expect("Unable to create database")
+                options.create_if_missing = true;
+                LevelDB::open(&path, options).expect("Unable to create database")
             };
             // Create node[idx]
             let blockchain = Blockchain::new(Box::new(db), vec![Box::new(service)]);
             let node_cfg = node_cfgs[idx].clone();
             let node_thread = thread::spawn(move || {
                 // Run it in separate thread
-                let node = Node::new(blockchain, node_cfg);
+                let mut node = Node::new(blockchain, node_cfg);
                 node.run_handler().expect("Unable to run node");
             });
             node_threads.push(node_thread);

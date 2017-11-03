@@ -41,11 +41,3 @@ exonum-configuration = "0.2.0"
 default = []
 sandbox_tests = []
 rpc_tests = []
-
-[replace."exonum:0.2.0"]
-git = "https://github.com/aleksuss/exonum.git"
-branch = "rocksdb-fork-cf"
-
-[replace."exonum-configuration:0.2.0"]
-git = "https://github.com/aleksuss/exonum-configuration.git"
-branch = "rocksdb"
