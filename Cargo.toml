@@ -41,3 +41,7 @@ exonum-configuration = "0.3.0"
 default = []
 sandbox_tests = []
 rpc_tests = []
+
+[replace."exonum:0.3.0"]
+git = "https://github.com/alekseysidorov/exonum.git"
+branch = "improve-blockchain-api"

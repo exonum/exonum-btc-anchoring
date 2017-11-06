@@ -22,9 +22,9 @@ iron = "0.5.1"
 iron-test = "0.5.0"
 
 [dependencies.sandbox]
-git = "https://github.com/exonum/exonum.git"
-tag = "v0.3"
+git = "https://github.com/alekseysidorov/exonum.git"
+branch = "improve-blockchain-api"
 
 [replace."exonum:0.3.0"]
-git = "https://github.com/exonum/exonum.git"
-tag = "v0.3"
+git = "https://github.com/alekseysidorov/exonum.git"
+branch = "improve-blockchain-api"

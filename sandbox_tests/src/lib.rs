@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Avoid clippy bug
+// FIXME: Sometimes clippy incorrectly calculates lifetimes.
 #![cfg_attr(feature="cargo-clippy", allow(let_and_return))]
 
 extern crate exonum;

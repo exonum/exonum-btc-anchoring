@@ -121,7 +121,7 @@ impl Service for AnchoringService {
         serde_json::to_value(cfg).unwrap()
     }
 
-    fn handle_commit(&self, state: &mut ServiceContext) {
+    fn handle_commit(&self, state: &ServiceContext) {
         let mut handler = self.handler.lock().unwrap();
         match handler.handle_commit(state) {
             #[cfg(feature = "sandbox_tests")]
