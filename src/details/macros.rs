@@ -66,6 +66,20 @@ macro_rules! implement_base58_wrapper {
 
 macro_rules! implement_serde_hex {
 ($name:ident) => (
+    impl ::std::str::FromStr for $name {
+        type Err = ::exonum::encoding::serialize::FromHexError;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            $name::from_hex(s)
+        }
+    }
+
+    impl ::std::string::ToString for $name {
+        fn to_string(&self) -> String {
+            self.to_hex()
+        }
+    }
+
     impl ::serde::Serialize for $name {
         fn serialize<S>(&self, ser: S) -> ::std::result::Result<S::Ok, S::Error>
             where S: ::serde::Serializer
