@@ -18,7 +18,6 @@ mod macros;
 pub mod btc;
 pub mod rpc;
 pub mod error;
-#[cfg(feature = "sandbox_tests")]
 pub mod sandbox;
 
 #[cfg(test)]

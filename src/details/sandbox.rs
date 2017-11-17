@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use std::collections::VecDeque;
-use std::collections::BTreeMap;
 use std::sync::{Arc, Mutex};
 
 use std::default::Default;
@@ -23,9 +22,13 @@ use bitcoinrpc::*;
 
 use serde::Deserialize;
 use serde_json;
-use serde_json::value::{Value, from_value};
+use serde_json::value::{from_value, Value};
 
-use details::rpc::AnchoringRpcConfig;
+use exonum::encoding::serialize::HexValue;
+
+use details::rpc::{AnchoringRpcConfig, BitcoinRelay, TxInfo, SATOSHI_DIVISOR};
+use details::btc;
+use details::btc::transactions::{BitcoinTx, FundingTx, TxKind};
 
 #[derive(Debug)]
 pub struct Request {
@@ -109,110 +112,32 @@ impl SandboxClient {
         self.requests.lock().unwrap().extend(requests);
     }
 
-    pub fn getinfo(&self) -> Result<Info> {
-        self.request("getinfo", Vec::new())
-    }
-    pub fn getnewaddress(&self, account: &str) -> Result<String> {
-        self.request("getnewaddress", vec![Value::String(account.to_owned())])
-    }
-    pub fn validateaddress(&self, addr: &str) -> Result<AddressInfo> {
-        self.request("validateaddress", vec![Value::String(addr.to_owned())])
-    }
-    pub fn createmultisig<V: AsRef<[String]>>(&self, signs: u8, addrs: V) -> Result<MultiSig> {
-        let n = serde_json::to_value(signs).unwrap();
-        let addrs = serde_json::to_value(addrs.as_ref()).unwrap();
-        self.request("createmultisig", vec![n, addrs])
-    }
-    pub fn sendtoaddress(&self, addr: &str, amount: &str) -> Result<String> {
+    fn sendtoaddress(&self, addr: &str, amount: &str) -> Result<String> {
         let params = vec![
             serde_json::to_value(addr).unwrap(),
             serde_json::to_value(amount).unwrap(),
         ];
         self.request("sendtoaddress", params)
     }
-    pub fn getrawtransaction(&self, txid: &str) -> Result<String> {
+
+    fn getrawtransaction(&self, txid: &str) -> Result<String> {
         let params = json!([txid, 0]).as_array().cloned().unwrap();
         self.request("getrawtransaction", params)
     }
-    pub fn getrawtransaction_verbose(&self, txid: &str) -> Result<RawTransactionInfo> {
+
+    fn getrawtransaction_verbose(&self, txid: &str) -> Result<RawTransactionInfo> {
         let params = json!([txid, 1]).as_array().cloned().unwrap();
         self.request("getrawtransaction", params)
     }
-    pub fn createrawtransaction<T, O>(
-        &self,
-        transactions: T,
-        outputs: O,
-        data: Option<String>,
-    ) -> Result<String>
-    where
-        T: AsRef<[TransactionInput]>,
-        O: AsRef<[TransactionOutput]>,
-    {
-        let mut map = BTreeMap::new();
-        map.extend(outputs.as_ref().iter().map(|x| {
-            (x.address.clone(), x.value.clone())
-        }));
-        if let Some(data) = data {
-            map.insert("data".into(), data);
-        }
 
-        let params = json!([transactions.as_ref(), map])
-            .as_array()
-            .cloned()
-            .unwrap();
-        self.request("createrawtransaction", params)
-    }
-    pub fn dumpprivkey(&self, pub_key: &str) -> Result<String> {
-        let params = json!([pub_key]).as_array().cloned().unwrap();
-        self.request("dumpprivkey", params)
-    }
-    pub fn signrawtransaction<O, K>(
-        &self,
-        txhex: &str,
-        outputs: O,
-        priv_keys: K,
-    ) -> Result<SignTxOutput>
-    where
-        O: AsRef<[DependentOutput]>,
-        K: AsRef<[String]>,
-    {
-        let params = json!([txhex, outputs.as_ref(), priv_keys.as_ref()])
-            .as_array()
-            .cloned()
-            .unwrap();
-        self.request("signrawtransaction", params)
-    }
-    pub fn sendrawtransaction(&self, txhex: &str) -> Result<String> {
+    fn sendrawtransaction(&self, txhex: &str) -> Result<String> {
         self.request(
             "sendrawtransaction",
             vec![serde_json::to_value(txhex).unwrap()],
         )
     }
-    pub fn decoderawtransaction(&self, txhex: &str) -> Result<RawTransactionInfo> {
-        self.request(
-            "decoderawtransaction",
-            vec![serde_json::to_value(txhex).unwrap()],
-        )
-    }
-    pub fn addwitnessaddress(&self, addr: &str) -> Result<String> {
-        self.request(
-            "addwitnessaddress",
-            vec![serde_json::to_value(addr).unwrap()],
-        )
-    }
-    pub fn listtransactions(
-        &self,
-        count: u32,
-        from: u32,
-        include_watch_only: bool,
-    ) -> Result<Vec<TransactionInfo>> {
-        let params = json!(["*", count, from, include_watch_only])
-            .as_array()
-            .cloned()
-            .unwrap();
-        self.request("listtransactions", params)
-    }
-    pub fn listunspent<'a, V: AsRef<[&'a str]>>(
+
+    fn listunspent<'a, V: AsRef<[&'a str]>>(
         &self,
         min_confirmations: u32,
         max_confirmations: u32,
@@ -223,9 +148,9 @@ impl SandboxClient {
             .cloned()
             .unwrap();
         self.request("listunspent", params)
-
     }
-    pub fn importaddress(&self, addr: &str, label: &str, rescan: bool, p2sh: bool) -> Result<()> {
+
+    fn importaddress(&self, addr: &str, label: &str, rescan: bool, p2sh: bool) -> Result<()> {
         let params = json!([addr, label, rescan, p2sh])
             .as_array()
             .cloned()
@@ -238,27 +163,67 @@ impl SandboxClient {
             Err(e) => Err(e),
         }
     }
+}
 
-    pub fn generate(&self, nblocks: u64, maxtries: u64) -> Result<Vec<String>> {
-        let params = json!([nblocks, maxtries]).as_array().cloned().unwrap();
-        self.request("generate", params)
+impl BitcoinRelay for SandboxClient {
+    fn get_transaction(&self, txid: btc::TxId) -> Result<Option<BitcoinTx>> {
+        let r = self.getrawtransaction(&txid.to_string());
+        match r {
+            Ok(tx) => Ok(Some(BitcoinTx::from_hex(tx).unwrap())),
+            Err(Error::NoInformation(_)) => Ok(None),
+            Err(e) => Err(e),
+        }
     }
 
-    pub fn generatetoaddress(
-        &self,
-        nblocks: u64,
-        addr: &str,
-        maxtries: u64,
-    ) -> Result<Vec<String>> {
-        let params = json!([nblocks, addr, maxtries])
-            .as_array()
-            .cloned()
-            .unwrap();
-        self.request("generatetoaddress", params)
+    fn get_transaction_info(&self, txid: btc::TxId) -> Result<Option<TxInfo>> {
+        let info = match self.getrawtransaction_verbose(&txid.to_string()) {
+            Ok(info) => Ok(info),
+            Err(Error::NoInformation(_)) => return Ok(None),
+            Err(e) => Err(e),
+        }?;
+        Ok(Some(info.into()))
     }
 
-    pub fn stop(&self) -> Result<String> {
-        self.request("stop", vec![])
+    fn watch_address(&self, addr: &btc::Address, rescan: bool) -> Result<()> {
+        self.importaddress(&addr.to_string(), "multisig", false, rescan)
+    }
+
+    fn send_transaction(&self, tx: BitcoinTx) -> Result<()> {
+        let tx_hex = tx.to_string();
+        self.sendrawtransaction(&tx_hex)?;
+        Ok(())
+    }
+
+    fn send_to_address(&self, addr: &btc::Address, satoshis: u64) -> Result<FundingTx> {
+        let addr = addr.to_string();
+        let funds_str = (satoshis as f64 / SATOSHI_DIVISOR).to_string();
+        let utxo_txid = self.sendtoaddress(&addr, &funds_str)?;
+        // TODO rewrite Error types to avoid unwraps.
+        let utxo_txid = btc::TxId::from_hex(&utxo_txid).unwrap();
+        Ok(FundingTx::from(self.get_transaction(utxo_txid)?.unwrap()))
+    }
+
+    fn unspent_transactions(&self, addr: &btc::Address) -> Result<Vec<TxInfo>> {
+        let unspent_txs = self.listunspent(0, 9_999_999, [addr.to_string().as_ref()])?;
+        let mut txs = Vec::new();
+        for info in unspent_txs {
+            let txid = btc::TxId::from_hex(&info.txid).unwrap();
+            let confirmations = Some(info.confirmations);
+            if let Some(raw_tx) = self.get_transaction(txid)? {
+                match TxKind::from(raw_tx) {
+                    TxKind::Anchoring(tx) => txs.push(TxInfo {
+                        body: tx.into(),
+                        confirmations,
+                    }),
+                    TxKind::FundingTx(tx) => txs.push(TxInfo {
+                        body: tx.into(),
+                        confirmations,
+                    }),
+                    TxKind::Other(_) => {}
+                }
+            }
+        }
+        Ok(txs)
     }
 }
 

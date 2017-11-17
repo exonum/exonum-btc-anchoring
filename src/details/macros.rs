@@ -284,9 +284,9 @@ macro_rules! implement_tx_from_raw {
         }
     }
 
-    impl Into<BitcoinTx> for $name {
-        fn into(self) -> BitcoinTx {
-            BitcoinTx(self.0)
+    impl From<$name> for BitcoinTx {
+        fn from(tx: $name) -> Self {
+            BitcoinTx(tx.0)
         }
     }
 

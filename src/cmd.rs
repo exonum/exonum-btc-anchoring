@@ -344,11 +344,10 @@ impl CommandExtension for Finalize {
         anchoring_config.observer = observer;
 
         let majority_count = ::majority_count(public_config_list.len() as u8);
-        let (_, address) = client
-            .create_multisig_address(network, majority_count, pub_keys.iter())
-            .unwrap();
+        let address = btc::RedeemScript::from_pubkeys(&pub_keys, majority_count).compressed(network).to_address(network);
 
         let mut genesis_cfg = if let Some(total_funds) = create_funding_tx_with_amount {
+            client.watch_address(&address, false).unwrap();
             let tx = client.send_to_address(&address, total_funds).unwrap();
             println!("Created funding tx with txid {}", tx.txid());
             AnchoringConfig::new_with_funding_tx(network, pub_keys, tx)

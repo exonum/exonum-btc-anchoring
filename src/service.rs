@@ -185,9 +185,8 @@ where
     }
 
     let majority_count = ::majority_count(count);
-    let (_, address) = client
-        .create_multisig_address(network, majority_count, pub_keys.iter())
-        .unwrap();
+    let address = btc::RedeemScript::from_pubkeys(&pub_keys, majority_count).compressed(network).to_address(network);
+    client.watch_address(&address, false).unwrap();
     let tx = client.send_to_address(&address, total_funds).unwrap();
 
     let genesis_cfg = AnchoringConfig::new_with_funding_tx(network, pub_keys, tx);

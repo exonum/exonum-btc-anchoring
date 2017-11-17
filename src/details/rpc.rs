@@ -31,8 +31,8 @@ pub use super::sandbox::SandboxClient as RpcClient;
 pub type Result<T> = bitcoinrpc::Result<T>;
 pub type Error = bitcoinrpc::Error;
 
-// Rpc method `sendtoaddress` uses amount in btc instead of the satoshis.
-const SATOSHI_DIVISOR: f64 = 100_000_000.0;
+/// Rpc method `sendtoaddress` uses amount in btc instead of the satoshis.
+pub const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 
 /// `Bitcoind` rpc configuration.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
