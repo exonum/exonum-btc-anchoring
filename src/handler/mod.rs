@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![cfg_attr(feature="cargo-clippy", allow(large_enum_variant))]
+#![cfg_attr(feature = "cargo-clippy", allow(large_enum_variant))]
 
 mod anchoring;
 mod auditing;
@@ -23,7 +23,7 @@ pub mod error;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
-use details::rpc::AnchoringRpc;
+use details::rpc::BitcoinRelay;
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx};
 use local_storage::AnchoringNodeConfig;
@@ -34,7 +34,7 @@ use blockchain::dto::MsgAnchoringSignature;
 #[derive(Debug)]
 pub struct AnchoringHandler {
     #[doc(hidden)]
-    pub client: Option<AnchoringRpc>,
+    pub client: Option<Box<BitcoinRelay>>,
     #[doc(hidden)]
     pub node: AnchoringNodeConfig,
     #[doc(hidden)]

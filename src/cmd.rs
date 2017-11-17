@@ -16,27 +16,24 @@
 //! This module collect all basic `CommandExtension` that
 //! we can use in `anchoring` bootstraping process.
 //!
+use std::error::Error;
+use std::collections::BTreeMap;
+use std::str::FromStr;
+
 use toml::Value;
+use bitcoin::util::base58::ToBase58;
+use bitcoin::network::constants::Network;
+
 use exonum::helpers::fabric::{AbstractConfig, Argument, CommandExtension, CommandName,
                               CommonConfigTemplate, Context, NodePublicConfig, ServiceFactory};
 use exonum::blockchain::Service;
-
 use exonum::node::NodeConfig;
 use exonum::crypto::HexValue;
-use bitcoin::util::base58::ToBase58;
-
-use bitcoin::network::constants::Network;
-use std::error::Error;
-use std::collections::BTreeMap;
 
 use service::AnchoringService;
 use super::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig, gen_btc_keypair};
-
-
-use details::btc::{PrivateKey, PublicKey};
-
-use AnchoringRpc;
-use details::btc::transactions::FundingTx;
+use details::btc::{self, PrivateKey, PublicKey};
+use details::rpc::{AnchoringRpc, BitcoinRelay};
 use bitcoin::util::base58::FromBase58;
 use observer::AnchoringObserverConfig;
 
@@ -352,12 +349,13 @@ impl CommandExtension for Finalize {
             .unwrap();
 
         let mut genesis_cfg = if let Some(total_funds) = create_funding_tx_with_amount {
-            let tx = FundingTx::create(&client, &address, total_funds).unwrap();
+            let tx = client.send_to_address(&address, total_funds).unwrap();
             println!("Created funding tx with txid {}", tx.txid());
             AnchoringConfig::new_with_funding_tx(network, pub_keys, tx)
         } else {
             let txid = funding_txid.expect("Funding txid not fount");
-            let tx = client.get_transaction(&txid).unwrap().expect(
+            let txid = btc::TxId::from_str(&txid).expect("Unable to parse funding txid");
+            let tx = client.get_transaction(txid).unwrap().expect(
                 "Funding tx with the \
                  given id not fount",
             );

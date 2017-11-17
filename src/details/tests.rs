@@ -690,7 +690,7 @@ mod rpc {
     use exonum::helpers::{self, Height};
     use exonum::crypto::{Hash, hash};
 
-    use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
+    use details::rpc::{AnchoringRpc, BitcoinRelay, AnchoringRpcConfig};
     use details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
     use details::btc;
 
@@ -733,20 +733,17 @@ mod rpc {
 
         let inputs = tx.inputs().collect::<Vec<_>>();
         let signatures = make_signatures(redeem_script, &tx, inputs.as_slice(), priv_keys);
-        let tx = tx.send(client, redeem_script, signatures).unwrap();
+        let tx = tx.finalize(redeem_script, signatures);
+        client.send_transaction(tx.clone().into()).unwrap();
 
         let payload = tx.payload();
         assert_eq!(payload.block_height, block_height);
         assert_eq!(payload.block_hash, block_hash);
 
         trace!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
-        let lect_tx = client
-            .unspent_transactions(to)
-            .unwrap()
-            .first()
-            .unwrap()
-            .clone();
-        assert_eq!(lect_tx.0, tx.0);
+        let unspent_transactions = client.unspent_transactions(to).unwrap();
+        let lect_tx = &unspent_transactions[0];
+        assert_eq!(lect_tx.body.0, tx.0);
         tx
     }
 
@@ -756,7 +753,9 @@ mod rpc {
 
         let client = anchoring_client();
 
-        let txid = "21972c3e2b7047c41c0ece2f18223775e62a24822923c846b3a7cabfd8585d73";
+        let txid = btc::TxId::from_hex(
+            "21972c3e2b7047c41c0ece2f18223775e62a24822923c846b3a7cabfd8585d73",
+        ).unwrap();
         assert!(client.get_transaction_info(txid).unwrap().is_none());
         assert!(client.get_transaction(txid).unwrap().is_none());
     }
@@ -774,7 +773,7 @@ mod rpc {
             .create_multisig_address(Network::Testnet, majority_count, validators.iter())
             .unwrap();
 
-        let funding_tx = FundingTx::create(&client, &address, 1000).unwrap();
+        let funding_tx = client.send_to_address(&address, 1000).unwrap();
         let info = funding_tx.has_unspent_info(&client, &address).unwrap();
         assert!(info.is_some());
         trace!("{:#?}", info);
@@ -800,7 +799,7 @@ mod rpc {
         // Make anchoring txs chain
         let total_funds = 4000;
         let mut utxo_tx = {
-            let funding_tx = FundingTx::create(&client, &addr, total_funds).unwrap();
+            let funding_tx = client.send_to_address(&addr, total_funds).unwrap();
             let out = funding_tx.find_out(&addr).unwrap();
             trace!("funding_tx={:#?}", funding_tx);
 
@@ -814,7 +813,8 @@ mod rpc {
             trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
             let signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
-            let tx = tx.send(&client, &redeem_script, signatures).unwrap();
+            let tx = tx.finalize(&redeem_script, signatures);
+            client.send_transaction(tx.clone().into()).unwrap();
             trace!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
             assert!(
@@ -829,7 +829,7 @@ mod rpc {
                 .first()
                 .unwrap()
                 .clone();
-            assert_eq!(lect_tx.0, tx.0);
+            assert_eq!(lect_tx.body.0, tx.0);
             tx
         };
 
@@ -861,7 +861,7 @@ mod rpc {
         }
 
         // Try to add funding input
-        let funding_tx = FundingTx::create(&client, &addr, fee * 3).unwrap();
+        let funding_tx = client.send_to_address(&addr, fee * 3).unwrap();
         utxo_tx = send_anchoring_tx(
             &client,
             &redeem_script,
@@ -928,7 +928,7 @@ mod rpc {
         // Make anchoring txs chain
         let total_funds = 4000;
         let mut utxo_tx = {
-            let funding_tx = FundingTx::create(&client, &addr, total_funds).unwrap();
+            let funding_tx = client.send_to_address(&addr, total_funds).unwrap();
             let out = funding_tx.find_out(&addr).unwrap();
             trace!("funding_tx={:#?}", funding_tx);
 
@@ -941,7 +941,8 @@ mod rpc {
             trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
             let signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
-            let tx = tx.send(&client, &redeem_script, signatures).unwrap();
+            let tx = tx.finalize(&redeem_script, signatures);
+            client.send_transaction(tx.clone().into()).unwrap();
             trace!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
             assert!(
@@ -956,7 +957,7 @@ mod rpc {
                 .first()
                 .unwrap()
                 .clone();
-            assert_eq!(lect_tx.0, tx.0);
+            assert_eq!(lect_tx.body, tx.0);
             tx
         };
 
@@ -1000,5 +1001,4 @@ mod rpc {
             fee,
         );
     }
-
 }

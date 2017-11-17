@@ -75,7 +75,7 @@ impl AnchoringHandler {
 
         // Checks with access to the `bitcoind`
         if let Some(ref client) = self.client {
-            if client.get_transaction(&tx.txid())?.is_none() {
+            if client.get_transaction(tx.id())?.is_none() {
                 let e = HandlerError::IncorrectLect {
                     reason: "Initial funding_tx not found in the bitcoin blockchain".to_string(),
                     tx: tx.into(),
@@ -91,7 +91,7 @@ impl AnchoringHandler {
     fn check_anchoring_lect(&self, tx: AnchoringTx) -> Result<(), ServiceError> {
         // Checks with access to the `bitcoind`
         if let Some(ref client) = self.client {
-            if client.get_transaction(&tx.txid())?.is_none() {
+            if client.get_transaction(tx.id())?.is_none() {
                 let e = HandlerError::LectNotFound { height: tx.payload().block_height };
                 return Err(e.into());
             }

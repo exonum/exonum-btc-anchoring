@@ -56,6 +56,20 @@ macro_rules! implement_base58_wrapper {
             }
         }
 
+        impl ::std::str::FromStr for $to {
+            type Err = ::bitcoin::util::base58::Error;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                $to::from_base58check(s)
+            }
+        }
+
+        impl ::std::string::ToString for $to {
+            fn to_string(&self) -> String {
+                self.to_base58check()
+            }
+        }
+
         impl fmt::Debug for $to {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 write!(f, "\"{}({})\"", stringify!($to), self.to_base58check())
@@ -175,13 +189,6 @@ macro_rules! implement_tx_wrapper {
 
         pub fn ntxid(&self) -> String {
             self.0.ntxid().be_hex_string()
-        }
-
-        pub fn confirmations(&self, client: &AnchoringRpc)
-             -> ::std::result::Result<Option<u64>, ::bitcoinrpc::Error> {
-            let confirmations = client.get_transaction_info(&self.txid())?
-                .and_then(|info| info.confirmations);
-            Ok(confirmations)
         }
     }
 

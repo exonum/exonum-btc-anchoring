@@ -22,7 +22,7 @@ use exonum::helpers::{Height, ValidatorId};
 
 use error::Error as ServiceError;
 use handler::error::Error as HandlerError;
-use details::rpc::AnchoringRpc;
+use details::rpc::BitcoinRelay;
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, TxKind};
 use local_storage::AnchoringNodeConfig;
@@ -35,10 +35,10 @@ use super::{AnchoringHandler, AnchoringState, LectKind, MultisigAddress};
 impl AnchoringHandler {
     #[cfg(not(feature = "sandbox_tests"))]
     #[doc(hidden)]
-    pub fn new(client: Option<AnchoringRpc>, node: AnchoringNodeConfig) -> AnchoringHandler {
+    pub fn new(client: Option<Box<BitcoinRelay>>, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
-            client: client,
-            node: node,
+            client,
+            node,
             proposal_tx: None,
             known_addresses: HashSet::new(),
         }
@@ -46,10 +46,10 @@ impl AnchoringHandler {
 
     #[cfg(feature = "sandbox_tests")]
     #[doc(hidden)]
-    pub fn new(client: Option<AnchoringRpc>, node: AnchoringNodeConfig) -> AnchoringHandler {
+    pub fn new(client: Option<Box<BitcoinRelay>>, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
-            client: client,
-            node: node,
+            client,
+            node,
             proposal_tx: None,
             errors: Vec::new(),
             known_addresses: HashSet::new(),
@@ -74,11 +74,14 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn client(&self) -> &AnchoringRpc {
-        self.client.as_ref().expect(
-            "Bitcoind client needs to be present \
-             for validator node",
-        )
+    pub fn client(&self) -> &BitcoinRelay {
+        self.client
+            .as_ref()
+            .expect(
+                "Bitcoind client needs to be present \
+                 for validator node",
+            )
+            .as_ref()
     }
 
     #[doc(hidden)]
@@ -100,14 +103,9 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn import_address(&mut self, addr: &btc::Address) -> Result<(), ServiceError> {
-        let addr_str = addr.to_base58check();
+        let addr_str = addr.to_string();
         if !self.known_addresses.contains(&addr_str) {
-            self.client().importaddress(
-                &addr_str,
-                "multisig",
-                false,
-                false,
-            )?;
+            self.client().watch_address(addr, false)?;
 
             trace!("Add address to known, addr={}", addr_str);
             self.known_addresses.insert(addr_str);
@@ -210,7 +208,7 @@ impl AnchoringHandler {
                 TxKind::Anchoring(lect) => {
                     let lect_addr = lect.output_address(actual.network);
                     if lect_addr == following_addr {
-                        let confirmations = get_confirmations(self.client(), &lect.txid())?;
+                        let confirmations = self.client().get_transaction_confirmations(lect.id())?;
                         // Lect now is transition transaction
                         AnchoringState::Waiting {
                             lect: lect.into(),
@@ -238,7 +236,7 @@ impl AnchoringHandler {
                     if tx.find_out(&actual_addr).is_some() {
                         trace!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
                         // Wait until funding_tx got enough confirmation
-                        let confirmations = get_confirmations(self.client(), &tx.txid())?;
+                        let confirmations = self.client().get_transaction_confirmations(tx.id())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
                                 lect: tx.into(),
@@ -267,7 +265,9 @@ impl AnchoringHandler {
                     // If the lect encodes a transition to a new anchoring address,
                     // we need to wait until it reaches enough confirmations.
                     if actual_lect_is_transition(&actual, &actual_lect, &anchoring_schema) {
-                        let confirmations = get_confirmations(self.client(), &actual_lect.txid())?;
+                        let confirmations = self.client().get_transaction_confirmations(
+                            actual_lect.id(),
+                        )?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
                                 lect: actual_lect.into(),
@@ -372,7 +372,10 @@ impl AnchoringHandler {
         multisig: &MultisigAddress,
         state: &ServiceContext,
     ) -> Result<Option<BitcoinTx>, ServiceError> {
-        let lects: Vec<_> = self.client().unspent_transactions(&multisig.addr)?;
+        let lects = self.client()
+            .unspent_transactions(&multisig.addr)?
+            .into_iter()
+            .map(|tx| tx.body);
         for lect in lects {
             if self.transaction_is_lect(&lect, multisig, state)? {
                 return Ok(Some(lect));
@@ -424,9 +427,13 @@ impl AnchoringHandler {
             funding_tx,
             multisig.addr.to_base58check()
         );
-        if let Some(info) = funding_tx.has_unspent_info(self.client(), &multisig.addr)? {
+        if let Some(info) = self.client()
+            .unspent_transactions(&multisig.addr)?
+            .iter()
+            .find(|tx| tx.body.0 == funding_tx.0)
+        {
             trace!(
-                "avaliable_funding_tx={:#?}, confirmations={}",
+                "avaliable_funding_tx={:#?}, confirmations={:?}",
                 funding_tx,
                 info.confirmations
             );
@@ -462,12 +469,11 @@ impl AnchoringHandler {
                 }
 
                 let txid = tx.prev_hash();
-                let prev_lect =
-                    if let Some(tx) = self.client().get_transaction(&txid.be_hex_string())? {
-                        tx
-                    } else {
-                        return Ok(false);
-                    };
+                let prev_lect = if let Some(tx) = self.client().get_transaction(txid)? {
+                    tx
+                } else {
+                    return Ok(false);
+                };
 
                 trace!("Check prev lect={:#?}", prev_lect);
 
@@ -553,11 +559,6 @@ where
     } else {
         false
     }
-}
-
-fn get_confirmations(client: &AnchoringRpc, txid: &str) -> Result<Option<u64>, ServiceError> {
-    let info = client.get_transaction_info(txid)?;
-    Ok(info.and_then(|info| info.confirmations))
 }
 
 fn is_enough_confirmations(cfg: &AnchoringConfig, confirmations: Option<u64>) -> bool {

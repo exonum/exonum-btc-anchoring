@@ -34,7 +34,7 @@ use exonum::crypto::{FromHexError, Hash, HexValue, hash};
 use exonum::helpers::Height;
 use exonum::storage::StorageValue;
 
-use details::rpc::{AnchoringRpc, Error as RpcError, RpcClient};
+use details::rpc::{Error as RpcError, RpcClient};
 use details::btc;
 use details::btc::{HexValueEx, RedeemScript, TxId};
 use details::error::Error as InternalError;
@@ -104,15 +104,6 @@ implement_serde_hex! {FundingTx}
 implement_serde_hex! {BitcoinTx}
 
 impl FundingTx {
-    pub fn create(
-        client: &AnchoringRpc,
-        address: &btc::Address,
-        total_funds: u64,
-    ) -> Result<FundingTx, RpcError> {
-        let tx = client.send_to_address(address, total_funds)?;
-        Ok(FundingTx::from(tx))
-    }
-
     pub fn find_out(&self, addr: &btc::Address) -> Option<u32> {
         let redeem_script_hash = addr.hash;
         self.0
@@ -213,16 +204,16 @@ impl AnchoringTx {
         finalize_anchoring_transaction(self, redeem_script, signatures)
     }
 
-    pub fn send(
-        self,
-        client: &AnchoringRpc,
-        redeem_script: &btc::RedeemScript,
-        signatures: HashMap<u32, Vec<btc::Signature>>,
-    ) -> Result<AnchoringTx, RpcError> {
-        let tx = self.finalize(redeem_script, signatures);
-        client.send_transaction(tx.clone().into())?;
-        Ok(tx)
-    }
+    // pub fn send(
+    //     self,
+    //     client: &AnchoringRpc,
+    //     redeem_script: &btc::RedeemScript,
+    //     signatures: HashMap<u32, Vec<btc::Signature>>,
+    // ) -> Result<AnchoringTx, RpcError> {
+    //     let tx = self.finalize(redeem_script, signatures);
+    //     client.send_transaction(tx.clone().into())?;
+    //     Ok(tx)
+    // }
 }
 
 impl fmt::Debug for AnchoringTx {

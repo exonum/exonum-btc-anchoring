@@ -33,8 +33,7 @@ use exonum::api::Api;
 
 use api::PublicApi;
 use details::btc;
-use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
-use details::btc::transactions::FundingTx;
+use details::rpc::{AnchoringRpc, AnchoringRpcConfig, BitcoinRelay};
 use local_storage::AnchoringNodeConfig;
 use handler::AnchoringHandler;
 use blockchain::consensus_storage::AnchoringConfig;
@@ -61,7 +60,7 @@ pub struct AnchoringService {
 impl AnchoringService {
     /// Creates a new service instance with the given `consensus` and `local` configurations.
     pub fn new(consensus: AnchoringConfig, local: AnchoringNodeConfig) -> AnchoringService {
-        let client = local.rpc.clone().map(AnchoringRpc::new);
+        let client = local.rpc.clone().map(AnchoringRpc::new).map(Into::into);
         AnchoringService {
             genesis: consensus,
             handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local))),
@@ -70,7 +69,7 @@ impl AnchoringService {
 
     #[doc(hidden)]
     pub fn new_with_client(
-        client: AnchoringRpc,
+        client: Box<BitcoinRelay>,
         genesis: AnchoringConfig,
         local_cfg: AnchoringNodeConfig,
     ) -> AnchoringService {
@@ -189,7 +188,7 @@ where
     let (_, address) = client
         .create_multisig_address(network, majority_count, pub_keys.iter())
         .unwrap();
-    let tx = FundingTx::create(client, &address, total_funds).unwrap();
+    let tx = client.send_to_address(&address, total_funds).unwrap();
 
     let genesis_cfg = AnchoringConfig::new_with_funding_tx(network, pub_keys, tx);
     for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {

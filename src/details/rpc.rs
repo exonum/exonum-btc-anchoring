@@ -13,14 +13,14 @@
 // limitations under the License.
 
 use std::ops::Deref;
+use std::string::ToString;
 
 use bitcoinrpc;
-use bitcoin::util::base58::ToBase58;
 
 use exonum::crypto::HexValue;
 
 use details::btc;
-use details::btc::transactions::{BitcoinTx, TxKind};
+use details::btc::transactions::{BitcoinTx, FundingTx, TxKind};
 
 #[doc(hidden)]
 #[cfg(not(feature = "sandbox_tests"))]
@@ -63,45 +63,7 @@ impl AnchoringRpc {
         }
     }
 
-    pub fn get_transaction(&self, txid: &str) -> Result<Option<BitcoinTx>> {
-        let r = self.0.getrawtransaction(txid);
-        match r {
-            Ok(tx) => Ok(Some(BitcoinTx::from_hex(tx).unwrap())),
-            Err(bitcoinrpc::Error::NoInformation(_)) => Ok(None),
-            Err(e) => Err(e),
-        }
-    }
-
-    pub fn get_transaction_info(
-        &self,
-        txid: &str,
-    ) -> Result<Option<bitcoinrpc::RawTransactionInfo>> {
-        let r = self.0.getrawtransaction_verbose(txid);
-        match r {
-            Ok(tx) => Ok(Some(tx)),
-            Err(bitcoinrpc::Error::NoInformation(_)) => Ok(None),
-            Err(e) => Err(e),
-        }
-    }
-
-    pub fn get_transaction_confirmations(&self, txid: &btc::TxId) -> Result<Option<u64>> {
-        let info = self.get_transaction_info(&txid.be_hex_string())?;
-        Ok(info.and_then(|info| info.confirmations))
-    }
-
-    pub fn send_transaction(&self, tx: BitcoinTx) -> Result<()> {
-        let tx_hex = tx.to_hex();
-        self.0.sendrawtransaction(&tx_hex)?;
-        Ok(())
-    }
-
-    pub fn send_to_address(&self, address: &btc::Address, funds: u64) -> Result<BitcoinTx> {
-        let addr = address.to_base58check();
-        let funds_str = (funds as f64 / SATOSHI_DIVISOR).to_string();
-        let utxo_txid = self.0.sendtoaddress(&addr, &funds_str)?;
-        Ok(self.get_transaction(&utxo_txid)?.unwrap())
-    }
-
+    #[deprecated]
     pub fn create_multisig_address<'a, I>(
         &self,
         network: btc::Network,
@@ -114,54 +76,8 @@ impl AnchoringRpc {
         let redeem_script = btc::RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
         let addr = btc::Address::from_script(&redeem_script, network);
 
-        self.0.importaddress(
-            &addr.to_base58check(),
-            "multisig",
-            false,
-            false,
-        )?;
+        self.watch_address(&addr, false)?;
         Ok((redeem_script, addr))
-    }
-
-    pub fn get_last_anchoring_transactions(
-        &self,
-        addr: &str,
-        limit: u32,
-    ) -> Result<Vec<bitcoinrpc::TransactionInfo>> {
-        self.0.listtransactions(limit, 0, true).map(|v| {
-            v.into_iter()
-                .rev()
-                .filter(|tx| tx.address == Some(addr.into()))
-                .collect::<Vec<_>>()
-        })
-    }
-
-    pub fn get_unspent_transactions(
-        &self,
-        min_conf: u32,
-        max_conf: u32,
-        addr: &str,
-    ) -> Result<Vec<bitcoinrpc::UnspentTransactionInfo>> {
-        self.0.listunspent(min_conf, max_conf, [addr])
-    }
-
-    pub fn unspent_transactions(&self, addr: &btc::Address) -> Result<Vec<BitcoinTx>> {
-        let unspent_txs = self.get_unspent_transactions(
-            0,
-            9_999_999,
-            &addr.to_base58check(),
-        )?;
-        let mut txs = Vec::new();
-        for info in unspent_txs {
-            if let Some(raw_tx) = self.get_transaction(&info.txid)? {
-                match TxKind::from(raw_tx) {
-                    TxKind::Anchoring(tx) => txs.push(tx.into()),
-                    TxKind::FundingTx(tx) => txs.push(tx.into()),
-                    TxKind::Other(_) => {}
-                }
-            }
-        }
-        Ok(txs)
     }
 }
 
@@ -170,5 +86,122 @@ impl Deref for AnchoringRpc {
 
     fn deref(&self) -> &RpcClient {
         &self.0
+    }
+}
+
+/// Short information about bitcoin transaction.
+#[derive(Clone, Debug)]
+pub struct TxInfo {
+    /// Transaction body,
+    pub body: BitcoinTx,
+    /// Number of confirmations.
+    pub confirmations: Option<u64>,
+}
+
+impl From<bitcoinrpc::RawTransactionInfo> for TxInfo {
+    fn from(info: bitcoinrpc::RawTransactionInfo) -> Self {
+        TxInfo {
+            body: BitcoinTx::from_hex(info.hex.expect("Transaction hex is absent in response."))
+                .unwrap(),
+            confirmations: info.confirmations,
+        }
+    }
+}
+
+pub trait BitcoinRelay: 'static + ::std::fmt::Debug + Send + Sync {
+    /// Retrieves transaction from the bitcoin blockchain.
+    fn get_transaction(&self, txid: btc::TxId) -> Result<Option<BitcoinTx>>;
+
+    /// Retrieves information about transaction with the given id.
+    fn get_transaction_info(&self, txid: btc::TxId) -> Result<Option<TxInfo>>;
+
+    /// Observes the changes on given address.
+    fn watch_address(&self, addr: &btc::Address, rescan: bool) -> Result<()>;
+
+    /// Sends raw transaction to the bitcoin network.
+    fn send_transaction(&self, tx: BitcoinTx) -> Result<()>;
+
+    /// Sends funds to the given address.
+    fn send_to_address(&self, addr: &btc::Address, satoshis: u64) -> Result<FundingTx>;
+
+    /// Lists unspent transactions for the given address.
+    fn unspent_transactions(&self, addr: &btc::Address) -> Result<Vec<TxInfo>>;
+
+    /// Retrieves information about confirmations for transaction with the given id.
+    fn get_transaction_confirmations(&self, txid: btc::TxId) -> Result<Option<u64>> {
+        let info = self.get_transaction_info(txid)?;
+        Ok(info.and_then(|x| x.confirmations))
+    }
+}
+
+impl BitcoinRelay for AnchoringRpc {
+    fn get_transaction(&self, txid: btc::TxId) -> Result<Option<BitcoinTx>> {
+        let r = self.getrawtransaction(&txid.to_string());
+        match r {
+            Ok(tx) => Ok(Some(BitcoinTx::from_hex(tx).unwrap())),
+            Err(bitcoinrpc::Error::NoInformation(_)) => Ok(None),
+            Err(e) => Err(e),
+        }
+    }
+
+    fn get_transaction_info(&self, txid: btc::TxId) -> Result<Option<TxInfo>> {
+        let info = match self.getrawtransaction_verbose(&txid.to_string()) {
+            Ok(info) => Ok(info),
+            Err(bitcoinrpc::Error::NoInformation(_)) => return Ok(None),
+            Err(e) => Err(e),
+        }?;
+        Ok(Some(info.into()))
+    }
+
+    fn watch_address(&self, addr: &btc::Address, rescan: bool) -> Result<()> {
+        self.importaddress(&addr.to_string(), "multisig", false, rescan)
+    }
+
+    fn send_transaction(&self, tx: BitcoinTx) -> Result<()> {
+        let tx_hex = tx.to_hex();
+        self.sendrawtransaction(&tx_hex)?;
+        Ok(())
+    }
+
+    fn send_to_address(&self, addr: &btc::Address, satoshis: u64) -> Result<FundingTx> {
+        let addr = addr.to_string();
+        let funds_str = (satoshis as f64 / SATOSHI_DIVISOR).to_string();
+        let utxo_txid = self.sendtoaddress(&addr, &funds_str)?;
+        // TODO rewrite Error types to avoid unwraps.
+        let utxo_txid = btc::TxId::from_hex(&utxo_txid).unwrap();
+        Ok(FundingTx::from(self.get_transaction(utxo_txid)?.unwrap()))
+    }
+
+    fn unspent_transactions(&self, addr: &btc::Address) -> Result<Vec<TxInfo>> {
+        let unspent_txs = self.listunspent(0, 9_999_999, [addr.to_string().as_ref()])?;
+        let mut txs = Vec::new();
+        for info in unspent_txs {
+            let txid = btc::TxId::from_hex(&info.txid).unwrap();
+            let confirmations = Some(info.confirmations);
+            if let Some(raw_tx) = self.get_transaction(txid)? {
+                match TxKind::from(raw_tx) {
+                    TxKind::Anchoring(tx) => {
+                        txs.push(TxInfo {
+                            body: tx.into(),
+                            confirmations,
+                        })
+                    }
+                    TxKind::FundingTx(tx) => {
+                        txs.push(TxInfo {
+                            body: tx.into(),
+                            confirmations,
+                        })
+                    }
+                    TxKind::Other(_) => {}
+                }
+            }
+        }
+        Ok(txs)
+    }
+}
+
+impl<'a, T: BitcoinRelay + 'a> From<T> for Box<BitcoinRelay> {
+    fn from(t: T) -> Self {
+        Box::new(t) as Box<BitcoinRelay>
     }
 }
