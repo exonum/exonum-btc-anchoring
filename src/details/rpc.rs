@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops::Deref;
 use std::string::ToString;
 
 use bitcoinrpc;
@@ -22,11 +21,7 @@ use exonum::crypto::HexValue;
 use details::btc;
 use details::btc::transactions::{BitcoinTx, FundingTx, TxKind};
 
-#[doc(hidden)]
-#[cfg(not(feature = "sandbox_tests"))]
 pub use bitcoinrpc::Client as RpcClient;
-#[cfg(feature = "sandbox_tests")]
-pub use super::sandbox::SandboxClient as RpcClient;
 
 pub type Result<T> = bitcoinrpc::Result<T>;
 pub type Error = bitcoinrpc::Error;
@@ -50,42 +45,9 @@ pub struct AnchoringRpcConfig {
 #[derive(Debug)]
 pub struct AnchoringRpc(pub RpcClient);
 
-impl AnchoringRpc {
-    pub fn new(cfg: AnchoringRpcConfig) -> AnchoringRpc {
-        AnchoringRpc(RpcClient::new(cfg.host, cfg.username, cfg.password))
-    }
-
-    pub fn config(&self) -> AnchoringRpcConfig {
-        AnchoringRpcConfig {
-            host: self.0.url().to_string(),
-            username: self.0.username().clone(),
-            password: self.0.password().clone(),
-        }
-    }
-
-    #[deprecated]
-    pub fn create_multisig_address<'a, I>(
-        &self,
-        network: btc::Network,
-        count: u8,
-        pub_keys: I,
-    ) -> Result<(btc::RedeemScript, btc::Address)>
-    where
-        I: IntoIterator<Item = &'a btc::PublicKey>,
-    {
-        let redeem_script = btc::RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
-        let addr = btc::Address::from_script(&redeem_script, network);
-
-        self.watch_address(&addr, false)?;
-        Ok((redeem_script, addr))
-    }
-}
-
-impl Deref for AnchoringRpc {
-    type Target = RpcClient;
-
-    fn deref(&self) -> &RpcClient {
-        &self.0
+impl From<AnchoringRpcConfig> for RpcClient {
+    fn from(cfg: AnchoringRpcConfig) -> Self {
+        RpcClient::new(cfg.host, cfg.username, cfg.password)
     }
 }
 
@@ -132,9 +94,12 @@ pub trait BitcoinRelay: 'static + ::std::fmt::Debug + Send + Sync {
         let info = self.get_transaction_info(txid)?;
         Ok(info.and_then(|x| x.confirmations))
     }
+
+    /// Returns an actual relay configuration.
+    fn config(&self) -> AnchoringRpcConfig;
 }
 
-impl BitcoinRelay for AnchoringRpc {
+impl BitcoinRelay for RpcClient {
     fn get_transaction(&self, txid: btc::TxId) -> Result<Option<BitcoinTx>> {
         let r = self.getrawtransaction(&txid.to_string());
         match r {
@@ -197,6 +162,14 @@ impl BitcoinRelay for AnchoringRpc {
             }
         }
         Ok(txs)
+    }
+
+    fn config(&self) -> AnchoringRpcConfig {
+        AnchoringRpcConfig {
+            host: self.url().to_string(),
+            username: self.username().clone(),
+            password: self.password().clone(),
+        }
     }
 }
 

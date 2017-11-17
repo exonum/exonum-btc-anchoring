@@ -76,13 +76,15 @@ impl RedeemScript {
 
         for instruction in &self.0 {
             match instruction {
-                Instruction::PushBytes(bytes) => if bytes.len() == 33 {
-                    builder = builder.push_slice(bytes);
-                } else {
-                    let pubkey = RawPublicKey::from_slice(&context, bytes).unwrap();
-                    let addr = RawAddress::from_key(network, &pubkey, true);
-                    builder = builder.push_slice(addr.hash[..].as_ref());
-                },
+                Instruction::PushBytes(bytes) => {
+                    if bytes.len() == 33 {
+                        builder = builder.push_slice(bytes);
+                    } else {
+                        let pubkey = RawPublicKey::from_slice(&context, bytes).unwrap();
+                        let addr = RawAddress::from_key(network, &pubkey, true);
+                        builder = builder.push_slice(addr.hash[..].as_ref());
+                    }
+                }
                 Instruction::Op(opcode) => builder = builder.push_opcode(opcode),
                 Instruction::Error(_) => unimplemented!(),
             }

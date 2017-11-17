@@ -21,6 +21,8 @@ extern crate rand;
 extern crate sandbox;
 #[macro_use]
 extern crate serde_json;
+#[macro_use]
+extern crate pretty_assertions;
 
 use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;
@@ -37,7 +39,6 @@ use exonum_btc_anchoring::{AnchoringConfig, AnchoringNodeConfig, ANCHORING_SERVI
 use exonum_btc_anchoring::details::sandbox::Request;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{FundingTx, TransactionBuilder};
-use exonum_btc_anchoring::details::rpc::AnchoringRpc;
 use exonum_btc_anchoring::details::sandbox::SandboxClient;
 use exonum_btc_anchoring::observer::AnchoringChainObserver;
 use exonum_btc_anchoring::blockchain::AnchoringSchema;
@@ -1032,11 +1033,9 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-
             gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id))
                 .raw()
                 .clone()
-
         })
         .collect::<Vec<_>>();
     sandbox.broadcast(&lects[0]);
@@ -1163,11 +1162,9 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-
             gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id))
                 .raw()
                 .clone()
-
         })
         .collect::<Vec<_>>();
     sandbox.broadcast(&lects[0]);
@@ -1302,11 +1299,9 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-
             gen_service_tx_lect(&sandbox, id, &new_chain_tx, lects_count(&sandbox, id))
                 .raw()
                 .clone()
-
         })
         .collect::<Vec<_>>();
     sandbox.broadcast(&lects[0]);
@@ -1644,11 +1639,9 @@ fn test_anchoring_transit_after_exclude_from_validator() {
     let lects = (0..3)
         .map(ValidatorId)
         .map(|id| {
-
             gen_service_tx_lect(&sandbox, id, &transition_tx, lects_count(&sandbox, id))
                 .raw()
                 .clone()
-
         })
         .collect::<Vec<_>>();
 
@@ -1885,24 +1878,24 @@ fn test_anchoring_transit_changed_self_key_observer() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| {
-
             gen_service_tx_lect(&sandbox, id, &third_anchored_tx, lects_count(&sandbox, id))
                 .raw()
                 .clone()
-
         })
         .collect::<Vec<_>>();
     sandbox.broadcast(&lects[0]);
     sandbox.add_height(&lects);
 
     let anchoring_addr = sandbox.current_addr();
+    let client = SandboxClient::default();
+    let requests = client.requests();
     let mut observer = AnchoringChainObserver::new_with_client(
         sandbox.blockchain_ref().clone(),
-        AnchoringRpc(SandboxClient::default()),
+        Box::new(client),
         0,
     );
 
-    observer.client().expect(vec![
+    requests.expect(vec![
         request! {
             method: "listunspent",
             params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],

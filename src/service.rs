@@ -33,7 +33,7 @@ use exonum::api::Api;
 
 use api::PublicApi;
 use details::btc;
-use details::rpc::{AnchoringRpc, AnchoringRpcConfig, BitcoinRelay};
+use details::rpc::{RpcClient, BitcoinRelay};
 use local_storage::AnchoringNodeConfig;
 use handler::AnchoringHandler;
 use blockchain::consensus_storage::AnchoringConfig;
@@ -60,7 +60,7 @@ pub struct AnchoringService {
 impl AnchoringService {
     /// Creates a new service instance with the given `consensus` and `local` configurations.
     pub fn new(consensus: AnchoringConfig, local: AnchoringNodeConfig) -> AnchoringService {
-        let client = local.rpc.clone().map(AnchoringRpc::new).map(Into::into);
+        let client = local.rpc.clone().map(RpcClient::from).map(Into::into);
         AnchoringService {
             genesis: consensus,
             handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local))),
@@ -158,7 +158,7 @@ impl Service for AnchoringService {
 /// Note: Bitcoin node that is used by rpc should have enough bitcoin amount to generate
 /// funding transaction by given `total_funds`.
 pub fn gen_anchoring_testnet_config_with_rng<R>(
-    client: &AnchoringRpc,
+    client: &BitcoinRelay,
     network: btc::Network,
     count: u8,
     total_funds: u64,
@@ -167,11 +167,7 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(
 where
     R: Rng,
 {
-    let rpc = AnchoringRpcConfig {
-        host: client.url().into(),
-        username: client.username().clone(),
-        password: client.password().clone(),
-    };
+    let rpc = client.config();
     let mut pub_keys = Vec::new();
     let mut node_cfgs = Vec::new();
     let mut priv_keys = Vec::new();
@@ -185,7 +181,9 @@ where
     }
 
     let majority_count = ::majority_count(count);
-    let address = btc::RedeemScript::from_pubkeys(&pub_keys, majority_count).compressed(network).to_address(network);
+    let address = btc::RedeemScript::from_pubkeys(&pub_keys, majority_count)
+        .compressed(network)
+        .to_address(network);
     client.watch_address(&address, false).unwrap();
     let tx = client.send_to_address(&address, total_funds).unwrap();
 
@@ -203,7 +201,7 @@ where
 /// Same as [`gen_anchoring_testnet_config_with_rng`](fn.gen_anchoring_testnet_config_with_rng.html)
 /// but it uses default random number generator.
 pub fn gen_anchoring_testnet_config(
-    client: &AnchoringRpc,
+    client: &BitcoinRelay,
     network: btc::Network,
     count: u8,
     total_funds: u64,

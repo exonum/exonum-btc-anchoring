@@ -22,7 +22,7 @@ use bitcoin::util::base58::ToBase58;
 use exonum::blockchain::{Blockchain, Schema};
 use exonum::storage::Fork;
 
-use details::rpc::{AnchoringRpc, AnchoringRpcConfig, BitcoinRelay};
+use details::rpc::{RpcClient, AnchoringRpcConfig, BitcoinRelay};
 use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
 use blockchain::schema::AnchoringSchema;
 use blockchain::consensus_storage::AnchoringConfig;
@@ -69,7 +69,7 @@ impl AnchoringChainObserver {
     ) -> AnchoringChainObserver {
         AnchoringChainObserver {
             blockchain,
-            client: AnchoringRpc::new(rpc).into(),
+            client: Box::new(RpcClient::from(rpc)),
             check_interval: observer.check_interval,
         }
     }

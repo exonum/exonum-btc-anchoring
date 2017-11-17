@@ -13,14 +13,13 @@
 // limitations under the License.
 
 use exonum_btc_anchoring::details::sandbox::{Request, SandboxClient};
-use exonum_btc_anchoring::AnchoringRpc;
 
 use {AnchoringSandbox, gen_sandbox_anchoring_config};
 
 #[test]
 fn test_rpc_getnewaddress() {
     let client = SandboxClient::default();
-    client.expect(vec![
+    client.requests().expect(vec![
         request! {
             method: "getnewaddress",
             params: ["maintain"],
@@ -42,7 +41,7 @@ fn test_rpc_expected_request() {
 #[should_panic(expected = "assertion failed")]
 fn test_rpc_wrong_request() {
     let client = SandboxClient::default();
-    client.expect(vec![
+    client.requests().expect(vec![
         request! {
             method: "getnewaddress",
             params: ["maintain"],
@@ -56,7 +55,7 @@ fn test_rpc_wrong_request() {
 #[should_panic(expected = "assertion failed")]
 fn test_rpc_uneexpected_request() {
     let client = SandboxClient::default();
-    client.expect(vec![
+    client.requests().expect(vec![
         request! {
             method: "getnewaddress",
             params: ["maintain"],
@@ -69,7 +68,7 @@ fn test_rpc_uneexpected_request() {
         },
     ]);
     client.getnewaddress("useroid").unwrap();
-    client.expect(vec![
+    client.requests().expect(vec![
         request! {
             method: "getnewaddress",
             params: ["maintain"],
@@ -81,7 +80,7 @@ fn test_rpc_uneexpected_request() {
 #[test]
 fn test_rpc_validateaddress() {
     let client = SandboxClient::default();
-    client.expect(vec![
+    client.requests().expect(vec![
         request! {
             method: "validateaddress",
             params: ["n2cCRtaXxRAbmWYhH9sZUBBwqZc8mMV8tb"],
@@ -108,7 +107,7 @@ fn test_rpc_validateaddress() {
 
 #[test]
 fn test_generate_anchoring_config() {
-    let mut client = AnchoringRpc(SandboxClient::default());
+    let mut client = SandboxClient::default();
     gen_sandbox_anchoring_config(&mut client);
 }
 

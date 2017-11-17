@@ -19,6 +19,8 @@ extern crate exonum_btc_anchoring;
 extern crate exonum_btc_anchoring_sandbox;
 #[macro_use]
 extern crate serde_json;
+#[macro_use]
+extern crate pretty_assertions;
 
 use std::ops::Deref;
 

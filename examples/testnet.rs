@@ -25,8 +25,8 @@ use exonum::node::Node;
 use exonum::storage::{RocksDB, RocksDBOptions};
 use exonum::helpers::{generate_testnet_config, init_logger};
 
-use exonum_btc_anchoring::{AnchoringRpc, AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
-                           gen_anchoring_testnet_config};
+use exonum_btc_anchoring::{AnchoringRpcConfig, AnchoringService, BitcoinNetwork,
+                           gen_anchoring_testnet_config, RpcClient};
 
 fn main() {
     // Init crypto engine and pretty logger.
@@ -52,7 +52,7 @@ fn main() {
     let destdir = tmpdir_handle.path();
 
     // Generate blockchain configuration
-    let client = AnchoringRpc::new(rpc_config.clone());
+    let client = RpcClient::from(rpc_config.clone());
     let (anchoring_common, anchoring_nodes) =
         gen_anchoring_testnet_config(&client, BitcoinNetwork::Testnet, count, total_funds);
     let node_cfgs = generate_testnet_config(count, start_port);

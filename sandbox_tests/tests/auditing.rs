@@ -20,6 +20,8 @@ extern crate exonum_btc_anchoring_sandbox;
 extern crate sandbox;
 #[macro_use]
 extern crate serde_json;
+#[macro_use]
+extern crate pretty_assertions;
 
 use bitcoin::util::base58::ToBase58;
 

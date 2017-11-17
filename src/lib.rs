@@ -74,6 +74,8 @@ extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 extern crate toml;
+#[macro_use]
+extern crate pretty_assertions;
 
 #[macro_use]
 extern crate exonum;
@@ -97,7 +99,7 @@ pub mod observer;
 pub mod cmd;
 
 pub use details::btc::{gen_btc_keypair, gen_btc_keypair_with_rng, Network as BitcoinNetwork};
-pub use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
+pub use details::rpc::{RpcClient, AnchoringRpcConfig, BitcoinRelay};
 pub use blockchain::consensus_storage::AnchoringConfig;
 pub use local_storage::AnchoringNodeConfig;
 pub use service::{gen_anchoring_testnet_config, gen_anchoring_testnet_config_with_rng,

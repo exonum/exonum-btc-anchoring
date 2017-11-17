@@ -33,7 +33,7 @@ use exonum::crypto::HexValue;
 use service::AnchoringService;
 use super::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig, gen_btc_keypair};
 use details::btc::{self, PrivateKey, PublicKey};
-use details::rpc::{AnchoringRpc, BitcoinRelay};
+use details::rpc::{RpcClient, BitcoinRelay};
 use bitcoin::util::base58::FromBase58;
 use observer::AnchoringObserverConfig;
 
@@ -339,12 +339,14 @@ impl CommandExtension for Finalize {
                 HexValue::from_hex(&key).unwrap()
             })
             .collect();
-        let client = AnchoringRpc::new(rpc.clone());
+        let client = RpcClient::from(rpc.clone());
         let mut anchoring_config = AnchoringNodeConfig::new(Some(rpc));
         anchoring_config.observer = observer;
 
         let majority_count = ::majority_count(public_config_list.len() as u8);
-        let address = btc::RedeemScript::from_pubkeys(&pub_keys, majority_count).compressed(network).to_address(network);
+        let address = btc::RedeemScript::from_pubkeys(&pub_keys, majority_count)
+            .compressed(network)
+            .to_address(network);
 
         let mut genesis_cfg = if let Some(total_funds) = create_funding_tx_with_amount {
             client.watch_address(&address, false).unwrap();

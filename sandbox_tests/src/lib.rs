@@ -13,19 +13,21 @@
 // limitations under the License.
 
 // FIXME: Sometimes clippy incorrectly calculates lifetimes.
-#![cfg_attr(feature="cargo-clippy", allow(let_and_return))]
+#![cfg_attr(feature = "cargo-clippy", allow(let_and_return))]
 
+extern crate bitcoin;
+extern crate byteorder;
 extern crate exonum;
-extern crate sandbox;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
 extern crate exonum_btc_anchoring;
+extern crate libc;
+extern crate rand;
+extern crate sandbox;
+extern crate secp256k1;
 #[macro_use]
 extern crate serde_json;
-extern crate bitcoin;
-extern crate exonum_bitcoinrpc as bitcoinrpc;
-extern crate byteorder;
-extern crate secp256k1;
-extern crate rand;
-extern crate libc;
+#[macro_use]
+extern crate pretty_assertions;
 
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex, MutexGuard};
@@ -39,22 +41,23 @@ use bitcoin::util::base58::{FromBase58, ToBase58};
 
 use exonum::crypto::Hash;
 use exonum::messages::{Message, RawTransaction};
-use exonum::helpers::{ValidatorId, Height};
+use exonum::helpers::{Height, ValidatorId};
 
 use sandbox::sandbox_with_services;
 use sandbox::sandbox::Sandbox;
 use sandbox::timestamping::TimestampingService;
-use sandbox::sandbox_tests_helper::{SandboxState, VALIDATOR_0, add_one_height_with_transactions,
-                                    add_one_height_with_transactions_from_other_validator};
+use sandbox::sandbox_tests_helper::{add_one_height_with_transactions,
+                                    add_one_height_with_transactions_from_other_validator,
+                                    SandboxState, VALIDATOR_0};
 use sandbox::config_updater::ConfigUpdateService;
 
-use exonum_btc_anchoring::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpc, AnchoringService,
-                           gen_anchoring_testnet_config_with_rng};
-use exonum_btc_anchoring::details::sandbox::{Request, SandboxClient};
+use exonum_btc_anchoring::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
+                           AnchoringNodeConfig, AnchoringService};
+use exonum_btc_anchoring::details::sandbox::{Request, Requests, SandboxClient};
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringSignature;
-use exonum_btc_anchoring::handler::{AnchoringHandler, collect_signatures};
+use exonum_btc_anchoring::handler::{collect_signatures, AnchoringHandler};
 use exonum_btc_anchoring::error::HandlerError;
 
 #[macro_use]
@@ -79,14 +82,14 @@ pub struct AnchoringSandboxState {
 
 pub struct AnchoringSandbox {
     pub sandbox: Sandbox,
-    pub client: AnchoringRpc,
+    pub requests: Requests,
     pub state: RefCell<AnchoringSandboxState>,
     pub handler: Arc<Mutex<AnchoringHandler>>,
 }
 
 /// Generates config for 4 validators and 4000 funds
 pub fn gen_sandbox_anchoring_config(
-    client: &mut AnchoringRpc,
+    client: &mut SandboxClient,
 ) -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let requests = vec![
         request! {
@@ -115,7 +118,7 @@ pub fn gen_sandbox_anchoring_config(
                 211ef5cbf1986971cae80bcc983d23a88ac35ae1000"
         },
     ];
-    client.expect(requests);
+    client.requests().expect(requests);
     let mut rng: StdRng = SeedableRng::from_seed([1, 2, 3, 4].as_ref());
     gen_anchoring_testnet_config_with_rng(
         client,
@@ -131,7 +134,7 @@ impl AnchoringSandbox {
     where
         I: IntoIterator<Item = &'a (&'a str, Vec<&'a str>)>,
     {
-        let mut client = AnchoringRpc(SandboxClient::default());
+        let mut client = SandboxClient::default();
         let (mut common, mut nodes) = gen_sandbox_anchoring_config(&mut client);
 
         let priv_keys = priv_keys.into_iter().collect::<Vec<_>>();
@@ -151,14 +154,15 @@ impl AnchoringSandbox {
             node.check_lect_frequency = CHECK_LECT_FREQUENCY;
         }
 
-        client.expect(vec![
+        client.requests().expect(vec![
             request! {
-            method: "importaddress",
-            params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
-        },
+                method: "importaddress",
+                params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
+            },
         ]);
+        let requests = client.requests();
         let service = AnchoringService::new_with_client(
-            AnchoringRpc(client.clone()),
+            Box::new(client),
             common.clone(),
             nodes[ANCHORING_VALIDATOR.0 as usize].clone(),
         );
@@ -179,13 +183,13 @@ impl AnchoringSandbox {
         AnchoringSandbox {
             state: state.into(),
             handler: service_handler,
-            client: client,
-            sandbox: sandbox,
+            requests,
+            sandbox,
         }
     }
 
-    pub fn client(&self) -> &AnchoringRpc {
-        &self.client
+    pub fn client(&self) -> &Requests {
+        &self.requests
     }
 
     pub fn handler(&self) -> MutexGuard<AnchoringHandler> {

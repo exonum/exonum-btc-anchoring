@@ -12,9 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::VecDeque;
+use std::collections::{BTreeMap, VecDeque};
 use std::sync::{Arc, Mutex};
-
 use std::default::Default;
 use std::ops::{Deref, Drop};
 
@@ -38,8 +37,35 @@ pub struct Request {
 }
 
 #[derive(Debug, Clone)]
+pub struct Requests(Arc<Mutex<VecDeque<Request>>>);
+
+impl Requests {
+    pub fn new() -> Requests {
+        Requests(Arc::new(Mutex::new(VecDeque::new())))
+    }
+
+    pub fn expect<I: IntoIterator<Item = Request>>(&self, requests: I) {
+        {
+            let requests = self.0.lock().unwrap();
+            assert!(
+                requests.is_empty(),
+                "Send unexpected requests: {:#?}",
+                requests.deref()
+            );
+        }
+        self.0.lock().unwrap().extend(requests);
+    }
+}
+
+impl Default for Requests {
+    fn default() -> Requests {
+        Requests::new()
+    }
+}
+
+#[derive(Debug, Clone)]
 pub struct SandboxClient {
-    requests: Arc<Mutex<VecDeque<Request>>>,
+    requests: Requests,
     rpc: AnchoringRpcConfig,
 }
 
@@ -54,7 +80,7 @@ impl SandboxClient {
                 username: username,
                 password: password,
             },
-            requests: Arc::new(Mutex::new(VecDeque::new())),
+            requests: Requests::default(),
         }
     }
 
@@ -68,12 +94,16 @@ impl SandboxClient {
         &self.rpc.username
     }
 
+    pub fn requests(&self) -> Requests {
+        self.requests.clone()
+    }
+
     fn request<T>(&self, method: &str, params: Params) -> Result<T>
     where
         T: ::std::fmt::Debug,
         for<'de> T: Deserialize<'de>,
     {
-        let expected = self.requests.lock().unwrap().pop_front().expect(
+        let expected = self.requests.0.lock().unwrap().pop_front().expect(
             format!(
                 "expected response for method={}, \
                  params={:#?}",
@@ -100,19 +130,21 @@ impl SandboxClient {
         from_value(response).map_err(|e| Error::Other(RpcError::Json(e)))
     }
 
-    pub fn expect<I: IntoIterator<Item = Request>>(&self, requests: I) {
-        {
-            let requests = self.requests.lock().unwrap();
-            assert!(
-                requests.is_empty(),
-                "Send unexpected requests: {:#?}",
-                requests.deref()
-            );
-        }
-        self.requests.lock().unwrap().extend(requests);
+    pub fn getnewaddress(&self, account: &str) -> Result<String> {
+        self.request("getnewaddress", vec![Value::String(account.to_owned())])
     }
 
-    fn sendtoaddress(&self, addr: &str, amount: &str) -> Result<String> {
+    pub fn validateaddress(&self, addr: &str) -> Result<AddressInfo> {
+        self.request("validateaddress", vec![Value::String(addr.to_owned())])
+    }
+
+    pub fn createmultisig<V: AsRef<[String]>>(&self, signs: u8, addrs: V) -> Result<MultiSig> {
+        let n = serde_json::to_value(signs).unwrap();
+        let addrs = serde_json::to_value(addrs.as_ref()).unwrap();
+        self.request("createmultisig", vec![n, addrs])
+    }
+
+    pub fn sendtoaddress(&self, addr: &str, amount: &str) -> Result<String> {
         let params = vec![
             serde_json::to_value(addr).unwrap(),
             serde_json::to_value(amount).unwrap(),
@@ -120,24 +152,98 @@ impl SandboxClient {
         self.request("sendtoaddress", params)
     }
 
-    fn getrawtransaction(&self, txid: &str) -> Result<String> {
+    pub fn getrawtransaction(&self, txid: &str) -> Result<String> {
         let params = json!([txid, 0]).as_array().cloned().unwrap();
         self.request("getrawtransaction", params)
     }
 
-    fn getrawtransaction_verbose(&self, txid: &str) -> Result<RawTransactionInfo> {
+    pub fn getrawtransaction_verbose(&self, txid: &str) -> Result<RawTransactionInfo> {
         let params = json!([txid, 1]).as_array().cloned().unwrap();
         self.request("getrawtransaction", params)
     }
 
-    fn sendrawtransaction(&self, txhex: &str) -> Result<String> {
+    pub fn createrawtransaction<T, O>(
+        &self,
+        transactions: T,
+        outputs: O,
+        data: Option<String>,
+    ) -> Result<String>
+    where
+        T: AsRef<[TransactionInput]>,
+        O: AsRef<[TransactionOutput]>,
+    {
+        let mut map = BTreeMap::new();
+        map.extend(outputs.as_ref().iter().map(|x| {
+            (x.address.clone(), x.value.clone())
+        }));
+        if let Some(data) = data {
+            map.insert("data".into(), data);
+        }
+
+        let params = json!([transactions.as_ref(), map])
+            .as_array()
+            .cloned()
+            .unwrap();
+        self.request("createrawtransaction", params)
+    }
+
+    pub fn dumpprivkey(&self, pub_key: &str) -> Result<String> {
+        let params = json!([pub_key]).as_array().cloned().unwrap();
+        self.request("dumpprivkey", params)
+    }
+
+    pub fn signrawtransaction<O, K>(
+        &self,
+        txhex: &str,
+        outputs: O,
+        priv_keys: K,
+    ) -> Result<SignTxOutput>
+    where
+        O: AsRef<[DependentOutput]>,
+        K: AsRef<[String]>,
+    {
+        let params = json!([txhex, outputs.as_ref(), priv_keys.as_ref()])
+            .as_array()
+            .cloned()
+            .unwrap();
+        self.request("signrawtransaction", params)
+    }
+
+    pub fn sendrawtransaction(&self, txhex: &str) -> Result<String> {
         self.request(
             "sendrawtransaction",
             vec![serde_json::to_value(txhex).unwrap()],
         )
     }
 
-    fn listunspent<'a, V: AsRef<[&'a str]>>(
+    pub fn decoderawtransaction(&self, txhex: &str) -> Result<RawTransactionInfo> {
+        self.request(
+            "decoderawtransaction",
+            vec![serde_json::to_value(txhex).unwrap()],
+        )
+    }
+
+    pub fn addwitnessaddress(&self, addr: &str) -> Result<String> {
+        self.request(
+            "addwitnessaddress",
+            vec![serde_json::to_value(addr).unwrap()],
+        )
+    }
+
+    pub fn listtransactions(
+        &self,
+        count: u32,
+        from: u32,
+        include_watch_only: bool,
+    ) -> Result<Vec<TransactionInfo>> {
+        let params = json!(["*", count, from, include_watch_only])
+            .as_array()
+            .cloned()
+            .unwrap();
+        self.request("listtransactions", params)
+    }
+
+    pub fn listunspent<'a, V: AsRef<[&'a str]>>(
         &self,
         min_confirmations: u32,
         max_confirmations: u32,
@@ -148,9 +254,10 @@ impl SandboxClient {
             .cloned()
             .unwrap();
         self.request("listunspent", params)
+
     }
 
-    fn importaddress(&self, addr: &str, label: &str, rescan: bool, p2sh: bool) -> Result<()> {
+    pub fn importaddress(&self, addr: &str, label: &str, rescan: bool, p2sh: bool) -> Result<()> {
         let params = json!([addr, label, rescan, p2sh])
             .as_array()
             .cloned()
@@ -162,6 +269,28 @@ impl SandboxClient {
             Err(Error::Other(RpcError::NoErrorOrResult)) => Ok(()),
             Err(e) => Err(e),
         }
+    }
+
+    pub fn generate(&self, nblocks: u64, maxtries: u64) -> Result<Vec<String>> {
+        let params = json!([nblocks, maxtries]).as_array().cloned().unwrap();
+        self.request("generate", params)
+    }
+
+    pub fn generatetoaddress(
+        &self,
+        nblocks: u64,
+        addr: &str,
+        maxtries: u64,
+    ) -> Result<Vec<String>> {
+        let params = json!([nblocks, addr, maxtries])
+            .as_array()
+            .cloned()
+            .unwrap();
+        self.request("generatetoaddress", params)
+    }
+
+    pub fn stop(&self) -> Result<String> {
+        self.request("stop", vec![])
     }
 }
 
@@ -211,26 +340,34 @@ impl BitcoinRelay for SandboxClient {
             let confirmations = Some(info.confirmations);
             if let Some(raw_tx) = self.get_transaction(txid)? {
                 match TxKind::from(raw_tx) {
-                    TxKind::Anchoring(tx) => txs.push(TxInfo {
-                        body: tx.into(),
-                        confirmations,
-                    }),
-                    TxKind::FundingTx(tx) => txs.push(TxInfo {
-                        body: tx.into(),
-                        confirmations,
-                    }),
+                    TxKind::Anchoring(tx) => {
+                        txs.push(TxInfo {
+                            body: tx.into(),
+                            confirmations,
+                        })
+                    }
+                    TxKind::FundingTx(tx) => {
+                        txs.push(TxInfo {
+                            body: tx.into(),
+                            confirmations,
+                        })
+                    }
                     TxKind::Other(_) => {}
                 }
             }
         }
         Ok(txs)
     }
+
+    fn config(&self) -> AnchoringRpcConfig {
+        self.rpc.clone()
+    }
 }
 
 impl Default for SandboxClient {
     fn default() -> SandboxClient {
         SandboxClient {
-            requests: Arc::new(Mutex::new(VecDeque::new())),
+            requests: Requests::default(),
             rpc: AnchoringRpcConfig {
                 host: "127.0.0.1:1024".into(),
                 username: None,
@@ -243,7 +380,7 @@ impl Default for SandboxClient {
 impl Drop for SandboxClient {
     fn drop(&mut self) {
         if !::std::thread::panicking() {
-            let requests = self.requests.lock().unwrap();
+            let requests = self.requests.0.lock().unwrap();
             if !requests.is_empty() {
                 panic!("Expected requests: {:?}", requests.deref());
             }
