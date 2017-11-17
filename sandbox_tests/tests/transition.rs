@@ -252,7 +252,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -265,7 +265,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -301,7 +301,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
         .clone();
     client.expect(vec![confirmations_request(&transition_tx, 1000)]);
 
-    sandbox.broadcast(transition_lect.clone());
+    sandbox.broadcast(&transition_lect);
     sandbox.add_height(&[transition_lect]);
 
     let signatures = {
@@ -316,7 +316,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
             )
             .1
     };
-    sandbox.broadcast(signatures[0].raw().clone());
+    sandbox.broadcast(signatures[0].raw());
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -339,7 +339,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
             .1
     };
     let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].raw().clone());
+    sandbox.broadcast(signatures[0].raw());
     client.expect(vec![
         confirmations_request(&transition_tx, 20_000),
         confirmations_request(&anchored_tx, 0),
@@ -354,7 +354,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
     sandbox.add_height(&lects);
 }
 
@@ -402,7 +402,7 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -415,7 +415,7 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -437,7 +437,7 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
         &following_multisig.1,
     );
     let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     client.expect(vec![confirmations_request(&transition_tx, 40)]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -459,7 +459,7 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 
     client.expect(vec![
         request! {
@@ -529,7 +529,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -542,7 +542,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -590,7 +590,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
         },
     ]);
 
-    sandbox.broadcast(transition_lect.clone());
+    sandbox.broadcast(&transition_lect);
     sandbox.add_height(&[transition_lect]);
 
     let signatures = {
@@ -605,8 +605,8 @@ fn test_anchoring_transit_config_with_funding_tx() {
             )
             .1
     };
-    sandbox.broadcast(signatures[0].raw().clone());
-    sandbox.broadcast(signatures[1].raw().clone());
+    sandbox.broadcast(signatures[0].raw());
+    sandbox.broadcast(signatures[1].raw());
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures[0..2]);
 
@@ -639,8 +639,8 @@ fn test_anchoring_transit_config_with_funding_tx() {
             .1
     };
     let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].raw().clone());
-    sandbox.broadcast(signatures[1].raw().clone());
+    sandbox.broadcast(signatures[0].raw());
+    sandbox.broadcast(signatures[1].raw());
     client.expect(vec![
         confirmations_request(&transition_tx, 20_000),
         confirmations_request(&anchored_tx, 0),
@@ -655,7 +655,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
     sandbox.add_height(&lects);
 
     assert_eq!(anchored_tx.amount(), 10_1000);
@@ -705,7 +705,7 @@ fn test_anchoring_transit_config_lost_lect_resend_before_cfg_change() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -718,7 +718,7 @@ fn test_anchoring_transit_config_lost_lect_resend_before_cfg_change() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -771,7 +771,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -784,7 +784,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -809,7 +809,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
         None,
         &following_multisig.1,
     );
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     client.expect(vec![confirmations_request(&transition_tx, 40)]);
     sandbox.add_height(&signatures[0..1]);
 }
@@ -885,7 +885,7 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
     );
     let new_chain_tx = sandbox.latest_anchored_tx();
 
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     client.expect(vec![
         request! {
             method: "listunspent",
@@ -924,7 +924,7 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -998,7 +998,7 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
     );
     let new_chain_tx = sandbox.latest_anchored_tx();
 
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     client.expect(vec![
         request! {
             method: "listunspent",
@@ -1039,7 +1039,7 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
 
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -1136,7 +1136,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
     );
     let new_chain_tx = sandbox.latest_anchored_tx();
 
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     client.expect(vec![
         request! {
             method: "listunspent",
@@ -1170,7 +1170,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
 
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -1275,7 +1275,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
     );
     let new_chain_tx = sandbox.latest_anchored_tx();
 
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     client.expect(vec![
         request! {
             method: "listunspent",
@@ -1309,7 +1309,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
 
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 }
 
 // We send `MsgAnchoringSignature` with current output_address
@@ -1351,7 +1351,7 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
         &following_multisig.1,
     );
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     sandbox.add_height(&signatures[0..1]);
 
     // Gen transaction with different `output_addr`
@@ -1444,7 +1444,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -1457,7 +1457,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -1488,7 +1488,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
         &following_multisig.1,
     );
     let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     client.expect(vec![confirmations_request(&transition_tx, 40)]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -1510,7 +1510,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 
     client.expect(vec![
         request! {
@@ -1694,7 +1694,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
     ]);
     sandbox.add_height(&[]);
 
-    sandbox.broadcast(lect.clone());
+    sandbox.broadcast(&lect);
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&[lect]);
 
@@ -1714,7 +1714,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
             .1
     };
     let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     // Commit anchoring transaction to bitcoin blockchain
     client.expect(vec![
         confirmations_request(&transition_tx, 1000),
@@ -1737,7 +1737,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         &anchored_tx,
         lects_count(&sandbox, ANCHORING_VALIDATOR),
     );
-    sandbox.broadcast(lect.clone());
+    sandbox.broadcast(&lect);
     sandbox.add_height(&[lect.raw().clone()]);
 
     let lects = dump_lects(&sandbox, ANCHORING_VALIDATOR);
@@ -1788,7 +1788,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
     let transition_tx = sandbox.latest_anchored_tx();
 
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&signatures);
@@ -1801,7 +1801,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
@@ -1837,7 +1837,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
         .clone();
     client.expect(vec![confirmations_request(&transition_tx, 1000)]);
 
-    sandbox.broadcast(transition_lect.clone());
+    sandbox.broadcast(&transition_lect);
     sandbox.add_height(&[transition_lect]);
 
     let signatures = {
@@ -1852,7 +1852,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
             )
             .1
     };
-    sandbox.broadcast(signatures[0].raw().clone());
+    sandbox.broadcast(signatures[0].raw());
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -1875,7 +1875,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
             .1
     };
     let third_anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.broadcast(signatures[0].raw().clone());
+    sandbox.broadcast(signatures[0].raw());
     client.expect(vec![
         confirmations_request(&transition_tx, 20_000),
         confirmations_request(&third_anchored_tx, 0),
@@ -1892,7 +1892,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
 
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
     sandbox.add_height(&lects);
 
     let anchoring_addr = sandbox.current_addr();

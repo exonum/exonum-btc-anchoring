@@ -20,7 +20,6 @@ use bitcoin::util::base58::ToBase58;
 use exonum::blockchain::{Schema, ServiceContext};
 use exonum::crypto::HexValue;
 use exonum::helpers::Height;
-use exonum::node::TransactionSend;
 
 use error::Error as ServiceError;
 use details::btc;
@@ -183,7 +182,7 @@ impl AnchoringHandler {
                 sign_msg,
                 signature.to_hex()
             );
-            context.api_sender().send(Box::new(sign_msg))?;
+            context.transaction_sender().send(Box::new(sign_msg))?;
         }
         self.proposal_tx = Some(proposal);
         Ok(())
@@ -261,7 +260,7 @@ impl AnchoringHandler {
                 lects_count,
                 context.secret_key(),
             );
-            context.api_sender().send(Box::new(lect_msg))?;
+            context.transaction_sender().send(Box::new(lect_msg))?;
         } else {
             warn!("Insufficient signatures for proposal={:#?}", proposal);
         }

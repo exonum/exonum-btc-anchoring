@@ -19,7 +19,6 @@ use bitcoin::util::base58::ToBase58;
 use exonum::blockchain::ServiceContext;
 use exonum::storage::Snapshot;
 use exonum::helpers::{Height, ValidatorId};
-use exonum::node::TransactionSend;
 
 use error::Error as ServiceError;
 use handler::error::Error as HandlerError;
@@ -511,7 +510,7 @@ impl AnchoringHandler {
             lects_count,
             state.secret_key(),
         );
-        state.api_sender().send(Box::new(lect_msg)).expect(
+        state.transaction_sender().send(Box::new(lect_msg)).expect(
             "Can't send lect transaction.",
         );
     }
