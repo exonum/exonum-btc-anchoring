@@ -45,7 +45,7 @@ use exonum_btc_anchoring_sandbox::secp256k1_hack::sign_tx_input_with_nonce;
 // problems: None
 // result: success
 #[test]
-fn test_anchoring_first_block() {
+fn test_anchoring_first_block_simple() {
     init_logger();
 
     let sandbox = AnchoringSandbox::initialize(&[]);
@@ -66,7 +66,19 @@ fn test_anchoring_funding_tx_waiting() {
     client.expect(vec![confirmations_request(&funding_tx, 0)]);
     sandbox.add_height(&[]);
     // Resend funding_tx if we lost it
-    client.expect(send_raw_transaction_requests(&funding_tx));
+    client.expect(vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&funding_tx.txid(), 1],
+            error: RpcError::NoInformation("Unable to find tx".to_string())
+        },
+        request! {
+            method: "sendrawtransaction",
+            params: [funding_tx.to_hex()],
+            response: funding_tx.to_hex()
+        },
+    ]
+    );
     sandbox.add_height(&[]);
 
     client.expect(vec![confirmations_request(&funding_tx, 0)]);
@@ -146,6 +158,8 @@ fn test_anchoring_second_block_additional_funds() {
                 listunspent_entry(&funds, &anchoring_addr, 75)
             ]
         },
+        get_transaction_request(&sandbox.latest_anchored_tx()),
+        get_transaction_request(&funds),
     ]);
     sandbox.add_height(&[]);
 
@@ -224,6 +238,7 @@ fn test_anchoring_second_block_lect_lost() {
                 listunspent_entry(&prev_anchored_tx, &anchoring_addr, 0)
             ]
         },
+        get_transaction_request(&prev_anchored_tx)
     ]);
     sandbox.add_height(&txs);
     sandbox.set_latest_anchored_tx(Some((prev_anchored_tx, prev_tx_signatures)));

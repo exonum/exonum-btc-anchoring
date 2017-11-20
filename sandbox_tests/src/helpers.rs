@@ -180,7 +180,7 @@ pub fn send_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<Request> {
     vec![
         request! {
             method: "getrawtransaction",
-            params: [&tx.txid(), 1],
+            params: [&tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -229,6 +229,7 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
                 listunspent_entry(&sandbox.current_funding_tx(), &anchoring_addr, 50)
             ]
         },
+        get_transaction_request(&sandbox.current_funding_tx()),
     ]);
 
     let hash = sandbox.last_hash();
@@ -242,7 +243,7 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
         confirmations_request(&sandbox.current_funding_tx(), 50),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 1],
+            params: [&anchored_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -375,6 +376,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
                 listunspent_entry(&other_lect, &anchoring_addr, 100)
             ]
         },
+        get_transaction_request(&other_lect),
     ]);
     sandbox.add_height(&txs);
 
@@ -383,7 +385,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
         confirmations_request(&sandbox.current_funding_tx(), 50),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 1],
+            params: [&anchored_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -415,6 +417,7 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
                 listunspent_entry(&sandbox.latest_anchored_tx(), &anchoring_addr, 1)
             ]
         },
+        get_transaction_request(&sandbox.latest_anchored_tx()),
     ]);
     sandbox.add_height(&[]);
 
@@ -429,7 +432,7 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     let anchored_tx = sandbox.latest_anchored_tx();
 
     sandbox.broadcast(&signatures[0]);
-    client.expect(vec![confirmations_request(&anchored_tx.clone(), 0)]);
+    client.expect(vec![get_transaction_request(&anchored_tx.clone())]);
     sandbox.add_height(&signatures);
 
     let txs = (0..4)
@@ -467,6 +470,7 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
                 listunspent_entry(&sandbox.current_funding_tx(), &anchoring_addr, 50)
             ]
         },
+        get_transaction_request(&sandbox.current_funding_tx())
     ]);
 
     let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
