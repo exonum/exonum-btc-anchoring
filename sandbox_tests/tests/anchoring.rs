@@ -66,9 +66,7 @@ fn test_anchoring_funding_tx_waiting() {
     client.expect(vec![confirmations_request(&funding_tx, 0)]);
     sandbox.add_height(&[]);
     // Resend funding_tx if we lost it
-    client.expect(
-        resend_raw_transaction_requests(&funding_tx)
-    );
+    client.expect(resend_raw_transaction_requests(&funding_tx));
     sandbox.add_height(&[]);
 
     client.expect(vec![confirmations_request(&funding_tx, 0)]);
@@ -228,7 +226,7 @@ fn test_anchoring_second_block_lect_lost() {
                 listunspent_entry(&prev_anchored_tx, &anchoring_addr, 0)
             ]
         },
-        get_transaction_request(&prev_anchored_tx)
+        get_transaction_request(&prev_anchored_tx),
     ]);
     sandbox.add_height(&txs);
     sandbox.set_latest_anchored_tx(Some((prev_anchored_tx, prev_tx_signatures)));

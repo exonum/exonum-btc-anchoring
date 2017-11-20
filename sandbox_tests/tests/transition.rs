@@ -874,7 +874,7 @@ fn test_transit_unchanged_self_key_recover_with_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
-        get_transaction_request(&funding_tx)
+        get_transaction_request(&funding_tx),
     ]);
     sandbox.add_height(&[]);
 
@@ -900,7 +900,7 @@ fn test_transit_unchanged_self_key_recover_with_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
-        get_transaction_request(&funding_tx)
+        get_transaction_request(&funding_tx),
     ]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -1155,7 +1155,7 @@ fn test_transit_changed_self_key_recover_without_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
-        get_transaction_request(&funding_tx)
+        get_transaction_request(&funding_tx),
     ]);
     sandbox.add_height(&signatures[0..1]);
 

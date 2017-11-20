@@ -254,7 +254,6 @@ impl SandboxClient {
             .cloned()
             .unwrap();
         self.request("listunspent", params)
-
     }
 
     pub fn importaddress(&self, addr: &str, label: &str, rescan: bool, p2sh: bool) -> Result<()> {
@@ -265,7 +264,7 @@ impl SandboxClient {
         // special case for decode {"result":null}
         let r: Result<Option<bool>> = self.request("importaddress", params);
         match r {
-            Ok(_) => Ok(()),
+            Ok(_) |
             Err(Error::Other(RpcError::NoErrorOrResult)) => Ok(()),
             Err(e) => Err(e),
         }
