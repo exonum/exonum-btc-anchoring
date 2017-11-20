@@ -106,7 +106,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[]);
     sandbox.broadcast(&signatures[0]);
 
-    client.expect(vec![confirmations_request(&transition_tx, 100)]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)

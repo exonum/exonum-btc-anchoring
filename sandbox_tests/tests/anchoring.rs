@@ -66,18 +66,8 @@ fn test_anchoring_funding_tx_waiting() {
     client.expect(vec![confirmations_request(&funding_tx, 0)]);
     sandbox.add_height(&[]);
     // Resend funding_tx if we lost it
-    client.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&funding_tx.txid(), 1],
-            error: RpcError::NoInformation("Unable to find tx".to_string())
-        },
-        request! {
-            method: "sendrawtransaction",
-            params: [funding_tx.to_hex()],
-            response: funding_tx.to_hex()
-        },
-    ]
+    client.expect(
+        resend_raw_transaction_requests(&funding_tx)
     );
     sandbox.add_height(&[]);
 

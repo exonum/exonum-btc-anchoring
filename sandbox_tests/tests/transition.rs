@@ -215,7 +215,7 @@ fn gen_following_cfg_add_two_validators_changed_self_key(
 // - none
 // result: success
 #[test]
-fn test_anchoring_transit_changed_self_key_normal() {
+fn test_transit_changed_self_key_normal() {
     let cfg_change_height = Height(16);
 
     init_logger();
@@ -255,7 +255,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
     sandbox.add_height(&[]);
     sandbox.broadcast(&signatures[0]);
 
-    client.expect(vec![confirmations_request(&transition_tx, 0)]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
@@ -343,7 +343,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
     sandbox.broadcast(signatures[0].raw());
     client.expect(vec![
         confirmations_request(&transition_tx, 20_000),
-        confirmations_request(&anchored_tx, 0),
+        get_transaction_request(&anchored_tx),
     ]);
     sandbox.add_height(&signatures);
 
@@ -364,7 +364,7 @@ fn test_anchoring_transit_changed_self_key_normal() {
 // - none
 // result: success
 #[test]
-fn test_anchoring_transit_unchanged_self_key_normal() {
+fn test_transit_unchanged_self_key_normal() {
     let cfg_change_height = Height(16);
 
     init_logger();
@@ -405,7 +405,7 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
     sandbox.add_height(&[]);
     sandbox.broadcast(&signatures[0]);
 
-    client.expect(vec![confirmations_request(&transition_tx, 0)]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
@@ -448,7 +448,7 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
         .collect::<Vec<_>>();
     client.expect(vec![
         confirmations_request(&transition_tx, 100),
-        confirmations_request(&anchored_tx, 0),
+        get_transaction_request(&anchored_tx),
     ]);
     sandbox.add_height(&signatures[1..]);
 
@@ -481,7 +481,7 @@ fn test_anchoring_transit_unchanged_self_key_normal() {
 // - none
 // result: success
 #[test]
-fn test_anchoring_transit_config_with_funding_tx() {
+fn test_transit_config_with_funding_tx() {
     let cfg_change_height = Height(16);
 
     init_logger();
@@ -532,7 +532,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
     sandbox.add_height(&[]);
     sandbox.broadcast(&signatures[0]);
 
-    client.expect(vec![confirmations_request(&transition_tx, 0)]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
@@ -589,6 +589,8 @@ fn test_anchoring_transit_config_with_funding_tx() {
                 listunspent_entry(&transition_tx, &following_addr, 30)
             ]
         },
+        get_transaction_request(&funding_tx),
+        get_transaction_request(&transition_tx),
     ]);
 
     sandbox.broadcast(&transition_lect);
@@ -622,6 +624,8 @@ fn test_anchoring_transit_config_with_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 30),
             ]
         },
+        get_transaction_request(&transition_tx),
+        get_transaction_request(&funding_tx),
     ]);
     sandbox.add_height(&[]);
 
@@ -644,7 +648,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
     sandbox.broadcast(signatures[1].raw());
     client.expect(vec![
         confirmations_request(&transition_tx, 20_000),
-        confirmations_request(&anchored_tx, 0),
+        get_transaction_request(&anchored_tx),
     ]);
     sandbox.add_height(&signatures);
 
@@ -667,7 +671,7 @@ fn test_anchoring_transit_config_with_funding_tx() {
 //  - we losing transition tx before following config height
 // result: we resend it
 #[test]
-fn test_anchoring_transit_config_lost_lect_resend_before_cfg_change() {
+fn test_transit_config_lost_lect_resend_before_cfg_change() {
     let cfg_change_height = Height(16);
 
     init_logger();
@@ -708,7 +712,7 @@ fn test_anchoring_transit_config_lost_lect_resend_before_cfg_change() {
     sandbox.add_height(&[]);
     sandbox.broadcast(&signatures[0]);
 
-    client.expect(vec![confirmations_request(&transition_tx, 0)]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
@@ -724,7 +728,7 @@ fn test_anchoring_transit_config_lost_lect_resend_before_cfg_change() {
     client.expect(vec![confirmations_request(&transition_tx, 0)]);
     sandbox.add_height(&lects);
 
-    client.expect(send_raw_transaction_requests(&transition_tx));
+    client.expect(resend_raw_transaction_requests(&transition_tx));
     sandbox.add_height(&[]);
 }
 
@@ -733,7 +737,7 @@ fn test_anchoring_transit_config_lost_lect_resend_before_cfg_change() {
 //  - we losing transition tx and we have no time to recovering it
 // result: we trying to resend tx
 #[test]
-fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
+fn test_transit_config_lost_lect_resend_after_cfg_change() {
     let cfg_change_height = Height(16);
 
     init_logger();
@@ -774,7 +778,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
     sandbox.add_height(&[]);
     sandbox.broadcast(&signatures[0]);
 
-    client.expect(vec![confirmations_request(&transition_tx, 0)]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
@@ -798,7 +802,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
     // Update cfg
     sandbox.set_anchoring_cfg(following_cfg);
 
-    client.expect(send_raw_transaction_requests(&transition_tx));
+    client.expect(resend_raw_transaction_requests(&transition_tx));
     sandbox.add_height(&[]);
 
     client.expect(vec![confirmations_request(&transition_tx, 30)]);
@@ -820,7 +824,7 @@ fn test_anchoring_transit_config_lost_lect_resend_after_cfg_change() {
 //  - We have no time to create transition transaction
 // result: we create a new anchoring tx chain from scratch
 #[test]
-fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
+fn test_transit_unchanged_self_key_recover_with_funding_tx() {
     let cfg_change_height = Height(11);
 
     init_logger();
@@ -870,6 +874,7 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
+        get_transaction_request(&funding_tx)
     ]);
     sandbox.add_height(&[]);
 
@@ -895,6 +900,7 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
+        get_transaction_request(&funding_tx)
     ]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -914,7 +920,8 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
-        confirmations_request(&new_chain_tx, 0),
+        get_transaction_request(&funding_tx),
+        get_transaction_request(&new_chain_tx),
     ]);
     sandbox.add_height(&signatures[1..]);
     let lects = (0..4)
@@ -933,7 +940,7 @@ fn test_anchoring_transit_unchanged_self_key_recover_with_funding_tx() {
 //  - We have no time to create transition transaction
 // result: we create a new anchoring tx chain from scratch
 #[test]
-fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
+fn test_transit_changed_self_key_recover_with_funding_tx() {
     let cfg_change_height = Height(11);
 
     init_logger();
@@ -983,6 +990,7 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
+        get_transaction_request(&funding_tx),
     ]);
     sandbox.add_height(&[]);
 
@@ -1008,6 +1016,7 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
+        get_transaction_request(&funding_tx),
     ]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -1027,7 +1036,8 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
-        confirmations_request(&new_chain_tx, 0),
+        get_transaction_request(&funding_tx),
+        get_transaction_request(&new_chain_tx),
     ]);
     sandbox.add_height(&signatures[1..]);
     let lects = (0..4)
@@ -1047,7 +1057,7 @@ fn test_anchoring_transit_changed_self_key_recover_with_funding_tx() {
 // and we have no suitable `funding_tx` for a new address.
 // result: we create a new anchoring tx chain from scratch
 #[test]
-fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
+fn test_transit_changed_self_key_recover_without_funding_tx() {
     let first_cfg_change_height = Height(11);
     let second_cfg_change_height = Height(13);
 
@@ -1121,6 +1131,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
+        get_transaction_request(&funding_tx),
     ]);
     sandbox.add_height(&[]);
     sandbox.set_anchoring_cfg(following_cfg.clone());
@@ -1144,6 +1155,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
+        get_transaction_request(&funding_tx)
     ]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -1155,7 +1167,8 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
-        confirmations_request(&new_chain_tx, 0),
+        get_transaction_request(&funding_tx),
+        get_transaction_request(&new_chain_tx),
     ]);
     sandbox.add_height(&signatures[1..]);
 
@@ -1176,7 +1189,7 @@ fn test_anchoring_transit_changed_self_key_recover_without_funding_tx() {
 // and we have no suitable `funding_tx` for a new address.
 // result: we create a new anchoring tx chain from scratch
 #[test]
-fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
+fn test_transit_add_validators_recover_without_funding_tx() {
     let first_cfg_change_height = Height(11);
     let second_cfg_change_height = Height(13);
 
@@ -1258,6 +1271,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
+        get_transaction_request(&funding_tx),
     ]);
     sandbox.add_height(&[]);
     sandbox.set_anchoring_cfg(following_cfg.clone());
@@ -1281,6 +1295,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
+        get_transaction_request(&funding_tx),
     ]);
     sandbox.add_height(&signatures[0..1]);
 
@@ -1292,7 +1307,8 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
                 listunspent_entry(&funding_tx, &following_addr, 200)
             ]
         },
-        confirmations_request(&new_chain_tx, 0),
+        get_transaction_request(&funding_tx),
+        get_transaction_request(&new_chain_tx),
     ]);
     sandbox.add_height(&signatures[1..]);
 
@@ -1312,7 +1328,7 @@ fn test_anchoring_transit_add_validators_recover_without_funding_tx() {
 // - none
 // result: msg ignored
 #[test]
-fn test_anchoring_transit_msg_signature_incorrect_output_address() {
+fn test_transit_msg_signature_incorrect_output_address() {
     init_logger();
     let sandbox = AnchoringSandbox::initialize(&[]);
     let client = sandbox.client();
@@ -1379,7 +1395,7 @@ fn test_anchoring_transit_msg_signature_incorrect_output_address() {
 // result: unimplemented
 #[test]
 #[should_panic(expected = "We must not to change genesis configuration!")]
-fn test_anchoring_transit_config_after_funding_tx() {
+fn test_transit_config_after_funding_tx() {
     let cfg_change_height = Height(16);
 
     init_logger();
@@ -1441,7 +1457,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
     sandbox.add_height(&[]);
     sandbox.broadcast(&signatures[0]);
 
-    client.expect(vec![confirmations_request(&transition_tx, 0)]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
@@ -1493,7 +1509,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
         .collect::<Vec<_>>();
     client.expect(vec![
         confirmations_request(&transition_tx, 100),
-        confirmations_request(&anchored_tx, 0),
+        get_transaction_request(&anchored_tx),
     ]);
     sandbox.add_height(&signatures[1..]);
 
@@ -1526,7 +1542,7 @@ fn test_anchoring_transit_config_after_funding_tx() {
 // - none
 // result: we continues anchoring as validator
 #[test]
-fn test_anchoring_transit_after_exclude_from_validator() {
+fn test_transit_after_exclude_from_validator() {
     let cfg_change_height = Height(16);
 
     let _ = exonum::helpers::init_logger();
@@ -1713,7 +1729,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
         confirmations_request(&transition_tx, 1000),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 1],
+            params: [&anchored_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string()),
         },
         request! {
@@ -1743,7 +1759,7 @@ fn test_anchoring_transit_after_exclude_from_validator() {
 // - none
 // result: success
 #[test]
-fn test_anchoring_transit_changed_self_key_observer() {
+fn test_transit_changed_self_key_observer() {
     let cfg_change_height = Height(16);
 
     init_logger();
@@ -1783,7 +1799,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
     sandbox.add_height(&[]);
     sandbox.broadcast(&signatures[0]);
 
-    client.expect(vec![confirmations_request(&transition_tx, 0)]);
+    client.expect(vec![get_transaction_request(&transition_tx)]);
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
@@ -1871,7 +1887,7 @@ fn test_anchoring_transit_changed_self_key_observer() {
     sandbox.broadcast(signatures[0].raw());
     client.expect(vec![
         confirmations_request(&transition_tx, 20_000),
-        confirmations_request(&third_anchored_tx, 0),
+        get_transaction_request(&third_anchored_tx),
     ]);
     sandbox.add_height(&signatures);
 

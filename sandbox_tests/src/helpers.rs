@@ -191,6 +191,22 @@ pub fn send_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<Request> {
     ]
 }
 
+pub fn resend_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<Request> {
+    let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
+    vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&tx.txid(), 1],
+            error: RpcError::NoInformation("Unable to find tx".to_string())
+        },
+        request! {
+            method: "sendrawtransaction",
+            params: [tx.to_hex()],
+            response: tx.to_hex()
+        },
+    ]
+}
+
 pub fn listunspent_entry(raw: &RawBitcoinTx, addr: &btc::Address, confirmations: u64) -> Value {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     json!({
@@ -522,7 +538,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     sandbox.add_height(&[]);
     sandbox.broadcast(&signatures[0]);
 
-    client.expect(vec![confirmations_request(&transition_tx, 100)]);
+    client.expect(send_raw_transaction_requests(&transition_tx));
     sandbox.add_height(&signatures);
 
     let lects = (0..4)
