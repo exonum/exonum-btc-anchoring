@@ -36,7 +36,9 @@ tempdir = "0.3.5"
 pretty_assertions = "0.4.0"
 
 [dev-dependencies]
+libc = "0.2.21"
 exonum-configuration = "0.3.0"
+exonum-testkit = { git = "https://github.com/alekseysidorov/exonum-testkit.git", branch = "remove-node-handler" }
 
 [features]
 default = []
@@ -44,5 +46,5 @@ sandbox_tests = []
 rpc_tests = []
 
 [replace."exonum:0.3.0"]
-git = "https://github.com/alekseysidorov/exonum.git"
-branch = "improve-blockchain-api"
+git = "https://github.com/exonum/exonum.git"
+rev = "adb1a9ab47a356b6efb3ef73755f981f6fd0af9a"
