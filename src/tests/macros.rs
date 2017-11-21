@@ -18,7 +18,7 @@ macro_rules! request {
         method: $method:expr,
         params: [$($params:tt)+]
     ) => {
-        TestRequest {
+        $crate::tests::TestRequest {
             method: $method,
             params: json!([$($params)+]).as_array().unwrap().clone(),
             response: Ok(::serde_json::Value::Null)
@@ -29,7 +29,7 @@ macro_rules! request {
         params: [$($params:tt)+],
         response: $($response:tt)+
     ) => {
-        TestRequest {
+        $crate::tests::TestRequest {
             method: $method,
             params: json!([$($params)+]).as_array().unwrap().clone(),
             response: Ok(json!($($response)+)),
@@ -40,7 +40,7 @@ macro_rules! request {
         params: [$($params:tt)+],
         error: $($err:tt)+
     ) => {
-        TestRequest {
+        $crate::tests::TestRequest {
             method: $method,
             params: json!([$($params)+]).as_array().unwrap().clone(),
             response: Err($($err)+)

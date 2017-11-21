@@ -84,7 +84,7 @@ extern crate rand;
 extern crate router;
 
 #[macro_use]
-#[cfg(test)]
+// #[cfg(test)]
 extern crate exonum_testkit;
 #[cfg(test)]
 extern crate libc;
