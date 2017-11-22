@@ -21,7 +21,7 @@ use exonum::blockchain::{Schema, Transaction};
 use exonum::storage::StorageValue;
 use exonum::helpers::{self, Height, ValidatorId};
 
-use exonum_testkit::TestKit;
+use exonum_testkit::{TestKit, TestNetworkConfiguration};
 
 use {AnchoringConfig, ANCHORING_SERVICE_NAME};
 use details::btc;
@@ -111,24 +111,6 @@ pub fn dump_signatures(testkit: &TestKit, txid: &btc::TxId) -> Vec<MsgAnchoringS
     let signatures = signatures.iter().collect::<Vec<_>>();
     signatures
 }
-
-// pub fn gen_update_config_tx(
-//     testkit: &TestKit,
-//     actual_from: Height,
-//     service_cfg: &AnchoringConfig,
-// ) -> RawTransaction {
-//     let mut cfg = testkit.cfg();
-//     cfg.actual_from = actual_from;
-//     cfg.previous_cfg_hash = testkit.cfg().hash();
-//     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
-//     let tx = TxConfig::new(
-//         &testkit.service_public_key(ANCHORING_VALIDATOR),
-//         &cfg.into_bytes(),
-//         actual_from,
-//         testkit.service_secret_key(ANCHORING_VALIDATOR),
-//     );
-//     tx.raw().clone()
-// }
 
 pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> TestRequest {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
@@ -497,90 +479,85 @@ pub fn anchor_first_block_without_other_signatures(testkit: &mut AnchoringTestKi
     testkit.create_block_with_transactions(signatures.drain(0..1));
 }
 
-// Invoke this method after anchor_first_block_lect_normal
-// pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
-//     let cfg_change_height = Height(12);
-//     let (cfg_tx, following_cfg) = gen_following_cfg_exclude_validator(testkit, cfg_change_height);
-//     let (_, following_addr) = following_cfg.redeem_script();
+/// Invoke this method after anchor_first_block_lect_normal
+pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
+    let cfg_change_height = Height(12);
+    let (cfg_proposal, following_cfg) =
+        gen_following_cfg_exclude_validator(testkit, cfg_change_height);
+    let (_, following_addr) = following_cfg.redeem_script();
 
-//     // Tx has not enough confirmations.
-//     let anchored_tx = testkit.latest_anchored_tx();
+    // Tx has not enough confirmations.
+    let anchored_tx = testkit.latest_anchored_tx();
 
-//     let requests = testkit.requests();
-//     requests.expect(vec![
-//         request! {
-//             method: "importaddress",
-//             params: [&following_addr, "multisig", false, false]
-//         },
-//         confirmations_request(&anchored_tx, 10),
-//     ]);
-//     testkit.add_height(&[cfg_tx]);
+    let requests = testkit.requests();
+    requests.expect(vec![
+        request! {
+            method: "importaddress",
+            params: [&following_addr, "multisig", false, false]
+        },
+        confirmations_request(&anchored_tx, 10),
+    ]);
+    testkit.commit_configuration_change(cfg_proposal);
 
-//     let following_multisig = following_cfg.redeem_script();
-//     let (_, signatures) = testkit.gen_anchoring_tx_with_signatures(
-//         Height::zero(),
-//         anchored_tx.payload().block_hash,
-//         &[],
-//         None,
-//         &following_multisig.1,
-//     );
-//     let transition_tx = testkit.latest_anchored_tx();
-//     // Tx gets enough confirmations.
-//     requests.expect(vec![confirmations_request(&anchored_tx, 100)]);
-//     testkit.create_block();
-//     testkit.mempool().contains_key(&signatures[0].hash());
+    let following_multisig = following_cfg.redeem_script();
+    let (_, signatures) = testkit.gen_anchoring_tx_with_signatures(
+        Height::zero(),
+        anchored_tx.payload().block_hash,
+        &[],
+        None,
+        &following_multisig.1,
+    );
+    let transition_tx = testkit.latest_anchored_tx();
+    // Tx gets enough confirmations.
+    requests.expect(vec![confirmations_request(&anchored_tx, 100)]);
+    testkit.create_block();
+    let signatures = signatures.into_iter().map(to_box).collect::<Vec<_>>();
+    testkit.mempool().contains_key(&signatures[0].hash());
 
-//     requests.expect(send_raw_transaction_requests(&transition_tx));
-//     testkit.add_height(&signatures);
+    requests.expect(send_raw_transaction_requests(&transition_tx));
+    testkit.create_block_with_transactions(signatures);
 
-//     let lects = (0..4)
-//         .map(|id| {
-//             gen_service_tx_lect(testkit, ValidatorId(id), &transition_tx, 2)
-//                 .raw()
-//                 .clone()
-//         })
-//         .collect::<Vec<_>>();
-//     testkit.broadcast(&lects[0]);
-//     requests.expect(vec![confirmations_request(&transition_tx, 100)]);
-//     testkit.add_height(&lects);
-//     testkit.fast_forward_to_height(cfg_change_height);
+    let lects = (0..4)
+        .map(|id| {
+            gen_service_tx_lect(testkit, ValidatorId(id), &transition_tx, 2)
+        })
+        .map(to_box)
+        .collect::<Vec<_>>();
+    testkit.mempool().contains_key(&lects[0].hash());
+    requests.expect(vec![confirmations_request(&transition_tx, 100)]);
+    testkit.create_block_with_transactions(lects);
+    testkit.create_blocks_until(cfg_change_height);
 
-//     testkit.set_anchoring_cfg(following_cfg);
-//     testkit.nodes_mut().swap_remove(0);
-//     requests.expect(vec![get_transaction_request(&transition_tx)]);
-//     testkit.add_height_as_auditor(&[]);
+    testkit.nodes_mut().swap_remove(0);
+    requests.expect(vec![get_transaction_request(&transition_tx)]);
+    testkit.create_block();
 
-//     assert_eq!(testkit.handler().errors, Vec::new());
-// }
+    assert_eq!(testkit.take_handler_errors(), Vec::new());
+}
 
-// /// Generates a configuration that excludes `testkit node` from consensus.
-// /// Then it continues to work as auditor.
-// fn gen_following_cfg_exclude_validator(
-//     testkit: &Anchoringtestkit,
-//     from_height: Height,
-// ) -> (RawTransaction, AnchoringConfig) {
-//     let mut service_cfg = testkit.current_cfg().clone();
-//     let priv_keys = testkit.current_priv_keys();
-//     service_cfg.anchoring_keys.swap_remove(0);
+/// Generates a configuration that excludes `testkit node` from consensus.
+/// Then it continues to work as auditor.
+fn gen_following_cfg_exclude_validator(
+    testkit: &mut AnchoringTestKit,
+    from_height: Height,
+) -> (TestNetworkConfiguration, AnchoringConfig) {
+    let mut cfg = testkit.configuration_change_proposal();
+    let mut service_cfg: AnchoringConfig = cfg.service_config(ANCHORING_SERVICE_NAME);
+    let priv_keys = testkit.current_priv_keys();
+    service_cfg.anchoring_keys.swap_remove(0);
 
-//     let following_addr = service_cfg.redeem_script().1;
-//     for (id, ref mut node) in testkit.nodes_mut().iter_mut().enumerate() {
-//         node.private_keys.insert(
-//             following_addr.to_base58check(),
-//             priv_keys[id].clone(),
-//         );
-//     }
+    let following_addr = service_cfg.redeem_script().1;
+    for (id, ref mut node) in testkit.nodes_mut().iter_mut().enumerate() {
+        node.private_keys.insert(
+            following_addr.to_string(),
+            priv_keys[id].clone(),
+        );
+    }
 
-//     let mut cfg = testkit.cfg();
-//     cfg.actual_from = from_height;
-//     cfg.previous_cfg_hash = testkit.cfg().hash();
-//     cfg.validator_keys.swap_remove(0);
-//     *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
-//     let tx = TxConfig::new(
-//         &testkit.service_public_key(ANCHORING_VALIDATOR),
-//         &cfg.into_bytes(),
-//         from_height,
-//         testkit.service_secret_key(ANCHORING_VALIDATOR),
-//     );
-//     (tx.raw().clone(), service_cfg)
-// }
+    cfg.set_actual_from(from_height);
+    let mut validators = cfg.validators().to_vec();
+    validators.swap_remove(0);
+    cfg.set_validators(validators);
+    cfg.set_service_config(ANCHORING_SERVICE_NAME, service_cfg.clone());
+    (cfg, service_cfg)
+}

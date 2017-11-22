@@ -22,6 +22,7 @@ pub mod error;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
+use std::sync::mpsc;
 
 use details::rpc::BitcoinRelay;
 use details::btc;
@@ -39,9 +40,8 @@ pub struct AnchoringHandler {
     pub node: AnchoringNodeConfig,
     #[doc(hidden)]
     pub proposal_tx: Option<AnchoringTx>,
-    #[cfg(feature = "sandbox_tests")]
     #[doc(hidden)]
-    pub errors: Vec<error::Error>,
+    pub errors_sink: Option<mpsc::Sender<error::Error>>,
     #[doc(hidden)]
     pub known_addresses: HashSet<String>,
 }

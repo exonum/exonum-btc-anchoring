@@ -21,7 +21,7 @@ use iron::{Handler, Request, Response};
 use iron::prelude::IronResult;
 use serde_json;
 use serde_json::value::Value;
-use rand::{Rng, thread_rng};
+use rand::{thread_rng, Rng};
 use router::Router;
 
 use exonum::blockchain::{ApiContext, Blockchain, Service, ServiceContext, Transaction};
@@ -33,13 +33,13 @@ use exonum::api::Api;
 
 use api::PublicApi;
 use details::btc;
-use details::rpc::{RpcClient, BitcoinRelay};
+use details::rpc::{BitcoinRelay, RpcClient};
 use local_storage::AnchoringNodeConfig;
 use handler::AnchoringHandler;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
-use blockchain::dto::{ANCHORING_MESSAGE_LATEST, ANCHORING_MESSAGE_SIGNATURE,
-                      MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest, ANCHORING_MESSAGE_LATEST,
+                      ANCHORING_MESSAGE_SIGNATURE};
 use error::Error as ServiceError;
 #[cfg(not(feature = "sandbox_tests"))]
 use handler::error::Error as HandlerError;
@@ -134,6 +134,12 @@ impl Service for AnchoringService {
                     panic!("A critical error occured: {}", e);
                 }
                 error!("An error in handler occured: {}", e);
+                if let Some(ref channel) = handler.errors_sink.as_ref() {
+                    let res = channel.send(e);
+                    if let Err(err) = res {
+                        error!("Can't send error to channel: {}", err);
+                    }
+                }
             }
             Err(e) => {
                 error!("An error occured: {:?}", e);

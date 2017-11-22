@@ -1,6 +1,5 @@
 use std::ops::Deref;
 
-use bitcoin::util::base58::ToBase58;
 use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::constants::Network;
@@ -108,7 +107,9 @@ fn test_anchoring_second_block_additional_funds() {
                 listunspent_entry(&funds, &anchoring_addr, 75)
             ]
         },
-        get_transaction_request(&mut testkit.latest_anchored_tx()),
+        get_transaction_request(
+            &mut testkit.latest_anchored_tx()
+        ),
         get_transaction_request(&funds),
     ]);
     testkit.create_block();
@@ -755,7 +756,10 @@ fn test_anchoring_signature_input_from_different_validator() {
     let signs_before = dump_signatures(&mut testkit, &tx.id());
     // Commit `msg_signature_different` into blockchain
     requests.expect(vec![
-        confirmations_request(&mut testkit.current_funding_tx(), 50),
+        confirmations_request(
+            &mut testkit.current_funding_tx(),
+            50
+        ),
     ]);
     testkit.create_block_with_transactions(txvec![msg_signature_wrong.clone()]);
     // Ensure that service ignores it
@@ -802,14 +806,8 @@ fn test_anchoring_signature_unknown_output_address() {
     let msg_signature_wrong = {
         let validator_0 = ValidatorId(0);
         let keypair = testkit.validator(validator_0).service_keypair();
-        MsgAnchoringSignature::new(
-        keypair.0,
-        validator_0,
-        tx.clone(),
-        0,
-        &signature,
-        keypair.1,
-    )};
+        MsgAnchoringSignature::new(keypair.0, validator_0, tx.clone(), 0, &signature, keypair.1)
+    };
 
     let signs_before = dump_signatures(&mut testkit, &tx.id());
     // Commit `msg_signature_wrong` into blockchain

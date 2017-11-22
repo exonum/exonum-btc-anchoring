@@ -13,6 +13,7 @@
 // limitations under the License.
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex, MutexGuard};
+use std::sync::mpsc;
 
 use rand::{SeedableRng, StdRng};
 use serde_json;
@@ -29,6 +30,7 @@ use details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
 use details::btc::payload::Payload;
 use blockchain::dto::MsgAnchoringSignature;
 use handler::{collect_signatures, AnchoringHandler};
+use error::HandlerError;
 pub use self::rpc::{TestClient, TestRequest, TestRequests};
 
 #[macro_use]
@@ -47,6 +49,7 @@ pub struct AnchoringTestKit {
     inner: TestKit,
     requests: TestRequests,
     handler: Arc<Mutex<AnchoringHandler>>,
+    errors_receiver: mpsc::Receiver<HandlerError>,
     nodes: Vec<AnchoringNodeConfig>,
     latest_anchored_tx: Option<(AnchoringTx, Vec<MsgAnchoringSignature>)>,
 }
@@ -97,12 +100,16 @@ impl AnchoringTestKit {
             .with_service(service)
             .create();
 
+        let (sender, receiver) = mpsc::channel();
+        handler.lock().unwrap().set_errors_sink(Some(sender));
+
         AnchoringTestKit {
             inner: testkit,
             handler: handler,
             requests,
             nodes,
             latest_anchored_tx: None,
+            errors_receiver: receiver,
         }
     }
 
@@ -114,11 +121,9 @@ impl AnchoringTestKit {
         self.handler.lock().unwrap()
     }
 
-    // pub fn take_errors(&self) -> Vec<HandlerError> {
-    //     let mut handler = self.handler();
-    //     let v = handler.errors.drain(..).collect::<Vec<_>>();
-    //     v
-    // }
+    pub fn take_handler_errors(&mut self) -> Vec<HandlerError> {
+        self.errors_receiver.try_iter().collect()
+    }
 
     pub fn priv_keys(&self, addr: &btc::Address) -> Vec<btc::PrivateKey> {
         self.nodes()
@@ -129,6 +134,10 @@ impl AnchoringTestKit {
 
     pub fn nodes(&self) -> &[AnchoringNodeConfig] {
         self.nodes.as_slice()
+    }
+
+    pub fn nodes_mut(&mut self) -> &mut Vec<AnchoringNodeConfig> {
+        &mut self.nodes
     }
 
     pub fn current_priv_keys(&self) -> Vec<btc::PrivateKey> {

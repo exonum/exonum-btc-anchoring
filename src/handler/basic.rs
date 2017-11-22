@@ -13,6 +13,7 @@
 // limitations under the License.
 
 use std::collections::HashSet;
+use std::sync::mpsc;
 
 use bitcoin::util::base58::ToBase58;
 
@@ -41,6 +42,7 @@ impl AnchoringHandler {
             node,
             proposal_tx: None,
             known_addresses: HashSet::new(),
+            errors_sink: None,
         }
     }
 
@@ -119,6 +121,11 @@ impl AnchoringHandler {
             address.to_base58check(),
             private_key,
         );
+    }
+
+    #[doc(hidden)]
+    pub fn set_errors_sink(&mut self, sink: Option<mpsc::Sender<HandlerError>>) {
+        self.errors_sink = sink;
     }
 
     #[doc(hidden)]
