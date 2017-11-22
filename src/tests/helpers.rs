@@ -35,8 +35,16 @@ pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 pub use super::secp256k1_hack::sign_tx_input_with_nonce;
 
-pub fn to_box<T: Transaction>(tx: T) -> Box<Transaction> {
+pub fn to_boxed<T: Transaction>(tx: T) -> Box<Transaction> {
     Box::new(tx) as Box<Transaction>
+}
+
+pub fn to_boxed_vec<T, I>(it: I) -> Vec<Box<Transaction>>
+where
+    T: Transaction,
+    I: IntoIterator<Item = T>,
+{
+    it.into_iter().map(to_boxed).collect()
 }
 
 pub fn gen_service_tx_lect(
@@ -230,7 +238,7 @@ pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
     let anchored_tx = testkit.latest_anchored_tx();
     testkit.create_block();
 
-    let signatures = signatures.into_iter().map(to_box).collect::<Vec<_>>();
+    let signatures = signatures.into_iter().map(to_boxed).collect::<Vec<_>>();
     testkit.mempool().contains_key(&signatures[0].hash());
     requests.expect(vec![
         confirmations_request(&testkit.current_funding_tx(), 50),
@@ -251,7 +259,7 @@ pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
         .map(|idx| {
             gen_service_tx_lect(testkit, ValidatorId(idx), &anchored_tx, 1)
         })
-        .map(to_box)
+        .map(to_boxed)
         .collect::<Vec<_>>();
     testkit.mempool().contains_key(&txs[0].hash());
     testkit.create_block_with_transactions(txs);
@@ -319,7 +327,7 @@ pub fn anchor_first_block_lect_different(testkit: &mut AnchoringTestKit) {
         .map(|idx| {
             gen_service_tx_lect(testkit, ValidatorId(idx), &other_lect, 2)
         })
-        .map(to_box)
+        .map(to_boxed)
         .collect::<Vec<_>>();
     testkit.mempool().contains_key(&txs[0].hash());
 
@@ -354,7 +362,7 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
         .map(|idx| {
             gen_service_tx_lect(testkit, ValidatorId(idx), &other_lect, 2)
         })
-        .map(to_box)
+        .map(to_boxed)
         .collect::<Vec<_>>();
     testkit.mempool().contains_key(&txs[0].hash());
 
@@ -387,7 +395,7 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
     ]);
     testkit.create_block();
     let lect = gen_service_tx_lect(testkit, ValidatorId(0), &anchored_tx, 3);
-    testkit.mempool().contains_key(&to_box(lect).hash());
+    testkit.mempool().contains_key(&to_boxed(lect).hash());
     testkit.set_latest_anchored_tx(None);
 }
 
@@ -419,7 +427,7 @@ pub fn anchor_second_block_normal(testkit: &mut AnchoringTestKit) {
     );
     let anchored_tx = testkit.latest_anchored_tx();
 
-    let signatures = signatures.into_iter().map(to_box).collect::<Vec<_>>();
+    let signatures = signatures.into_iter().map(to_boxed).collect::<Vec<_>>();
     testkit.mempool().contains_key(&signatures[0].hash());
     requests.expect(vec![get_transaction_request(&anchored_tx.clone())]);
     testkit.create_block_with_transactions(signatures);
@@ -428,7 +436,7 @@ pub fn anchor_second_block_normal(testkit: &mut AnchoringTestKit) {
         .map(|idx| {
             gen_service_tx_lect(testkit, ValidatorId(idx), &anchored_tx, 2)
         })
-        .map(to_box)
+        .map(to_boxed)
         .collect::<Vec<_>>();
     testkit.mempool().contains_key(&txs[0].hash());
     requests.expect(vec![
@@ -458,7 +466,7 @@ pub fn anchor_first_block_without_other_signatures(testkit: &mut AnchoringTestKi
                 listunspent_entry(&testkit.current_funding_tx(), &anchoring_addr, 50)
             ]
         },
-        get_transaction_request(&testkit.current_funding_tx())
+        get_transaction_request(&testkit.current_funding_tx()),
     ]);
 
     let last_block_hash = testkit.last_block_hash();
@@ -471,7 +479,7 @@ pub fn anchor_first_block_without_other_signatures(testkit: &mut AnchoringTestKi
     );
     testkit.create_block();
 
-    let mut signatures = signatures.into_iter().map(to_box).collect::<Vec<_>>();
+    let mut signatures = signatures.into_iter().map(to_boxed).collect::<Vec<_>>();
     testkit.mempool().contains_key(&signatures[0].hash());
     requests.expect(vec![
         confirmations_request(&testkit.current_funding_tx(), 50),
@@ -498,6 +506,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
         confirmations_request(&anchored_tx, 10),
     ]);
     testkit.commit_configuration_change(cfg_proposal);
+    testkit.create_block();
 
     let following_multisig = following_cfg.redeem_script();
     let (_, signatures) = testkit.gen_anchoring_tx_with_signatures(
@@ -511,7 +520,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
     // Tx gets enough confirmations.
     requests.expect(vec![confirmations_request(&anchored_tx, 100)]);
     testkit.create_block();
-    let signatures = signatures.into_iter().map(to_box).collect::<Vec<_>>();
+    let signatures = signatures.into_iter().map(to_boxed).collect::<Vec<_>>();
     testkit.mempool().contains_key(&signatures[0].hash());
 
     requests.expect(send_raw_transaction_requests(&transition_tx));
@@ -521,7 +530,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
         .map(|id| {
             gen_service_tx_lect(testkit, ValidatorId(id), &transition_tx, 2)
         })
-        .map(to_box)
+        .map(to_boxed)
         .collect::<Vec<_>>();
     testkit.mempool().contains_key(&lects[0].hash());
     requests.expect(vec![confirmations_request(&transition_tx, 100)]);

@@ -39,6 +39,7 @@ mod rpc;
 pub mod secp256k1_hack;
 mod helpers;
 mod test_anchoring;
+mod test_auditing;
 
 pub const ANCHORING_FREQUENCY: u64 = 10;
 pub const ANCHORING_UTXO_CONFIRMATIONS: u64 = 24;

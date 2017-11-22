@@ -1,8 +1,8 @@
 use std::ops::Deref;
 
-use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::constants::Network;
+use bitcoin::blockdata::script::Script;
 
 use exonum::messages::Message;
 use exonum::helpers::{Height, ValidatorId};
@@ -122,7 +122,7 @@ fn test_anchoring_second_block_additional_funds() {
         None,
         &anchoring_addr,
     );
-    let signatures = signatures.into_iter().map(to_box).collect::<Vec<_>>();
+    let signatures = signatures.into_iter().map(to_boxed).collect::<Vec<_>>();
 
     testkit.mempool().contains_key(&signatures[0].hash());
     testkit.mempool().contains_key(&signatures[1].hash());
@@ -172,7 +172,7 @@ fn test_anchoring_second_block_lect_lost() {
         .map(|id| {
             gen_service_tx_lect(&mut testkit, id, &prev_anchored_tx, 3)
         })
-        .map(to_box)
+        .map(to_boxed)
         .collect::<Vec<_>>();
     testkit.mempool().contains_key(&txs[0].hash());
 
