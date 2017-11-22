@@ -14,6 +14,7 @@
 
 use exonum::crypto::{Hash, PublicKey};
 use exonum::helpers::ValidatorId;
+use exonum::blockchain::Transaction;
 
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
 use service::ANCHORING_SERVICE_ID;
@@ -68,5 +69,17 @@ encoding_struct! {
         field msg_hash:       &Hash       [00 => 32]
         /// Bitcoin transaction content.
         field tx:             BitcoinTx   [32 => 40]
+    }
+}
+
+impl From<Box<MsgAnchoringSignature>> for Box<Transaction> {
+    fn from(tx: Box<MsgAnchoringSignature>) -> Self {
+        tx as Self
+    }
+}
+
+impl From<Box<MsgAnchoringUpdateLatest>> for Box<Transaction> {
+    fn from(tx: Box<MsgAnchoringUpdateLatest>) -> Self {
+        tx as Self
     }
 }

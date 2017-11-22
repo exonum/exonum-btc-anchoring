@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::collections::{BTreeMap, VecDeque};
+use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 use std::default::Default;
 use std::ops::{Deref, Drop};
@@ -70,30 +70,6 @@ pub struct TestClient {
 }
 
 impl TestClient {
-    pub fn new<S>(host: S, username: Option<String>, password: Option<String>) -> TestClient
-    where
-        S: Into<String>,
-    {
-        TestClient {
-            rpc: AnchoringRpcConfig {
-                host: host.into(),
-                username: username,
-                password: password,
-            },
-            requests: TestRequests::default(),
-        }
-    }
-
-    pub fn url(&self) -> &str {
-        &self.rpc.host
-    }
-    pub fn password(&self) -> &Option<String> {
-        &self.rpc.password
-    }
-    pub fn username(&self) -> &Option<String> {
-        &self.rpc.username
-    }
-
     pub fn requests(&self) -> TestRequests {
         self.requests.clone()
     }

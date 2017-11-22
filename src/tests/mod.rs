@@ -11,6 +11,7 @@
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
+
 use std::ops::{Deref, DerefMut};
 use std::sync::{Arc, Mutex, MutexGuard};
 use std::sync::mpsc;
@@ -19,7 +20,7 @@ use rand::{SeedableRng, StdRng};
 use serde_json;
 
 use exonum::crypto::Hash;
-use exonum::blockchain::Schema;
+use exonum::blockchain::{Schema, Transaction};
 use exonum::helpers::{Height, ValidatorId};
 use exonum_testkit::{TestKit, TestKitBuilder};
 
@@ -27,7 +28,6 @@ use {gen_anchoring_testnet_config_with_rng, AnchoringConfig, AnchoringNodeConfig
      AnchoringService, ANCHORING_SERVICE_NAME};
 use details::btc;
 use details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
-use details::btc::payload::Payload;
 use blockchain::dto::MsgAnchoringSignature;
 use handler::{collect_signatures, AnchoringHandler};
 use error::HandlerError;
@@ -40,6 +40,7 @@ pub mod secp256k1_hack;
 mod helpers;
 mod test_anchoring;
 mod test_auditing;
+mod test_transition;
 
 pub const ANCHORING_FREQUENCY: u64 = 10;
 pub const ANCHORING_UTXO_CONFIRMATIONS: u64 = 24;
@@ -169,14 +170,6 @@ impl AnchoringTestKit {
             .unwrap()
     }
 
-    pub fn payload_for_height(&self, height: Height) -> Payload {
-        Payload {
-            block_height: height,
-            block_hash: self.block_hash_on_height(height),
-            prev_tx_chain: None,
-        }
-    }
-
     pub fn next_check_lect_height(&self) -> Height {
         let height = self.last_block_height().next();
         let frequency = self.nodes[0].check_lect_frequency as u64;
@@ -216,7 +209,7 @@ impl AnchoringTestKit {
         funds: &[FundingTx],
         prev_tx_chain: Option<btc::TxId>,
         addr: &btc::Address,
-    ) -> (AnchoringTx, Vec<MsgAnchoringSignature>) {
+    ) -> (AnchoringTx, Vec<Box<Transaction>>) {
         let (propose_tx, signed_tx, signs) = {
             let (prev_tx, prev_tx_input) = self.latest_anchored_tx
                 .clone()
@@ -249,7 +242,13 @@ impl AnchoringTestKit {
         };
         self.latest_anchored_tx = Some((signed_tx, signs.clone()));
 
-        (propose_tx, signs)
+        (
+            propose_tx,
+            signs
+                .into_iter()
+                .map(|x| Box::new(x) as Box<Transaction>)
+                .collect(),
+        )
     }
 
     pub fn finalize_tx<I>(&self, tx: AnchoringTx, signs: I) -> AnchoringTx

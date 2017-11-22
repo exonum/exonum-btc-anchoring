@@ -24,7 +24,6 @@ cache:
   - "$HOME/.cargo"
   - "$HOME/.local"
   - "$TRAVIS_BUILD_DIR/target"
-  - "$TRAVIS_BUILD_DIR/sandbox_tests/target"
 sudo: false
 
 env:
@@ -98,12 +97,6 @@ jobs:
     - SANDBOX=true
     script:
     - cd sandbox_tests && cargo clippy -- -D warnings
-  - stage: test
-    env:
-    - SANDBOX=true
-    script:
-    - cd sandbox_tests
-    - cargo test
   - stage: test
     script:
     - |

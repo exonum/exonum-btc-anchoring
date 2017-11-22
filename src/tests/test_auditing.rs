@@ -1,4 +1,17 @@
-use exonum::messages::Message;
+// Copyright 2017 The Exonum Team
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 use exonum::helpers::{Height, ValidatorId};
 use exonum::encoding::serialize::HexValue;
 use exonum_testkit::TestNetworkConfiguration;
@@ -6,7 +19,7 @@ use exonum_testkit::TestNetworkConfiguration;
 use {AnchoringConfig, ANCHORING_SERVICE_NAME};
 use handler::error::Error as HandlerError;
 use blockchain::dto::MsgAnchoringUpdateLatest;
-use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, TransactionBuilder};
+use details::btc::transactions::BitcoinTx;
 use super::AnchoringTestKit;
 use super::helpers::*;
 
@@ -75,7 +88,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
     testkit.mempool().contains_key(&signatures[0].hash());
 
     requests.expect(vec![get_transaction_request(&transition_tx)]);
-    testkit.create_block_with_transactions(to_boxed_vec(signatures));
+    testkit.create_block_with_transactions(signatures);
 
     let lects = (0..4)
         .map(|id| {

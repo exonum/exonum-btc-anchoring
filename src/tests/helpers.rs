@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bitcoin::util::base58::{FromBase58, ToBase58};
+use bitcoin::util::base58::ToBase58;
 use serde_json::Value;
 
-use exonum::messages::{Message, RawTransaction};
-use exonum::crypto::{Hash, HexValue};
-use exonum::blockchain::{Schema, Transaction};
-use exonum::storage::StorageValue;
-use exonum::helpers::{self, Height, ValidatorId};
+use exonum::messages::Message;
+use exonum::crypto::HexValue;
+use exonum::blockchain::Transaction;
+use exonum::helpers::{Height, ValidatorId};
 
 use exonum_testkit::{TestKit, TestNetworkConfiguration};
 
@@ -37,14 +36,6 @@ pub use super::secp256k1_hack::sign_tx_input_with_nonce;
 
 pub fn to_boxed<T: Transaction>(tx: T) -> Box<Transaction> {
     Box::new(tx) as Box<Transaction>
-}
-
-pub fn to_boxed_vec<T, I>(it: I) -> Vec<Box<Transaction>>
-where
-    T: Transaction,
-    I: IntoIterator<Item = T>,
-{
-    it.into_iter().map(to_boxed).collect()
 }
 
 pub fn gen_service_tx_lect(
@@ -238,7 +229,6 @@ pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
     let anchored_tx = testkit.latest_anchored_tx();
     testkit.create_block();
 
-    let signatures = signatures.into_iter().map(to_boxed).collect::<Vec<_>>();
     testkit.mempool().contains_key(&signatures[0].hash());
     requests.expect(vec![
         confirmations_request(&testkit.current_funding_tx(), 50),
@@ -427,7 +417,6 @@ pub fn anchor_second_block_normal(testkit: &mut AnchoringTestKit) {
     );
     let anchored_tx = testkit.latest_anchored_tx();
 
-    let signatures = signatures.into_iter().map(to_boxed).collect::<Vec<_>>();
     testkit.mempool().contains_key(&signatures[0].hash());
     requests.expect(vec![get_transaction_request(&anchored_tx.clone())]);
     testkit.create_block_with_transactions(signatures);
@@ -470,7 +459,7 @@ pub fn anchor_first_block_without_other_signatures(testkit: &mut AnchoringTestKi
     ]);
 
     let last_block_hash = testkit.last_block_hash();
-    let (_, signatures) = testkit.gen_anchoring_tx_with_signatures(
+    let (_, mut signatures) = testkit.gen_anchoring_tx_with_signatures(
         Height::zero(),
         last_block_hash,
         &[],
@@ -479,7 +468,6 @@ pub fn anchor_first_block_without_other_signatures(testkit: &mut AnchoringTestKi
     );
     testkit.create_block();
 
-    let mut signatures = signatures.into_iter().map(to_boxed).collect::<Vec<_>>();
     testkit.mempool().contains_key(&signatures[0].hash());
     requests.expect(vec![
         confirmations_request(&testkit.current_funding_tx(), 50),
@@ -520,7 +508,6 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
     // Tx gets enough confirmations.
     requests.expect(vec![confirmations_request(&anchored_tx, 100)]);
     testkit.create_block();
-    let signatures = signatures.into_iter().map(to_boxed).collect::<Vec<_>>();
     testkit.mempool().contains_key(&signatures[0].hash());
 
     requests.expect(send_raw_transaction_requests(&transition_tx));
@@ -535,7 +522,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
     testkit.mempool().contains_key(&lects[0].hash());
     requests.expect(vec![confirmations_request(&transition_tx, 100)]);
     testkit.create_block_with_transactions(lects);
-    testkit.create_blocks_until(cfg_change_height);
+    testkit.create_blocks_until(cfg_change_height.previous());
 
     testkit.nodes_mut().swap_remove(0);
     requests.expect(vec![get_transaction_request(&transition_tx)]);
