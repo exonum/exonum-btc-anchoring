@@ -91,13 +91,6 @@ jobs:
     script:
     - cargo clippy -- -D warnings
   - stage: test
-    rust: nightly-2017-10-19
-    env:
-    - FEATURE=clippy
-    - SANDBOX=true
-    script:
-    - cd sandbox_tests && cargo clippy -- -D warnings
-  - stage: test
     script:
     - |
       if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then

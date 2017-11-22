@@ -134,8 +134,8 @@ impl Service for AnchoringService {
                     panic!("A critical error occured: {}", e);
                 }
                 error!("An error in handler occured: {}", e);
-                if let Some(ref channel) = handler.errors_sink.as_ref() {
-                    let res = channel.send(e);
+                if let Some(sink) = handler.errors_sink.as_ref() {
+                    let res = sink.send(e);
                     if let Err(err) = res {
                         error!("Can't send error to channel: {}", err);
                     }
