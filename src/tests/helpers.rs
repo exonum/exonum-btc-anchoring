@@ -533,7 +533,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
 
 /// Generates a configuration that excludes `testkit node` from consensus.
 /// Then it continues to work as auditor.
-fn gen_following_cfg_exclude_validator(
+pub fn gen_following_cfg_exclude_validator(
     testkit: &mut AnchoringTestKit,
     from_height: Height,
 ) -> (TestNetworkConfiguration, AnchoringConfig) {

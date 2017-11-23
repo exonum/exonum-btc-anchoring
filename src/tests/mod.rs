@@ -41,6 +41,7 @@ mod helpers;
 mod test_anchoring;
 mod test_auditing;
 mod test_transition;
+mod test_api;
 
 pub const ANCHORING_FREQUENCY: u64 = 10;
 pub const ANCHORING_UTXO_CONFIRMATIONS: u64 = 24;
