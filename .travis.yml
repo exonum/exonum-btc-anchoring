@@ -83,7 +83,6 @@ jobs:
     script:
     - cargo audit
     - cargo fmt -- --write-mode=diff
-    - cd sandbox_tests && cargo fmt -- --write-mode=diff
   - stage: test
     rust: nightly-2017-10-19
     env:
