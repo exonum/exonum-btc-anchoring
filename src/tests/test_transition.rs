@@ -249,7 +249,7 @@ fn test_transit_changed_self_key_normal() {
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
 
-    for i in testkit.current_height().0..(cfg_change_height.0 - 1) {
+    for i in testkit.height().next().0..cfg_change_height.previous().0 {
         requests.expect(vec![confirmations_request(&transition_tx, 15 + i)]);
         testkit.create_block();
     }
@@ -383,7 +383,7 @@ fn test_transit_unchanged_self_key_normal() {
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
 
-    for i in testkit.current_height().0..(cfg_change_height.0 - 1) {
+    for i in testkit.height().next().0..cfg_change_height.previous().0 {
         requests.expect(vec![confirmations_request(&transition_tx, 15 + i)]);
         testkit.create_block();
     }
@@ -499,7 +499,7 @@ fn test_transit_config_with_funding_tx() {
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
 
-    for i in testkit.current_height().0..(cfg_change_height.0 - 1) {
+    for i in testkit.height().next().0..cfg_change_height.previous().0 {
         requests.expect(vec![confirmations_request(&transition_tx, 15 + i)]);
         testkit.create_block();
     }
@@ -743,7 +743,7 @@ fn test_transit_config_lost_lect_resend_after_cfg_change() {
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
 
-    for _ in testkit.current_height().0..20 {
+    for _ in testkit.height().next().0..20 {
         requests.expect(vec![confirmations_request(&transition_tx, 20)]);
         testkit.create_block();
     }
@@ -810,7 +810,7 @@ fn test_transit_unchanged_self_key_recover_with_funding_tx() {
     ]);
     testkit.create_block();
 
-    for _ in testkit.current_height().0..(cfg_change_height.0 - 1) {
+    for _ in testkit.height().next().0..cfg_change_height.previous().0 {
         requests.expect(vec![confirmations_request(&anchored_tx, 10)]);
         testkit.create_block();
     }
@@ -928,7 +928,7 @@ fn test_transit_changed_self_key_recover_with_funding_tx() {
     ]);
     testkit.create_block();
 
-    for _ in testkit.current_height().0..(cfg_change_height.0 - 1) {
+    for _ in testkit.height().next().0..cfg_change_height.previous().0 {
         requests.expect(vec![confirmations_request(&anchored_tx, 10)]);
         testkit.create_block();
     }
@@ -1050,7 +1050,7 @@ fn test_transit_changed_self_key_recover_without_funding_tx() {
     ]);
     testkit.create_block();
 
-    for _ in testkit.current_height().0..(first_cfg_change_height.0 - 1) {
+    for _ in testkit.height().next().0..(first_cfg_change_height.0 - 1) {
         requests.expect(vec![confirmations_request(&anchored_tx, 10)]);
         testkit.create_block();
     }
@@ -1189,7 +1189,7 @@ fn test_transit_add_validators_recover_without_funding_tx() {
     ]);
     testkit.create_block();
 
-    for _ in testkit.current_height().0..(first_cfg_change_height.0 - 1) {
+    for _ in testkit.height().next().0..(first_cfg_change_height.0 - 1) {
         requests.expect(vec![confirmations_request(&anchored_tx, 10)]);
         testkit.create_block();
     }
@@ -1430,7 +1430,7 @@ fn test_transit_config_after_funding_tx() {
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
 
-    for i in testkit.current_height().0..(cfg_change_height.0 - 1) {
+    for i in testkit.height().next().0..cfg_change_height.previous().0 {
         requests.expect(vec![confirmations_request(&transition_tx, 15 + i)]);
         testkit.create_block();
     }
@@ -1736,7 +1736,7 @@ fn test_transit_changed_self_key_observer() {
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
 
-    for i in testkit.current_height().0..(cfg_change_height.0 - 1) {
+    for i in testkit.height().next().0..cfg_change_height.previous().0 {
         requests.expect(vec![confirmations_request(&transition_tx, 15 + i)]);
         testkit.create_block();
     }

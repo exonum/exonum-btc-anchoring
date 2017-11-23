@@ -172,19 +172,19 @@ impl AnchoringTestKit {
     }
 
     pub fn next_check_lect_height(&self) -> Height {
-        let height = self.last_block_height().next();
+        let height = self.height().next();
         let frequency = self.nodes[0].check_lect_frequency as u64;
         Height(height.0 - height.0 % frequency + frequency).previous()
     }
 
     pub fn next_anchoring_height(&self) -> Height {
-        let height = self.last_block_height().next();
+        let height = self.height().next();
         let frequency = self.current_cfg().frequency as u64;
         Height(height.0 - height.0 % frequency + frequency).previous()
     }
 
     pub fn latest_anchoring_height(&self) -> Height {
-        let height = self.last_block_height().next();
+        let height = self.height().next();
         self.current_cfg().latest_anchoring_height(height)
     }
 

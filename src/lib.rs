@@ -74,8 +74,6 @@ extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 extern crate toml;
-#[macro_use]
-extern crate pretty_assertions;
 
 #[macro_use]
 extern crate exonum;
@@ -88,6 +86,9 @@ extern crate router;
 extern crate exonum_testkit;
 #[cfg(test)]
 extern crate libc;
+#[cfg(test)]
+#[macro_use]
+extern crate pretty_assertions;
 
 #[doc(hidden)]
 pub mod details;
