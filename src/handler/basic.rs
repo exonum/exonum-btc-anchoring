@@ -58,11 +58,9 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn validator_id(&self, context: &ServiceContext) -> ValidatorId {
-        context
-            .validator_state()
-            .as_ref()
-            .expect("Request `validator_id` only from validator node.")
-            .id()
+        context.validator_id().expect(
+            "Request `validator_id` only from validator node.",
+        )
     }
 
     #[doc(hidden)]
@@ -71,11 +69,7 @@ impl AnchoringHandler {
         cfg: &'a AnchoringConfig,
         state: &ServiceContext,
     ) -> &'a btc::PublicKey {
-        let validator_id = state
-            .validator_state()
-            .as_ref()
-            .expect("Request `validator_id` only from validator node.")
-            .id();
+        let validator_id = self.validator_id(state);
         &cfg.anchoring_keys[validator_id.0 as usize]
     }
 
@@ -172,7 +166,7 @@ impl AnchoringHandler {
         // Ensure that bitcoind watching for the current addr
         self.import_address(&actual_addr)?;
 
-        if state.validator_state().is_none() {
+        if state.validator_id().is_none() {
             return Ok(AnchoringState::Auditing { cfg: actual });
         }
 
@@ -292,7 +286,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn handle_commit(&mut self, state: &mut ServiceContext) -> Result<(), ServiceError> {
+    pub fn handle_commit(&mut self, state: &ServiceContext) -> Result<(), ServiceError> {
         match self.current_state(state)? {
             AnchoringState::Anchoring { cfg } => self.handle_anchoring_state(cfg, state),
             AnchoringState::Transition { from, to } => {
@@ -391,7 +385,7 @@ impl AnchoringHandler {
     pub fn update_our_lect(
         &mut self,
         multisig: &MultisigAddress,
-        state: &mut ServiceContext,
+        state: &ServiceContext,
     ) -> Result<Option<BitcoinTx>, ServiceError> {
         let key = self.anchoring_key(multisig.common, state);
         trace!("Update our lect");
@@ -498,7 +492,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    fn send_updated_lect(&mut self, lect: BitcoinTx, lects_count: u64, state: &mut ServiceContext) {
+    fn send_updated_lect(&mut self, lect: BitcoinTx, lects_count: u64, state: &ServiceContext) {
         if self.proposal_tx.is_some() {
             self.proposal_tx = None;
         }
@@ -516,7 +510,7 @@ impl AnchoringHandler {
             lects_count,
             state.secret_key(),
         );
-        state.add_transaction(Box::new(lect_msg));
+        state.transaction_sender().send(Box::new(lect_msg)).unwrap();
     }
 }
 

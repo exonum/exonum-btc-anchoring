@@ -21,7 +21,7 @@ use iron::{Handler, Request, Response};
 use iron::prelude::IronResult;
 use serde_json;
 use serde_json::value::Value;
-use rand::{Rng, thread_rng};
+use rand::{thread_rng, Rng};
 use router::Router;
 
 use exonum::blockchain::{ApiContext, Blockchain, Service, ServiceContext, Transaction};
@@ -39,8 +39,8 @@ use local_storage::AnchoringNodeConfig;
 use handler::AnchoringHandler;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
-use blockchain::dto::{ANCHORING_MESSAGE_LATEST, ANCHORING_MESSAGE_SIGNATURE,
-                      MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest, ANCHORING_MESSAGE_LATEST,
+                      ANCHORING_MESSAGE_SIGNATURE};
 use error::Error as ServiceError;
 #[cfg(not(feature = "sandbox_tests"))]
 use handler::error::Error as HandlerError;
@@ -121,7 +121,7 @@ impl Service for AnchoringService {
         serde_json::to_value(cfg).unwrap()
     }
 
-    fn handle_commit(&self, state: &mut ServiceContext) {
+    fn handle_commit(&self, state: &ServiceContext) {
         let mut handler = self.handler.lock().unwrap();
         match handler.handle_commit(state) {
             #[cfg(feature = "sandbox_tests")]
