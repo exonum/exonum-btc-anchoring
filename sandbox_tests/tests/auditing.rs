@@ -102,7 +102,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     // Tx gets enough confirmations.
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures);
@@ -114,7 +114,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&lects);
     sandbox.fast_forward_to_height(cfg_change_height);

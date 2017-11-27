@@ -21,7 +21,6 @@ use std::env;
 
 use tempdir::TempDir;
 
-use exonum::blockchain::Blockchain;
 use exonum::node::Node;
 use exonum::storage::{RocksDB, RocksDBOptions};
 use exonum::helpers::{generate_testnet_config, init_logger};
@@ -70,14 +69,13 @@ fn main() {
                 let mut options = RocksDBOptions::default();
                 let path = destdir.join(idx.to_string());
                 options.create_if_missing(true);
-                RocksDB::open(&path, options).expect("Unable to create database")
+                RocksDB::open(&path, &options).expect("Unable to create database")
             };
             // Create node[idx]
-            let blockchain = Blockchain::new(Box::new(db), vec![Box::new(service)]);
             let node_cfg = node_cfgs[idx].clone();
             let node_thread = thread::spawn(move || {
                 // Run it in separate thread
-                let node = Node::new(blockchain, node_cfg);
+                let node = Node::new(Box::new(db), vec![Box::new(service)], node_cfg);
                 node.run_handler().expect("Unable to run node");
             });
             node_threads.push(node_thread);

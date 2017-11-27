@@ -29,7 +29,7 @@ impl AnchoringHandler {
         &mut self,
         from: AnchoringConfig,
         to: AnchoringConfig,
-        state: &mut ServiceContext,
+        state: &ServiceContext,
     ) -> Result<(), ServiceError> {
         let multisig: MultisigAddress = {
             let mut multisig = self.multisig_address(&from);
@@ -106,7 +106,7 @@ impl AnchoringHandler {
         &mut self,
         prev_cfg: AnchoringConfig,
         actual_cfg: AnchoringConfig,
-        state: &mut ServiceContext,
+        state: &ServiceContext,
     ) -> Result<(), ServiceError> {
         let multisig: MultisigAddress = self.multisig_address(&actual_cfg);
 

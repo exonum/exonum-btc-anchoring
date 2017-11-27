@@ -155,14 +155,14 @@ fn test_anchoring_second_block_additional_funds() {
         &anchoring_addr,
     );
 
-    sandbox.broadcast(signatures[0].clone());
-    sandbox.broadcast(signatures[1].clone());
+    sandbox.broadcast(&signatures[0]);
+    sandbox.broadcast(&signatures[1]);
 
     let anchored_tx = &sandbox.latest_anchored_tx();
     client.expect(send_raw_transaction_requests(anchored_tx));
 
     sandbox.add_height(&signatures);
-    sandbox.broadcast(gen_service_tx_lect(
+    sandbox.broadcast(&gen_service_tx_lect(
         &sandbox,
         ANCHORING_VALIDATOR,
         anchored_tx,
@@ -211,7 +211,7 @@ fn test_anchoring_second_block_lect_lost() {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(txs[0].clone());
+    sandbox.broadcast(&txs[0]);
 
     // Trying to resend lost lect tx
     client.expect(vec![
@@ -291,7 +291,7 @@ fn test_anchoring_find_lect_chain_normal() {
     sandbox.add_height(&[]);
 
     let lect = gen_service_tx_lect(&sandbox, ANCHORING_VALIDATOR, &current_anchored_tx, 2);
-    sandbox.broadcast(lect);
+    sandbox.broadcast(&lect);
 }
 
 // We find lect, whose prev_hash is not known

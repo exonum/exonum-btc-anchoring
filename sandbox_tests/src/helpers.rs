@@ -237,7 +237,7 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
     let anchored_tx = sandbox.latest_anchored_tx();
     sandbox.add_height(&[]);
 
-    sandbox.broadcast(signatures[0].raw().clone());
+    sandbox.broadcast(signatures[0].raw());
     client.expect(vec![
         confirmations_request(&sandbox.current_funding_tx(), 50),
         request! {
@@ -262,7 +262,7 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(txs[0].clone());
+    sandbox.broadcast(&txs[0]);
     sandbox.add_height(&txs);
 }
 
@@ -329,7 +329,7 @@ pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(txs[0].clone());
+    sandbox.broadcast(&txs[0]);
 
     sandbox.add_height(&txs);
     sandbox.set_latest_anchored_tx(Some((other_lect.clone(), other_signatures.clone())));
@@ -364,7 +364,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(txs[0].clone());
+    sandbox.broadcast(&txs[0]);
 
     client.expect(vec![
         confirmations_request(&sandbox.current_funding_tx(), 50),
@@ -393,7 +393,7 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
         },
     ]);
     sandbox.add_height(&[]);
-    sandbox.broadcast(gen_service_tx_lect(
+    sandbox.broadcast(&gen_service_tx_lect(
         sandbox,
         ANCHORING_VALIDATOR,
         &anchored_tx,
@@ -428,7 +428,7 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
     );
     let anchored_tx = sandbox.latest_anchored_tx();
 
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     client.expect(vec![confirmations_request(&anchored_tx.clone(), 0)]);
     sandbox.add_height(&signatures);
 
@@ -439,7 +439,7 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(txs[0].clone());
+    sandbox.broadcast(&txs[0]);
     client.expect(vec![
         request! {
             method: "listunspent",
@@ -478,7 +478,7 @@ pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
     );
     sandbox.add_height(&[]);
 
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
     client.expect(vec![
         confirmations_request(&sandbox.current_funding_tx(), 50),
     ]);
@@ -516,7 +516,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
     // Tx gets enough confirmations.
     client.expect(vec![confirmations_request(&anchored_tx, 100)]);
     sandbox.add_height(&[]);
-    sandbox.broadcast(signatures[0].clone());
+    sandbox.broadcast(&signatures[0]);
 
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&signatures);
@@ -528,7 +528,7 @@ pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
                 .clone()
         })
         .collect::<Vec<_>>();
-    sandbox.broadcast(lects[0].clone());
+    sandbox.broadcast(&lects[0]);
     client.expect(vec![confirmations_request(&transition_tx, 100)]);
     sandbox.add_height(&lects);
     sandbox.fast_forward_to_height(cfg_change_height);

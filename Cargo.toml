@@ -37,6 +37,13 @@ tempdir = "0.3.5"
 [dev-dependencies]
 exonum-configuration = "0.3.0"
 
+[patch.crates-io]
+exonum = { git = "https://github.com/exonum/exonum", rev = "391d0a14bd84e040bf2edc737578fff2ea2e2265" }
+
+[patch.crates-io.exonum-configuration]
+git = "https://github.com/exonum/exonum-configuration"
+rev = "9e18e38978edbd548f573f76ba62edd78b465dc3" 
+
 [features]
 default = []
 sandbox_tests = []
