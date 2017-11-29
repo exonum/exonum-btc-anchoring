@@ -16,7 +16,7 @@ travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 
 [dependencies]
 exonum = "0.3.0"
-exonum_bitcoinrpc = "0.1.1"
+exonum_bitcoinrpc = "0.2.0"
 
 bitcoin="0.10.0"
 secp256k1 = "0.6.0"
@@ -44,7 +44,11 @@ git = "https://github.com/alekseysidorov/exonum-testkit"
 rev = "6b22c464efceaa5deb15ecb2eb40a3fca24e97f4"
 
 [patch.crates-io]
-exonum = { git = "https://github.com/exonum/exonum", rev = "adb1a9ab47a356b6efb3ef73755f981f6fd0af9a" }
+exonum = { git = "https://github.com/exonum/exonum", rev = "3ffaf6c7f2bf93e42cb70b10a8a0d02077691fe2" }
+
+[patch.crates-io.exonum-configuration]
+git = "https://github.com/exonum/exonum-configuration"
+rev = "0ed244a9cd72dda227f1da948d13519ee081a51f" 
 
 [features]
 default = []
