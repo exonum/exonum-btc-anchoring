@@ -40,8 +40,8 @@ pretty_assertions = "0.4.0"
 libc = "0.2.21"
 
 [dev-dependencies.exonum-testkit]
-git = "https://github.com/alekseysidorov/exonum-testkit"
-rev = "6b22c464efceaa5deb15ecb2eb40a3fca24e97f4"
+git = "https://github.com/exonum/exonum-testkit"
+rev = "8a5371d00141475bb07458f0d08e605102005d18"
 
 [patch.crates-io]
 exonum = { git = "https://github.com/exonum/exonum", rev = "3ffaf6c7f2bf93e42cb70b10a8a0d02077691fe2" }
