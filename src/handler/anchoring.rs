@@ -12,9 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// FIXME: Sometimes clippy incorrectly calculates lifetimes.
-#![cfg_attr(feature="cargo-clippy", allow(let_and_return))]
-
 use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::{Schema, ServiceContext};
@@ -212,9 +209,7 @@ impl AnchoringHandler {
         let collected_signatures = {
             let anchoring_schema = AnchoringSchema::new(context.snapshot());
             let signatures = anchoring_schema.signatures(&txid);
-            let collected_signatures =
-                collect_signatures(&proposal, multisig.common, signatures.iter());
-            collected_signatures
+            collect_signatures(&proposal, multisig.common, &signatures)
         };
         if let Some(signatures) = collected_signatures {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
