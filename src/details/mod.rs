@@ -18,7 +18,6 @@ mod macros;
 pub mod btc;
 pub mod rpc;
 pub mod error;
-pub mod sandbox;
 
 #[cfg(test)]
 pub mod tests;

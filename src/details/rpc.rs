@@ -26,7 +26,10 @@ pub use bitcoinrpc::Client as RpcClient;
 pub type Result<T> = bitcoinrpc::Result<T>;
 pub type Error = bitcoinrpc::Error;
 
-/// Rpc method `sendtoaddress` uses amount in btc instead of the satoshis.
+/// Number of satoshis in a bitcoin.
+///
+/// Used to convert values in satoshis for the bitcoind's `sendtoaddress` RPC endpoint,
+/// which measures amounts in bitcoins (rather than satoshis).
 pub const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 
 /// `Bitcoind` rpc configuration.

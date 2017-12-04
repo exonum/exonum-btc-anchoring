@@ -52,5 +52,4 @@ rev = "0ed244a9cd72dda227f1da948d13519ee081a51f"
 
 [features]
 default = []
-sandbox_tests = []
 rpc_tests = []

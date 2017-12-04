@@ -203,17 +203,6 @@ impl AnchoringTx {
     ) -> AnchoringTx {
         finalize_anchoring_transaction(self, redeem_script, signatures)
     }
-
-    // pub fn send(
-    //     self,
-    //     client: &AnchoringRpc,
-    //     redeem_script: &btc::RedeemScript,
-    //     signatures: HashMap<u32, Vec<btc::Signature>>,
-    // ) -> Result<AnchoringTx, RpcError> {
-    //     let tx = self.finalize(redeem_script, signatures);
-    //     client.send_transaction(tx.clone().into())?;
-    //     Ok(tx)
-    // }
 }
 
 impl fmt::Debug for AnchoringTx {
