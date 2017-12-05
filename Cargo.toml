@@ -33,15 +33,15 @@ iron = "0.5.1"
 mount = "0.3.0"
 toml = "0.4.0"
 tempdir = "0.3.5"
+libc = "0.2.21"
+
+[dependencies.exonum-testkit]
+git = "https://github.com/exonum/exonum-testkit"
+rev = "8a5371d00141475bb07458f0d08e605102005d18"
 
 [dev-dependencies]
 exonum-configuration = "0.3.0"
 pretty_assertions = "0.4.0"
-libc = "0.2.21"
-
-[dev-dependencies.exonum-testkit]
-git = "https://github.com/exonum/exonum-testkit"
-rev = "8a5371d00141475bb07458f0d08e605102005d18"
 
 [patch.crates-io]
 exonum = { git = "https://github.com/exonum/exonum", rev = "3ffaf6c7f2bf93e42cb70b10a8a0d02077691fe2" }

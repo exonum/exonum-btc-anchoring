@@ -12,19 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+extern crate bitcoin;
+#[macro_use]
+extern crate serde_json;
+#[macro_use]
+extern crate pretty_assertions;
+extern crate exonum;
+#[macro_use]
+extern crate exonum_btc_anchoring;
+#[macro_use]
+extern crate exonum_testkit;
+
 use exonum::messages::Message;
 use exonum::helpers::{Height, ValidatorId};
 use exonum::encoding::serialize::HexValue;
 use exonum_testkit::{ApiKind, TestKitApi};
 
-use ANCHORING_SERVICE_NAME;
-use api::{AnchoringInfo, LectInfo};
-use observer::AnchoringChainObserver;
-use blockchain::dto::MsgAnchoringUpdateLatest;
-use details::btc;
-use details::btc::transactions::{AnchoringTx, BitcoinTx};
-use super::{AnchoringTestKit, TestClient};
-use super::helpers::*;
+use exonum_btc_anchoring::ANCHORING_SERVICE_NAME;
+use exonum_btc_anchoring::api::{AnchoringInfo, LectInfo};
+use exonum_btc_anchoring::observer::AnchoringChainObserver;
+use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
+use exonum_btc_anchoring::details::btc;
+use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, BitcoinTx};
+use exonum_btc_anchoring::testkit_extras::{AnchoringTestKit, TestClient};
+use exonum_btc_anchoring::testkit_extras::helpers::*;
 
 trait AnchoringApi {
     fn actual_lect(&self) -> Option<AnchoringInfo>;

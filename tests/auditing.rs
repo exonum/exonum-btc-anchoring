@@ -12,16 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+extern crate bitcoin;
+#[macro_use]
+extern crate serde_json;
+#[macro_use]
+extern crate pretty_assertions;
+extern crate exonum;
+#[macro_use]
+extern crate exonum_btc_anchoring;
+#[macro_use]
+extern crate exonum_testkit;
+
 use exonum::helpers::{Height, ValidatorId};
 use exonum::encoding::serialize::HexValue;
 use exonum_testkit::TestNetworkConfiguration;
 
-use {AnchoringConfig, ANCHORING_SERVICE_NAME};
-use handler::error::Error as HandlerError;
-use blockchain::dto::MsgAnchoringUpdateLatest;
-use details::btc::transactions::BitcoinTx;
-use super::AnchoringTestKit;
-use super::helpers::*;
+use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};
+use exonum_btc_anchoring::handler::error::Error as HandlerError;
+use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
+use exonum_btc_anchoring::details::btc::transactions::BitcoinTx;
+use exonum_btc_anchoring::testkit_extras::AnchoringTestKit;
+use exonum_btc_anchoring::testkit_extras::helpers::*;
 
 /// Generates a configuration that excludes `testkit node` from consensus.
 /// Then it continues to work as auditor.

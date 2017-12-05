@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![cfg_attr(feature="cargo-clippy", allow(let_and_return))]
+
 use bitcoin::util::base58::ToBase58;
 use serde_json::Value;
 
@@ -63,7 +65,7 @@ pub fn gen_service_tx_lect_wrong(
 ) -> MsgAnchoringUpdateLatest {
     let keypair = testkit.network().validators()[real_id.0 as usize].service_keypair();
     MsgAnchoringUpdateLatest::new(
-        &keypair.0,
+        keypair.0,
         fake_id,
         BitcoinTx::from(tx.clone()),
         count,

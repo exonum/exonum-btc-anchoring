@@ -37,17 +37,14 @@ pub use self::rpc::{TestClient, TestRequest, TestRequests};
 mod macros;
 mod rpc;
 pub mod secp256k1_hack;
-mod helpers;
-mod test_anchoring;
-mod test_auditing;
-mod test_transition;
-mod test_api;
+pub mod helpers;
 
 pub const ANCHORING_FREQUENCY: u64 = 10;
 pub const ANCHORING_UTXO_CONFIRMATIONS: u64 = 24;
 pub const ANCHORING_FUNDS: u64 = 4000;
 pub const CHECK_LECT_FREQUENCY: u64 = 6;
 
+#[derive(Debug)]
 pub struct AnchoringTestKit {
     inner: TestKit,
     requests: TestRequests,

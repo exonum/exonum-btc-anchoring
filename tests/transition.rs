@@ -12,6 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+extern crate rand;
+extern crate bitcoin;
+#[macro_use]
+extern crate serde_json;
+#[macro_use]
+extern crate pretty_assertions;
+extern crate exonum;
+#[macro_use]
+extern crate exonum_btc_anchoring;
+#[macro_use]
+extern crate exonum_testkit;
+
 use rand::{SeedableRng, StdRng};
 use bitcoin::network::constants::Network;
 
@@ -21,13 +33,13 @@ use exonum::encoding::serialize::HexValue;
 use exonum_testkit::{TestNetworkConfiguration, TestNode};
 use exonum::crypto::{gen_keypair_from_seed, Seed};
 
-use {AnchoringConfig, AnchoringNodeConfig, ANCHORING_SERVICE_NAME};
-use observer::AnchoringChainObserver;
-use blockchain::AnchoringSchema;
-use details::btc;
-use details::btc::transactions::{FundingTx, TransactionBuilder};
-use super::{AnchoringTestKit, TestClient};
-use super::helpers::*;
+use exonum_btc_anchoring::{AnchoringConfig, AnchoringNodeConfig, ANCHORING_SERVICE_NAME};
+use exonum_btc_anchoring::observer::AnchoringChainObserver;
+use exonum_btc_anchoring::blockchain::AnchoringSchema;
+use exonum_btc_anchoring::details::btc;
+use exonum_btc_anchoring::details::btc::transactions::{FundingTx, TransactionBuilder};
+use exonum_btc_anchoring::testkit_extras::{AnchoringTestKit, TestClient};
+use exonum_btc_anchoring::testkit_extras::helpers::*;
 
 fn gen_following_cfg(
     testkit: &mut AnchoringTestKit,
