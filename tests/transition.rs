@@ -193,7 +193,7 @@ fn gen_following_cfg_add_two_validators_changed_self_key(
 
     // Update consensus config
     let mut validators = cfg_proposal.validators().to_vec();
-    for keypair in exonum_keypairs.into_iter() {
+    for keypair in exonum_keypairs {
         let node = TestNode::from_parts(keypair.0, keypair.1, None);
         validators.push(node);
     }

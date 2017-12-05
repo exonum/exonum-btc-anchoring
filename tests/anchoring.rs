@@ -129,13 +129,11 @@ fn test_anchoring_second_block_additional_funds() {
             method: "listunspent",
             params: [0, 9_999_999, [&anchoring_addr.to_string()]],
             response: [
-                listunspent_entry(&mut testkit.latest_anchored_tx(), &anchoring_addr, 1),
+                listunspent_entry(&testkit.latest_anchored_tx(), &anchoring_addr, 1),
                 listunspent_entry(&funds, &anchoring_addr, 75)
             ]
         },
-        get_transaction_request(
-            &mut testkit.latest_anchored_tx()
-        ),
+        get_transaction_request(&testkit.latest_anchored_tx()),
         get_transaction_request(&funds),
     ]);
     testkit.create_block();
@@ -156,7 +154,7 @@ fn test_anchoring_second_block_additional_funds() {
     requests.expect(send_raw_transaction_requests(anchored_tx));
 
     testkit.create_block_with_transactions(signatures);
-    let lect = gen_service_tx_lect(&mut testkit, ValidatorId(0), anchored_tx, 2);
+    let lect = gen_service_tx_lect(&testkit, ValidatorId(0), anchored_tx, 2);
     testkit.mempool().contains_key(&lect.hash());
 }
 
@@ -194,9 +192,7 @@ fn test_anchoring_second_block_lect_lost() {
 
     let txs = (0..4)
         .map(ValidatorId)
-        .map(|id| {
-            gen_service_tx_lect(&mut testkit, id, &prev_anchored_tx, 3)
-        })
+        .map(|id| gen_service_tx_lect(&testkit, id, &prev_anchored_tx, 3))
         .map(to_boxed)
         .collect::<Vec<_>>();
     testkit.mempool().contains_key(&txs[0].hash());
@@ -274,7 +270,7 @@ fn test_anchoring_find_lect_chain_normal() {
     requests.expect(request);
     testkit.create_block();
 
-    let lect = gen_service_tx_lect(&mut testkit, ValidatorId(0), &current_anchored_tx, 2);
+    let lect = gen_service_tx_lect(&testkit, ValidatorId(0), &current_anchored_tx, 2);
     testkit.mempool().contains_key(&lect.hash());
 }
 
@@ -348,7 +344,7 @@ fn test_anchoring_lect_correct_validator() {
     let msg_lect = {
         let latest_anchored_tx = testkit.latest_anchored_tx();
         gen_service_tx_lect_wrong(
-            &mut testkit,
+            &testkit,
             ValidatorId(0),
             ValidatorId(0),
             &latest_anchored_tx,
@@ -376,7 +372,7 @@ fn test_anchoring_lect_wrong_validator() {
     let msg_lect_wrong = {
         let latest_anchored_tx = testkit.latest_anchored_tx();
         gen_service_tx_lect_wrong(
-            &mut testkit,
+            &testkit,
             ValidatorId(2),
             ValidatorId(0),
             &latest_anchored_tx,
@@ -384,11 +380,11 @@ fn test_anchoring_lect_wrong_validator() {
         )
     };
 
-    let lects_before = dump_lects(&mut testkit, ValidatorId(0));
+    let lects_before = dump_lects(&testkit, ValidatorId(0));
     // Commit `msg_lect_wrong` into blockchain
     testkit.create_block_with_transactions(txvec![msg_lect_wrong]);
     // Ensure that service ignore it
-    let lects_after = dump_lects(&mut testkit, ValidatorId(0));
+    let lects_after = dump_lects(&testkit, ValidatorId(0));
     assert_eq!(lects_after, lects_before);
 }
 
@@ -403,7 +399,7 @@ fn test_anchoring_lect_nonexistent_validator() {
     let msg_lect_wrong = {
         let latest_anchored_tx = testkit.latest_anchored_tx();
         gen_service_tx_lect_wrong(
-            &mut testkit,
+            &testkit,
             ValidatorId(2),
             ValidatorId(1000),
             &latest_anchored_tx,
@@ -411,11 +407,11 @@ fn test_anchoring_lect_nonexistent_validator() {
         )
     };
 
-    let lects_before = dump_lects(&mut testkit, ValidatorId(2));
+    let lects_before = dump_lects(&testkit, ValidatorId(2));
     // Commit `msg_lect_wrong` into blockchain
     testkit.create_block_with_transactions(txvec![msg_lect_wrong]);
     // Ensure that service ignore it
-    let lects_after = dump_lects(&mut testkit, ValidatorId(2));
+    let lects_after = dump_lects(&testkit, ValidatorId(2));
     assert_eq!(lects_after, lects_before);
 }
 
@@ -449,11 +445,11 @@ fn test_anchoring_signature_wrong_validator() {
         )
     };
 
-    let signs_before = dump_signatures(&mut testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.id());
     // Commit `msg_signature_wrong` into blockchain
     testkit.create_block_with_transactions(txvec![msg_signature_wrong]);
     // Ensure that service ignore it
-    let signs_after = dump_signatures(&mut testkit, &tx.id());
+    let signs_after = dump_signatures(&testkit, &tx.id());
     assert_eq!(signs_before, signs_after);
 }
 
@@ -469,13 +465,13 @@ fn test_anchoring_signature_nonexistent_tx() {
 
     let (redeem_script, addr) = testkit.current_cfg().redeem_script();
     let block_hash = testkit.block_hash_on_height(Height::zero());
-    let tx = TransactionBuilder::with_prev_tx(&mut testkit.latest_anchored_tx(), 0)
+    let tx = TransactionBuilder::with_prev_tx(&testkit.latest_anchored_tx(), 0)
         .fee(100)
         .payload(Height::zero(), block_hash)
         .send_to(addr.clone())
         .into_transaction()
         .unwrap();
-    let signature = tx.sign_input(&redeem_script, 0, &mut testkit.priv_keys(&addr)[1]);
+    let signature = tx.sign_input(&redeem_script, 0, &testkit.priv_keys(&addr)[1]);
     let validator_1 = ValidatorId(1);
     let msg_sign = {
         let keypair = testkit.validator(validator_1).service_keypair();
@@ -490,7 +486,7 @@ fn test_anchoring_signature_nonexistent_tx() {
     };
 
 
-    let signs_before = dump_signatures(&mut testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.id());
     // Commit `msg_sign` into blockchain
     testkit.create_block_with_transactions(txvec![msg_sign.clone()]);
     // Ensure that service adds it
@@ -510,13 +506,13 @@ fn test_anchoring_signature_incorrect_payload() {
     anchor_first_block_lect_normal(&mut testkit);
 
     let (redeem_script, addr) = testkit.current_cfg().redeem_script();
-    let tx = TransactionBuilder::with_prev_tx(&mut testkit.latest_anchored_tx(), 0)
+    let tx = TransactionBuilder::with_prev_tx(&testkit.latest_anchored_tx(), 0)
         .fee(100)
         .payload(Height::zero(), Hash::zero())
         .send_to(addr.clone())
         .into_transaction()
         .unwrap();
-    let signature = tx.sign_input(&redeem_script, 0, &mut testkit.priv_keys(&addr)[1]);
+    let signature = tx.sign_input(&redeem_script, 0, &testkit.priv_keys(&addr)[1]);
     let validator_1 = ValidatorId(1);
     let msg_sign = {
         let keypair = testkit.validator(validator_1).service_keypair();
@@ -583,12 +579,12 @@ fn test_anchoring_lect_incorrect_funding_tx() {
          4abfec4f4cb19d942202529b8653a0a58d870c170f0c000000001976a9147bb8844ee71cbd2bc735411f4e2997\
          1f697fed0a88ac81131100",
     ).unwrap();
-    let msg_lect = gen_service_tx_lect(&mut testkit, ValidatorId(0), &tx, 2);
-    let lects_before = dump_lects(&mut testkit, ValidatorId(0));
+    let msg_lect = gen_service_tx_lect(&testkit, ValidatorId(0), &tx, 2);
+    let lects_before = dump_lects(&testkit, ValidatorId(0));
     // Commit `msg_lect` into blockchain
     testkit.create_block_with_transactions(txvec![msg_lect.clone()]);
     // Ensure that service ignores it
-    let lects_after = dump_lects(&mut testkit, ValidatorId(0));
+    let lects_after = dump_lects(&testkit, ValidatorId(0));
     assert_eq!(lects_before, lects_after);
 }
 
@@ -602,7 +598,7 @@ fn test_anchoring_lect_incorrect_anchoring_payload() {
     anchor_first_block(&mut testkit);
     anchor_first_block_lect_normal(&mut testkit);
 
-    let tx = TransactionBuilder::with_prev_tx(&mut testkit.current_funding_tx(), 0)
+    let tx = TransactionBuilder::with_prev_tx(&testkit.current_funding_tx(), 0)
         .fee(1000)
         .payload(Height::zero(), Hash::zero())
         .send_to(testkit.current_addr())
@@ -628,7 +624,7 @@ fn test_anchoring_lect_unknown_prev_tx() {
     anchor_first_block_lect_normal(&mut testkit);
 
     let tx = {
-        let prev_tx = TransactionBuilder::with_prev_tx(&mut testkit.current_funding_tx(), 0)
+        let prev_tx = TransactionBuilder::with_prev_tx(&testkit.current_funding_tx(), 0)
             .fee(100)
             .payload(Height::zero(), Hash::zero())
             .send_to(testkit.current_addr())
@@ -643,12 +639,12 @@ fn test_anchoring_lect_unknown_prev_tx() {
             .unwrap()
     };
 
-    let msg_lect = gen_service_tx_lect(&mut testkit, ValidatorId(0), &tx, 2);
-    let lects_before = dump_lects(&mut testkit, ValidatorId(0));
+    let msg_lect = gen_service_tx_lect(&testkit, ValidatorId(0), &tx, 2);
+    let lects_before = dump_lects(&testkit, ValidatorId(0));
     // Commit `msg_lect` into blockchain
     testkit.create_block_with_transactions(txvec![msg_lect.clone()]);
     // Ensure that service ignores it
-    let lects_after = dump_lects(&mut testkit, ValidatorId(0));
+    let lects_after = dump_lects(&testkit, ValidatorId(0));
     assert_eq!(lects_after, lects_before);
 }
 
@@ -711,7 +707,7 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
         let cfg = testkit.current_cfg();
         let (redeem_script, addr) = cfg.redeem_script();
         let pub_key = &cfg.anchoring_keys[1];
-        let priv_key = &mut testkit.priv_keys(&addr)[1];
+        let priv_key = &testkit.priv_keys(&addr)[1];
 
         let mut different_signature =
             sign_tx_input_with_nonce(&tx, 0, &redeem_script, priv_key.secret_key(), 2);
@@ -739,11 +735,11 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
     };
     assert_ne!(signature_msgs[1], msg_signature_different);
 
-    let signs_before = dump_signatures(&mut testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.id());
     // Commit `msg_signature_different` into blockchain
     testkit.create_block_with_transactions(txvec![msg_signature_different.clone()]);
     // Ensure that service ignores it
-    let signs_after = dump_signatures(&mut testkit, &tx.id());
+    let signs_after = dump_signatures(&testkit, &tx.id());
     assert_eq!(signs_before, signs_after);
 }
 
@@ -778,17 +774,14 @@ fn test_anchoring_signature_input_from_different_validator() {
         )
     };
 
-    let signs_before = dump_signatures(&mut testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.id());
     // Commit `msg_signature_different` into blockchain
     requests.expect(vec![
-        confirmations_request(
-            &mut testkit.current_funding_tx(),
-            50
-        ),
+        confirmations_request(&testkit.current_funding_tx(), 50),
     ]);
     testkit.create_block_with_transactions(txvec![msg_signature_wrong.clone()]);
     // Ensure that service ignores it
-    let signs_after = dump_signatures(&mut testkit, &tx.id());
+    let signs_after = dump_signatures(&testkit, &tx.id());
     assert_eq!(signs_before, signs_after);
 }
 
@@ -809,7 +802,7 @@ fn test_anchoring_signature_unknown_output_address() {
             anchoring_cfg.redeem_script()
         };
 
-        TransactionBuilder::with_prev_tx(&mut testkit.latest_anchored_tx(), 0)
+        TransactionBuilder::with_prev_tx(&testkit.latest_anchored_tx(), 0)
             .fee(1000)
             .payload(Height::zero(), Hash::zero())
             .send_to(addr)
@@ -824,7 +817,7 @@ fn test_anchoring_signature_unknown_output_address() {
     assert!(tx.verify_input(
         &redeem_script,
         0,
-        &mut testkit.current_cfg().anchoring_keys[0],
+        &testkit.current_cfg().anchoring_keys[0],
         &signature,
     ));
 
@@ -834,10 +827,10 @@ fn test_anchoring_signature_unknown_output_address() {
         MsgAnchoringSignature::new(keypair.0, validator_0, tx.clone(), 0, &signature, keypair.1)
     };
 
-    let signs_before = dump_signatures(&mut testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.id());
     // Commit `msg_signature_wrong` into blockchain
     testkit.create_block_with_transactions(txvec![msg_signature_wrong]);
     // Ensure that service ignores it
-    let signs_after = dump_signatures(&mut testkit, &tx.id());
+    let signs_after = dump_signatures(&testkit, &tx.id());
     assert_eq!(signs_before, signs_after);
 }

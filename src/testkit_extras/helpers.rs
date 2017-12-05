@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// FIXME: Sometimes clippy incorrectly calculates lifetimes.
 #![cfg_attr(feature="cargo-clippy", allow(let_and_return))]
 
 use bitcoin::util::base58::ToBase58;
@@ -477,7 +478,7 @@ pub fn anchor_first_block_without_other_signatures(testkit: &mut AnchoringTestKi
     testkit.create_block_with_transactions(signatures.drain(0..1));
 }
 
-/// Invoke this method after anchor_first_block_lect_normal
+/// Invoke this method after `anchor_first_block_lect_normal`
 pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
     let cfg_change_height = Height(12);
     let (cfg_proposal, following_cfg) =

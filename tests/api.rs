@@ -20,7 +20,6 @@ extern crate pretty_assertions;
 extern crate exonum;
 #[macro_use]
 extern crate exonum_btc_anchoring;
-#[macro_use]
 extern crate exonum_testkit;
 
 use exonum::messages::Message;
