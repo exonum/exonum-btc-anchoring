@@ -41,7 +41,6 @@ use blockchain::schema::AnchoringSchema;
 use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest, ANCHORING_MESSAGE_LATEST,
                       ANCHORING_MESSAGE_SIGNATURE};
 use error::Error as ServiceError;
-#[cfg(not(feature = "sandbox_tests"))]
 use handler::error::Error as HandlerError;
 use observer::AnchoringChainObserver;
 

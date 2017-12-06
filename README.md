@@ -31,7 +31,7 @@ ANCHORING_PASSWORD=<rpc-password>
 ```
 * Enable feature `rpc_tests` in cargo.
 
-Additional tests are situated in `sandbox_tests` subfolder.
+Additional tests are situated in [tests](tests) subfolder.
 
 ## Licence
 

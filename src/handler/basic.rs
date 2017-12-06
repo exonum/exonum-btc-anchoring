@@ -34,7 +34,6 @@ use blockchain::dto::MsgAnchoringUpdateLatest;
 use super::{AnchoringHandler, AnchoringState, LectKind, MultisigAddress};
 
 impl AnchoringHandler {
-    #[cfg(not(feature = "sandbox_tests"))]
     #[doc(hidden)]
     pub fn new(client: Option<Box<BitcoinRelay>>, node: AnchoringNodeConfig) -> AnchoringHandler {
         AnchoringHandler {
@@ -43,18 +42,6 @@ impl AnchoringHandler {
             proposal_tx: None,
             known_addresses: HashSet::new(),
             errors_sink: None,
-        }
-    }
-
-    #[cfg(feature = "sandbox_tests")]
-    #[doc(hidden)]
-    pub fn new(client: Option<Box<BitcoinRelay>>, node: AnchoringNodeConfig) -> AnchoringHandler {
-        AnchoringHandler {
-            client,
-            node,
-            proposal_tx: None,
-            errors: Vec::new(),
-            known_addresses: HashSet::new(),
         }
     }
 
