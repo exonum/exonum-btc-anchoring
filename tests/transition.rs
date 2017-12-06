@@ -88,7 +88,7 @@ fn gen_add_funding_tx(
     let mut cfg_proposal = testkit.configuration_change_proposal();
     cfg_proposal.set_actual_from(from_height);
     let mut anchoring_cfg: AnchoringConfig = cfg_proposal.service_config(ANCHORING_SERVICE_NAME);
-    anchoring_cfg.funding_tx = Some(funding_tx.clone());
+    anchoring_cfg.funding_tx = Some(funding_tx);
     cfg_proposal.set_service_config(ANCHORING_SERVICE_NAME, anchoring_cfg.clone());
     (cfg_proposal, anchoring_cfg)
 }
