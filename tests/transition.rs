@@ -255,7 +255,7 @@ fn test_transit_changed_self_key_normal() {
     let transition_tx = testkit.latest_anchored_tx();
 
     testkit.create_block();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
 
     requests.expect(vec![get_transaction_request(&transition_tx)]);
     testkit.create_block_with_transactions(signatures);
@@ -265,7 +265,7 @@ fn test_transit_changed_self_key_normal() {
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
@@ -299,7 +299,7 @@ fn test_transit_changed_self_key_normal() {
     );
     requests.expect(vec![confirmations_request(&transition_tx, 1000)]);
 
-    testkit.mempool().contains_key(&transition_lect.hash());
+    assert!(testkit.mempool().contains_key(&transition_lect.hash()));
     testkit.create_block_with_transactions(txvec![transition_lect]);
 
     let mut signatures = {
@@ -309,7 +309,7 @@ fn test_transit_changed_self_key_normal() {
             .gen_anchoring_tx_with_signatures(height, hash, &[], None, &following_multisig.1)
             .1
     };
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![confirmations_request(&transition_tx, 100)]);
     testkit.create_block_with_transactions(signatures.drain(0..1));
 
@@ -327,7 +327,7 @@ fn test_transit_changed_self_key_normal() {
             .1
     };
     let anchored_tx = testkit.latest_anchored_tx();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![
         confirmations_request(&transition_tx, 20_000),
         get_transaction_request(&anchored_tx),
@@ -341,7 +341,7 @@ fn test_transit_changed_self_key_normal() {
         })
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
     testkit.create_block_with_transactions(lects);
 }
 
@@ -389,7 +389,7 @@ fn test_transit_unchanged_self_key_normal() {
     let transition_tx = testkit.latest_anchored_tx();
 
     testkit.create_block();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
 
     requests.expect(vec![get_transaction_request(&transition_tx)]);
     testkit.create_block_with_transactions(signatures);
@@ -399,7 +399,7 @@ fn test_transit_unchanged_self_key_normal() {
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
@@ -420,7 +420,7 @@ fn test_transit_unchanged_self_key_normal() {
             .1
     };
     let anchored_tx = testkit.latest_anchored_tx();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![confirmations_request(&transition_tx, 40)]);
     testkit.create_block_with_transactions(signatures.drain(0..1));
 
@@ -435,7 +435,7 @@ fn test_transit_unchanged_self_key_normal() {
         .map(|id| gen_service_tx_lect(&testkit, id, &anchored_tx, 3))
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
     requests.expect(vec![
         request! {
@@ -505,7 +505,7 @@ fn test_transit_config_with_funding_tx() {
     let transition_tx = testkit.latest_anchored_tx();
 
     testkit.create_block();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
 
     requests.expect(vec![get_transaction_request(&transition_tx)]);
     testkit.create_block_with_transactions(signatures);
@@ -515,7 +515,7 @@ fn test_transit_config_with_funding_tx() {
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
@@ -568,7 +568,7 @@ fn test_transit_config_with_funding_tx() {
         get_transaction_request(&transition_tx),
     ]);
 
-    testkit.mempool().contains_key(&transition_lect.hash());
+    assert!(testkit.mempool().contains_key(&transition_lect.hash()));
     testkit.create_block_with_transactions(txvec![transition_lect]);
 
     let mut signatures = {
@@ -584,8 +584,8 @@ fn test_transit_config_with_funding_tx() {
             )
             .1
     };
-    testkit.mempool().contains_key(&signatures[0].hash());
-    testkit.mempool().contains_key(&signatures[1].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
+    assert!(testkit.mempool().contains_key(&signatures[1].hash()));
     requests.expect(vec![confirmations_request(&transition_tx, 100)]);
     testkit.create_block_with_transactions(signatures.drain(0..2));
 
@@ -621,8 +621,8 @@ fn test_transit_config_with_funding_tx() {
             .1
     };
     let anchored_tx = testkit.latest_anchored_tx();
-    testkit.mempool().contains_key(&signatures[0].hash());
-    testkit.mempool().contains_key(&signatures[1].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
+    assert!(testkit.mempool().contains_key(&signatures[1].hash()));
     requests.expect(vec![
         confirmations_request(&transition_tx, 20_000),
         get_transaction_request(&anchored_tx),
@@ -636,7 +636,7 @@ fn test_transit_config_with_funding_tx() {
         })
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
     testkit.create_block_with_transactions(lects);
 
     assert_eq!(anchored_tx.amount(), 10_1000);
@@ -686,7 +686,7 @@ fn test_transit_config_lost_lect_resend_before_cfg_change() {
     let transition_tx = testkit.latest_anchored_tx();
 
     testkit.create_block();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
 
     requests.expect(vec![get_transaction_request(&transition_tx)]);
     testkit.create_block_with_transactions(signatures);
@@ -696,7 +696,7 @@ fn test_transit_config_lost_lect_resend_before_cfg_change() {
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
@@ -749,7 +749,7 @@ fn test_transit_config_lost_lect_resend_after_cfg_change() {
     let transition_tx = testkit.latest_anchored_tx();
 
     testkit.create_block();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
 
     requests.expect(vec![get_transaction_request(&transition_tx)]);
     testkit.create_block_with_transactions(signatures);
@@ -759,7 +759,7 @@ fn test_transit_config_lost_lect_resend_after_cfg_change() {
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
@@ -783,7 +783,7 @@ fn test_transit_config_lost_lect_resend_after_cfg_change() {
             .gen_anchoring_tx_with_signatures(height, hash, &[], None, &following_multisig.1)
             .1
     };
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![confirmations_request(&transition_tx, 40)]);
     testkit.create_block_with_transactions(signatures.drain(0..1));
 }
@@ -868,7 +868,7 @@ fn test_transit_unchanged_self_key_recover_with_funding_tx() {
     };
     let new_chain_tx = testkit.latest_anchored_tx();
 
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![
         request! {
             method: "listunspent",
@@ -906,7 +906,7 @@ fn test_transit_unchanged_self_key_recover_with_funding_tx() {
         .map(|id| gen_service_tx_lect(&testkit, id, &new_chain_tx, 2))
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -986,7 +986,7 @@ fn test_transit_changed_self_key_recover_with_funding_tx() {
     };
     let new_chain_tx = testkit.latest_anchored_tx();
 
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![
         request! {
             method: "listunspent",
@@ -1026,7 +1026,7 @@ fn test_transit_changed_self_key_recover_with_funding_tx() {
         })
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -1126,7 +1126,7 @@ fn test_transit_changed_self_key_recover_without_funding_tx() {
     };
     let new_chain_tx = testkit.latest_anchored_tx();
 
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![
         request! {
             method: "listunspent",
@@ -1159,7 +1159,7 @@ fn test_transit_changed_self_key_recover_without_funding_tx() {
         })
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 }
 
 // We commit a new configuration and take actions to transit tx chain to the new address
@@ -1266,7 +1266,7 @@ fn test_transit_add_validators_recover_without_funding_tx() {
     };
     let new_chain_tx = testkit.latest_anchored_tx();
 
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![
         request! {
             method: "listunspent",
@@ -1299,7 +1299,7 @@ fn test_transit_add_validators_recover_without_funding_tx() {
         })
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 }
 
 // We send `MsgAnchoringSignature` with current output_address
@@ -1343,7 +1343,7 @@ fn test_transit_msg_signature_incorrect_output_address() {
         )
         .1;
     testkit.create_block();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     testkit.create_block_with_transactions(signatures.drain(0..1));
 
     // Gen transaction with different `output_addr`
@@ -1436,7 +1436,7 @@ fn test_transit_config_after_funding_tx() {
     let transition_tx = testkit.latest_anchored_tx();
 
     testkit.create_block();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
 
     requests.expect(vec![get_transaction_request(&transition_tx)]);
     testkit.create_block_with_transactions(signatures);
@@ -1446,7 +1446,7 @@ fn test_transit_config_after_funding_tx() {
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
@@ -1476,7 +1476,7 @@ fn test_transit_config_after_funding_tx() {
             .1
     };
     let anchored_tx = testkit.latest_anchored_tx();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![confirmations_request(&transition_tx, 40)]);
     testkit.create_block_with_transactions(signatures.drain(0..1));
 
@@ -1491,7 +1491,7 @@ fn test_transit_config_after_funding_tx() {
         .map(|id| gen_service_tx_lect(&testkit, id, &anchored_tx, 3))
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
     requests.expect(vec![
         request! {
@@ -1652,7 +1652,7 @@ fn test_transit_after_exclude_from_validator() {
     ]);
     testkit.create_block();
 
-    testkit.mempool().contains_key(&lect.hash());
+    assert!(testkit.mempool().contains_key(&lect.hash()));
     requests.expect(vec![confirmations_request(&transition_tx, 100)]);
     testkit.create_block_with_transactions(txvec![lect]);
 
@@ -1667,7 +1667,7 @@ fn test_transit_after_exclude_from_validator() {
             .1
     };
     let anchored_tx = testkit.latest_anchored_tx();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     // Commit anchoring transaction to bitcoin blockchain
     requests.expect(vec![
         confirmations_request(&transition_tx, 1000),
@@ -1691,7 +1691,7 @@ fn test_transit_after_exclude_from_validator() {
         &anchored_tx,
         lects_count(&testkit, validator_0),
     );
-    testkit.mempool().contains_key(&lect.hash());
+    assert!(testkit.mempool().contains_key(&lect.hash()));
     testkit.create_block_with_transactions(txvec![lect.clone()]);
 
     let lects = dump_lects(&testkit, validator_0);
@@ -1742,7 +1742,7 @@ fn test_transit_changed_self_key_observer() {
     let transition_tx = testkit.latest_anchored_tx();
 
     testkit.create_block();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
 
     requests.expect(vec![get_transaction_request(&transition_tx)]);
     testkit.create_block_with_transactions(signatures);
@@ -1752,7 +1752,7 @@ fn test_transit_changed_self_key_observer() {
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
     requests.expect(vec![confirmations_request(&transition_tx, 0)]);
     testkit.create_block_with_transactions(lects);
@@ -1791,7 +1791,7 @@ fn test_transit_changed_self_key_observer() {
     };
     requests.expect(vec![confirmations_request(&transition_tx, 1000)]);
 
-    testkit.mempool().contains_key(&transition_lect.hash());
+    assert!(testkit.mempool().contains_key(&transition_lect.hash()));
     testkit.create_block_with_transactions(txvec![transition_lect]);
 
     let mut signatures = {
@@ -1801,7 +1801,7 @@ fn test_transit_changed_self_key_observer() {
             .gen_anchoring_tx_with_signatures(height, hash, &[], None, &following_multisig.1)
             .1
     };
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![confirmations_request(&transition_tx, 100)]);
     testkit.create_block_with_transactions(signatures.drain(0..1));
 
@@ -1819,7 +1819,7 @@ fn test_transit_changed_self_key_observer() {
             .1
     };
     let third_anchored_tx = testkit.latest_anchored_tx();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
     requests.expect(vec![
         confirmations_request(&transition_tx, 20_000),
         get_transaction_request(&third_anchored_tx),
@@ -1833,7 +1833,7 @@ fn test_transit_changed_self_key_observer() {
         })
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
     testkit.create_block_with_transactions(lects);
 
     let anchoring_addr = testkit.current_addr();

@@ -330,6 +330,6 @@ fn test_generate_anchoring_config() {
 }
 
 #[test]
-fn test_anchoring_testkit() {
+fn test_create_anchoring_testkit() {
     AnchoringTestKit::default();
 }

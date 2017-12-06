@@ -106,7 +106,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
     // Tx gets enough confirmations.
     requests.expect(vec![confirmations_request(&anchored_tx, 100)]);
     testkit.create_block();
-    testkit.mempool().contains_key(&signatures[0].hash());
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
 
     requests.expect(vec![get_transaction_request(&transition_tx)]);
     testkit.create_block_with_transactions(signatures);
@@ -117,7 +117,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
         })
         .map(to_boxed)
         .collect::<Vec<_>>();
-    testkit.mempool().contains_key(&lects[0].hash());
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
     requests.expect(vec![confirmations_request(&transition_tx, 100)]);
     testkit.create_block_with_transactions(lects);
     testkit.create_blocks_until(cfg_change_height.previous());
