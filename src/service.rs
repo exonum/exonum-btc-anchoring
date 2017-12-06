@@ -123,16 +123,10 @@ impl Service for AnchoringService {
     fn handle_commit(&self, state: &ServiceContext) {
         let mut handler = self.handler.lock().unwrap();
         match handler.handle_commit(state) {
-            #[cfg(feature = "sandbox_tests")]
-            Err(ServiceError::Handler(e)) => {
-                error!("An error occured: {:?}", e);
-                handler.errors.push(e);
+            Err(ServiceError::Handler(e @ HandlerError::IncorrectLect { .. })) => {
+                panic!("A critical error occured: {}", e)
             }
-            #[cfg(not(feature = "sandbox_tests"))]
             Err(ServiceError::Handler(e)) => {
-                if let HandlerError::IncorrectLect { .. } = e {
-                    panic!("A critical error occured: {}", e);
-                }
                 error!("An error in handler occured: {}", e);
                 if let Some(sink) = handler.errors_sink.as_ref() {
                     let res = sink.send(e);
