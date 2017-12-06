@@ -13,14 +13,24 @@
 // limitations under the License.
 
 extern crate bitcoin;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
+extern crate secp256k1;
+extern crate rand;
+extern crate serde;
+extern crate libc;
+extern crate byteorder;
+#[macro_use]
+extern crate log;
 #[macro_use]
 extern crate serde_json;
 #[macro_use]
 extern crate pretty_assertions;
 extern crate exonum;
-#[macro_use]
 extern crate exonum_btc_anchoring;
 extern crate exonum_testkit;
+
+#[macro_use]
+pub mod testkit_extras;
 
 use exonum::messages::Message;
 use exonum::helpers::{Height, ValidatorId};
@@ -33,8 +43,8 @@ use exonum_btc_anchoring::observer::AnchoringChainObserver;
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, BitcoinTx};
-use exonum_btc_anchoring::testkit_extras::{AnchoringTestKit, TestClient};
-use exonum_btc_anchoring::testkit_extras::helpers::*;
+use testkit_extras::{AnchoringTestKit, TestClient};
+use testkit_extras::helpers::*;
 
 trait AnchoringApi {
     fn actual_lect(&self) -> Option<AnchoringInfo>;

@@ -81,8 +81,6 @@ extern crate iron;
 extern crate rand;
 extern crate router;
 
-extern crate exonum_testkit;
-extern crate libc;
 #[cfg(test)]
 #[macro_use]
 extern crate pretty_assertions;
@@ -101,8 +99,6 @@ pub mod error;
 pub mod api;
 pub mod observer;
 pub mod cmd;
-#[doc(hidden)]
-pub mod testkit_extras;
 
 pub use details::btc::{gen_btc_keypair, gen_btc_keypair_with_rng, Network as BitcoinNetwork};
 pub use details::rpc::{RpcClient, AnchoringRpcConfig, BitcoinRelay};

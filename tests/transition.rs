@@ -12,17 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate rand;
 extern crate bitcoin;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
+extern crate secp256k1;
+extern crate rand;
+extern crate serde;
+extern crate libc;
+extern crate byteorder;
+#[macro_use]
+extern crate log;
 #[macro_use]
 extern crate serde_json;
 #[macro_use]
 extern crate pretty_assertions;
 extern crate exonum;
-#[macro_use]
 extern crate exonum_btc_anchoring;
 #[macro_use]
 extern crate exonum_testkit;
+
+#[macro_use]
+pub mod testkit_extras;
 
 use rand::{SeedableRng, StdRng};
 use bitcoin::network::constants::Network;
@@ -38,8 +47,8 @@ use exonum_btc_anchoring::observer::AnchoringChainObserver;
 use exonum_btc_anchoring::blockchain::AnchoringSchema;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{FundingTx, TransactionBuilder};
-use exonum_btc_anchoring::testkit_extras::{AnchoringTestKit, TestClient};
-use exonum_btc_anchoring::testkit_extras::helpers::*;
+use testkit_extras::{AnchoringTestKit, TestClient};
+use testkit_extras::helpers::*;
 
 fn gen_following_cfg(
     testkit: &mut AnchoringTestKit,

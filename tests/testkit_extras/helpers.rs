@@ -25,11 +25,11 @@ use exonum::helpers::{Height, ValidatorId};
 
 use exonum_testkit::{TestKit, TestNetworkConfiguration};
 
-use {AnchoringConfig, ANCHORING_SERVICE_NAME};
-use details::btc;
-use details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
-use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
-use blockchain::schema::AnchoringSchema;
+use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};
+use exonum_btc_anchoring::details::btc;
+use exonum_btc_anchoring::details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
+use exonum_btc_anchoring::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use exonum_btc_anchoring::blockchain::schema::AnchoringSchema;
 
 use super::{AnchoringTestKit, TestRequest};
 

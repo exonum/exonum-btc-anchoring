@@ -25,9 +25,9 @@ use serde_json::value::{from_value, Value};
 
 use exonum::encoding::serialize::HexValue;
 
-use details::rpc::{AnchoringRpcConfig, BitcoinRelay, TxInfo, SATOSHI_DIVISOR};
-use details::btc;
-use details::btc::transactions::{BitcoinTx, FundingTx, TxKind};
+use exonum_btc_anchoring::details::rpc::{AnchoringRpcConfig, BitcoinRelay, TxInfo, SATOSHI_DIVISOR};
+use exonum_btc_anchoring::details::btc;
+use exonum_btc_anchoring::details::btc::transactions::{BitcoinTx, FundingTx, TxKind};
 
 #[derive(Debug)]
 pub struct TestRequest {

@@ -24,13 +24,13 @@ use exonum::blockchain::{Schema, Transaction};
 use exonum::helpers::{Height, ValidatorId};
 use exonum_testkit::{TestKit, TestKitBuilder};
 
-use {gen_anchoring_testnet_config_with_rng, AnchoringConfig, AnchoringNodeConfig,
-     AnchoringService, ANCHORING_SERVICE_NAME};
-use details::btc;
-use details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
-use blockchain::dto::MsgAnchoringSignature;
-use handler::{collect_signatures, AnchoringHandler};
-use error::HandlerError;
+use exonum_btc_anchoring::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
+                           AnchoringNodeConfig, AnchoringService, ANCHORING_SERVICE_NAME};
+use exonum_btc_anchoring::details::btc;
+use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
+use exonum_btc_anchoring::blockchain::dto::MsgAnchoringSignature;
+use exonum_btc_anchoring::handler::{collect_signatures, AnchoringHandler};
+use exonum_btc_anchoring::error::HandlerError;
 pub use self::rpc::{TestClient, TestRequest, TestRequests};
 
 #[macro_use]
