@@ -26,7 +26,7 @@ use router::Router;
 
 use exonum::blockchain::{ApiContext, Blockchain, Service, ServiceContext, Transaction};
 use exonum::crypto::Hash;
-use exonum::messages::{FromRaw, RawTransaction};
+use exonum::messages::RawTransaction;
 use exonum::encoding::Error as StreamStructError;
 use exonum::storage::{Fork, Snapshot};
 use exonum::api::Api;

@@ -45,7 +45,7 @@ impl StorageKey for KnownSignatureId {
     }
 
     fn write(&self, buffer: &mut [u8]) {
-        buffer[0..32].copy_from_slice(self.txid.as_ref());
+        buffer[0..32].copy_from_slice(self.txid.as_bytes());
         BigEndian::write_u16(&mut buffer[32..34], self.validator_id.0);
         BigEndian::write_u32(&mut buffer[34..38], self.input);
     }

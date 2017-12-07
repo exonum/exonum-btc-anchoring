@@ -28,7 +28,7 @@ use exonum::helpers::fabric::{AbstractConfig, Argument, CommandExtension, Comman
                               CommonConfigTemplate, Context, NodePublicConfig, ServiceFactory};
 use exonum::blockchain::Service;
 use exonum::node::NodeConfig;
-use exonum::crypto::HexValue;
+use exonum::encoding::serialize::FromHex;
 
 use service::AnchoringService;
 use super::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig, gen_btc_keypair};
@@ -117,7 +117,7 @@ impl CommandExtension for GenerateNodeConfig {
             vec![
                 (
                     "anchoring_pub_key".to_owned(),
-                    Value::try_from(p.to_hex()).unwrap()
+                    Value::try_from(p.to_string()).unwrap()
                 ),
             ].into_iter(),
         );
@@ -146,7 +146,7 @@ impl CommandExtension for GenerateNodeConfig {
                 ),
                 (
                     "anchoring_pub_key".to_owned(),
-                    Value::try_from(p.to_hex()).unwrap()
+                    Value::try_from(p.to_string()).unwrap()
                 ),
                 (
                     "rpc_config".to_owned(),
@@ -326,8 +326,8 @@ impl CommandExtension for Finalize {
 
         let priv_key: PrivateKey = PrivateKey::from_base58check(&sec_key).unwrap();
         //TODO: validate config keys
-        let _pub_key: PublicKey = HexValue::from_hex(&pub_key).unwrap();
-        let pub_keys: Vec<PublicKey> = public_config_list
+        let _pub_key = PublicKey::from_hex(&pub_key).unwrap();
+        let pub_keys: Vec<_> = public_config_list
             .iter()
             .map(|v| {
                 let key: String = v.services_public_configs()
@@ -336,7 +336,7 @@ impl CommandExtension for Finalize {
                     .clone()
                     .try_into()
                     .unwrap();
-                HexValue::from_hex(&key).unwrap()
+                PublicKey::from_hex(&key).unwrap()
             })
             .collect();
         let client = RpcClient::from(rpc.clone());

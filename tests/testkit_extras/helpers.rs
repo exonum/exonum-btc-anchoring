@@ -19,7 +19,6 @@ use bitcoin::util::base58::ToBase58;
 use serde_json::Value;
 
 use exonum::messages::Message;
-use exonum::crypto::HexValue;
 use exonum::blockchain::Transaction;
 use exonum::helpers::{Height, ValidatorId};
 

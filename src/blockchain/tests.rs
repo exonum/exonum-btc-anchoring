@@ -12,9 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::{HexValue, PublicKey, Signature, hash};
+use exonum::crypto::{PublicKey, Signature, hash};
 use exonum::storage::StorageValue;
 use exonum::helpers::ValidatorId;
+use exonum::encoding::serialize::FromHex;
 
 use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::constants::Network;

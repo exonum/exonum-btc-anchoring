@@ -34,7 +34,7 @@ pub mod testkit_extras;
 
 use exonum::messages::Message;
 use exonum::helpers::{Height, ValidatorId};
-use exonum::encoding::serialize::HexValue;
+use exonum::encoding::serialize::FromHex;
 use exonum_testkit::{ApiKind, TestKitApi};
 
 use exonum_btc_anchoring::ANCHORING_SERVICE_NAME;

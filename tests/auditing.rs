@@ -35,7 +35,7 @@ pub mod testkit_extras;
 
 use exonum::helpers::{Height, ValidatorId};
 use exonum::blockchain::Transaction;
-use exonum::encoding::serialize::HexValue;
+use exonum::encoding::serialize::FromHex;
 use exonum_testkit::TestNetworkConfiguration;
 
 use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};

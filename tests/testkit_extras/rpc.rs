@@ -23,7 +23,7 @@ use serde::Deserialize;
 use serde_json;
 use serde_json::value::{from_value, Value};
 
-use exonum::encoding::serialize::HexValue;
+use exonum::encoding::serialize::FromHex;
 
 use exonum_btc_anchoring::details::rpc::{AnchoringRpcConfig, BitcoinRelay, TxInfo, SATOSHI_DIVISOR};
 use exonum_btc_anchoring::details::btc;

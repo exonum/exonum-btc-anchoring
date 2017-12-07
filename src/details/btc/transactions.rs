@@ -30,7 +30,8 @@ use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::{Message, Secp256k1, Signature};
 use bitcoinrpc;
 
-use exonum::crypto::{FromHexError, Hash, HexValue, hash};
+use exonum::crypto::{Hash, hash};
+use exonum::encoding::serialize::{FromHexError, FromHex};
 use exonum::helpers::Height;
 use exonum::storage::StorageValue;
 
@@ -87,7 +88,7 @@ impl HexValueEx for RawBitcoinTx {
         if let Ok(tx) = deserialize(bytes.as_ref()) {
             Ok(tx)
         } else {
-            Err(FromHexError::InvalidHexLength)
+            Err(FromHexError::InvalidStringLength)
         }
     }
 }
