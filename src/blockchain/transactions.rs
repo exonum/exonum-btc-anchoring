@@ -16,7 +16,6 @@ use bitcoin::blockdata::transaction::SigHashType;
 
 use exonum::blockchain::{Schema, Transaction};
 use exonum::messages::Message;
-use exonum::crypto::HexValue;
 use exonum::storage::{Fork, Snapshot};
 use exonum::helpers::Height;
 
@@ -224,7 +223,7 @@ where
                          for validator \
                          {}",
                         prev_lect_idx,
-                        key.to_hex()
+                        key.to_string()
                     ),
                 );
                 assert_eq!(

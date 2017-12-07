@@ -111,7 +111,7 @@ impl PayloadV1 {
             PayloadV1::Recover(height, hash, txid) => {
                 LittleEndian::write_u64(&mut buf[0..8], height.0);
                 buf[8..40].copy_from_slice(hash.as_ref());
-                buf[40..72].copy_from_slice(txid.as_ref());
+                buf[40..72].copy_from_slice(txid.as_bytes());
             }
         };
     }

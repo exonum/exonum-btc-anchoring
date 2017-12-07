@@ -28,15 +28,15 @@ log = "0.3.0"
 clap = "2.22.1"
 rand = "0.3.0"
 derive-error = "0.0.4"
-router = "0.5.1"
-iron = "0.5.1"
-mount = "0.3.0"
+router = "0.6.0"
+iron = "0.6.0"
+mount = "0.4.0"
 toml = "0.4.0"
 tempdir = "0.3.5"
 
 [dev-dependencies.exonum-testkit]
 git = "https://github.com/exonum/exonum-testkit"
-rev = "8a5371d00141475bb07458f0d08e605102005d18"
+rev = "0aa5213c3575af707ca95b5df705e753850555b8"
 
 [dev-dependencies]
 libc = "0.2.21"
@@ -44,11 +44,11 @@ exonum-configuration = "0.3.0"
 pretty_assertions = "0.4.0"
 
 [patch.crates-io]
-exonum = { git = "https://github.com/exonum/exonum", rev = "3ffaf6c7f2bf93e42cb70b10a8a0d02077691fe2" }
+exonum = { git = "https://github.com/exonum/exonum", rev = "f0f690731b8871533dfd6e2368f03ef3ba182e47" }
 
 [patch.crates-io.exonum-configuration]
 git = "https://github.com/exonum/exonum-configuration"
-rev = "0ed244a9cd72dda227f1da948d13519ee081a51f" 
+rev = "c2569fe2bd67fabd23b93291ba7d0efa19f93fcf" 
 
 [features]
 default = []

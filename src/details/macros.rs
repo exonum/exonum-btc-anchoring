@@ -81,16 +81,20 @@ macro_rules! implement_base58_wrapper {
 macro_rules! implement_serde_hex {
 ($name:ident) => (
     impl ::std::str::FromStr for $name {
-        type Err = ::exonum::encoding::serialize::FromHexError;
+        type Err = $crate::exonum::encoding::serialize::FromHexError;
 
         fn from_str(s: &str) -> Result<Self, Self::Err> {
+            use $crate::exonum::encoding::serialize::FromHex;
             $name::from_hex(s)
         }
     }
 
     impl ::std::string::ToString for $name {
         fn to_string(&self) -> String {
-            self.to_hex()
+            use $crate::exonum::encoding::serialize::ToHex;
+            let mut out = String::new();
+            self.write_hex(&mut out).unwrap();
+            out
         }
     }
 
@@ -98,7 +102,7 @@ macro_rules! implement_serde_hex {
         fn serialize<S>(&self, ser: S) -> ::std::result::Result<S::Ok, S::Error>
             where S: ::serde::Serializer
         {
-            ser.serialize_str(&self.to_hex())
+            ser.serialize_str(&self.to_string())
         }
     }
 
@@ -190,18 +194,37 @@ macro_rules! implement_tx_wrapper {
         pub fn ntxid(&self) -> String {
             self.0.ntxid().be_hex_string()
         }
+
+        pub fn to_hex(&self) -> String {
+            use $crate::exonum::encoding::serialize::ToHex;
+            let mut out = String::new();
+            self.write_hex(&mut out).unwrap();
+            out
+        }
     }
 
-    impl HexValue for $name  {
-        fn to_hex(&self) -> String {
-            serialize_hex(&self.0).unwrap()
+
+    impl $crate::exonum::encoding::serialize::ToHex for $name {
+        fn write_hex<W: fmt::Write>(&self, w: &mut W) -> fmt::Result {
+            let string = $crate::bitcoin::network::serialize::serialize_hex(&self.0).unwrap();
+            w.write_str(&string)
         }
-        fn from_hex<T: AsRef<str>>(v: T) -> ::std::result::Result<Self, FromHexError> {
-            let bytes = Vec::<u8>::from_hex(v.as_ref())?;
+
+        fn write_hex_upper<W: fmt::Write>(&self, w: &mut W) -> fmt::Result {
+            let string = $crate::bitcoin::network::serialize::serialize_hex(&self.0).unwrap();
+            w.write_str(&string)
+        }
+    }
+
+    impl $crate::exonum::encoding::serialize::FromHex for $name {
+        type Error = $crate::exonum::encoding::serialize::FromHexError;
+
+        fn from_hex<T: AsRef<[u8]>>(v: T) -> Result<Self, Self::Error> {
+            let bytes = Vec::<u8>::from_hex(v)?;
             if let Ok(tx) = deserialize::<RawBitcoinTx>(bytes.as_ref()) {
                 Ok($name::from(tx))
             } else {
-                Err(FromHexError::InvalidHexLength)
+                Err($crate::exonum::encoding::serialize::FromHexError::InvalidStringLength)
             }
         }
     }

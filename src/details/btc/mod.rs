@@ -28,7 +28,7 @@ use rand::Rng;
 use secp256k1::Secp256k1;
 use secp256k1::key;
 
-use exonum::crypto::FromHexError;
+use exonum::encoding::serialize::FromHexError;
 
 #[doc(hidden)]
 /// For test purpose only

@@ -42,7 +42,7 @@ use bitcoin::blockdata::script::Script;
 use exonum::blockchain::Transaction;
 use exonum::messages::Message;
 use exonum::helpers::{Height, ValidatorId};
-use exonum::encoding::serialize::HexValue;
+use exonum::encoding::serialize::FromHex;
 use exonum::crypto::Hash;
 
 use exonum_btc_anchoring::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};

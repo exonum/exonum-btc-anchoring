@@ -16,7 +16,7 @@ use std::string::ToString;
 
 use bitcoinrpc;
 
-use exonum::crypto::HexValue;
+use exonum::encoding::serialize::FromHex;
 
 use details::btc;
 use details::btc::transactions::{BitcoinTx, FundingTx, TxKind};

@@ -15,8 +15,8 @@
 use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::{Schema, ServiceContext};
-use exonum::crypto::HexValue;
 use exonum::helpers::Height;
+use exonum::encoding::serialize::encode_hex;
 
 use error::Error as ServiceError;
 use details::btc;
@@ -177,7 +177,7 @@ impl AnchoringHandler {
             trace!(
                 "Sign input msg={:#?}, sighex={}",
                 sign_msg,
-                signature.to_hex()
+                encode_hex(signature)
             );
             context.transaction_sender().send(Box::new(sign_msg))?;
         }

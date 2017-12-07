@@ -39,7 +39,7 @@ use bitcoin::network::constants::Network;
 use exonum::messages::Message;
 use exonum::blockchain::Transaction;
 use exonum::helpers::{Height, ValidatorId};
-use exonum::encoding::serialize::HexValue;
+use exonum::encoding::serialize::FromHex;
 use exonum_testkit::{TestNetworkConfiguration, TestNode};
 use exonum::crypto::{gen_keypair_from_seed, Seed};
 
