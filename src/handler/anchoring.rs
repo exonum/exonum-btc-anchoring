@@ -179,10 +179,7 @@ impl AnchoringHandler {
                 sign_msg,
                 signature.to_hex()
             );
-            context
-                .transaction_sender()
-                .send(Box::new(sign_msg))
-                .unwrap();
+            context.transaction_sender().send(Box::new(sign_msg))?;
         }
         self.proposal_tx = Some(proposal);
         Ok(())
@@ -209,20 +206,15 @@ impl AnchoringHandler {
             return Ok(());
         }
 
-        let anchoring_schema = AnchoringSchema::new(context.snapshot());
-        let signatures = anchoring_schema.signatures(&txid);
-        if let Some(signatures) = collect_signatures(
-            &proposal,
-            multisig.common,
-            signatures.iter(),
-        )
-        {
+        let collected_signatures = {
+            let anchoring_schema = AnchoringSchema::new(context.snapshot());
+            let signatures = anchoring_schema.signatures(&txid);
+            collect_signatures(&proposal, multisig.common, &signatures)
+        };
+        if let Some(signatures) = collected_signatures {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
-            if self.client()
-                .get_transaction_info(&new_lect.txid())?
-                .is_none()
-            {
+            if self.client().get_transaction(new_lect.id())?.is_none() {
                 self.client().send_transaction(new_lect.clone().into())?;
                 trace!(
                     "Sended signed_tx={:#?}, to={}",
@@ -260,10 +252,7 @@ impl AnchoringHandler {
                 lects_count,
                 context.secret_key(),
             );
-            context
-                .transaction_sender()
-                .send(Box::new(lect_msg))
-                .unwrap();
+            context.transaction_sender().send(Box::new(lect_msg))?;
         } else {
             warn!("Insufficient signatures for proposal={:#?}", proposal);
         }

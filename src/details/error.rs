@@ -12,13 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::io;
+
 use details::rpc::Error as RpcError;
 
-/// Service error
+/// Service error.
 #[derive(Debug, Error)]
 pub enum Error {
-    /// Rpc error
+    /// Rpc error.
     Rpc(RpcError),
-    /// Insufficient funds to create anchoring transaction
+    /// Insufficient funds to create anchoring transaction.
     InsufficientFunds,
+    /// An input output error.
+    Io(io::Error),
 }

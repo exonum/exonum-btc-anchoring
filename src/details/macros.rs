@@ -56,6 +56,20 @@ macro_rules! implement_base58_wrapper {
             }
         }
 
+        impl ::std::str::FromStr for $to {
+            type Err = ::bitcoin::util::base58::Error;
+
+            fn from_str(s: &str) -> Result<Self, Self::Err> {
+                $to::from_base58check(s)
+            }
+        }
+
+        impl ::std::string::ToString for $to {
+            fn to_string(&self) -> String {
+                self.to_base58check()
+            }
+        }
+
         impl fmt::Debug for $to {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 write!(f, "\"{}({})\"", stringify!($to), self.to_base58check())
@@ -66,6 +80,20 @@ macro_rules! implement_base58_wrapper {
 
 macro_rules! implement_serde_hex {
 ($name:ident) => (
+    impl ::std::str::FromStr for $name {
+        type Err = ::exonum::encoding::serialize::FromHexError;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            $name::from_hex(s)
+        }
+    }
+
+    impl ::std::string::ToString for $name {
+        fn to_string(&self) -> String {
+            self.to_hex()
+        }
+    }
+
     impl ::serde::Serialize for $name {
         fn serialize<S>(&self, ser: S) -> ::std::result::Result<S::Ok, S::Error>
             where S: ::serde::Serializer
@@ -162,13 +190,6 @@ macro_rules! implement_tx_wrapper {
         pub fn ntxid(&self) -> String {
             self.0.ntxid().be_hex_string()
         }
-
-        pub fn confirmations(&self, client: &AnchoringRpc)
-             -> ::std::result::Result<Option<u64>, ::bitcoinrpc::Error> {
-            let confirmations = client.get_transaction_info(&self.txid())?
-                .and_then(|info| info.confirmations);
-            Ok(confirmations)
-        }
     }
 
     impl HexValue for $name  {
@@ -263,9 +284,9 @@ macro_rules! implement_tx_from_raw {
         }
     }
 
-    impl Into<BitcoinTx> for $name {
-        fn into(self) -> BitcoinTx {
-            BitcoinTx(self.0)
+    impl From<$name> for BitcoinTx {
+        fn from(tx: $name) -> Self {
+            BitcoinTx(tx.0)
         }
     }
 

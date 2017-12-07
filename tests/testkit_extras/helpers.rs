@@ -12,64 +12,66 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bitcoin::util::base58::{FromBase58, ToBase58};
+// FIXME: Sometimes clippy incorrectly calculates lifetimes.
+#![cfg_attr(feature="cargo-clippy", allow(let_and_return))]
+
+use bitcoin::util::base58::ToBase58;
 use serde_json::Value;
 
-use exonum::messages::{Message, RawTransaction};
-use exonum::crypto::{Hash, HexValue};
-use exonum::blockchain::Schema;
-use exonum::storage::StorageValue;
-use exonum::helpers::{self, Height, ValidatorId};
+use exonum::messages::Message;
+use exonum::crypto::HexValue;
+use exonum::blockchain::Transaction;
+use exonum::helpers::{Height, ValidatorId};
 
-use sandbox::sandbox::Sandbox;
-use sandbox::config_updater::TxConfig;
+use exonum_testkit::{TestKit, TestNetworkConfiguration};
 
 use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
-use exonum_btc_anchoring::details::sandbox::Request;
 use exonum_btc_anchoring::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use exonum_btc_anchoring::blockchain::schema::AnchoringSchema;
 
-use {AnchoringSandbox, ANCHORING_VALIDATOR};
+use super::{AnchoringTestKit, TestRequest};
 
 pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
+pub use super::secp256k1_hack::sign_tx_input_with_nonce;
 
 pub fn gen_service_tx_lect(
-    sandbox: &Sandbox,
+    testkit: &TestKit,
     validator: ValidatorId,
     tx: &RawBitcoinTx,
     count: u64,
 ) -> MsgAnchoringUpdateLatest {
+    let keypair = testkit.network().validators()[validator.0 as usize].service_keypair();
     MsgAnchoringUpdateLatest::new(
-        &sandbox.service_public_key(validator),
+        keypair.0,
         validator,
         BitcoinTx::from(tx.clone()),
         count,
-        sandbox.service_secret_key(validator),
+        keypair.1,
     )
 }
 
 pub fn gen_service_tx_lect_wrong(
-    sandbox: &Sandbox,
+    testkit: &TestKit,
     real_id: ValidatorId,
     fake_id: ValidatorId,
     tx: &RawBitcoinTx,
     count: u64,
 ) -> MsgAnchoringUpdateLatest {
+    let keypair = testkit.network().validators()[real_id.0 as usize].service_keypair();
     MsgAnchoringUpdateLatest::new(
-        &sandbox.service_public_key(real_id),
+        keypair.0,
         fake_id,
         BitcoinTx::from(tx.clone()),
         count,
-        sandbox.service_secret_key(real_id),
+        keypair.1,
     )
 }
 
-pub fn dump_lects(sandbox: &Sandbox, id: ValidatorId) -> Vec<BitcoinTx> {
-    let b = sandbox.blockchain_ref().clone();
-    let anchoring_schema = AnchoringSchema::new(b.snapshot());
+pub fn dump_lects(testkit: &TestKit, id: ValidatorId) -> Vec<BitcoinTx> {
+    let anchoring_schema = AnchoringSchema::new(testkit.snapshot());
     let key = &anchoring_schema.actual_anchoring_config().anchoring_keys[id.0 as usize];
 
     let lects = anchoring_schema.lects(key);
@@ -77,15 +79,15 @@ pub fn dump_lects(sandbox: &Sandbox, id: ValidatorId) -> Vec<BitcoinTx> {
     lects
 }
 
-pub fn lects_count(sandbox: &Sandbox, id: ValidatorId) -> u64 {
-    dump_lects(sandbox, id).len() as u64
+pub fn lects_count(testkit: &TestKit, id: ValidatorId) -> u64 {
+    dump_lects(testkit, id).len() as u64
 }
 
-pub fn force_commit_lects<I>(sandbox: &Sandbox, lects: I)
+pub fn force_commit_lects<I>(teskit: &mut TestKit, lects: I)
 where
     I: IntoIterator<Item = MsgAnchoringUpdateLatest>,
 {
-    let mut blockchain = sandbox.blockchain_mut();
+    let blockchain = teskit.blockchain_mut();
     let mut fork = blockchain.fork();
     {
         let mut anchoring_schema = AnchoringSchema::new(&mut fork);
@@ -99,9 +101,8 @@ where
     blockchain.merge(fork.into_patch()).unwrap();
 }
 
-pub fn dump_signatures(sandbox: &Sandbox, txid: &btc::TxId) -> Vec<MsgAnchoringSignature> {
-    let b = sandbox.blockchain_ref().clone();
-    let v = b.snapshot();
+pub fn dump_signatures(testkit: &TestKit, txid: &btc::TxId) -> Vec<MsgAnchoringSignature> {
+    let v = testkit.snapshot();
     let anchoring_schema = AnchoringSchema::new(&v);
 
     let signatures = anchoring_schema.signatures(txid);
@@ -109,25 +110,7 @@ pub fn dump_signatures(sandbox: &Sandbox, txid: &btc::TxId) -> Vec<MsgAnchoringS
     signatures
 }
 
-pub fn gen_update_config_tx(
-    sandbox: &Sandbox,
-    actual_from: Height,
-    service_cfg: &AnchoringConfig,
-) -> RawTransaction {
-    let mut cfg = sandbox.cfg();
-    cfg.actual_from = actual_from;
-    cfg.previous_cfg_hash = sandbox.cfg().hash();
-    *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
-    let tx = TxConfig::new(
-        &sandbox.service_public_key(ANCHORING_VALIDATOR),
-        &cfg.into_bytes(),
-        actual_from,
-        sandbox.service_secret_key(ANCHORING_VALIDATOR),
-    );
-    tx.raw().clone()
-}
-
-pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> Request {
+pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> TestRequest {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     request! {
         method: "getrawtransaction",
@@ -166,7 +149,7 @@ pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> Request 
     }
 }
 
-pub fn get_transaction_request(raw: &RawBitcoinTx) -> Request {
+pub fn get_transaction_request(raw: &RawBitcoinTx) -> TestRequest {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     request! {
         method: "getrawtransaction",
@@ -175,7 +158,23 @@ pub fn get_transaction_request(raw: &RawBitcoinTx) -> Request {
     }
 }
 
-pub fn send_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<Request> {
+pub fn send_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<TestRequest> {
+    let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
+    vec![
+        request! {
+            method: "getrawtransaction",
+            params: [&tx.txid(), 0],
+            error: RpcError::NoInformation("Unable to find tx".to_string())
+        },
+        request! {
+            method: "sendrawtransaction",
+            params: [tx.to_hex()],
+            response: tx.to_hex()
+        },
+    ]
+}
+
+pub fn resend_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<TestRequest> {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     vec![
         request! {
@@ -206,43 +205,35 @@ pub fn listunspent_entry(raw: &RawBitcoinTx, addr: &btc::Address, confirmations:
     })
 }
 
-pub fn block_hash_on_height(sandbox: &Sandbox, height: Height) -> Hash {
-    let blockchain = sandbox.blockchain_ref();
-    let snapshot = blockchain.snapshot();
-    let schema = Schema::new(&snapshot);
-    schema.block_hashes_by_height().get(height.0).unwrap()
-}
-
 /// Anchor genesis block using funding tx
-pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
-    let client = sandbox.client();
+pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
+    let requests = testkit.requests();
 
-    let anchoring_addr = sandbox.current_addr();
-
-
-    client.expect(vec![
-        confirmations_request(&sandbox.current_funding_tx(), 50),
+    let anchoring_addr = testkit.current_addr();
+    requests.expect(vec![
+        confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "listunspent",
             params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
-                listunspent_entry(&sandbox.current_funding_tx(), &anchoring_addr, 50)
+                listunspent_entry(&testkit.current_funding_tx(), &anchoring_addr, 50)
             ]
         },
+        get_transaction_request(&testkit.current_funding_tx()),
     ]);
 
-    let hash = sandbox.last_hash();
+    let hash = testkit.last_block_hash();
     let (_, signatures) =
-        sandbox.gen_anchoring_tx_with_signatures(Height::zero(), hash, &[], None, &anchoring_addr);
-    let anchored_tx = sandbox.latest_anchored_tx();
-    sandbox.add_height(&[]);
+        testkit.gen_anchoring_tx_with_signatures(Height::zero(), hash, &[], None, &anchoring_addr);
+    let anchored_tx = testkit.latest_anchored_tx();
+    testkit.create_block();
 
-    sandbox.broadcast(signatures[0].raw());
-    client.expect(vec![
-        confirmations_request(&sandbox.current_funding_tx(), 50),
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
+    requests.expect(vec![
+        confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 1],
+            params: [&anchored_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -251,32 +242,30 @@ pub fn anchor_first_block(sandbox: &AnchoringSandbox) {
             response: anchored_tx.to_hex()
         },
     ]);
-
-    let signatures = signatures.into_iter().map(|tx| tx).collect::<Vec<_>>();
-    sandbox.add_height(&signatures);
+    testkit.create_block_with_transactions(signatures);
 
     let txs = (0..4)
         .map(|idx| {
-            gen_service_tx_lect(sandbox, ValidatorId(idx), &anchored_tx, 1)
-                .raw()
-                .clone()
+            gen_service_tx_lect(testkit, ValidatorId(idx), &anchored_tx, 1)
         })
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
-    sandbox.broadcast(&txs[0]);
-    sandbox.add_height(&txs);
+    assert!(testkit.mempool().contains_key(&txs[0].hash()));
+    testkit.create_block_with_transactions(txs);
 }
 
-pub fn anchor_first_block_lect_normal(sandbox: &AnchoringSandbox) {
+pub fn anchor_first_block_lect_normal(testkit: &mut AnchoringTestKit) {
     // Just add few heights
-    sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
+    let height = testkit.next_check_lect_height();
+    testkit.create_blocks_until(height);
 
-    let anchored_tx = sandbox.latest_anchored_tx();
-    let anchoring_addr = sandbox.current_addr();
+    let anchored_tx = testkit.latest_anchored_tx();
+    let anchoring_addr = testkit.current_addr();
 
-    sandbox.client().expect(vec![
+    testkit.requests().expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr.to_string()]],
             response: [
                 listunspent_entry(&anchored_tx, &anchoring_addr, 0),
             ]
@@ -287,30 +276,31 @@ pub fn anchor_first_block_lect_normal(sandbox: &AnchoringSandbox) {
             response: &anchored_tx.to_hex()
         },
     ]);
-    sandbox.add_height(&[]);
+    testkit.create_block();
 }
 
-pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
-    let client = sandbox.client();
+pub fn anchor_first_block_lect_different(testkit: &mut AnchoringTestKit) {
+    let requests = testkit.requests();
 
-    anchor_first_block(sandbox);
+    anchor_first_block(testkit);
     // Just add few heights
-    sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
+    let height = testkit.next_check_lect_height();
+    testkit.create_blocks_until(height);
 
     let (other_lect, other_signatures) = {
-        let anchored_tx = sandbox.latest_anchored_tx();
-        let other_signatures = sandbox
+        let anchored_tx = testkit.latest_anchored_tx();
+        let other_signatures = testkit
             .latest_anchored_tx_signatures()
             .iter()
-            .filter(|tx| tx.validator() != ANCHORING_VALIDATOR)
+            .filter(|tx| tx.validator() != ValidatorId(0))
             .cloned()
             .collect::<Vec<_>>();
-        let other_lect = sandbox.finalize_tx(anchored_tx.clone(), other_signatures.clone());
+        let other_lect = testkit.finalize_tx(anchored_tx.clone(), other_signatures.clone());
         (other_lect, other_signatures)
     };
 
-    let anchoring_addr = sandbox.current_addr();
-    client.expect(vec![
+    let anchoring_addr = testkit.current_addr();
+    requests.expect(vec![
         request! {
             method: "listunspent",
             params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
@@ -320,32 +310,32 @@ pub fn anchor_first_block_lect_different(sandbox: &AnchoringSandbox) {
         },
         get_transaction_request(&other_lect),
     ]);
-    sandbox.add_height(&[]);
+    testkit.create_block();
 
     let txs = (0..4)
         .map(|idx| {
-            gen_service_tx_lect(sandbox, ValidatorId(idx), &other_lect, 2)
-                .raw()
-                .clone()
+            gen_service_tx_lect(testkit, ValidatorId(idx), &other_lect, 2)
         })
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
-    sandbox.broadcast(&txs[0]);
+    assert!(testkit.mempool().contains_key(&txs[0].hash()));
 
-    sandbox.add_height(&txs);
-    sandbox.set_latest_anchored_tx(Some((other_lect.clone(), other_signatures.clone())));
+    testkit.create_block_with_transactions(txs);
+    testkit.set_latest_anchored_tx(Some((other_lect.clone(), other_signatures.clone())));
 }
 
-pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
-    let client = sandbox.client();
+pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
+    let requests = testkit.requests();
 
-    anchor_first_block(sandbox);
+    anchor_first_block(testkit);
     // Just add few heights
-    sandbox.fast_forward_to_height(sandbox.next_check_lect_height());
+    let height = testkit.next_check_lect_height();
+    testkit.create_blocks_until(height);
 
-    let other_lect = sandbox.current_funding_tx();
-    let anchoring_addr = sandbox.current_addr();
+    let other_lect = testkit.current_funding_tx();
+    let anchoring_addr = testkit.current_addr();
 
-    client.expect(vec![
+    requests.expect(vec![
         request! {
             method: "listunspent",
             params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
@@ -355,19 +345,18 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
         },
         get_transaction_request(&other_lect),
     ]);
-    sandbox.add_height(&[]);
+    testkit.create_block();
 
     let txs = (0..4)
         .map(|idx| {
-            gen_service_tx_lect(sandbox, ValidatorId(idx), &other_lect, 2)
-                .raw()
-                .clone()
+            gen_service_tx_lect(testkit, ValidatorId(idx), &other_lect, 2)
         })
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
-    sandbox.broadcast(&txs[0]);
+    assert!(testkit.mempool().contains_key(&txs[0].hash()));
 
-    client.expect(vec![
-        confirmations_request(&sandbox.current_funding_tx(), 50),
+    requests.expect(vec![
+        confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "listunspent",
             params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
@@ -375,15 +364,16 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
                 listunspent_entry(&other_lect, &anchoring_addr, 100)
             ]
         },
+        get_transaction_request(&other_lect),
     ]);
-    sandbox.add_height(&txs);
+    testkit.create_block_with_transactions(txs);
 
-    let anchored_tx = sandbox.latest_anchored_tx();
-    client.expect(vec![
-        confirmations_request(&sandbox.current_funding_tx(), 50),
+    let anchored_tx = testkit.latest_anchored_tx();
+    requests.expect(vec![
+        confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 1],
+            params: [&anchored_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -392,55 +382,52 @@ pub fn anchor_first_block_lect_lost(sandbox: &AnchoringSandbox) {
             response: anchored_tx.to_hex()
         },
     ]);
-    sandbox.add_height(&[]);
-    sandbox.broadcast(&gen_service_tx_lect(
-        sandbox,
-        ANCHORING_VALIDATOR,
-        &anchored_tx,
-        3,
-    ));
-    sandbox.set_latest_anchored_tx(None);
+    testkit.create_block();
+    let lect = gen_service_tx_lect(testkit, ValidatorId(0), &anchored_tx, 3);
+    assert!(testkit.mempool().contains_key(&Box::<Transaction>::from(lect).hash()));
+    testkit.set_latest_anchored_tx(None);
 }
 
-pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
-    let client = sandbox.client();
-    sandbox.fast_forward_to_height(sandbox.next_anchoring_height());
+pub fn anchor_second_block_normal(testkit: &mut AnchoringTestKit) {
+    let requests = testkit.requests();
+    let height = testkit.next_anchoring_height();
+    testkit.create_blocks_until(height);
 
-    let anchoring_addr = sandbox.current_addr();
-    client.expect(vec![
+    let anchoring_addr = testkit.current_addr();
+    requests.expect(vec![
         request! {
             method: "listunspent",
             params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
-                listunspent_entry(&sandbox.latest_anchored_tx(), &anchoring_addr, 1)
+                listunspent_entry(&testkit.latest_anchored_tx(), &anchoring_addr, 1)
             ]
         },
+        get_transaction_request(&testkit.latest_anchored_tx()),
     ]);
-    sandbox.add_height(&[]);
+    testkit.create_block();
 
-    let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
+    let last_block_hash = testkit.last_block_hash();
+    let (_, signatures) = testkit.gen_anchoring_tx_with_signatures(
         Height(10),
-        sandbox.last_hash(),
+        last_block_hash,
         &[],
         None,
-        &btc::Address::from_base58check(&anchoring_addr.to_base58check())
-            .unwrap(),
+        &anchoring_addr,
     );
-    let anchored_tx = sandbox.latest_anchored_tx();
+    let anchored_tx = testkit.latest_anchored_tx();
 
-    sandbox.broadcast(&signatures[0]);
-    client.expect(vec![confirmations_request(&anchored_tx.clone(), 0)]);
-    sandbox.add_height(&signatures);
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
+    requests.expect(vec![get_transaction_request(&anchored_tx.clone())]);
+    testkit.create_block_with_transactions(signatures);
 
     let txs = (0..4)
         .map(|idx| {
-            gen_service_tx_lect(sandbox, ValidatorId(idx), &anchored_tx, 2)
-                .raw()
-                .clone()
+            gen_service_tx_lect(testkit, ValidatorId(idx), &anchored_tx, 2)
         })
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
-    sandbox.broadcast(&txs[0]);
-    client.expect(vec![
+    assert!(testkit.mempool().contains_key(&txs[0].hash()));
+    requests.expect(vec![
         request! {
             method: "listunspent",
             params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
@@ -450,130 +437,122 @@ pub fn anchor_second_block_normal(sandbox: &AnchoringSandbox) {
         },
         get_transaction_request(&anchored_tx),
     ]);
-    sandbox.add_height(&txs);
+    testkit.create_block_with_transactions(txs);
 }
 
 /// Anchor genesis block using funding tx
-pub fn anchor_first_block_without_other_signatures(sandbox: &AnchoringSandbox) {
-    let client = sandbox.client();
-    let anchoring_addr = sandbox.current_addr();
+pub fn anchor_first_block_without_other_signatures(testkit: &mut AnchoringTestKit) {
+    let requests = testkit.requests();
+    let anchoring_addr = testkit.current_addr();
 
-    client.expect(vec![
-        confirmations_request(&sandbox.current_funding_tx(), 50),
+    requests.expect(vec![
+        confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "listunspent",
             params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
             response: [
-                listunspent_entry(&sandbox.current_funding_tx(), &anchoring_addr, 50)
+                listunspent_entry(&testkit.current_funding_tx(), &anchoring_addr, 50)
             ]
         },
+        get_transaction_request(&testkit.current_funding_tx()),
     ]);
 
-    let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
+    let last_block_hash = testkit.last_block_hash();
+    let (_, mut signatures) = testkit.gen_anchoring_tx_with_signatures(
         Height::zero(),
-        sandbox.last_hash(),
+        last_block_hash,
         &[],
         None,
         &anchoring_addr,
     );
-    sandbox.add_height(&[]);
+    testkit.create_block();
 
-    sandbox.broadcast(&signatures[0]);
-    client.expect(vec![
-        confirmations_request(&sandbox.current_funding_tx(), 50),
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
+    requests.expect(vec![
+        confirmations_request(&testkit.current_funding_tx(), 50),
     ]);
-    sandbox.add_height(&signatures[0..1]);
+    testkit.create_block_with_transactions(signatures.drain(0..1));
 }
 
-// Invoke this method after anchor_first_block_lect_normal
-pub fn exclude_node_from_validators(sandbox: &AnchoringSandbox) {
+/// Invoke this method after `anchor_first_block_lect_normal`
+pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
     let cfg_change_height = Height(12);
-    let (cfg_tx, following_cfg) = gen_following_cfg_exclude_validator(sandbox, cfg_change_height);
+    let (cfg_proposal, following_cfg) =
+        gen_following_cfg_exclude_validator(testkit, cfg_change_height);
     let (_, following_addr) = following_cfg.redeem_script();
 
     // Tx has not enough confirmations.
-    let anchored_tx = sandbox.latest_anchored_tx();
+    let anchored_tx = testkit.latest_anchored_tx();
 
-    let client = sandbox.client();
-    client.expect(vec![
+    let requests = testkit.requests();
+    requests.expect(vec![
         request! {
             method: "importaddress",
             params: [&following_addr, "multisig", false, false]
         },
         confirmations_request(&anchored_tx, 10),
     ]);
-    sandbox.add_height(&[cfg_tx]);
+    testkit.commit_configuration_change(cfg_proposal);
+    testkit.create_block();
 
     let following_multisig = following_cfg.redeem_script();
-    let (_, signatures) = sandbox.gen_anchoring_tx_with_signatures(
+    let (_, signatures) = testkit.gen_anchoring_tx_with_signatures(
         Height::zero(),
         anchored_tx.payload().block_hash,
         &[],
         None,
         &following_multisig.1,
     );
-    let transition_tx = sandbox.latest_anchored_tx();
+    let transition_tx = testkit.latest_anchored_tx();
     // Tx gets enough confirmations.
-    client.expect(vec![confirmations_request(&anchored_tx, 100)]);
-    sandbox.add_height(&[]);
-    sandbox.broadcast(&signatures[0]);
+    requests.expect(vec![confirmations_request(&anchored_tx, 100)]);
+    testkit.create_block();
+    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
 
-    client.expect(vec![confirmations_request(&transition_tx, 100)]);
-    sandbox.add_height(&signatures);
+    requests.expect(send_raw_transaction_requests(&transition_tx));
+    testkit.create_block_with_transactions(signatures);
 
     let lects = (0..4)
         .map(|id| {
-            gen_service_tx_lect(sandbox, ValidatorId(id), &transition_tx, 2)
-                .raw()
-                .clone()
+            gen_service_tx_lect(testkit, ValidatorId(id), &transition_tx, 2)
         })
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
-    sandbox.broadcast(&lects[0]);
-    client.expect(vec![confirmations_request(&transition_tx, 100)]);
-    sandbox.add_height(&lects);
-    sandbox.fast_forward_to_height(cfg_change_height);
+    assert!(testkit.mempool().contains_key(&lects[0].hash()));
+    requests.expect(vec![confirmations_request(&transition_tx, 100)]);
+    testkit.create_block_with_transactions(lects);
+    testkit.create_blocks_until(cfg_change_height.previous());
 
-    sandbox.set_anchoring_cfg(following_cfg);
-    sandbox.nodes_mut().swap_remove(0);
-    client.expect(vec![get_transaction_request(&transition_tx)]);
-    sandbox.add_height_as_auditor(&[]);
+    testkit.nodes_mut().swap_remove(0);
+    requests.expect(vec![get_transaction_request(&transition_tx)]);
+    testkit.create_block();
 
-    assert_eq!(sandbox.handler().errors, Vec::new());
+    assert_eq!(testkit.take_handler_errors(), Vec::new());
 }
 
-pub fn init_logger() {
-    let _ = helpers::init_logger();
-}
-
-
-/// Generates a configuration that excludes `sandbox node` from consensus.
+/// Generates a configuration that excludes `testkit node` from consensus.
 /// Then it continues to work as auditor.
-fn gen_following_cfg_exclude_validator(
-    sandbox: &AnchoringSandbox,
+pub fn gen_following_cfg_exclude_validator(
+    testkit: &mut AnchoringTestKit,
     from_height: Height,
-) -> (RawTransaction, AnchoringConfig) {
-    let mut service_cfg = sandbox.current_cfg().clone();
-    let priv_keys = sandbox.current_priv_keys();
+) -> (TestNetworkConfiguration, AnchoringConfig) {
+    let mut cfg = testkit.configuration_change_proposal();
+    let mut service_cfg: AnchoringConfig = cfg.service_config(ANCHORING_SERVICE_NAME);
+    let priv_keys = testkit.current_priv_keys();
     service_cfg.anchoring_keys.swap_remove(0);
 
     let following_addr = service_cfg.redeem_script().1;
-    for (id, ref mut node) in sandbox.nodes_mut().iter_mut().enumerate() {
+    for (id, ref mut node) in testkit.nodes_mut().iter_mut().enumerate() {
         node.private_keys.insert(
-            following_addr.to_base58check(),
+            following_addr.to_string(),
             priv_keys[id].clone(),
         );
     }
 
-    let mut cfg = sandbox.cfg();
-    cfg.actual_from = from_height;
-    cfg.previous_cfg_hash = sandbox.cfg().hash();
-    cfg.validator_keys.swap_remove(0);
-    *cfg.services.get_mut(ANCHORING_SERVICE_NAME).unwrap() = json!(service_cfg);
-    let tx = TxConfig::new(
-        &sandbox.service_public_key(ANCHORING_VALIDATOR),
-        &cfg.into_bytes(),
-        from_height,
-        sandbox.service_secret_key(ANCHORING_VALIDATOR),
-    );
-    (tx.raw().clone(), service_cfg)
+    cfg.set_actual_from(from_height);
+    let mut validators = cfg.validators().to_vec();
+    validators.swap_remove(0);
+    cfg.set_validators(validators);
+    cfg.set_service_config(ANCHORING_SERVICE_NAME, service_cfg.clone());
+    (cfg, service_cfg)
 }

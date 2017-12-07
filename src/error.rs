@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::io;
+
 pub use details::error::Error as InternalError;
 pub use handler::error::Error as HandlerError;
 use bitcoinrpc::Error as RpcError;
@@ -28,5 +30,11 @@ pub enum Error {
 impl From<RpcError> for Error {
     fn from(err: RpcError) -> Error {
         Error::Internal(InternalError::Rpc(err))
+    }
+}
+
+impl From<io::Error> for Error {
+    fn from(err: io::Error) -> Error {
+        Error::Internal(InternalError::Io(err))
     }
 }

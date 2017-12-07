@@ -63,7 +63,9 @@ impl AnchoringHandler {
                         return Ok(());
                     }
                     // check that we have enougth confirmations
-                    let confirmations = lect.confirmations(self.client())?.unwrap_or_else(|| 0);
+                    let confirmations = self.client()
+                        .get_transaction_confirmations(lect.id())?
+                        .unwrap_or_else(|| 0);
                     if confirmations >= multisig.common.utxo_confirmations {
                         let height = multisig.common.latest_anchoring_height(state.height());
                         self.create_proposal_tx(lect, &multisig, height, state)?;

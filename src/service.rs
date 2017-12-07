@@ -33,8 +33,7 @@ use exonum::api::Api;
 
 use api::PublicApi;
 use details::btc;
-use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
-use details::btc::transactions::FundingTx;
+use details::rpc::{BitcoinRelay, RpcClient};
 use local_storage::AnchoringNodeConfig;
 use handler::AnchoringHandler;
 use blockchain::consensus_storage::AnchoringConfig;
@@ -42,14 +41,13 @@ use blockchain::schema::AnchoringSchema;
 use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest, ANCHORING_MESSAGE_LATEST,
                       ANCHORING_MESSAGE_SIGNATURE};
 use error::Error as ServiceError;
-#[cfg(not(feature = "sandbox_tests"))]
 use handler::error::Error as HandlerError;
 use observer::AnchoringChainObserver;
 
 /// Anchoring service id.
 pub const ANCHORING_SERVICE_ID: u16 = 3;
 /// Anchoring service name.
-pub const ANCHORING_SERVICE_NAME: &'static str = "btc_anchoring";
+pub const ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
 
 /// Anchoring service implementation for the Exonum blockchain.
 #[derive(Debug)]
@@ -61,7 +59,7 @@ pub struct AnchoringService {
 impl AnchoringService {
     /// Creates a new service instance with the given `consensus` and `local` configurations.
     pub fn new(consensus: AnchoringConfig, local: AnchoringNodeConfig) -> AnchoringService {
-        let client = local.rpc.clone().map(AnchoringRpc::new);
+        let client = local.rpc.clone().map(RpcClient::from).map(Into::into);
         AnchoringService {
             genesis: consensus,
             handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local))),
@@ -70,7 +68,7 @@ impl AnchoringService {
 
     #[doc(hidden)]
     pub fn new_with_client(
-        client: AnchoringRpc,
+        client: Box<BitcoinRelay>,
         genesis: AnchoringConfig,
         local_cfg: AnchoringNodeConfig,
     ) -> AnchoringService {
@@ -124,17 +122,17 @@ impl Service for AnchoringService {
     fn handle_commit(&self, state: &ServiceContext) {
         let mut handler = self.handler.lock().unwrap();
         match handler.handle_commit(state) {
-            #[cfg(feature = "sandbox_tests")]
-            Err(ServiceError::Handler(e)) => {
-                error!("An error occured: {:?}", e);
-                handler.errors.push(e);
+            Err(ServiceError::Handler(e @ HandlerError::IncorrectLect { .. })) => {
+                panic!("A critical error occured: {}", e)
             }
-            #[cfg(not(feature = "sandbox_tests"))]
             Err(ServiceError::Handler(e)) => {
-                if let HandlerError::IncorrectLect { .. } = e {
-                    panic!("A critical error occured: {}", e);
-                }
                 error!("An error in handler occured: {}", e);
+                if let Some(sink) = handler.errors_sink.as_ref() {
+                    let res = sink.send(e);
+                    if let Err(err) = res {
+                        error!("Can't send error to channel: {}", err);
+                    }
+                }
             }
             Err(e) => {
                 error!("An error occured: {:?}", e);
@@ -159,7 +157,7 @@ impl Service for AnchoringService {
 /// Note: Bitcoin node that is used by rpc should have enough bitcoin amount to generate
 /// funding transaction by given `total_funds`.
 pub fn gen_anchoring_testnet_config_with_rng<R>(
-    client: &AnchoringRpc,
+    client: &BitcoinRelay,
     network: btc::Network,
     count: u8,
     total_funds: u64,
@@ -168,11 +166,7 @@ pub fn gen_anchoring_testnet_config_with_rng<R>(
 where
     R: Rng,
 {
-    let rpc = AnchoringRpcConfig {
-        host: client.url().into(),
-        username: client.username().clone(),
-        password: client.password().clone(),
-    };
+    let rpc = client.config();
     let mut pub_keys = Vec::new();
     let mut node_cfgs = Vec::new();
     let mut priv_keys = Vec::new();
@@ -186,10 +180,11 @@ where
     }
 
     let majority_count = ::majority_count(count);
-    let (_, address) = client
-        .create_multisig_address(network, majority_count, pub_keys.iter())
-        .unwrap();
-    let tx = FundingTx::create(client, &address, total_funds).unwrap();
+    let address = btc::RedeemScript::from_pubkeys(&pub_keys, majority_count)
+        .compressed(network)
+        .to_address(network);
+    client.watch_address(&address, false).unwrap();
+    let tx = client.send_to_address(&address, total_funds).unwrap();
 
     let genesis_cfg = AnchoringConfig::new_with_funding_tx(network, pub_keys, tx);
     for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
@@ -205,7 +200,7 @@ where
 /// Same as [`gen_anchoring_testnet_config_with_rng`](fn.gen_anchoring_testnet_config_with_rng.html)
 /// but it uses default random number generator.
 pub fn gen_anchoring_testnet_config(
-    client: &AnchoringRpc,
+    client: &BitcoinRelay,
     network: btc::Network,
     count: u8,
     total_funds: u64,

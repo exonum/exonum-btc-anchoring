@@ -22,7 +22,7 @@ use exonum::helpers::Height;
 
 use details::btc;
 
-const PAYLOAD_PREFIX: &'static [u8] = b"EXONUM";
+const PAYLOAD_PREFIX: &[u8] = b"EXONUM";
 const PAYLOAD_HEADER_LEN: usize = 8;
 const PAYLOAD_V1: u8 = 1;
 const PAYLOAD_V1_KIND_REGULAR: u8 = 0;

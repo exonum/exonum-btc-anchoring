@@ -22,7 +22,7 @@ use bitcoin::util::base58::ToBase58;
 use exonum::blockchain::{Blockchain, Schema};
 use exonum::storage::Fork;
 
-use details::rpc::{AnchoringRpc, AnchoringRpcConfig};
+use details::rpc::{RpcClient, AnchoringRpcConfig, BitcoinRelay};
 use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
 use blockchain::schema::AnchoringSchema;
 use blockchain::consensus_storage::AnchoringConfig;
@@ -56,7 +56,7 @@ impl Default for AnchoringObserverConfig {
 #[derive(Debug)]
 pub struct AnchoringChainObserver {
     blockchain: Blockchain,
-    client: AnchoringRpc,
+    client: Box<BitcoinRelay>,
     check_interval: Milliseconds,
 }
 
@@ -69,7 +69,7 @@ impl AnchoringChainObserver {
     ) -> AnchoringChainObserver {
         AnchoringChainObserver {
             blockchain,
-            client: AnchoringRpc::new(rpc),
+            client: Box::new(RpcClient::from(rpc)),
             check_interval: observer.check_interval,
         }
     }
@@ -77,7 +77,7 @@ impl AnchoringChainObserver {
     #[doc(hidden)]
     pub fn new_with_client(
         blockchain: Blockchain,
-        client: AnchoringRpc,
+        client: Box<BitcoinRelay>,
         check_interval: Milliseconds,
     ) -> AnchoringChainObserver {
         AnchoringChainObserver {
@@ -128,8 +128,8 @@ impl AnchoringChainObserver {
     }
 
     #[doc(hidden)]
-    pub fn client(&self) -> &AnchoringRpc {
-        &self.client
+    pub fn client(&self) -> &BitcoinRelay {
+        self.client.as_ref()
     }
 
     #[doc(hidden)]
@@ -157,7 +157,7 @@ impl AnchoringChainObserver {
                 }
             }
 
-            let confirmations = self.client.get_transaction_confirmations(&lect.id())?;
+            let confirmations = self.client.get_transaction_confirmations(lect.id())?;
             if confirmations.as_ref() >= Some(&actual_cfg.utxo_confirmations) {
                 trace!(
                     "Adds transaction to chain, height={}, content={:#?}",
@@ -172,7 +172,7 @@ impl AnchoringChainObserver {
             }
 
             let prev_txid = payload.prev_tx_chain.unwrap_or_else(|| lect.prev_hash());
-            if let Some(prev_tx) = self.client.get_transaction(&prev_txid.be_hex_string())? {
+            if let Some(prev_tx) = self.client.get_transaction(prev_txid)? {
                 lect = match TxKind::from(prev_tx) {
                     TxKind::Anchoring(lect) => lect,
                     TxKind::FundingTx(_) => return Ok(()),
@@ -200,8 +200,8 @@ impl AnchoringChainObserver {
 
         let unspent_txs: Vec<_> = self.client.unspent_transactions(&actual_addr)?;
         for tx in unspent_txs {
-            if self.transaction_is_lect(fork, actual_cfg, &tx)? {
-                if let TxKind::Anchoring(lect) = TxKind::from(tx) {
+            if self.transaction_is_lect(fork, actual_cfg, &tx.body)? {
+                if let TxKind::Anchoring(lect) = TxKind::from(tx.body) {
                     return Ok(Some(lect));
                 }
             }
