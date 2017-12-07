@@ -34,6 +34,7 @@ extern crate exonum_testkit;
 pub mod testkit_extras;
 
 use exonum::helpers::{Height, ValidatorId};
+use exonum::blockchain::Transaction;
 use exonum::encoding::serialize::HexValue;
 use exonum_testkit::TestNetworkConfiguration;
 
@@ -115,7 +116,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
         .map(|id| {
             gen_service_tx_lect(testkit, ValidatorId(id), &transition_tx, 2)
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
     requests.expect(vec![confirmations_request(&transition_tx, 100)]);

@@ -39,6 +39,7 @@ use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::constants::Network;
 use bitcoin::blockdata::script::Script;
 
+use exonum::blockchain::Transaction;
 use exonum::messages::Message;
 use exonum::helpers::{Height, ValidatorId};
 use exonum::encoding::serialize::HexValue;
@@ -203,7 +204,7 @@ fn test_anchoring_second_block_lect_lost() {
     let txs = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &prev_anchored_tx, 3))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&txs[0].hash()));
 

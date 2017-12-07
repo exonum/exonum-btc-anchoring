@@ -37,6 +37,7 @@ use rand::{SeedableRng, StdRng};
 use bitcoin::network::constants::Network;
 
 use exonum::messages::Message;
+use exonum::blockchain::Transaction;
 use exonum::helpers::{Height, ValidatorId};
 use exonum::encoding::serialize::HexValue;
 use exonum_testkit::{TestNetworkConfiguration, TestNode};
@@ -263,7 +264,7 @@ fn test_transit_changed_self_key_normal() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
@@ -339,7 +340,7 @@ fn test_transit_changed_self_key_normal() {
         .map(|id| {
             gen_service_tx_lect(&testkit, id, &anchored_tx, lects_count(&testkit, id))
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
     testkit.create_block_with_transactions(lects);
@@ -397,7 +398,7 @@ fn test_transit_unchanged_self_key_normal() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
@@ -433,7 +434,7 @@ fn test_transit_unchanged_self_key_normal() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &anchored_tx, 3))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
@@ -513,7 +514,7 @@ fn test_transit_config_with_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
@@ -552,7 +553,7 @@ fn test_transit_config_with_funding_tx() {
             &transition_tx,
             lects_count(&testkit, validator_0),
         );
-        to_boxed(lect)
+        Box::<Transaction>::from(lect)
     };
     requests.expect(vec![
         confirmations_request(&transition_tx, 1000),
@@ -634,7 +635,7 @@ fn test_transit_config_with_funding_tx() {
         .map(|id| {
             gen_service_tx_lect(&testkit, id, &anchored_tx, lects_count(&testkit, id))
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
     testkit.create_block_with_transactions(lects);
@@ -694,7 +695,7 @@ fn test_transit_config_lost_lect_resend_before_cfg_change() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
@@ -757,7 +758,7 @@ fn test_transit_config_lost_lect_resend_after_cfg_change() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
@@ -904,7 +905,7 @@ fn test_transit_unchanged_self_key_recover_with_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &new_chain_tx, 2))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 }
@@ -1024,7 +1025,7 @@ fn test_transit_changed_self_key_recover_with_funding_tx() {
         .map(|id| {
             gen_service_tx_lect(&testkit, id, &new_chain_tx, lects_count(&testkit, id))
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 }
@@ -1157,7 +1158,7 @@ fn test_transit_changed_self_key_recover_without_funding_tx() {
         .map(|id| {
             gen_service_tx_lect(&testkit, id, &new_chain_tx, lects_count(&testkit, id))
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 }
@@ -1297,7 +1298,7 @@ fn test_transit_add_validators_recover_without_funding_tx() {
         .map(|id| {
             gen_service_tx_lect(&testkit, id, &new_chain_tx, lects_count(&testkit, id))
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 }
@@ -1362,7 +1363,7 @@ fn test_transit_msg_signature_incorrect_output_address() {
     // Try to commit tx
     let different_signatures = different_signatures
         .into_iter()
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     testkit.create_block_with_transactions(different_signatures);
     // Ensure that service ignores tx
@@ -1444,7 +1445,7 @@ fn test_transit_config_after_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
@@ -1489,7 +1490,7 @@ fn test_transit_config_after_funding_tx() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &anchored_tx, 3))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
@@ -1601,7 +1602,7 @@ fn test_transit_after_exclude_from_validator() {
         .map(|id| {
             gen_service_tx_lect(&testkit, id, &transition_tx, lects_count(&testkit, id))
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
 
     let txs = {
@@ -1750,7 +1751,7 @@ fn test_transit_changed_self_key_observer() {
     let lects = (0..4)
         .map(ValidatorId)
         .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, 2))
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
 
@@ -1787,7 +1788,7 @@ fn test_transit_changed_self_key_observer() {
             &transition_tx,
             lects_count(&testkit, validator_0),
         );
-        to_boxed(lect)
+        Box::<Transaction>::from(lect)
     };
     requests.expect(vec![confirmations_request(&transition_tx, 1000)]);
 
@@ -1831,7 +1832,7 @@ fn test_transit_changed_self_key_observer() {
         .map(|id| {
             gen_service_tx_lect(&testkit, id, &third_anchored_tx, lects_count(&testkit, id))
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
     testkit.create_block_with_transactions(lects);

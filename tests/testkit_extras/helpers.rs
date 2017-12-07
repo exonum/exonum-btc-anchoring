@@ -37,10 +37,6 @@ pub use bitcoinrpc::RpcError as JsonRpcError;
 pub use bitcoinrpc::Error as RpcError;
 pub use super::secp256k1_hack::sign_tx_input_with_nonce;
 
-pub fn to_boxed<T: Transaction>(tx: T) -> Box<Transaction> {
-    Box::new(tx) as Box<Transaction>
-}
-
 pub fn gen_service_tx_lect(
     testkit: &TestKit,
     validator: ValidatorId,
@@ -252,7 +248,7 @@ pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
         .map(|idx| {
             gen_service_tx_lect(testkit, ValidatorId(idx), &anchored_tx, 1)
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&txs[0].hash()));
     testkit.create_block_with_transactions(txs);
@@ -320,7 +316,7 @@ pub fn anchor_first_block_lect_different(testkit: &mut AnchoringTestKit) {
         .map(|idx| {
             gen_service_tx_lect(testkit, ValidatorId(idx), &other_lect, 2)
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&txs[0].hash()));
 
@@ -355,7 +351,7 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
         .map(|idx| {
             gen_service_tx_lect(testkit, ValidatorId(idx), &other_lect, 2)
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&txs[0].hash()));
 
@@ -388,7 +384,7 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
     ]);
     testkit.create_block();
     let lect = gen_service_tx_lect(testkit, ValidatorId(0), &anchored_tx, 3);
-    assert!(testkit.mempool().contains_key(&to_boxed(lect).hash()));
+    assert!(testkit.mempool().contains_key(&Box::<Transaction>::from(lect).hash()));
     testkit.set_latest_anchored_tx(None);
 }
 
@@ -428,7 +424,7 @@ pub fn anchor_second_block_normal(testkit: &mut AnchoringTestKit) {
         .map(|idx| {
             gen_service_tx_lect(testkit, ValidatorId(idx), &anchored_tx, 2)
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&txs[0].hash()));
     requests.expect(vec![
@@ -520,7 +516,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
         .map(|id| {
             gen_service_tx_lect(testkit, ValidatorId(id), &transition_tx, 2)
         })
-        .map(to_boxed)
+        .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
     requests.expect(vec![confirmations_request(&transition_tx, 100)]);
