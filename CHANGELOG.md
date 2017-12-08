@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## 0.4 - 2017-12-08
+
+### Added
+- Added tests written on `exonum-testkit` (#101).
+
+### Changed
+- Update to the [Exonum 0.4.0](https://github.com/exonum/exonum/releases/tag/v0.4) release (#104).
+
+### Removed
+- Sandbox tests are removed (#101).
+
 ## 0.3.0 - 2017-11-03
 
 - Update to the [Exonum 0.3.0](https://github.com/exonum/exonum/releases/tag/v0.3) release (#93).
