@@ -57,8 +57,7 @@
 //! ```
 //!
 
-#![deny(missing_docs)]
-#![deny(missing_debug_implementations)]
+#![deny(missing_docs, missing_debug_implementations)]
 
 extern crate bitcoin;
 extern crate byteorder;

@@ -282,19 +282,19 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn handle_commit(&mut self, state: &ServiceContext) -> Result<(), ServiceError> {
         match self.current_state(state)? {
-            AnchoringState::Anchoring { cfg } => self.handle_anchoring_state(cfg, state),
+            AnchoringState::Anchoring { cfg } => self.handle_anchoring_state(&cfg, state),
             AnchoringState::Transition { from, to } => {
-                self.handle_transition_state(from, to, state)
+                self.handle_transition_state(&from, &to, state)
             }
             AnchoringState::Recovering {
                 prev_cfg,
                 actual_cfg,
-            } => self.handle_recovering_state(prev_cfg, actual_cfg, state),
+            } => self.handle_recovering_state(&prev_cfg, &actual_cfg, state),
             AnchoringState::Waiting {
                 lect,
                 confirmations,
             } => self.handle_waiting_state(lect, confirmations),
-            AnchoringState::Auditing { cfg } => self.handle_auditing_state(cfg, state),
+            AnchoringState::Auditing { cfg } => self.handle_auditing_state(&cfg, state),
             AnchoringState::Broken => panic!("Broken anchoring state detected!"),
         }
     }
@@ -396,7 +396,7 @@ impl AnchoringHandler {
             };
 
             if Some(&lect) != our_lect.as_ref() {
-                self.send_updated_lect(lect.clone(), lects_count, state);
+                self.send_updated_lect(&lect, lects_count, state);
             }
 
             Ok(Some(lect))
@@ -492,7 +492,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    fn send_updated_lect(&mut self, lect: BitcoinTx, lects_count: u64, state: &ServiceContext) {
+    fn send_updated_lect(&mut self, lect: &BitcoinTx, lects_count: u64, state: &ServiceContext) {
         if self.proposal_tx.is_some() {
             self.proposal_tx = None;
         }

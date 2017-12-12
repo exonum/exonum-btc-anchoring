@@ -145,7 +145,7 @@ impl Service for AnchoringService {
     /// See [`PublicApi`](api/struct.PublicApi.html) for details.
     fn public_api_handler(&self, context: &ApiContext) -> Option<Box<Handler>> {
         let handler = self.handler.lock().unwrap();
-        let router = PublicApiHandler::new(context.blockchain().clone(), &handler.node);
+        let router = PublicApiHandler::new(context.blockchain(), &handler.node);
         Some(Box::new(router))
     }
 }
@@ -218,7 +218,7 @@ struct PublicApiHandler {
 impl PublicApiHandler {
     /// Creates public api handler instance for the given `blockchain`
     /// and anchoring node `config`.
-    pub fn new(blockchain: Blockchain, config: &AnchoringNodeConfig) -> PublicApiHandler {
+    pub fn new(blockchain: &Blockchain, config: &AnchoringNodeConfig) -> PublicApiHandler {
         let mut router = Router::new();
         let api = PublicApi { blockchain: blockchain.clone() };
         api.wire(&mut router);
@@ -226,7 +226,7 @@ impl PublicApiHandler {
         let observer = if config.observer.enabled {
             let rpc_cfg = config.rpc.clone().expect("Rpc config is not setted");
             let mut observer =
-                AnchoringChainObserver::new(blockchain.clone(), rpc_cfg, config.observer.clone());
+                AnchoringChainObserver::new(blockchain.clone(), rpc_cfg, &config.observer);
 
             Some(thread::spawn(move || { observer.run().unwrap(); }))
         } else {

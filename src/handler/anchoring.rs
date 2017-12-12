@@ -32,10 +32,10 @@ use super::{AnchoringHandler, LectKind, MultisigAddress, collect_signatures};
 impl AnchoringHandler {
     pub fn handle_anchoring_state(
         &mut self,
-        cfg: AnchoringConfig,
+        cfg: &AnchoringConfig,
         context: &ServiceContext,
     ) -> Result<(), ServiceError> {
-        let multisig = self.multisig_address(&cfg);
+        let multisig = self.multisig_address(cfg);
         trace!("Anchoring state, addr={}", multisig.addr.to_base58check());
 
         if context.height().0 % self.node.check_lect_frequency == 0 {
@@ -70,7 +70,7 @@ impl AnchoringHandler {
                 let latest_anchored_height =
                     multisig.common.latest_anchoring_height(context.height());
                 if latest_anchored_height > anchored_height {
-                    return self.create_proposal_tx(tx, multisig, latest_anchored_height, context);
+                    return self.create_proposal_tx(&tx, multisig, latest_anchored_height, context);
                 }
                 Ok(())
             }
@@ -121,7 +121,7 @@ impl AnchoringHandler {
 
     pub fn create_proposal_tx(
         &mut self,
-        lect: AnchoringTx,
+        lect: &AnchoringTx,
         multisig: &MultisigAddress,
         height: Height,
         context: &ServiceContext,
@@ -132,7 +132,7 @@ impl AnchoringHandler {
             .unwrap();
 
         let proposal = {
-            let mut builder = TransactionBuilder::with_prev_tx(&lect, 0)
+            let mut builder = TransactionBuilder::with_prev_tx(lect, 0)
                 .fee(multisig.common.fee)
                 .payload(height, hash)
                 .send_to(multisig.addr.clone());
