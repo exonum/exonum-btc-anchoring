@@ -28,14 +28,14 @@ use super::error::Error as HandlerError;
 impl AnchoringHandler {
     pub fn handle_auditing_state(
         &mut self,
-        cfg: AnchoringConfig,
+        cfg: &AnchoringConfig,
         state: &ServiceContext,
     ) -> Result<(), ServiceError> {
         trace!("Auditing state");
         if state.height().0 % self.node.check_lect_frequency == 0 {
             let r = match self.collect_lects(state)? {
                 LectKind::Funding(tx) => self.check_funding_lect(tx, state),
-                LectKind::Anchoring(tx) => self.check_anchoring_lect(tx),
+                LectKind::Anchoring(tx) => self.check_anchoring_lect(&tx),
                 LectKind::None => {
                     let e = HandlerError::LectNotFound {
                         height: cfg.latest_anchoring_height(state.height()),
@@ -88,7 +88,7 @@ impl AnchoringHandler {
         Ok(())
     }
 
-    fn check_anchoring_lect(&self, tx: AnchoringTx) -> Result<(), ServiceError> {
+    fn check_anchoring_lect(&self, tx: &AnchoringTx) -> Result<(), ServiceError> {
         // Checks with access to the `bitcoind`
         if let Some(ref client) = self.client {
             if client.get_transaction(tx.id())?.is_none() {

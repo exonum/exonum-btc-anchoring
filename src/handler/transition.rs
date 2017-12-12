@@ -27,12 +27,12 @@ use super::{AnchoringHandler, LectKind, MultisigAddress};
 impl AnchoringHandler {
     pub fn handle_transition_state(
         &mut self,
-        from: AnchoringConfig,
-        to: AnchoringConfig,
+        from: &AnchoringConfig,
+        to: &AnchoringConfig,
         state: &ServiceContext,
     ) -> Result<(), ServiceError> {
         let multisig: MultisigAddress = {
-            let mut multisig = self.multisig_address(&from);
+            let mut multisig = self.multisig_address(from);
             multisig.addr = to.redeem_script().1;
             multisig
         };
@@ -68,7 +68,7 @@ impl AnchoringHandler {
                         .unwrap_or_else(|| 0);
                     if confirmations >= multisig.common.utxo_confirmations {
                         let height = multisig.common.latest_anchoring_height(state.height());
-                        self.create_proposal_tx(lect, &multisig, height, state)?;
+                        self.create_proposal_tx(&lect, &multisig, height, state)?;
                     } else {
                         warn!(
                             "Insufficient confirmations for create transition transaction, \
@@ -106,11 +106,11 @@ impl AnchoringHandler {
 
     pub fn handle_recovering_state(
         &mut self,
-        prev_cfg: AnchoringConfig,
-        actual_cfg: AnchoringConfig,
+        prev_cfg: &AnchoringConfig,
+        actual_cfg: &AnchoringConfig,
         state: &ServiceContext,
     ) -> Result<(), ServiceError> {
-        let multisig: MultisigAddress = self.multisig_address(&actual_cfg);
+        let multisig: MultisigAddress = self.multisig_address(actual_cfg);
 
         if state.height().0 % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
@@ -124,7 +124,7 @@ impl AnchoringHandler {
 
         let lect_txid = {
             let anchoring_schema = AnchoringSchema::new(state.snapshot());
-            if let Some(tx) = anchoring_schema.collect_lects(&prev_cfg) {
+            if let Some(tx) = anchoring_schema.collect_lects(prev_cfg) {
                 tx.id()
             } else {
                 // Use initial funding tx as prev chain

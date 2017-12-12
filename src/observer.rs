@@ -65,7 +65,7 @@ impl AnchoringChainObserver {
     pub fn new(
         blockchain: Blockchain,
         rpc: AnchoringRpcConfig,
-        observer: AnchoringObserverConfig,
+        observer: &AnchoringObserverConfig,
     ) -> AnchoringChainObserver {
         AnchoringChainObserver {
             blockchain,

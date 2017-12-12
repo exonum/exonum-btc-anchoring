@@ -74,11 +74,13 @@ impl TestClient {
         self.requests.clone()
     }
 
-    fn request<T>(&self, method: &str, params: Params) -> Result<T>
+    fn request<T, P>(&self, method: &str, params: P) -> Result<T>
     where
         T: ::std::fmt::Debug,
+        P: AsRef<Params>,
         for<'de> T: Deserialize<'de>,
     {
+        let params = params.as_ref();
         let expected = self.requests.0.lock().unwrap().pop_front().expect(
             format!(
                 "expected response for method={}, \
@@ -90,7 +92,7 @@ impl TestClient {
 
         assert_eq!(expected.method, method);
         assert_eq!(
-            expected.params,
+            &expected.params,
             params,
             "Invalid params for method {}!",
             method
