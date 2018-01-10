@@ -26,18 +26,17 @@ message! {
     struct MsgAnchoringSignature {
         const TYPE = ANCHORING_SERVICE_ID;
         const ID = ANCHORING_MESSAGE_SIGNATURE;
-        const SIZE = 54;
 
         /// Public key of validator.
-        field from:           &PublicKey   [00 => 32]
+        from: &PublicKey,
         /// Public key index in anchoring public keys list.
-        field validator:      ValidatorId  [32 => 34]
+        validator: ValidatorId,
         /// Transaction content.
-        field tx:             AnchoringTx  [34 => 42]
+        tx: AnchoringTx,
         /// Signed input.
-        field input:          u32          [42 => 46]
+        input: u32,
         /// Signature for the corresponding `input`.
-        field signature:      &[u8]        [46 => 54]
+        signature: &[u8],
     }
 }
 
@@ -46,27 +45,24 @@ message! {
     struct MsgAnchoringUpdateLatest {
         const TYPE = ANCHORING_SERVICE_ID;
         const ID = ANCHORING_MESSAGE_LATEST;
-        const SIZE = 50;
 
         /// Public key of validator.
-        field from:           &PublicKey   [00 => 32]
+        from: &PublicKey,
         /// Public key index in anchoring public keys list.
-        field validator:      ValidatorId  [32 => 34]
+        validator: ValidatorId,
         /// Lect content.
-        field tx:             BitcoinTx    [34 => 42]
+        tx: BitcoinTx,
         /// Current lects count in the `lects` table for the current validator.
-        field lect_count:     u64          [42 => 50]
+        lect_count: u64,
     }
 }
 
 encoding_struct! {
     /// Lect content
     struct LectContent {
-        const SIZE = 40;
-
         /// Hash of exonum transaction that contains this lect.
-        field msg_hash:       &Hash       [00 => 32]
+        msg_hash: &Hash,
         /// Bitcoin transaction content.
-        field tx:             BitcoinTx   [32 => 40]
+        tx: BitcoinTx,
     }
 }
