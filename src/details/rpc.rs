@@ -141,7 +141,7 @@ impl BitcoinRelay for RpcClient {
     }
 
     fn unspent_transactions(&self, addr: &btc::Address) -> Result<Vec<TxInfo>> {
-        let unspent_txs = self.listunspent(0, 9_999_999, [addr.to_string().as_ref()])?;
+        let unspent_txs = self.listunspent(0, 9_999_999, &[addr.to_string()])?;
         let mut txs = Vec::new();
         for info in unspent_txs {
             let txid = btc::TxId::from_hex(&info.txid).unwrap();
