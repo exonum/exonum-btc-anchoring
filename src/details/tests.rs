@@ -852,7 +852,7 @@ mod rpc {
         };
 
         let utxos = client
-            .listunspent(0, 9999999, &[addr.to_base58check().as_ref()])
+            .listunspent(0, 9999999, &[addr.to_base58check()])
             .unwrap();
         trace!("utxos={:#?}", utxos);
 
@@ -983,7 +983,7 @@ mod rpc {
         };
 
         let utxos = client
-            .listunspent(0, 9999999, &[addr.to_base58check().as_ref()])
+            .listunspent(0, 9999999, &[addr.to_base58check()])
             .unwrap();
         trace!("utxos={:#?}", utxos);
 

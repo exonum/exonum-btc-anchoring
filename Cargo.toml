@@ -16,7 +16,7 @@ travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 
 [dependencies]
 exonum = "0.4.0"
-exonum_bitcoinrpc = "0.2.0"
+exonum_bitcoinrpc = "0.3.0"
 
 bitcoin="0.10.0"
 secp256k1 = "0.6.0"
