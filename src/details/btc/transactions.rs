@@ -152,7 +152,7 @@ impl AnchoringTx {
 
         Address {
             ty: Type::ScriptHash,
-            network: network,
+            network,
             hash: Hash160::from(bytes),
         }.into()
     }
