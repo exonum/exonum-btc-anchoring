@@ -24,16 +24,16 @@ use toml::Value;
 use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;
 
-use exonum::helpers::fabric::{AbstractConfig, Argument, CommandExtension, CommandName,
-                              CommonConfigTemplate, Context, NodePublicConfig, ServiceFactory};
+use exonum::helpers::fabric::{Argument, CommandExtension, CommandName, Context, ServiceFactory};
+use exonum::helpers::fabric::keys;
 use exonum::blockchain::Service;
 use exonum::node::NodeConfig;
 use exonum::encoding::serialize::FromHex;
 
 use service::AnchoringService;
-use super::{AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig, gen_btc_keypair};
+use super::{gen_btc_keypair, AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig};
 use details::btc::{self, PrivateKey, PublicKey};
-use details::rpc::{RpcClient, BitcoinRelay};
+use details::rpc::{BitcoinRelay, RpcClient};
 use bitcoin::util::base58::FromBase58;
 use observer::AnchoringObserverConfig;
 
@@ -79,7 +79,7 @@ impl CommandExtension for GenerateNodeConfig {
                 "ANCHORING_OBSERVER_CHECK_INTERVAL",
                 false,
                 "This option enables anchoring chain observer with the given check interval \
-                (in milliseconds).",
+                 (in milliseconds).",
                 None,
                 "anchoring-observer-check-interval",
                 false
@@ -95,7 +95,7 @@ impl CommandExtension for GenerateNodeConfig {
         let passwd = context.arg("ANCHORING_RPC_PASSWD").ok();
         let observer_check_interval = context.arg("ANCHORING_OBSERVER_CHECK_INTERVAL").ok();
 
-        let config: CommonConfigTemplate = context.get("common_config").unwrap();
+        let config = context.get(keys::COMMON_CONFIG).unwrap();
 
         let network: String = config
             .services_config
@@ -111,8 +111,9 @@ impl CommandExtension for GenerateNodeConfig {
         };
 
         let (p, s) = gen_btc_keypair(network);
-        let mut services_public_configs: BTreeMap<String, Value> =
-            context.get("services_public_configs").unwrap_or_default();
+        let mut services_public_configs = context
+            .get(keys::SERVICES_PUBLIC_CONFIGS)
+            .unwrap_or_default();
         services_public_configs.extend(
             vec![
                 (
@@ -136,8 +137,9 @@ impl CommandExtension for GenerateNodeConfig {
             observer_config
         };
         //TODO: Replace this by structure.
-        let mut services_secret_configs: BTreeMap<String, Value> =
-            context.get("services_secret_configs").unwrap_or_default();
+        let mut services_secret_configs = context
+            .get(keys::SERVICES_SECRET_CONFIGS)
+            .unwrap_or_default();
         services_secret_configs.extend(
             vec![
                 (
@@ -159,8 +161,8 @@ impl CommandExtension for GenerateNodeConfig {
             ].into_iter(),
         );
 
-        context.set("services_public_configs", services_public_configs);
-        context.set("services_secret_configs", services_secret_configs);
+        context.set(keys::SERVICES_PUBLIC_CONFIGS, services_public_configs);
+        context.set(keys::SERVICES_SECRET_CONFIGS, services_secret_configs);
         Ok(context)
     }
 }
@@ -211,7 +213,7 @@ impl CommandExtension for GenerateCommonConfig {
             "No network name found.",
         );
 
-        let mut values: BTreeMap<String, Value> = context.get("services_config").expect(
+        let mut values: BTreeMap<String, Value> = context.get(keys::SERVICES_CONFIG).expect(
             "Expected services_config \
              in context.",
         );
@@ -233,7 +235,7 @@ impl CommandExtension for GenerateCommonConfig {
                 ),
             ].into_iter(),
         );
-        context.set("services_config", values);
+        context.set(keys::SERVICES_CONFIG, values);
         Ok(context)
     }
 }
@@ -263,11 +265,10 @@ impl CommandExtension for Finalize {
     }
 
     fn execute(&self, mut context: Context) -> Result<Context, Box<Error>> {
-        let mut node_config: NodeConfig = context.get("node_config").unwrap();
-        let common_config: CommonConfigTemplate = context.get("common_config").unwrap();
-        let public_config_list: Vec<NodePublicConfig> = context.get("public_config_list").unwrap();
-        let services_secret_configs: AbstractConfig =
-            context.get("services_secret_configs").unwrap();
+        let mut node_config: NodeConfig = context.get(keys::NODE_CONFIG).unwrap();
+        let common_config = context.get(keys::COMMON_CONFIG).unwrap();
+        let public_config_list = context.get(keys::PUBLIC_CONFIG_LIST).unwrap();
+        let services_secret_configs = context.get(keys::SERVICES_SECRET_CONFIGS).unwrap();
 
         let funding_txid = context.arg::<String>("ANCHORING_FUNDING_TXID").ok();
         let create_funding_tx_with_amount = context.arg::<u64>("ANCHORING_CREATE_FUNDING_TX").ok();
@@ -379,7 +380,7 @@ impl CommandExtension for Finalize {
                 node: anchoring_config,
             }).expect("could not serialize anchoring service config"),
         );
-        context.set("node_config", node_config);
+        context.set(keys::NODE_CONFIG, node_config);
         Ok(context)
     }
 }
@@ -400,7 +401,7 @@ impl ServiceFactory for AnchoringServiceFactory {
         })
     }
     fn make_service(&mut self, run_context: &Context) -> Box<Service> {
-        let node_config: NodeConfig = run_context.get("node_config").unwrap();
+        let node_config = run_context.get(keys::NODE_CONFIG).unwrap();
         let anch_cfg: AnchoringServiceConfig = node_config.services_configs["anchoring_service"]
             .clone()
             .try_into()
