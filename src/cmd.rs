@@ -280,42 +280,42 @@ impl CommandExtension for Finalize {
             .try_into()?;
         let pub_key: String = services_secret_configs
             .get("anchoring_pub_key")
-            .expect("Anchoring public key not fount")
+            .expect("Anchoring public key not found")
             .clone()
             .try_into()?;
         let rpc: AnchoringRpcConfig = services_secret_configs
             .get("rpc_config")
-            .expect("Anchoring rpc config not fount")
+            .expect("Anchoring rpc config not found")
             .clone()
             .try_into()?;
         let observer: AnchoringObserverConfig = services_secret_configs
             .get("observer_config")
-            .expect("Anchoring rpc config not fount")
+            .expect("Anchoring rpc config not found")
             .clone()
             .try_into()?;
         // Global config section
         let network: String = common_config
             .services_config
             .get("anchoring_network")
-            .expect("Anchoring network not fount")
+            .expect("Anchoring network not found")
             .clone()
             .try_into()?;
         let utxo_confirmations: u64 = common_config
             .services_config
             .get("anchoring_utxo_confirmations")
-            .expect("Anchoring utxo confirmations not fount")
+            .expect("Anchoring utxo confirmations not found")
             .clone()
             .try_into()?;
         let frequency: u64 = common_config
             .services_config
             .get("anchoring_frequency")
-            .expect("Anchoring frequency not fount")
+            .expect("Anchoring frequency not found")
             .clone()
             .try_into()?;
         let fee: u64 = common_config
             .services_config
             .get("anchoring_fee")
-            .expect("Anchoring fee not fount")
+            .expect("Anchoring fee not found")
             .clone()
             .try_into()?;
 
@@ -333,7 +333,7 @@ impl CommandExtension for Finalize {
             .map(|v| {
                 let key: String = v.services_public_configs()
                     .get("anchoring_pub_key")
-                    .expect("Anchoring validator public key not fount")
+                    .expect("Anchoring validator public key not found")
                     .clone()
                     .try_into()
                     .unwrap();
@@ -355,11 +355,11 @@ impl CommandExtension for Finalize {
             println!("Created funding tx with txid {}", tx.txid());
             AnchoringConfig::new_with_funding_tx(network, pub_keys, tx)
         } else {
-            let txid = funding_txid.expect("Funding txid not fount");
+            let txid = funding_txid.expect("Funding txid not found");
             let txid = btc::TxId::from_str(&txid).expect("Unable to parse funding txid");
             let tx = client.get_transaction(txid).unwrap().expect(
                 "Funding tx with the \
-                 given id not fount",
+                 given id not found",
             );
             AnchoringConfig::new_with_funding_tx(network, pub_keys, tx.into())
         };
@@ -378,7 +378,7 @@ impl CommandExtension for Finalize {
             Value::try_from(AnchoringServiceConfig {
                 genesis: genesis_cfg,
                 node: anchoring_config,
-            }).expect("could not serialize anchoring service config"),
+            }).expect("Could not serialize anchoring service config"),
         );
         context.set(keys::NODE_CONFIG, node_config);
         Ok(context)
