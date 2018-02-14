@@ -196,7 +196,14 @@ impl CommandExtension for GenerateCommonConfig {
                 "anchoring-fee",
                 false
             ),
-            Argument::new_positional("NETWORK", true, "Anchoring network name."),
+            Argument::new_named(
+                "ANCHORING_NETWORK",
+                true,
+                "Anchoring network name.",
+                None,
+                "anchoring-network",
+                false
+            ),
         ]
     }
 
@@ -209,7 +216,7 @@ impl CommandExtension for GenerateCommonConfig {
             "Expected `ANCHORING_FEE` \
              in cmd.",
         );
-        let network = context.arg::<String>("NETWORK").expect(
+        let network = context.arg::<String>("ANCHORING_NETWORK").expect(
             "No network name found.",
         );
 
