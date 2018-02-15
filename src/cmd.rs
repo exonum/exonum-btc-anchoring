@@ -199,7 +199,7 @@ impl CommandExtension for GenerateCommonConfig {
             Argument::new_named(
                 "ANCHORING_NETWORK",
                 true,
-                "Anchoring network name.",
+                "Anchoring network type.",
                 None,
                 "anchoring-network",
                 false
@@ -217,7 +217,7 @@ impl CommandExtension for GenerateCommonConfig {
              in cmd.",
         );
         let network = context.arg::<String>("ANCHORING_NETWORK").expect(
-            "No network name found.",
+            "No network type found.",
         );
 
         let mut values: BTreeMap<String, Value> = context.get(keys::SERVICES_CONFIG).expect(
