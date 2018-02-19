@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Breaking changes
+- The `network` parameter became named. (#114)
+  
+  Now, to generate template config, run the following command:
+  ```
+  $ anchoring generate-template ...
+  --anchoring-network <Network in which anchoring shoud work (testnet\bitcoin)>
+  ```
+
 ## 0.5 - 2018-01-30
 
 ### Changed
