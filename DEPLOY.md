@@ -54,7 +54,7 @@ At the first stage, one of the participants creates a template of blockchain con
 ```
 $ anchoring generate-template \
     <Path where save template config> \
-    --anchoring-fee <fee is satoshis> \
+    --anchoring-fee <fee in satoshis> \
     --anchoring-network <Network in which anchoring shoud work (testnet\bitcoin)>
 ```
 
