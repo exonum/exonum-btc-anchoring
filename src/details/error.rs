@@ -17,12 +17,15 @@ use std::io;
 use details::rpc::Error as RpcError;
 
 /// Service error.
-#[derive(Debug, Error)]
+#[derive(Debug, Display, Fail)]
 pub enum Error {
     /// Rpc error.
+    #[display(fmt = "{}", _0)]
     Rpc(RpcError),
     /// Insufficient funds to create anchoring transaction.
+    #[display(fmt = "Insufficient funds to create anchoring transaction.")]
     InsufficientFunds,
     /// An input output error.
+    #[display(fmt = "{}", _0)]
     Io(io::Error),
 }

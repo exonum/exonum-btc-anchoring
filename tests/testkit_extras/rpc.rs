@@ -105,7 +105,7 @@ impl TestClient {
             params,
             response
         );
-        from_value(response).map_err(|e| Error::Other(RpcError::Json(e)))
+        from_value(response).map_err(|e| Error::Rpc(RpcError::Json(e)))
     }
 
     pub fn getnewaddress(&self, account: &str) -> Result<String> {
@@ -161,7 +161,7 @@ impl TestClient {
         let r: Result<Option<bool>> = self.request("importaddress", params);
         match r {
             Ok(_) |
-            Err(Error::Other(RpcError::NoErrorOrResult)) => Ok(()),
+            Err(Error::Rpc(RpcError::NoErrorOrResult)) => Ok(()),
             Err(e) => Err(e),
         }
     }

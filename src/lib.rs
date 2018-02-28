@@ -61,8 +61,6 @@
 
 extern crate bitcoin;
 extern crate byteorder;
-#[macro_use]
-extern crate derive_error;
 extern crate exonum_bitcoinrpc as bitcoinrpc;
 #[macro_use]
 extern crate log;
@@ -73,6 +71,12 @@ extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 extern crate toml;
+extern crate failure;
+#[macro_use]
+extern crate failure_derive;
+#[macro_use]
+extern crate display_derive;
+
 
 #[macro_use]
 extern crate exonum;
