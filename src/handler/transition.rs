@@ -62,7 +62,7 @@ impl AnchoringHandler {
                     if lect.output_address(multisig.common.network) == multisig.addr {
                         return Ok(());
                     }
-                    // check that we have enougth confirmations
+                    // check that we have enough confirmations
                     let confirmations = self.client()
                         .get_transaction_confirmations(lect.id())?
                         .unwrap_or_else(|| 0);

@@ -87,7 +87,7 @@ impl AnchoringChainObserver {
         }
     }
 
-    /// Runs obesrver in infinity loop.
+    /// Runs observer in infinity loop.
     pub fn run(&mut self) -> Result<(), ServiceError> {
         info!(
             "Launching anchoring chain observer with polling interval {} ms",
@@ -97,7 +97,7 @@ impl AnchoringChainObserver {
         loop {
             if let Err(e) = self.check_anchoring_chain() {
                 error!(
-                    "An error during `check_anchoring_chain` occured, msg={:?}",
+                    "An error during `check_anchoring_chain` occurred, msg={:?}",
                     e
                 );
             }
@@ -106,7 +106,7 @@ impl AnchoringChainObserver {
     }
 
     /// Tries to get `lect` for the current anchoring configuration and retrospectively adds
-    /// all previosly unknown anchoring transactions.
+    /// all previously unknown anchoring transactions.
     pub fn check_anchoring_chain(&mut self) -> Result<(), ServiceError> {
         let mut fork = self.blockchain.fork();
         if !self.is_blockchain_inited(&fork) {

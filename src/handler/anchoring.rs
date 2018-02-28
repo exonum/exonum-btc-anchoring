@@ -89,7 +89,7 @@ impl AnchoringHandler {
         context: &ServiceContext,
     ) -> Result<(), ServiceError> {
         trace!("Create tx chain");
-        if let Some(funding_tx) = self.avaliable_funding_tx(multisig)? {
+        if let Some(funding_tx) = self.available_funding_tx(multisig)? {
             // Create anchoring proposal
             let height = multisig.common.latest_anchoring_height(context.height());
             let hash = Schema::new(context.snapshot())
@@ -136,7 +136,7 @@ impl AnchoringHandler {
                 .fee(multisig.common.fee)
                 .payload(height, hash)
                 .send_to(multisig.addr.clone());
-            if let Some(funds) = self.avaliable_funding_tx(multisig)? {
+            if let Some(funds) = self.available_funding_tx(multisig)? {
                 let out = funds.find_out(&multisig.addr).expect(
                     "Funding tx has proper \
                      multisig output",
@@ -217,7 +217,7 @@ impl AnchoringHandler {
             if self.client().get_transaction(new_lect.id())?.is_none() {
                 self.client().send_transaction(new_lect.clone().into())?;
                 trace!(
-                    "Sended signed_tx={:#?}, to={}",
+                    "Sent signed_tx={:#?}, to={}",
                     new_lect,
                     new_lect
                         .output_address(multisig.common.network)
