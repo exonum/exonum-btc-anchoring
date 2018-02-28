@@ -103,8 +103,8 @@ oneshot
 OP_CHECKSIG
 OP_EQUALVERIFY
 openssl
-PASSWD
 passwd
+PASSWD
 peekable
 permissioned
 postcondition
@@ -163,6 +163,7 @@ structopt
 structs
 subcommand
 subcommands
+subfolder
 subsec
 supermajority
 supervisorctl
