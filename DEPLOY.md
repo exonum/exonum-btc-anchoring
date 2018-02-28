@@ -15,7 +15,8 @@ for more information about installation.
 
 Then create bitcoind configuration file in according to this [tutorial][bitcoin_wiki:configuration].
 
-For correct work of the service, the `bitcoind` configuration file should contain the following settings:
+For correct work of the service, the `bitcoind` configuration file
+should contain the following settings:
 
 ```ini
 # Run on the test network instead of the real bitcoin network.
