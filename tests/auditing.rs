@@ -142,7 +142,7 @@ fn test_auditing_exclude_node_from_validators() {
 }
 
 // There is no consensus in `exonum` about current `lect`.
-// result: Error LectNotFound occured
+// result: Error LectNotFound occurred
 #[test]
 fn test_auditing_no_consensus_in_lect() {
     let mut testkit = AnchoringTestKit::default();
@@ -175,7 +175,7 @@ fn test_auditing_no_consensus_in_lect() {
 }
 
 // FundingTx from lect not found in `bitcoin` network
-// result: Error IncorrectLect occured
+// result: Error IncorrectLect occurred
 #[test]
 #[should_panic(expected = "Initial funding_tx not found in the bitcoin blockchain")]
 fn test_auditing_lect_lost_funding_tx() {
@@ -215,7 +215,7 @@ fn test_auditing_lect_lost_funding_tx() {
 }
 
 // FundingTx from lect has no correct outputs
-// result: Error IncorrectLect occured
+// result: Error IncorrectLect occurred
 #[test]
 #[should_panic(expected = "Initial funding_tx from cfg is different than in lect")]
 fn test_auditing_lect_incorrect_funding_tx() {
@@ -257,7 +257,7 @@ fn test_auditing_lect_incorrect_funding_tx() {
 }
 
 // Current lect not found in `bitcoin` network
-// result: Error LectNotFound occured
+// result: Error LectNotFound occurred
 #[test]
 fn test_auditing_lect_lost_current_lect() {
     let mut testkit = AnchoringTestKit::default();

@@ -14,7 +14,7 @@
 
 //! Basic clap factory implementation.
 //! This module collect all basic `CommandExtension` that
-//! we can use in `anchoring` bootstraping process.
+//! we can use in `anchoring` bootstrapping process.
 //!
 use std::error::Error;
 use std::collections::BTreeMap;
@@ -409,10 +409,10 @@ impl ServiceFactory for AnchoringServiceFactory {
     }
     fn make_service(&mut self, run_context: &Context) -> Box<Service> {
         let node_config = run_context.get(keys::NODE_CONFIG).unwrap();
-        let anch_cfg: AnchoringServiceConfig = node_config.services_configs["anchoring_service"]
+        let anchoring_config: AnchoringServiceConfig = node_config.services_configs["anchoring_service"]
             .clone()
             .try_into()
             .unwrap();
-        Box::new(AnchoringService::new(anch_cfg.genesis, anch_cfg.node))
+        Box::new(AnchoringService::new(anchoring_config.genesis, anchoring_config.node))
     }
 }

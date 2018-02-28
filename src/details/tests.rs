@@ -699,7 +699,7 @@ mod rpc {
         use std::env;
         let rpc = AnchoringRpcConfig {
             host: env::var("ANCHORING_RELAY_HOST")
-                .expect("Env variable ANCHORING_RELAY_HOST needs to be setted")
+                .expect("Env variable ANCHORING_RELAY_HOST needs to be set")
                 .parse()
                 .unwrap(),
             username: env::var("ANCHORING_USER").ok(),
@@ -758,7 +758,7 @@ mod rpc {
         assert_eq!(payload.block_height, block_height);
         assert_eq!(payload.block_hash, block_hash);
 
-        trace!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
+        trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.txid());
         let unspent_transactions = client.unspent_transactions(to).unwrap();
         let lect_tx = &unspent_transactions[0];
         assert_eq!(lect_tx.body.0, tx.0);
@@ -833,7 +833,7 @@ mod rpc {
             let signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
             let tx = tx.finalize(&redeem_script, signatures);
             client.send_transaction(tx.clone().into()).unwrap();
-            trace!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
+            trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
             assert!(
                 funding_tx
@@ -959,12 +959,12 @@ mod rpc {
                 .fee(fee)
                 .into_transaction()
                 .unwrap();
-            trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
+            trace!("Proposed anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
             let signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
             let tx = tx.finalize(&redeem_script, signatures);
             client.send_transaction(tx.clone().into()).unwrap();
-            trace!("Sended anchoring_tx={:#?}, txid={}", tx, tx.txid());
+            trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.txid());
 
             assert!(
                 funding_tx

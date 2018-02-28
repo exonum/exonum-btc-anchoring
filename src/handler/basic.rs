@@ -406,7 +406,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn avaliable_funding_tx(
+    pub fn available_funding_tx(
         &self,
         multisig: &MultisigAddress,
     ) -> Result<Option<FundingTx>, ServiceError> {
@@ -427,7 +427,7 @@ impl AnchoringHandler {
             .find(|tx| tx.body.0 == funding_tx.0)
         {
             trace!(
-                "avaliable_funding_tx={:#?}, confirmations={:?}",
+                "available_funding_tx={:#?}, confirmations={:?}",
                 funding_tx,
                 info.confirmations
             );

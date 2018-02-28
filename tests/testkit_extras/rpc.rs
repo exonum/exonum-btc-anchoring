@@ -100,7 +100,7 @@ impl TestClient {
 
         let response = expected.response?;
         trace!(
-            "method: {}, params={:?}, respose={:#}",
+            "method: {}, params={:?}, response={:#}",
             method,
             params,
             response
@@ -281,7 +281,7 @@ fn test_rpc_getnewaddress() {
 #[should_panic(expected = "expected response for method=getnewaddress")]
 fn test_rpc_expected_request() {
     let client = TestClient::default();
-    client.getnewaddress("useroid").unwrap();
+    client.getnewaddress("userid").unwrap();
 }
 
 #[test]
@@ -295,12 +295,12 @@ fn test_rpc_wrong_request() {
             response: "mmoXxKhAwnhtFiAMvxJ82CKCBia751mzfY"
         },
     ]);
-    client.getnewaddress("useroid").unwrap();
+    client.getnewaddress("userid").unwrap();
 }
 
 #[test]
 #[should_panic(expected = "assertion failed")]
-fn test_rpc_uneexpected_request() {
+fn test_rpc_unexpected_request() {
     let client = TestClient::default();
     client.requests().expect(vec![
         request! {
@@ -314,7 +314,7 @@ fn test_rpc_uneexpected_request() {
             response: "mmoXxKhBwnhtFiAMvxJ82CKCBia751mzfY"
         },
     ]);
-    client.getnewaddress("useroid").unwrap();
+    client.getnewaddress("userid").unwrap();
     client.requests().expect(vec![
         request! {
             method: "getnewaddress",

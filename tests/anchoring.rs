@@ -108,7 +108,7 @@ fn test_anchoring_first_block_lect_lost() {
     anchor_first_block_lect_lost(&mut testkit);
 }
 
-// We anchor second block after successfuly anchored first
+// We anchor second block after successfully anchored first
 // problems: none
 // result: success
 #[test]
@@ -119,7 +119,7 @@ fn test_anchoring_second_block_normal() {
     anchor_second_block_normal(&mut testkit);
 }
 
-// We anchor second block after successfuly anchored first with additional funds
+// We anchor second block after successfully anchored first with additional funds
 // problems: none
 // result: success
 #[test]
@@ -169,7 +169,7 @@ fn test_anchoring_second_block_additional_funds() {
     assert!(testkit.mempool().contains_key(&lect.hash()));
 }
 
-// We anchor second block after successfuly anchored first
+// We anchor second block after successfully anchored first
 // problems: second anchoring tx is lost
 // result: we have lost anchoring tx
 #[test]
@@ -346,7 +346,7 @@ fn test_anchoring_find_lect_chain_wrong() {
 
 // We received lect message with correct content
 // problems: None
-// result: we appect it
+// result: we append it
 #[test]
 fn test_anchoring_lect_correct_validator() {
     let mut testkit = AnchoringTestKit::default();

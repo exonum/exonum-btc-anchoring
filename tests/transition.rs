@@ -1865,7 +1865,8 @@ fn test_transit_changed_self_key_observer() {
 
     observer.check_anchoring_chain().unwrap();
 
-    // Checks that all anchoring transaction successfuly commited to `anchoring_tx_chain` table.
+    // Checks that all anchoring transaction unsuccessfully committed to 
+    // `anchoring_tx_chain` table.
     let blockchain = observer.blockchain().clone();
     let snapshot = blockchain.snapshot();
     let anchoring_schema = AnchoringSchema::new(&snapshot);

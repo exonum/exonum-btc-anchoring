@@ -28,7 +28,7 @@ pub type Error = bitcoinrpc::Error;
 
 /// Number of satoshis in a bitcoin.
 ///
-/// Used to convert values in satoshis for the bitcoind's `sendtoaddress` RPC endpoint,
+/// Used to convert values in satoshis for the bitcoind `sendtoaddress` RPC endpoint,
 /// which measures amounts in bitcoins (rather than satoshis).
 pub const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 
