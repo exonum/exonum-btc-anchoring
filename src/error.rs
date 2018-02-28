@@ -19,11 +19,13 @@ pub use handler::error::Error as HandlerError;
 use bitcoinrpc::Error as RpcError;
 
 /// Anchoring btc service Error type.
-#[derive(Debug, Error)]
+#[derive(Debug, Fail, Display)]
 pub enum Error {
     /// Internal error
+    #[display(fmt = "An internal error occurred. {}", _0)]
     Internal(InternalError),
     /// Handler error.
+    #[display(fmt = "A handler error occurred. {}", _0)]
     Handler(HandlerError),
 }
 
@@ -36,5 +38,17 @@ impl From<RpcError> for Error {
 impl From<io::Error> for Error {
     fn from(err: io::Error) -> Error {
         Error::Internal(InternalError::Io(err))
+    }
+}
+
+impl From<InternalError> for Error {
+    fn from(e: InternalError) -> Self {
+        Error::Internal(e)
+    }
+}
+
+impl From<HandlerError> for Error {
+    fn from(e: HandlerError) -> Self {
+        Error::Handler(e)
     }
 }
