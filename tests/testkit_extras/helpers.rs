@@ -138,7 +138,7 @@ pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> TestRequ
                 "type":"scripthash"},
                 "value":0.00004},
                 {"n":1,"scriptPubKey":{"addresses":["mn1jSMdewrpxTDkg1N6brC7fpTNV9X2Cmq"],
-                "asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a 
+                "asm":"OP_DUP OP_HASH160 474215d1e614a7d9dddbd853d9f139cff2e99e1a
                     OP_EQUALVERIFY OP_CHECKSIG",
                 "hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
                 "reqSigs":1,"type":"pubkeyhash"},

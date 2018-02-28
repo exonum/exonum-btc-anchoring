@@ -408,11 +408,14 @@ impl ServiceFactory for AnchoringServiceFactory {
         })
     }
     fn make_service(&mut self, run_context: &Context) -> Box<Service> {
-        let node_config = run_context.get(keys::NODE_CONFIG).unwrap();
-        let anchoring_config: AnchoringServiceConfig = node_config.services_configs["anchoring_service"]
-            .clone()
-            .try_into()
-            .unwrap();
-        Box::new(AnchoringService::new(anchoring_config.genesis, anchoring_config.node))
+        let anchoring_config: AnchoringServiceConfig =
+            run_context.get(keys::NODE_CONFIG).unwrap().services_configs["anchoring_service"]
+                .clone()
+                .try_into()
+                .unwrap();
+        Box::new(AnchoringService::new(
+            anchoring_config.genesis,
+            anchoring_config.node,
+        ))
     }
 }

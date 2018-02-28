@@ -117,10 +117,8 @@ impl TestClient {
     }
 
     pub fn sendtoaddress(&self, addr: &str, amount: &str) -> Result<String> {
-        let params = vec![
-            serde_json::to_value(addr).unwrap(),
-            serde_json::to_value(amount).unwrap(),
-        ];
+        let params =
+            vec![serde_json::to_value(addr).unwrap(), serde_json::to_value(amount).unwrap()];
         self.request("sendtoaddress", params)
     }
 
