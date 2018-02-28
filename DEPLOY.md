@@ -9,8 +9,9 @@
 
 ## Bitcoind node deployment
 
-First of all install `bitcoind` via your package manager and ensure that you use the latest stable version.
-You may visit official bitcoin [site][bitcoin:install] for more information about installation.
+First of all install `bitcoind` via your package manager and ensure that you
+use the latest stable version. You may visit official bitcoin [site][bitcoin:install]
+for more information about installation.
 
 Then create bitcoind configuration file in according to this [tutorial][bitcoin_wiki:configuration].
 
