@@ -27,7 +27,8 @@ server=1
 # Maintain a full transaction index, used by the getrawtransaction rpc call.
 txindex=1
 
-# Bind to given address to listen for JSON-RPC connections. Use [host]:port notation for IPv6.
+# Bind to given address to listen for JSON-RPC connections.
+# Use [host]:port notation for IPv6.
 # This option can be specified multiple times (default: bind to all interfaces)
 #rpcbind=<addr>
 # You must specify rpcuser and rpcpassword to secure the JSON-RPC api
