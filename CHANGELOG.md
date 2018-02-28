@@ -21,7 +21,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-- Update to the [Exonum 0.5.0](https://github.com/exonum/exonum/releases/tag/v0.5) release (#112).
+- Update to the [Exonum 0.5.0](https://github.com/exonum/exonum/releases/tag/v0.5)
+  release (#112).
 
 ## 0.4 - 2017-12-08
 
@@ -31,7 +32,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Changed
 
-- Update to the [Exonum 0.4.0](https://github.com/exonum/exonum/releases/tag/v0.4) release (#104).
+- Update to the [Exonum 0.4.0](https://github.com/exonum/exonum/releases/tag/v0.4)
+  release (#104).
 
 ### Removed
 
@@ -39,7 +41,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## 0.3.0 - 2017-11-03
 
-- Update to the [Exonum 0.3.0](https://github.com/exonum/exonum/releases/tag/v0.3) release (#93).
+- Update to the [Exonum 0.3.0](https://github.com/exonum/exonum/releases/tag/v0.3) 
+  release (#93).
 
 ## 0.2.1 - 2017-10-13
 
