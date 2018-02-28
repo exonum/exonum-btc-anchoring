@@ -1,4 +1,5 @@
 2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1
+2NCJYWui4LGNZguUw41xBANbcHoKxSVxyzr
 2NDG2AbxE914amqvimARQF2JJBZ9vHDn3Ga
 2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA
 addrs
@@ -115,15 +116,15 @@ precommits
 prevote
 prevotes
 println
-Privkey
 privkey
+Privkey
 pubkey
 pubkeyhash
 pubkeys
 readonly
 reddit
-Regtest
 regtest
+Regtest
 reimplemented
 repr
 reqwest
