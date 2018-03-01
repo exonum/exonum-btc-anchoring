@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   --anchoring-network <Network in which anchoring should work (testnet\bitcoin)>
   ```
 
+### Internal improvements
+
+- Error types now uses the `failure` instead of the `derive-error`,
+  that means that error messages became more human readable. (#115)
+
 ## 0.5 - 2018-01-30
 
 ### Changed
