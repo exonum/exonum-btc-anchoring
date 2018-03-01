@@ -99,3 +99,7 @@ jobs:
     script:
     - cargo doc --no-deps
     - cargo deadlinks --dir target/doc
+
+notifications:
+  slack:
+    secure: Wr4+GsNyuFui2pE3X7vYEucThsrQeRZlDoK9MrxA6+tZkQ090/dC/N0dVXlAi8m1g9uzCzf02rAGhM6QvTRCGO1lLccKAD2LYHbQ8wMxuhu98Kw3LasInUoVKHkkGWWoZ4If5oKYQ+tNX6d83uqjx9q4Z7DX7NylgMiRragnWb/qfnSHbcvJYx0dKLOzuNPTzTHajduS5bwW3yVi91zv/7vveoytCy8h06z6O6jNeGQMie/6ivpsAbmJYqMtfRbT//ZXjXIr3yzU5p5MAsPILHlWLZQWTxhs+k7ik3bRX1TnbA9F5EGv3F/QpM7FBmKpTORwqRpmMZ7q0ATjM9lUEkLd+WofcGQFrAzWLtd9oPtCUuGd+9DFlP9b8c7zcTgZMFj4zS2HgHKhGa11MVvAvhetISQ1ChoKyyEX+Lng3XYE1q4/VXT2Eq2W/QEwY4hCQTqpPWW8Ku8y6mi1MYMYH+/YJa/fe98YrLAxCCbXqNCdAdpaW3f1AabK9PdXqAEp8JvEI4oABFdX0QWXGw27u/YCQM9TGSUpPdWM28DhRG16Lc880mBB5ijjmdY5aJN+qvve865e5+pf3A82eqQv2yUIrrTXrcOZqPOUdkNMHedHNqVXMIoPrp7b8kjIJiy0KbzsfAsbK7NtmQcKqfDi4Zh0RBRJTO4cvsd0F337xzo=
