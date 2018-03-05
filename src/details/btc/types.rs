@@ -26,7 +26,7 @@ use bitcoin::util::base58::{Error as FromBase58Error, FromBase58, ToBase58};
 pub use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
 
-use exonum::crypto::{hash, Hash};
+use exonum::crypto::{hash, CryptoHash, Hash};
 use exonum::encoding::serialize::{encode_hex, FromHex, FromHexError, ToHex};
 use exonum::encoding::Field;
 use exonum::storage::{StorageKey, StorageValue};
@@ -170,7 +170,9 @@ impl StorageValue for RedeemScript {
     fn from_bytes(v: Cow<[u8]>) -> RedeemScript {
         RedeemScript(RawScript::from(v.into_owned()))
     }
+}
 
+impl CryptoHash for RedeemScript {
     fn hash(&self) -> Hash {
         hash(self.0.clone().into_vec().as_ref())
     }

@@ -14,7 +14,8 @@
 
 use bitcoin::blockdata::transaction::SigHashType;
 
-use exonum::blockchain::{Schema, Transaction};
+use exonum::crypto::CryptoHash;
+use exonum::blockchain::{Schema, Transaction, ExecutionResult};
 use exonum::messages::Message;
 use exonum::storage::{Fork, Snapshot};
 use exonum::helpers::Height;
@@ -109,13 +110,14 @@ impl Transaction for MsgAnchoringSignature {
         self.verify_signature(self.from()) && self.verify_content()
     }
 
-    fn execute(&self, fork: &mut Fork) {
+    fn execute(&self, fork: &mut Fork) -> ExecutionResult {
         if !self.validate(fork) {
-            return;
+            return Ok(());
         }
 
         let mut anchoring_schema = AnchoringSchema::new(fork);
-        anchoring_schema.add_known_signature(self.clone())
+        anchoring_schema.add_known_signature(self.clone());
+        Ok(())
     }
 }
 
@@ -177,11 +179,12 @@ impl Transaction for MsgAnchoringUpdateLatest {
         self.verify_signature(self.from())
     }
 
-    fn execute(&self, view: &mut Fork) {
+    fn execute(&self, view: &mut Fork) -> ExecutionResult {
         if let Some((key, tx)) = self.validate(view) {
             let mut anchoring_schema = AnchoringSchema::new(view);
             anchoring_schema.add_lect(&key, tx, self.hash())
         }
+        Ok(())
     }
 }
 

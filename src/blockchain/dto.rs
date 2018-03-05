@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use exonum::blockchain::{Transaction, TransactionSet};
 use exonum::crypto::{Hash, PublicKey};
+use exonum::encoding::Error as EncodingError;
 use exonum::helpers::ValidatorId;
+use exonum::messages::RawTransaction;
 
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
 use service::ANCHORING_SERVICE_ID;
@@ -21,39 +24,33 @@ use service::ANCHORING_SERVICE_ID;
 pub const ANCHORING_MESSAGE_SIGNATURE: u16 = 0;
 pub const ANCHORING_MESSAGE_LATEST: u16 = 1;
 
-message! {
-    /// Exonum message with the signature for the given input of the anchoring transaction.
-    struct MsgAnchoringSignature {
-        const TYPE = ANCHORING_SERVICE_ID;
-        const ID = ANCHORING_MESSAGE_SIGNATURE;
+transactions! {
+    Messages {
+        const SERVICE_ID = ANCHORING_SERVICE_ID;
 
-        /// Public key of validator.
-        from: &PublicKey,
-        /// Public key index in anchoring public keys list.
-        validator: ValidatorId,
-        /// Transaction content.
-        tx: AnchoringTx,
-        /// Signed input.
-        input: u32,
-        /// Signature for the corresponding `input`.
-        signature: &[u8],
-    }
-}
-
-message! {
-    /// Exonum message with the updated validator's lect.
-    struct MsgAnchoringUpdateLatest {
-        const TYPE = ANCHORING_SERVICE_ID;
-        const ID = ANCHORING_MESSAGE_LATEST;
-
-        /// Public key of validator.
-        from: &PublicKey,
-        /// Public key index in anchoring public keys list.
-        validator: ValidatorId,
-        /// Lect content.
-        tx: BitcoinTx,
-        /// Current lects count in the `lects` table for the current validator.
-        lect_count: u64,
+        struct MsgAnchoringSignature {
+            /// Public key of validator.
+            from: &PublicKey,
+            /// Public key index in anchoring public keys list.
+            validator: ValidatorId,
+            /// Transaction content.
+            tx: AnchoringTx,
+            /// Signed input.
+            input: u32,
+            /// Signature for the corresponding `input`.
+            signature: &[u8],
+        }
+        /// Exonum message with the updated validator's lect.
+        struct MsgAnchoringUpdateLatest {
+            /// Public key of validator.
+            from: &PublicKey,
+            /// Public key index in anchoring public keys list.
+            validator: ValidatorId,
+            /// Lect content.
+            tx: BitcoinTx,
+            /// Current lects count in the `lects` table for the current validator.
+            lect_count: u64,
+        }
     }
 }
 
@@ -65,4 +62,9 @@ encoding_struct! {
         /// Bitcoin transaction content.
         tx: BitcoinTx,
     }
+}
+
+/// Constructs anchoring transaction from the given raw message.
+pub(crate) fn tx_from_raw(raw: RawTransaction) -> Result<Box<Transaction>, EncodingError> {
+    Messages::tx_from_raw(raw).map(Into::into)
 }

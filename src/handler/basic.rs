@@ -83,10 +83,10 @@ impl AnchoringHandler {
             .expect(&format!("Expected private key for address={}", addr_str))
             .clone();
         MultisigAddress {
-            common: common,
-            priv_key: priv_key,
-            redeem_script: redeem_script,
-            addr: addr,
+            common,
+            priv_key,
+            redeem_script,
+            addr,
         }
     }
 
@@ -183,7 +183,7 @@ impl AnchoringHandler {
 
             if is_recovering {
                 let state = AnchoringState::Recovering {
-                    prev_cfg: prev_cfg,
+                    prev_cfg,
                     actual_cfg: actual,
                 };
                 return Ok(state);
@@ -206,7 +206,7 @@ impl AnchoringHandler {
                         // Lect now is transition transaction
                         AnchoringState::Waiting {
                             lect: lect.into(),
-                            confirmations: confirmations,
+                            confirmations,
                         }
                     } else {
                         AnchoringState::Transition {
@@ -234,7 +234,7 @@ impl AnchoringHandler {
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
                                 lect: tx.into(),
-                                confirmations: confirmations,
+                                confirmations,
                             };
                             return Ok(state);
                         }
@@ -265,7 +265,7 @@ impl AnchoringHandler {
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
                                 lect: actual_lect.into(),
-                                confirmations: confirmations,
+                                confirmations,
                             };
                             return Ok(state);
                         }

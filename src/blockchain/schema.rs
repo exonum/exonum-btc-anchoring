@@ -29,7 +29,7 @@ use details::btc::transactions::{AnchoringTx, BitcoinTx};
 use service::ANCHORING_SERVICE_NAME;
 
 /// Unique identifier of signature for the `AnchoringTx`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KnownSignatureId {
     /// Normalized txid of the `AnchoringTx`.
     pub txid: btc::TxId,
