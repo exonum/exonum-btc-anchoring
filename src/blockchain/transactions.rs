@@ -15,7 +15,7 @@
 use bitcoin::blockdata::transaction::SigHashType;
 
 use exonum::crypto::CryptoHash;
-use exonum::blockchain::{Schema, Transaction, ExecutionResult};
+use exonum::blockchain::{ExecutionResult, Schema, Transaction};
 use exonum::messages::Message;
 use exonum::storage::{Fork, Snapshot};
 use exonum::helpers::Height;
@@ -25,6 +25,7 @@ use blockchain::schema::AnchoringSchema;
 use blockchain::consensus_storage::AnchoringConfig;
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, TxKind};
+use super::Error as ValidateError;
 
 impl MsgAnchoringSignature {
     pub fn verify_content(&self) -> bool {
@@ -59,7 +60,7 @@ impl MsgAnchoringSignature {
         true
     }
 
-    pub fn validate(&self, view: &Fork) -> bool {
+    pub fn validate(&self, view: &Fork) -> Result<(), ValidateError> {
         let core_schema = Schema::new(&view);
         let anchoring_schema = AnchoringSchema::new(&view);
 
@@ -68,8 +69,7 @@ impl MsgAnchoringSignature {
         let actual_cfg = core_schema.actual_configuration();
         // Verify from field
         if actual_cfg.validator_keys.get(id).map(|k| k.service_key) != Some(*self.from()) {
-            warn!("Received msg from non-validator, content={:#?}", self);
-            return false;
+            return Err(ValidateError::MsgFromNonValidator);
         }
 
         // Verify signature
@@ -84,23 +84,15 @@ impl MsgAnchoringSignature {
                 addr
             };
             if tx_addr != addr {
-                warn!(
-                    "Received msg with incorrect output address, content={:#?}",
-                    self
-                );
-                return false;
+                return Err(ValidateError::MsgWithIncorrectAddress);
             }
-            if !verify_anchoring_tx_payload(&tx, &core_schema) {
-                warn!("Received msg with incorrect payload, content={:#?}", self);
-                return false;
-            }
+            verify_anchoring_tx_payload(&tx, &core_schema)?;
             if !tx.verify_input(&redeem_script, self.input(), pub_key, self.signature()) {
-                warn!("Received msg with incorrect signature, content={:#?}", self);
-                return false;
+                return Err(ValidateError::SignatureIncorrect);
             }
-            return true;
+            Ok(())
         } else {
-            return false;
+            return Err(ValidateError::MsgFromNonValidator);
         }
     }
 }
@@ -111,18 +103,16 @@ impl Transaction for MsgAnchoringSignature {
     }
 
     fn execute(&self, fork: &mut Fork) -> ExecutionResult {
-        if !self.validate(fork) {
-            return Ok(());
-        }
-
+        self.validate(fork)?;
         let mut anchoring_schema = AnchoringSchema::new(fork);
-        anchoring_schema.add_known_signature(self.clone());
-        Ok(())
+        anchoring_schema.add_known_signature(self.clone()).map_err(
+            Into::into,
+        )
     }
 }
 
 impl MsgAnchoringUpdateLatest {
-    pub fn validate(&self, view: &Fork) -> Option<(btc::PublicKey, BitcoinTx)> {
+    pub fn validate(&self, view: &Fork) -> Result<(btc::PublicKey, BitcoinTx), ValidateError> {
         let anchoring_schema = AnchoringSchema::new(view);
         let core_schema = Schema::new(view);
 
@@ -132,45 +122,28 @@ impl MsgAnchoringUpdateLatest {
         let actual_cfg = core_schema.actual_configuration();
 
         if actual_cfg.validator_keys.get(id).map(|k| k.service_key) != Some(*self.from()) {
-            warn!("Received lect from non validator, content={:#?}", self);
-            return None;
+            return Err(ValidateError::MsgFromNonValidator);
         }
 
         let anchoring_cfg = anchoring_schema.actual_anchoring_config();
         let key = &anchoring_cfg.anchoring_keys[id];
         match TxKind::from(tx.clone()) {
             TxKind::Anchoring(tx) => {
-                if !verify_anchoring_tx_payload(&tx, &core_schema) {
-                    warn!("Received lect with incorrect payload, content={:#?}", self);
-                    return None;
-                }
-                if !verify_anchoring_tx_prev_hash(&tx, &anchoring_schema) {
-                    warn!(
-                        "Received lect with prev_lect without 2/3+ confirmations, content={:#?}",
-                        self
-                    );
-                    return None;
-                }
+                verify_anchoring_tx_payload(&tx, &core_schema)?;
+                verify_anchoring_tx_prev_hash(&tx, &anchoring_schema)?;
             }
             TxKind::FundingTx(tx) => {
                 let anchoring_cfg = anchoring_schema.genesis_anchoring_config();
-                if !verify_funding_tx(&tx, &anchoring_cfg) {
-                    warn!(
-                        "Received lect with incorrect funding_tx, content={:#?}",
-                        self
-                    );
-                    return None;
-                }
+                verify_funding_tx(&tx, &anchoring_cfg)?;
             }
-            TxKind::Other(_) => panic!("Incorrect fields deserialization."),
+            TxKind::Other(_) => return Err(ValidateError::LectWithIncorrectContent),
         }
 
         if anchoring_schema.lects(key).len() != self.lect_count() {
-            warn!("Received lect with wrong count, content={:#?}", self);
-            return None;
+            return Err(ValidateError::LectWithWrongCount);
         }
 
-        Some((*key, tx))
+        Ok((*key, tx))
     }
 }
 
@@ -180,15 +153,16 @@ impl Transaction for MsgAnchoringUpdateLatest {
     }
 
     fn execute(&self, view: &mut Fork) -> ExecutionResult {
-        if let Some((key, tx)) = self.validate(view) {
-            let mut anchoring_schema = AnchoringSchema::new(view);
-            anchoring_schema.add_lect(&key, tx, self.hash())
-        }
+        let (key, tx) = self.validate(view)?;
+        AnchoringSchema::new(view).add_lect(&key, tx, self.hash());
         Ok(())
     }
 }
 
-fn verify_anchoring_tx_prev_hash<T>(tx: &AnchoringTx, anchoring_schema: &AnchoringSchema<T>) -> bool
+fn verify_anchoring_tx_prev_hash<T>(
+    tx: &AnchoringTx,
+    anchoring_schema: &AnchoringSchema<T>,
+) -> Result<(), ValidateError>
 where
     T: AsRef<Snapshot>,
 {
@@ -196,21 +170,17 @@ where
     let prev_txid = tx.payload().prev_tx_chain.unwrap_or_else(|| tx.prev_hash());
     // Get `AnchoringConfig` for prev_tx
     let anchoring_cfg = {
-        let cfg_height = anchoring_schema.known_txs().get(&prev_txid).and_then(|tx| {
-            let height = match TxKind::from(tx) {
-                TxKind::Anchoring(tx) => tx.payload().block_height,
-                TxKind::FundingTx(_) => Height::zero(),
-                TxKind::Other(tx) => panic!("Incorrect lect content={:#?}", tx),
-            };
-            Some(height)
-        });
-
-        if let Some(height) = cfg_height {
-            anchoring_schema.anchoring_config_by_height(height)
-        } else {
-            warn!("Prev lect is unknown txid={:?}", prev_txid);
-            return false;
-        }
+        let prev_tx = anchoring_schema.known_txs().get(&prev_txid).ok_or_else(
+            || {
+                ValidateError::LectWithoutQuorum
+            },
+        )?;
+        let cfg_height = match TxKind::from(prev_tx) {
+            TxKind::Anchoring(tx) => Ok(tx.payload().block_height),
+            TxKind::FundingTx(_) => Ok(Height::zero()),
+            TxKind::Other(_) => Err(ValidateError::LectWithIncorrectContent),
+        }?;
+        anchoring_schema.anchoring_config_by_height(cfg_height)
     };
 
     let prev_lects_count = {
@@ -240,17 +210,29 @@ where
         }
         prev_lects_count
     };
-    prev_lects_count >= anchoring_cfg.majority_count()
+    if prev_lects_count >= anchoring_cfg.majority_count() {
+        Ok(())
+    } else {
+        Err(ValidateError::LectWithoutQuorum)
+    }
 }
 
-fn verify_anchoring_tx_payload<T>(tx: &AnchoringTx, schema: &Schema<T>) -> bool
+fn verify_anchoring_tx_payload<T>(tx: &AnchoringTx, schema: &Schema<T>) -> Result<(), ValidateError>
 where
     T: AsRef<Snapshot>,
 {
     let payload = tx.payload();
-    schema.block_hashes_by_height().get(payload.block_height.0) == Some(payload.block_hash)
+    if schema.block_hashes_by_height().get(payload.block_height.0) == Some(payload.block_hash) {
+        Ok(())
+    } else {
+        Err(ValidateError::MsgWithIncorrectPayload)
+    }
 }
 
-fn verify_funding_tx(tx: &FundingTx, anchoring_cfg: &AnchoringConfig) -> bool {
-    tx == anchoring_cfg.funding_tx()
+fn verify_funding_tx(tx: &FundingTx, anchoring_cfg: &AnchoringConfig) -> Result<(), ValidateError> {
+    if tx == anchoring_cfg.funding_tx() {
+        Ok(())
+    } else {
+        Err(ValidateError::LectWithIncorrectFunding)
+    }
 }
