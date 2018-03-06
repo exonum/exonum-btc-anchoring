@@ -28,6 +28,7 @@ transactions! {
     Messages {
         const SERVICE_ID = ANCHORING_SERVICE_ID;
 
+        /// Exonum message with the signature for the new anchoring transaction.
         struct MsgAnchoringSignature {
             /// Public key of validator.
             from: &PublicKey,
@@ -55,7 +56,7 @@ transactions! {
 }
 
 encoding_struct! {
-    /// Lect content
+    /// Last expected correct transaction content.
     struct LectContent {
         /// Hash of exonum transaction that contains this lect.
         msg_hash: &Hash,

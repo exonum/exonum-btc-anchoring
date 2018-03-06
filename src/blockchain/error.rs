@@ -18,17 +18,17 @@ use exonum::blockchain::ExecutionError;
 #[derive(Debug, Fail, Display, Clone, Copy)]
 #[repr(u8)]
 pub enum Error {
-    /// Received lect from the non validator node
-    #[display(fmt = "Received message from the non validator node")]
+    /// Received lect from the non-validator node
+    #[display(fmt = "Received message from the non-validator node")]
     MsgFromNonValidator = 0,
     /// Received lect with the incorrect payload
     #[display(fmt = "Received message with the incorrect payload")]
     MsgWithIncorrectPayload,
-    /// Received msg with incorrect output address
+    /// Received message with the incorrect output address
     #[display(fmt = "Received message with the incorrect output address")]
     MsgWithIncorrectAddress,
-    /// Received lect with prev_lect without 2/3+ confirmations
-    #[display(fmt = "Received lect with prev_lect without 2/3+ confirmations")]
+    /// Received lect with prev_lect without +2/3 confirmations
+    #[display(fmt = "Received lect with prev_lect without +2/3 confirmations")]
     LectWithoutQuorum,
     /// Received lect with incorrect funding_tx
     #[display(fmt = "Received lect with incorrect funding_tx")]
@@ -39,7 +39,7 @@ pub enum Error {
     /// Received lect with wrong count
     #[display(fmt = "Received lect with wrong count")]
     LectWithWrongCount,
-    /// Received msg with incorrect output address
+    /// Received message with the incorrect signature
     #[display(fmt = "Received message with the incorrect signature")]
     SignatureIncorrect,
     /// Received another signature for given tx propose
