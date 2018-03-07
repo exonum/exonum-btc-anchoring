@@ -18,7 +18,7 @@ use serde_json;
 use serde::{Deserialize, Deserializer};
 
 use exonum::storage::StorageValue;
-use exonum::crypto::{Hash, hash};
+use exonum::crypto::{hash, CryptoHash, Hash};
 use exonum::helpers::Height;
 
 use details::btc;
@@ -71,7 +71,7 @@ impl AnchoringConfig {
     {
         AnchoringConfig {
             anchoring_keys: anchoring_keys.into_iter().collect(),
-            network: network,
+            network,
             ..Default::default()
         }
     }
@@ -89,7 +89,7 @@ impl AnchoringConfig {
         AnchoringConfig {
             anchoring_keys: anchoring_keys.into_iter().collect(),
             funding_tx: Some(tx),
-            network: network,
+            network,
             ..Default::default()
         }
     }
@@ -161,7 +161,9 @@ impl StorageValue for AnchoringConfig {
     fn from_bytes(value: Cow<[u8]>) -> Self {
         serde_json::from_slice(value.as_ref()).unwrap()
     }
+}
 
+impl CryptoHash for AnchoringConfig {
     fn hash(&self) -> Hash {
         hash(serde_json::to_vec(&self).unwrap().as_slice())
     }

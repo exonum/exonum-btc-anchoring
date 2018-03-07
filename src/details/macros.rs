@@ -229,7 +229,7 @@ macro_rules! implement_tx_wrapper {
         }
     }
 
-    impl StorageValue for $name {
+    impl $crate::exonum::storage::StorageValue for $name {
         fn into_bytes(self) -> Vec<u8> {
             let mut v = Vec::new();
             v.extend(serialize(&self.0).unwrap());
@@ -240,8 +240,10 @@ macro_rules! implement_tx_wrapper {
             let tx = deserialize::<RawBitcoinTx>(v.as_ref()).unwrap();
             $name::from(tx)
         }
+    }
 
-        fn hash(&self) -> Hash {
+    impl $crate::exonum::crypto::CryptoHash for $name {
+        fn hash(&self) -> $crate::exonum::crypto::Hash {
             let mut v = Vec::new();
             v.extend(serialize(&self.0).unwrap());
             hash(&v)

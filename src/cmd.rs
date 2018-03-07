@@ -16,16 +16,16 @@
 //! This module collect all basic `CommandExtension` that
 //! we can use in `anchoring` bootstrapping process.
 //!
-use std::error::Error;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
-use toml::Value;
-use bitcoin::util::base58::ToBase58;
 use bitcoin::network::constants::Network;
+use bitcoin::util::base58::ToBase58;
+use failure;
+use toml::Value;
 
-use exonum::helpers::fabric::{Argument, CommandExtension, CommandName, Context, ServiceFactory};
-use exonum::helpers::fabric::keys;
+use exonum::helpers::fabric::{keys, Argument, CommandExtension, CommandName, Context,
+                              ServiceFactory};
 use exonum::blockchain::Service;
 use exonum::node::NodeConfig;
 use exonum::encoding::serialize::FromHex;
@@ -87,7 +87,7 @@ impl CommandExtension for GenerateNodeConfig {
         ]
     }
 
-    fn execute(&self, mut context: Context) -> Result<Context, Box<Error>> {
+    fn execute(&self, mut context: Context) -> Result<Context, failure::Error> {
         let host = context.arg("ANCHORING_RPC_HOST").expect(
             "Expected ANCHORING_RPC_HOST",
         );
@@ -124,7 +124,7 @@ impl CommandExtension for GenerateNodeConfig {
         );
 
         let rpc_config = AnchoringRpcConfig {
-            host: host,
+            host,
             username: user,
             password: passwd,
         };
@@ -207,7 +207,7 @@ impl CommandExtension for GenerateCommonConfig {
         ]
     }
 
-    fn execute(&self, mut context: Context) -> Result<Context, Box<Error>> {
+    fn execute(&self, mut context: Context) -> Result<Context, failure::Error> {
         let anchoring_frequency: u64 = context.arg::<u64>("ANCHORING_FREQUENCY").unwrap_or(500);
         let anchoring_utxo_confirmations: u64 = context
             .arg::<u64>("ANCHORING_UTXO_CONFIRMATIONS")
@@ -271,7 +271,7 @@ impl CommandExtension for Finalize {
         ]
     }
 
-    fn execute(&self, mut context: Context) -> Result<Context, Box<Error>> {
+    fn execute(&self, mut context: Context) -> Result<Context, failure::Error> {
         let mut node_config: NodeConfig = context.get(keys::NODE_CONFIG).unwrap();
         let common_config = context.get(keys::COMMON_CONFIG).unwrap();
         let public_config_list = context.get(keys::PUBLIC_CONFIG_LIST).unwrap();

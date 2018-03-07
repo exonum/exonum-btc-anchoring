@@ -39,19 +39,17 @@
 //!
 //! ```rust,no_run
 //! extern crate exonum;
-//! extern crate exonum_btc_anchoring;
-//! extern crate exonum_configuration;
+//! extern crate exonum_btc_anchoring as anchoring;
+//! extern crate exonum_configuration as configuration;
 //! use exonum::helpers::fabric::NodeBuilder;
 //! use exonum::helpers;
-//! use exonum_btc_anchoring::AnchoringServiceFactory;
-//! use exonum_configuration::ConfigurationServiceFactory;
 //!
 //! fn main() {
 //!     exonum::crypto::init();
 //!     helpers::init_logger().unwrap();
 //!     let node = NodeBuilder::new()
-//!        .with_service(Box::new(ConfigurationServiceFactory))
-//!        .with_service(Box::new(AnchoringServiceFactory));
+//!        .with_service(Box::new(configuration::ServiceFactory))
+//!        .with_service(Box::new(anchoring::ServiceFactory));
 //!     node.run();
 //! }
 //! ```
@@ -109,7 +107,7 @@ pub use blockchain::consensus_storage::AnchoringConfig;
 pub use local_storage::AnchoringNodeConfig;
 pub use service::{gen_anchoring_testnet_config, gen_anchoring_testnet_config_with_rng,
                   AnchoringService, ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
-pub use cmd::AnchoringServiceFactory;
+pub use cmd::AnchoringServiceFactory as ServiceFactory;
 pub use handler::AnchoringHandler;
 pub use error::Error;
 

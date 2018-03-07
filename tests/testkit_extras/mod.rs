@@ -105,7 +105,7 @@ impl AnchoringTestKit {
 
         AnchoringTestKit {
             inner: testkit,
-            handler: handler,
+            handler,
             requests,
             nodes,
             latest_anchored_tx: None,

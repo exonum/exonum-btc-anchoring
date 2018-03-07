@@ -27,9 +27,10 @@ use blockchain::dto::{LectContent, MsgAnchoringSignature};
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
 use service::ANCHORING_SERVICE_NAME;
+use super::Error as ValidateError;
 
 /// Unique identifier of signature for the `AnchoringTx`.
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct KnownSignatureId {
     /// Normalized txid of the `AnchoringTx`.
     pub txid: btc::TxId,
@@ -325,17 +326,15 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
     }
 
     /// Adds signature to known if it is correct.
-    pub fn add_known_signature(&mut self, msg: MsgAnchoringSignature) {
+    pub fn add_known_signature(&mut self, msg: MsgAnchoringSignature) -> Result<(), ValidateError> {
         let ntxid = msg.tx().nid();
         let signature_id = KnownSignatureId::from(&msg);
-        if let Some(sign_msg) = self.known_signatures().get(&signature_id) {
-            warn!(
-                "Received another signature for given tx propose msg={:#?}",
-                sign_msg
-            );
+        if self.known_signatures().get(&signature_id).is_some() {
+            Err(ValidateError::SignatureDifferent)
         } else {
             self.signatures_mut(&ntxid).push(msg.clone());
             self.known_signatures_mut().put(&signature_id, msg);
+            Ok(())
         }
     }
 }
