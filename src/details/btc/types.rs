@@ -121,15 +121,11 @@ impl FromHex for PublicKey {
 
 impl ToHex for PublicKey {
     fn write_hex<W: fmt::Write>(&self, w: &mut W) -> fmt::Result {
-        let context = Secp256k1::without_caps();
-        let array = self.0.serialize_vec(&context, true);
-        array.write_hex(w)
+        self.serialize().as_ref().write_hex(w)
     }
 
     fn write_hex_upper<W: fmt::Write>(&self, w: &mut W) -> fmt::Result {
-        let context = Secp256k1::without_caps();
-        let array = self.0.serialize_vec(&context, true);
-        array.write_hex_upper(w)
+        self.serialize().as_ref().write_hex_upper(w)
     }
 }
 
