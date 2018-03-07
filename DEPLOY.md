@@ -240,7 +240,8 @@ address and its corresponding private key. The address is encoded using
 
 ```ini
 [anchoring_service.node.private_keys]
-2NCJYWui4LGNZguUw41xBANbcHoKxSVxyzr = "cRf74adxyQzJs7V8fHoyrMDazxzCmKAan63Cfhf9i4KL69zRkdS2"
+address = "2NCJYWui4LGNZguUw41xBANbcHoKxSVxyzr"
+private_key = "cRf74adxyQzJs7V8fHoyrMDazxzCmKAan63Cfhf9i4KL69zRkdS2"
 ```
 
 Add the line with new address and corresponding private key for it. If node
