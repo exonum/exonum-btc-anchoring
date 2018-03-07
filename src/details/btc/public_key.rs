@@ -29,11 +29,7 @@ impl PublicKey {
     }
 
     pub fn to_bytes(&self) -> [u8; PUBLIC_KEY_SIZE] {
-        let ctx = Secp256k1::without_caps();
-        let vec = self.0.serialize_vec(&ctx, true);
-        let mut bytes = [0; PUBLIC_KEY_SIZE];
-        bytes.copy_from_slice(&vec);
-        bytes
+        self.serialize()
     }
 }
 
@@ -43,9 +39,7 @@ impl StorageKey for PublicKey {
     }
 
     fn write(&self, buffer: &mut [u8]) {
-        let ctx = Secp256k1::without_caps();
-        let vec = self.0.serialize_vec(&ctx, true);
-        buffer.copy_from_slice(&vec)
+        buffer.copy_from_slice(&self.to_bytes())
     }
 
     fn read(buffer: &[u8]) -> Self {

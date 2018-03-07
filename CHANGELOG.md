@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## 0.6 - 2018-03-06
+
 ### Breaking changes
 
 - The `network` parameter became named. (#114)
@@ -21,6 +23,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Error types now use `failure` instead of `derive-error`,
   which makes error messages more human-readable. (#115)
+
+- Implemented error codes for incorrect anchoring messages. (#117)
+
+- Updated to the [Exonum 0.6.0](https://github.com/exonum/exonum/releases/tag/v0.6)
+  release (#117).
 
 ## 0.5 - 2018-01-30
 
