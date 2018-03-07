@@ -75,7 +75,7 @@ fn main() {
             let node_cfg = node_cfgs[idx].clone();
             let node_thread = thread::spawn(move || {
                 // Run it in separate thread
-                let node = Node::new(Box::new(db), vec![Box::new(service)], node_cfg);
+                let node = Node::new(db, vec![Box::new(service)], node_cfg);
                 node.run_handler().expect("Unable to run node");
             });
             node_threads.push(node_thread);

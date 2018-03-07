@@ -1,6 +1,6 @@
 [package]
 name = "exonum-btc-anchoring"
-version = "0.5.0"
+version = "0.6.0"
 authors = ["The Exonum Team <exonum@bitfury.com>"]
 homepage = "https://exonum.com/doc/advanced/bitcoin-anchoring/"
 repository = "https://github.com/exonum/exonum-btc-anchoring"
@@ -15,32 +15,32 @@ description = "An Exonum service that provides anchoring to Bitcoin blockchain."
 travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 
 [dependencies]
-exonum = "0.5.1"
+exonum = "0.6.0"
 exonum_bitcoinrpc = "0.5.1"
 
-bitcoin="0.10.0"
-secp256k1 = "0.6.0"
+bitcoin="0.11.0"
+byteorder = "1.0.0"
+clap = "2.22.1"
+display_derive = "0.0.0"
+failure = "0.1.1"
+failure_derive = "0.1.1"
+iron = "0.6.0"
+log = "0.4.0"
+mount = "0.4.0"
+rand = "0.4.2"
+router = "0.6.0"
+secp256k1 = "0.8.0"
 serde = "1.0.0"
 serde_derive = "1.0.0"
 serde_json = "1.0.0"
-byteorder = "1.0.0"
-log = "0.4.0"
-clap = "2.22.1"
-rand = "0.3.0"
-router = "0.6.0"
-iron = "0.6.0"
-mount = "0.4.0"
-toml = "0.4.0"
 tempdir = "0.3.5"
-failure = "0.1.1"
-failure_derive = "0.1.1"
-display_derive = "0.0.0"
+toml = "0.4.0"
 
 [dev-dependencies]
-exonum-testkit = "0.5.0"
-exonum-configuration = "0.5.0"
+exonum-testkit = "0.6.0"
+exonum-configuration = "0.6.0"
 libc = "0.2.21"
-pretty_assertions = "0.4.0"
+pretty_assertions = "0.5.1"
 
 [features]
 default = []

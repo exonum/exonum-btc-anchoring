@@ -40,7 +40,7 @@ impl AnchoringNodeConfig {
     /// Creates blank configuration from given rpc config.
     pub fn new(rpc: Option<AnchoringRpcConfig>) -> AnchoringNodeConfig {
         AnchoringNodeConfig {
-            rpc: rpc,
+            rpc,
             ..Default::default()
         }
     }

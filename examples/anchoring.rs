@@ -13,19 +13,17 @@
 // limitations under the License.
 
 extern crate exonum;
-extern crate exonum_configuration;
-extern crate exonum_btc_anchoring;
+extern crate exonum_configuration as configuration;
+extern crate exonum_btc_anchoring as anchoring;
 
 use exonum::helpers::fabric::NodeBuilder;
 use exonum::helpers;
-use exonum_configuration::ConfigurationServiceFactory;
-use exonum_btc_anchoring::AnchoringServiceFactory;
 
 fn main() {
     exonum::crypto::init();
     helpers::init_logger().unwrap();
     let node = NodeBuilder::new()
-        .with_service(Box::new(ConfigurationServiceFactory))
-        .with_service(Box::new(AnchoringServiceFactory));
+        .with_service(Box::new(configuration::ServiceFactory))
+        .with_service(Box::new(anchoring::ServiceFactory));
     node.run();
 }

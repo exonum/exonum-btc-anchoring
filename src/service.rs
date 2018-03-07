@@ -26,7 +26,7 @@ use router::Router;
 
 use exonum::blockchain::{ApiContext, Blockchain, Service, ServiceContext, Transaction};
 use exonum::crypto::Hash;
-use exonum::messages::{Message, RawTransaction};
+use exonum::messages::RawTransaction;
 use exonum::encoding::Error as StreamStructError;
 use exonum::storage::{Fork, Snapshot};
 use exonum::api::Api;
@@ -38,8 +38,7 @@ use local_storage::AnchoringNodeConfig;
 use handler::AnchoringHandler;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
-use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest, ANCHORING_MESSAGE_LATEST,
-                      ANCHORING_MESSAGE_SIGNATURE};
+use blockchain::dto;
 use error::Error as ServiceError;
 use handler::error::Error as HandlerError;
 use observer::AnchoringChainObserver;
@@ -73,7 +72,7 @@ impl AnchoringService {
         local_cfg: AnchoringNodeConfig,
     ) -> AnchoringService {
         AnchoringService {
-            genesis: genesis,
+            genesis,
             handler: Arc::new(Mutex::new(AnchoringHandler::new(Some(client), local_cfg))),
         }
     }
@@ -99,13 +98,7 @@ impl Service for AnchoringService {
     }
 
     fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, StreamStructError> {
-        match raw.message_type() {
-            ANCHORING_MESSAGE_LATEST => Ok(Box::new(MsgAnchoringUpdateLatest::from_raw(raw)?)),
-            ANCHORING_MESSAGE_SIGNATURE => Ok(Box::new(MsgAnchoringSignature::from_raw(raw)?)),
-            _ => Err(StreamStructError::IncorrectMessageType {
-                message_type: raw.message_type(),
-            }),
-        }
+        dto::tx_from_raw(raw)
     }
 
     fn initialize(&self, fork: &mut Fork) -> Value {
@@ -149,7 +142,6 @@ impl Service for AnchoringService {
         Some(Box::new(router))
     }
 }
-
 
 /// Generates testnet configuration by given rpc for given nodes amount
 /// using given random number generator.

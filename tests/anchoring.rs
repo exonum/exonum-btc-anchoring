@@ -40,10 +40,9 @@ use bitcoin::network::constants::Network;
 use bitcoin::blockdata::script::Script;
 
 use exonum::blockchain::Transaction;
-use exonum::messages::Message;
-use exonum::helpers::{Height, ValidatorId};
+use exonum::crypto::{CryptoHash, Hash};
 use exonum::encoding::serialize::FromHex;
-use exonum::crypto::Hash;
+use exonum::helpers::{Height, ValidatorId};
 
 use exonum_btc_anchoring::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use exonum_btc_anchoring::details::btc::transactions::{verify_tx_input, AnchoringTx, FundingTx,

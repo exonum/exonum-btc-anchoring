@@ -155,66 +155,36 @@ impl PublicApi {
 
 impl Api for PublicApi {
     fn wire(&self, router: &mut Router) {
-        let _self = self.clone();
+        let api = self.clone();
         let actual_lect = move |_: &mut Request| -> IronResult<Response> {
-            let lect = _self.actual_lect()?;
-            _self.ok_response(&json!(lect))
+            let lect = api.actual_lect()?;
+            api.ok_response(&json!(lect))
         };
 
-        let _self = self.clone();
+        let api = self.clone();
         let current_lect_of_validator = move |req: &mut Request| -> IronResult<Response> {
-            let map = req.extensions.get::<Router>().unwrap();
-            match map.find("id") {
-                Some(id_str) => {
-                    let id: u32 = id_str.parse().map_err(|e| {
-                        let msg = format!(
-                            "An error during parsing of the validator id occurred: {}",
-                            e
-                        );
-                        ApiError::IncorrectRequest(msg.into())
-                    })?;
-                    let info = _self.current_lect_of_validator(id)?;
-                    _self.ok_response(&json!(info))
-                }
-                None => {
-                    let msg = "The identifier of the validator is not specified.";
-                    Err(ApiError::IncorrectRequest(msg.into()))?
-                }
-            }
+            let id = api.url_fragment(req, "id")?;
+            let info = api.current_lect_of_validator(id)?;
+            api.ok_response(&json!(info))
         };
 
-        let _self = self.clone();
+        let api = self.clone();
         let actual_address = move |_: &mut Request| -> IronResult<Response> {
-            let addr = _self.actual_address()?.to_base58check();
-            _self.ok_response(&json!(addr))
+            let addr = api.actual_address()?.to_base58check();
+            api.ok_response(&json!(addr))
         };
 
-        let _self = self.clone();
+        let api = self.clone();
         let following_address = move |_: &mut Request| -> IronResult<Response> {
-            let addr = _self.following_address()?.map(|addr| addr.to_base58check());
-            _self.ok_response(&json!(addr))
+            let addr = api.following_address()?.map(|addr| addr.to_base58check());
+            api.ok_response(&json!(addr))
         };
 
-        let _self = self.clone();
+        let api = self.clone();
         let nearest_lect = move |req: &mut Request| -> IronResult<Response> {
-            let map = req.extensions.get::<Router>().unwrap();
-            match map.find("height") {
-                Some(height_str) => {
-                    let height: u64 = height_str.parse().map_err(|e| {
-                        let msg = format!(
-                            "An error during parsing of the block height occurred: {}",
-                            e
-                        );
-                        ApiError::IncorrectRequest(msg.into())
-                    })?;
-                    let lect = _self.nearest_lect(height)?;
-                    _self.ok_response(&json!(lect))
-                }
-                None => {
-                    let msg = "The block height is not specified.";
-                    Err(ApiError::IncorrectRequest(msg.into()))?
-                }
-            }
+            let height = api.url_fragment(req, "height")?;
+            let lect = api.nearest_lect(height)?;
+            api.ok_response(&json!(lect))
         };
 
         router.get("/v1/address/actual", actual_address, "actual_address");

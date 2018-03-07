@@ -13,22 +13,22 @@
 // limitations under the License.
 
 extern crate bitcoin;
-extern crate exonum_bitcoinrpc as bitcoinrpc;
-extern crate secp256k1;
-extern crate rand;
-extern crate serde;
-extern crate libc;
 extern crate byteorder;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate serde_json;
-#[macro_use]
-extern crate pretty_assertions;
 extern crate exonum;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
 extern crate exonum_btc_anchoring;
 #[macro_use]
 extern crate exonum_testkit;
+extern crate libc;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate pretty_assertions;
+extern crate rand;
+extern crate secp256k1;
+extern crate serde;
+#[macro_use]
+extern crate serde_json;
 
 #[macro_use]
 pub mod testkit_extras;
@@ -36,18 +36,17 @@ pub mod testkit_extras;
 use rand::{SeedableRng, StdRng};
 use bitcoin::network::constants::Network;
 
-use exonum::messages::Message;
 use exonum::blockchain::Transaction;
-use exonum::helpers::{Height, ValidatorId};
+use exonum::crypto::{gen_keypair_from_seed, CryptoHash, Seed};
 use exonum::encoding::serialize::FromHex;
+use exonum::helpers::{Height, ValidatorId};
 use exonum_testkit::{TestNetworkConfiguration, TestNode};
-use exonum::crypto::{gen_keypair_from_seed, Seed};
 
 use exonum_btc_anchoring::{AnchoringConfig, AnchoringNodeConfig, ANCHORING_SERVICE_NAME};
-use exonum_btc_anchoring::observer::AnchoringChainObserver;
 use exonum_btc_anchoring::blockchain::AnchoringSchema;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{FundingTx, TransactionBuilder};
+use exonum_btc_anchoring::observer::AnchoringChainObserver;
 use testkit_extras::{AnchoringTestKit, TestClient};
 use testkit_extras::helpers::*;
 

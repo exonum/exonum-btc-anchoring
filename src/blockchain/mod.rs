@@ -22,8 +22,11 @@ pub mod dto;
 pub mod transactions;
 #[doc(hidden)]
 pub mod consensus_storage;
+#[doc(hidden)]
+pub mod error;
 #[cfg(test)]
 mod tests;
 
 pub use self::schema::{AnchoringSchema, KnownSignatureId};
 pub use self::dto::{LectContent, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+pub use self::error::Error;

@@ -19,6 +19,7 @@ btree
 bytearray
 byteorder
 cfgs
+CHECKMULTISIG
 checkpointed
 clippy
 clonned
@@ -77,8 +78,8 @@ libsodium
 libssl
 listunspent
 locktime
-mainnet
 Mainnet
+mainnet
 maintainer's
 markdownlint
 memorydb
