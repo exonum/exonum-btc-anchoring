@@ -57,9 +57,13 @@ impl Default for AnchoringNodeConfig {
     }
 }
 
+/// The structure for storing the anchoring address and private key. The structure is needed to
+/// convert data from the toml-file into memory.
 #[derive(Deserialize, Serialize)]
 struct AnchoringKeypair {
+    /// Anchoring address.
     address: String,
+    /// Private key.
     private_key: btc::PrivateKey,
 }
 
