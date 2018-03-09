@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use serde::{Deserialize, Deserializer, Serialize, Serializer};
+
 use std::default::Default;
 use std::collections::BTreeMap;
 
@@ -25,6 +27,7 @@ pub struct AnchoringNodeConfig {
     /// Rpc configuration. Must exist if node is validator.
     /// Otherwise node can only check `lect` payload without any checks with `bitcoind`.
     pub rpc: Option<AnchoringRpcConfig>,
+    #[serde(serialize_with = "serialize_map_to_vec", deserialize_with = "deserialize_vec_to_map")]
     /// Set of private keys for each anchoring address.
     pub private_keys: BTreeMap<String, btc::PrivateKey>,
     /// Frequency of lect check in blocks.
@@ -52,4 +55,49 @@ impl Default for AnchoringNodeConfig {
             check_lect_frequency: 30,
         }
     }
+}
+
+/// The structure for storing the anchoring address and private key. The structure is needed to
+/// convert data from the toml-file into memory.
+#[derive(Deserialize, Serialize)]
+struct AnchoringKeypair {
+    /// Anchoring address.
+    address: String,
+    /// Private key.
+    private_key: btc::PrivateKey,
+}
+
+fn serialize_map_to_vec<S>(
+    map: &BTreeMap<String, btc::PrivateKey>,
+    serializer: S,
+) -> Result<S::Ok, S::Error>
+where
+    S: Serializer,
+{
+    let keypairs = map.iter()
+        .map(|(address, private_key)| {
+            AnchoringKeypair {
+                address: address.to_string(),
+                private_key: private_key.clone(),
+            }
+        })
+        .collect::<Vec<_>>();
+
+    keypairs.serialize(serializer)
+}
+
+fn deserialize_vec_to_map<'de, D>(
+    deserializer: D,
+) -> Result<BTreeMap<String, btc::PrivateKey>, D::Error>
+where
+    D: Deserializer<'de>,
+{
+    let keypairs: Vec<AnchoringKeypair> = Vec::deserialize(deserializer)?;
+    let map = keypairs
+        .iter()
+        .map(|keypair| {
+            (keypair.address.to_string(), keypair.private_key.clone())
+        })
+        .collect::<BTreeMap<_, _>>();
+    Ok(map)
 }
