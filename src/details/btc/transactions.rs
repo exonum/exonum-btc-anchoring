@@ -125,7 +125,7 @@ impl FundingTx {
         client: &RpcClient,
         addr: &btc::Address,
     ) -> Result<Option<bitcoinrpc::UnspentTransactionInfo>, RpcError> {
-        let txid = self.txid();
+        let txid = self.id().to_string();
         let txs = client.listunspent(0, 9_999_999, &[addr.to_base58check()])?;
         Ok(txs.into_iter().find(|txinfo| txinfo.txid == txid))
     }

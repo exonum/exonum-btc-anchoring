@@ -187,14 +187,6 @@ macro_rules! implement_tx_wrapper {
             TxId::from(self.0.ntxid())
         }
 
-        pub fn txid(&self) -> String {
-            self.0.bitcoin_hash().be_hex_string()
-        }
-
-        pub fn ntxid(&self) -> String {
-            self.0.ntxid().be_hex_string()
-        }
-
         pub fn to_hex(&self) -> String {
             use $crate::exonum::encoding::serialize::ToHex;
             let mut out = String::new();

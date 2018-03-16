@@ -359,7 +359,7 @@ impl CommandExtension for Finalize {
         let mut genesis_cfg = if let Some(total_funds) = create_funding_tx_with_amount {
             client.watch_address(&address, false).unwrap();
             let tx = client.send_to_address(&address, total_funds).unwrap();
-            println!("Created funding tx with txid {}", tx.txid());
+            println!("Created funding tx with txid {}", tx.id().be_hex_string());
             AnchoringConfig::new_with_funding_tx(network, pub_keys, tx)
         } else {
             let txid = funding_txid.expect("Funding txid not found");

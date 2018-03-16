@@ -1673,7 +1673,7 @@ fn test_transit_after_exclude_from_validator() {
         confirmations_request(&transition_tx, 1000),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 0],
+            params: [&anchored_tx.id().to_string(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string()),
         },
         request! {
