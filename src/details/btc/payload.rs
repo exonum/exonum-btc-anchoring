@@ -216,20 +216,16 @@ impl Payload {
 impl From<PayloadV1> for Payload {
     fn from(v1: PayloadV1) -> Payload {
         match v1 {
-            PayloadV1::Regular(height, hash) => {
-                Payload {
-                    block_height: height,
-                    block_hash: hash,
-                    prev_tx_chain: None,
-                }
-            }
-            PayloadV1::Recover(height, hash, txid) => {
-                Payload {
-                    block_height: height,
-                    block_hash: hash,
-                    prev_tx_chain: Some(txid),
-                }
-            }
+            PayloadV1::Regular(height, hash) => Payload {
+                block_height: height,
+                block_hash: hash,
+                prev_tx_chain: None,
+            },
+            PayloadV1::Recover(height, hash, txid) => Payload {
+                block_height: height,
+                block_hash: hash,
+                prev_tx_chain: Some(txid),
+            },
         }
     }
 }
@@ -257,7 +253,7 @@ mod tests {
         assert_eq!(
             payload_script.to_hex(),
             "6a3045584f4e554d0100d204000000000000e3b0c44298fc1c149afbf4c8996fb92427ae41e4649\
-                   b934ca495991b7852b855"
+             b934ca495991b7852b855"
         );
     }
 
@@ -265,7 +261,7 @@ mod tests {
     fn test_payload_regular_deserialize() {
         let payload_script = Script::from_hex(
             "6a3045584f4e554d0100d204000000000000e3b0c44298fc1c14\
-                                               9afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+             9afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
         ).unwrap();
 
         let block_hash = hash(&[]);
@@ -288,8 +284,8 @@ mod tests {
         assert_eq!(
             payload_script.to_hex(),
             "6a4c5045584f4e554d0101d204000000000000e3b0c44298fc1c149afbf4c8996fb92427ae41e46\
-                   49b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7\
-                   852b855"
+             49b934ca495991b7852b855e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7\
+             852b855"
         );
     }
 
@@ -297,9 +293,9 @@ mod tests {
     fn test_payload_recover_deserialize() {
         let payload_script = Script::from_hex(
             "6a4c5045584f4e554d0101d204000000000000e3b0c44298fc1c\
-                                               149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3\
-                                               b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca49599\
-                                               1b7852b855",
+             149afbf4c8996fb92427ae41e4649b934ca495991b7852b855e3\
+             b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca49599\
+             1b7852b855",
         ).unwrap();
 
         let block_hash = hash(&[]);
@@ -315,7 +311,7 @@ mod tests {
         // Payload from old anchoring transaction
         let payload_script = Script::from_hex(
             "6a2a0128f0b31a00000000008fb4879f1b7f332be1aee197f99f\
-                                               7333c915570c6ad5c6eed641f33fe0199129",
+             7333c915570c6ad5c6eed641f33fe0199129",
         ).unwrap();
         assert_eq!(Payload::from_script(&payload_script), None);
     }

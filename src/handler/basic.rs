@@ -202,7 +202,7 @@ impl AnchoringHandler {
                 TxKind::Anchoring(lect) => {
                     let lect_addr = lect.output_address(actual.network);
                     if lect_addr == following_addr {
-                        let confirmations = self.client().get_transaction_confirmations(lect.txid())?;
+                        let confirmations = self.client().get_transaction_confirmations(lect.id())?;
                         // Lect now is transition transaction
                         AnchoringState::Waiting {
                             lect: lect.into(),
@@ -228,9 +228,9 @@ impl AnchoringHandler {
             match TxKind::from(actual_lect) {
                 TxKind::FundingTx(tx) => {
                     if tx.find_out(&actual_addr).is_some() {
-                        trace!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
+                        trace!("Checking funding_tx={:#?}, txid={}", tx, tx.id());
                         // Wait until funding_tx got enough confirmation
-                        let confirmations = self.client().get_transaction_confirmations(tx.txid())?;
+                        let confirmations = self.client().get_transaction_confirmations(tx.id())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
                                 lect: tx.into(),
@@ -260,7 +260,7 @@ impl AnchoringHandler {
                     // we need to wait until it reaches enough confirmations.
                     if actual_lect_is_transition(&actual, &actual_lect, &anchoring_schema) {
                         let confirmations = self.client().get_transaction_confirmations(
-                            actual_lect.txid(),
+                            actual_lect.id(),
                         )?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
@@ -447,7 +447,7 @@ impl AnchoringHandler {
         let key = self.anchoring_key(multisig.common, state);
 
         // Check that we know tx
-        if schema.find_lect_position(key, &lect.txid()).is_some() {
+        if schema.find_lect_position(key, &lect.id()).is_some() {
             return Ok(true);
         }
 
@@ -499,7 +499,7 @@ impl AnchoringHandler {
 
         info!(
             "LECT ====== txid={}, total_count={}",
-            lect.txid(),
+            lect.id(),
             lects_count
         );
 

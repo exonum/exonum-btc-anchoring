@@ -113,9 +113,9 @@ pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> TestRequ
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     request! {
         method: "getrawtransaction",
-        params: [&tx.txid(), 1],
+        params: [&tx.id(), 1],
         response: {
-            "hash":&tx.txid(),
+            "hash":&tx.id(),
             "hex":&tx.to_hex(),
             "confirmations": confirmations,
             "locktime":1_088_682,
@@ -142,7 +142,7 @@ pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> TestRequ
                     OP_EQUALVERIFY OP_CHECKSIG",
                 "hex":"76a914474215d1e614a7d9dddbd853d9f139cff2e99e1a88ac",
                 "reqSigs":1,"type":"pubkeyhash"},
-                "value":1.00768693}],
+                "value":1.007_686_93}],
             "vsize":223
         }
     }
@@ -152,7 +152,7 @@ pub fn get_transaction_request(raw: &RawBitcoinTx) -> TestRequest {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     request! {
         method: "getrawtransaction",
-        params: [&tx.txid(), 0],
+        params: [&tx.id(), 0],
         response: &tx.to_hex()
     }
 }
@@ -162,7 +162,7 @@ pub fn send_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<TestRequest> {
     vec![
         request! {
             method: "getrawtransaction",
-            params: [&tx.txid(), 0],
+            params: [&tx.id(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -178,7 +178,7 @@ pub fn resend_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<TestRequest> {
     vec![
         request! {
             method: "getrawtransaction",
-            params: [&tx.txid(), 1],
+            params: [&tx.id(), 1],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -192,13 +192,13 @@ pub fn resend_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<TestRequest> {
 pub fn listunspent_entry(raw: &RawBitcoinTx, addr: &btc::Address, confirmations: u64) -> Value {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     json!({
-        "txid": &tx.txid(),
+        "txid": &tx.id(),
         "address": &addr.to_base58check(),
         "confirmations": confirmations,
         "vout": 0,
         "account": "multisig",
         "scriptPubKey": "a914499d997314d6e55e49293b50d8dfb78bb9c958ab87",
-        "amount": 0.00010000,
+        "amount": 0.000_100_00,
         "spendable": false,
         "solvable": false
     })
@@ -232,7 +232,7 @@ pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
         confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 0],
+            params: [&anchored_tx.id(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -271,7 +271,7 @@ pub fn anchor_first_block_lect_normal(testkit: &mut AnchoringTestKit) {
         },
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 0],
+            params: [&anchored_tx.id(), 0],
             response: &anchored_tx.to_hex()
         },
     ]);
@@ -372,7 +372,7 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
         confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.txid(), 0],
+            params: [&anchored_tx.id(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -383,7 +383,11 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
     ]);
     testkit.create_block();
     let lect = gen_service_tx_lect(testkit, ValidatorId(0), &anchored_tx, 3);
-    assert!(testkit.mempool().contains_key(&Box::<Transaction>::from(lect).hash()));
+    assert!(
+        testkit
+            .mempool()
+            .contains_key(&Box::<Transaction>::from(lect).hash())
+    );
     testkit.set_latest_anchored_tx(None);
 }
 

@@ -22,7 +22,7 @@ use bitcoin::util::base58::ToBase58;
 use exonum::blockchain::{Blockchain, Schema};
 use exonum::storage::Fork;
 
-use details::rpc::{RpcClient, AnchoringRpcConfig, BitcoinRelay};
+use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
 use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
 use blockchain::schema::AnchoringSchema;
 use blockchain::consensus_storage::AnchoringConfig;
@@ -157,7 +157,7 @@ impl AnchoringChainObserver {
                 }
             }
 
-            let confirmations = self.client.get_transaction_confirmations(lect.txid())?;
+            let confirmations = self.client.get_transaction_confirmations(lect.id())?;
             if confirmations.as_ref() >= Some(&actual_cfg.utxo_confirmations) {
                 trace!(
                     "Adds transaction to chain, height={}, content={:#?}",
@@ -215,7 +215,7 @@ impl AnchoringChainObserver {
         actual_cfg: &AnchoringConfig,
         tx: &BitcoinTx,
     ) -> Result<bool, ServiceError> {
-        let txid = tx.txid();
+        let txid = tx.id();
         let anchoring_schema = AnchoringSchema::new(fork);
 
         let mut lect_count = 0;

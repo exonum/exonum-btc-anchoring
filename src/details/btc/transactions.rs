@@ -19,7 +19,7 @@ use std::ops::Deref;
 use bitcoin::blockdata::script::Instruction;
 use bitcoin::blockdata::opcodes::All;
 use bitcoin::util::hash::Hash160;
-use bitcoin::network::serialize::{BitcoinHash, deserialize, serialize, serialize_hex};
+use bitcoin::network::serialize::{deserialize, serialize, serialize_hex, BitcoinHash};
 use bitcoin::blockdata::transaction::{TxIn, TxOut};
 use bitcoin::blockdata::script::{Builder, Script};
 use bitcoin::util::base58::ToBase58;
@@ -30,8 +30,8 @@ use secp256k1::key::{PublicKey, SecretKey};
 use secp256k1::{Message, Secp256k1, Signature};
 use bitcoinrpc;
 
-use exonum::crypto::{Hash, hash};
-use exonum::encoding::serialize::{FromHexError, FromHex};
+use exonum::crypto::{hash, Hash};
+use exonum::encoding::serialize::{FromHex, FromHexError};
 use exonum::helpers::Height;
 use exonum::storage::StorageValue;
 
@@ -125,7 +125,7 @@ impl FundingTx {
         client: &RpcClient,
         addr: &btc::Address,
     ) -> Result<Option<bitcoinrpc::UnspentTransactionInfo>, RpcError> {
-        let txid = self.txid().to_string();
+        let txid = self.id().to_string();
         let txs = client.listunspent(0, 9_999_999, &[addr.to_base58check()])?;
         Ok(txs.into_iter().find(|txinfo| txinfo.txid == txid))
     }
@@ -206,7 +206,7 @@ impl fmt::Debug for AnchoringTx {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let payload = self.payload();
         f.debug_struct(stringify!(AnchoringTx))
-            .field("txid", &self.txid())
+            .field("txid", &self.id())
             .field("txhex", &self.to_hex())
             .field("content", &self.0)
             .field("payload", &payload)
@@ -217,7 +217,7 @@ impl fmt::Debug for AnchoringTx {
 impl fmt::Debug for FundingTx {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.debug_struct(stringify!(FundingTx))
-            .field("txid", &self.txid())
+            .field("txid", &self.id())
             .field("txhex", &self.to_hex())
             .field("content", &self.0)
             .finish()
@@ -436,7 +436,6 @@ fn finalize_anchoring_transaction(
     }
     anchoring_tx
 }
-
 
 fn find_payload(tx: &RawBitcoinTx) -> Option<Payload> {
     tx.output.get(ANCHORING_TX_DATA_OUTPUT as usize).and_then(

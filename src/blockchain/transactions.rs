@@ -201,7 +201,7 @@ where
                 );
                 assert_eq!(
                     prev_txid,
-                    prev_lect.tx().txid(),
+                    prev_lect.tx().id(),
                     "Inconsistent reference to previous lect in Exonum"
                 );
 

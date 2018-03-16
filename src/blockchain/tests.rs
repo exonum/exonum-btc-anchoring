@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::{PublicKey, Signature, hash};
+use exonum::crypto::{hash, PublicKey, Signature};
 use exonum::storage::StorageValue;
 use exonum::helpers::ValidatorId;
 use exonum::encoding::serialize::FromHex;
@@ -31,9 +31,9 @@ fn test_lect_content_encoding_struct() {
     let hash = hash(&[1, 2, 3, 4]);
     let tx = BitcoinTx::from_hex(
         "01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f3\
-        69a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9\
-        a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6\
-        e03f742abac0b3108134d900000000",
+         69a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9\
+         a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6\
+         e03f742abac0b3108134d900000000",
     ).unwrap();
 
     let content = LectContent::new(&hash, tx);
@@ -45,9 +45,9 @@ fn test_lect_content_encoding_struct() {
 fn test_msg_update_latest_json_serde() {
     let tx = BitcoinTx::from_hex(
         "01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f3\
-        69a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9\
-        a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6\
-        e03f742abac0b3108134d900000000",
+         69a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9\
+         a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6\
+         e03f742abac0b3108134d900000000",
     ).unwrap();
 
     let msg = MsgAnchoringUpdateLatest::new_with_signature(
@@ -66,14 +66,14 @@ fn test_msg_update_latest_json_serde() {
 fn test_sighash_type_all_in_msg_signature() {
     let tx = AnchoringTx::from_hex(
         "01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f3\
-        69a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9\
-        a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6\
-        e03f742abac0b3108134d900000000",
+         69a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9\
+         a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6\
+         e03f742abac0b3108134d900000000",
     ).unwrap();
     let btc_signature = btc::Signature::from_hex(
         "3044022061d0bd408ec10f4f901c6d548151cc53031a3083\
-        f28dbcfc132319a162421d24022074f8a1c182088389bfae8646d9d99dea5b47db8f795d02efcc41ab4da0a8e1\
-        1b01",
+         f28dbcfc132319a162421d24022074f8a1c182088389bfae8646d9d99dea5b47db8f795d02efcc41ab4da0a8e1\
+         1b01",
     ).unwrap();
     let msg = MsgAnchoringSignature::new_with_signature(
         &PublicKey::zero(),
@@ -91,14 +91,14 @@ fn test_sighash_type_all_in_msg_signature() {
 fn test_sighash_type_single_in_msg_signature() {
     let tx = AnchoringTx::from_hex(
         "01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f5c98f3\
-        69a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9\
-        a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6\
-        e03f742abac0b3108134d900000000",
+         69a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd4177a52c9\
+         a30a8700000000000000002c6a2a012800000000000000007fab6f66a0f7a747c820cd01fa30d7bdebd26b91c6\
+         e03f742abac0b3108134d900000000",
     ).unwrap();
     let mut btc_signature = btc::Signature::from_hex(
         "3044022061d0bd408ec10f4f901c6d548151cc53031a\
-        3083f28dbcfc132319a162421d24022074f8a1c182088389bfae8646d9d99dea5b47db8f795d02efcc41ab4da0\
-        a8e11b01",
+         3083f28dbcfc132319a162421d24022074f8a1c182088389bfae8646d9d99dea5b47db8f795d02efcc41ab4da0\
+         a8e11b01",
     ).unwrap();
     *btc_signature.last_mut().unwrap() = SigHashType::Single.as_u32() as u8;
 
@@ -122,8 +122,8 @@ fn test_signed_input_in_msg_signature_tx_body() {
     let btc_signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
     let signed_tx = tx.clone().finalize(&redeem_script, btc_signatures.clone());
 
-    assert!(signed_tx.ntxid() != signed_tx.txid());
-    assert_eq!(signed_tx.ntxid(), tx.txid());
+    assert!(signed_tx.nid() != signed_tx.id());
+    assert_eq!(signed_tx.nid(), tx.id());
 
     let msg = MsgAnchoringSignature::new_with_signature(
         &PublicKey::zero(),

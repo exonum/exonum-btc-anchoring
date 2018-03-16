@@ -64,7 +64,7 @@ impl AnchoringHandler {
                     }
                     // check that we have enough confirmations
                     let confirmations = self.client()
-                        .get_transaction_confirmations(lect.txid())?
+                        .get_transaction_confirmations(lect.id())?
                         .unwrap_or_else(|| 0);
                     if confirmations >= multisig.common.utxo_confirmations {
                         let height = multisig.common.latest_anchoring_height(state.height());
@@ -98,7 +98,7 @@ impl AnchoringHandler {
             confirmations
         );
         if confirmations.is_none() {
-            trace!("Resend transition transaction, txid={}", lect.txid());
+            trace!("Resend transition transaction, txid={}", lect.id());
             self.client().send_transaction(lect)?;
         }
         Ok(())
@@ -125,11 +125,11 @@ impl AnchoringHandler {
         let lect_txid = {
             let anchoring_schema = AnchoringSchema::new(state.snapshot());
             if let Some(tx) = anchoring_schema.collect_lects(prev_cfg) {
-                tx.txid()
+                tx.id()
             } else {
                 // Use initial funding tx as prev chain
                 let genesis_cfg = anchoring_schema.genesis_anchoring_config();
-                genesis_cfg.funding_tx().txid()
+                genesis_cfg.funding_tx().id()
             }
         };
         self.try_create_anchoring_tx_chain(

@@ -60,18 +60,14 @@ pub struct LectInfo {
 impl From<BitcoinTx> for AnchoringInfo {
     fn from(tx: BitcoinTx) -> AnchoringInfo {
         match TxKind::from(tx) {
-            TxKind::Anchoring(tx) => {
-                AnchoringInfo {
-                    txid: tx.txid(),
-                    payload: Some(tx.payload()),
-                }
-            }
-            TxKind::FundingTx(tx) => {
-                AnchoringInfo {
-                    txid: tx.txid(),
-                    payload: None,
-                }
-            }
+            TxKind::Anchoring(tx) => AnchoringInfo {
+                txid: tx.id(),
+                payload: Some(tx.payload()),
+            },
+            TxKind::FundingTx(tx) => AnchoringInfo {
+                txid: tx.id(),
+                payload: None,
+            },
             TxKind::Other(tx) => panic!("Found incorrect lect transaction, content={:#?}", tx),
         }
     }

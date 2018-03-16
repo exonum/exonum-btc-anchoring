@@ -13,21 +13,21 @@
 // limitations under the License.
 
 extern crate bitcoin;
-extern crate exonum_bitcoinrpc as bitcoinrpc;
-extern crate secp256k1;
-extern crate rand;
-extern crate serde;
-extern crate libc;
 extern crate byteorder;
+extern crate exonum;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
+extern crate exonum_btc_anchoring;
+extern crate exonum_testkit;
+extern crate libc;
 #[macro_use]
 extern crate log;
 #[macro_use]
-extern crate serde_json;
-#[macro_use]
 extern crate pretty_assertions;
-extern crate exonum;
-extern crate exonum_btc_anchoring;
-extern crate exonum_testkit;
+extern crate rand;
+extern crate secp256k1;
+extern crate serde;
+#[macro_use]
+extern crate serde_json;
 
 #[macro_use]
 pub mod testkit_extras;
@@ -116,7 +116,6 @@ fn test_api_public_common() {
         assert_eq!(api.current_lect_of_validator(id), lect_info);
     }
 }
-
 
 // Try to get lect from nonexistent validator id
 // result: Panic
