@@ -122,8 +122,8 @@ fn test_signed_input_in_msg_signature_tx_body() {
     let btc_signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
     let signed_tx = tx.clone().finalize(&redeem_script, btc_signatures.clone());
 
-    assert!(signed_tx.nid() != signed_tx.id());
-    assert_eq!(signed_tx.nid(), tx.id());
+    assert!(signed_tx.ntxid() != signed_tx.txid());
+    assert_eq!(signed_tx.ntxid(), tx.txid());
 
     let msg = MsgAnchoringSignature::new_with_signature(
         &PublicKey::zero(),

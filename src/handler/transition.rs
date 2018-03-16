@@ -64,7 +64,7 @@ impl AnchoringHandler {
                     }
                     // check that we have enough confirmations
                     let confirmations = self.client()
-                        .get_transaction_confirmations(lect.id())?
+                        .get_transaction_confirmations(lect.txid())?
                         .unwrap_or_else(|| 0);
                     if confirmations >= multisig.common.utxo_confirmations {
                         let height = multisig.common.latest_anchoring_height(state.height());
@@ -125,11 +125,11 @@ impl AnchoringHandler {
         let lect_txid = {
             let anchoring_schema = AnchoringSchema::new(state.snapshot());
             if let Some(tx) = anchoring_schema.collect_lects(prev_cfg) {
-                tx.id()
+                tx.txid()
             } else {
                 // Use initial funding tx as prev chain
                 let genesis_cfg = anchoring_schema.genesis_anchoring_config();
-                genesis_cfg.funding_tx().id()
+                genesis_cfg.funding_tx().txid()
             }
         };
         self.try_create_anchoring_tx_chain(

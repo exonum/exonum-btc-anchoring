@@ -264,7 +264,7 @@ fn test_anchoring_find_lect_chain_normal() {
         txs.into_iter().rev().nth(1).unwrap()
     };
     let current_anchored_tx = testkit.latest_anchored_tx();
-    assert_eq!(current_anchored_tx.prev_hash(), prev_anchored_tx.id());
+    assert_eq!(current_anchored_tx.prev_hash(), prev_anchored_tx.txid());
 
     let request = vec![
         request! {
@@ -455,11 +455,11 @@ fn test_anchoring_signature_wrong_validator() {
         )
     };
 
-    let signs_before = dump_signatures(&testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.txid());
     // Commit `msg_signature_wrong` into blockchain
     testkit.create_block_with_transactions(txvec![msg_signature_wrong]);
     // Ensure that service ignore it
-    let signs_after = dump_signatures(&testkit, &tx.id());
+    let signs_after = dump_signatures(&testkit, &tx.txid());
     assert_eq!(signs_before, signs_after);
 }
 
@@ -496,11 +496,11 @@ fn test_anchoring_signature_nonexistent_tx() {
     };
 
 
-    let signs_before = dump_signatures(&testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.txid());
     // Commit `msg_sign` into blockchain
     testkit.create_block_with_transactions(txvec![msg_sign.clone()]);
     // Ensure that service adds it
-    let signs_after = dump_signatures(&testkit, &tx.id());
+    let signs_after = dump_signatures(&testkit, &tx.txid());
     assert!(signs_before.is_empty());
     assert_eq!(signs_after[0], msg_sign);
 }
@@ -536,11 +536,11 @@ fn test_anchoring_signature_incorrect_payload() {
         )
     };
 
-    let signatures_before = dump_signatures(&testkit, &tx.id());
+    let signatures_before = dump_signatures(&testkit, &tx.txid());
     // Commit `msg_sign` into blockchain
     testkit.create_block_with_transactions(txvec![msg_sign.clone()]);
     // Ensure that service ignores it
-    let signatures_after = dump_signatures(&testkit, &tx.id());
+    let signatures_after = dump_signatures(&testkit, &tx.txid());
     assert!(signatures_before.is_empty());
     assert!(signatures_after.is_empty());
 }
@@ -688,11 +688,11 @@ fn test_anchoring_signature_nonexistent_validator() {
         )
     };
 
-    let signs_before = dump_signatures(&testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.txid());
     // Commit `msg_signature_wrong` into blockchain
     testkit.create_block_with_transactions(txvec![msg_signature_wrong]);
     // Ensure that service ignores it
-    let signs_after = dump_signatures(&testkit, &tx.id());
+    let signs_after = dump_signatures(&testkit, &tx.txid());
     assert_eq!(signs_before, signs_after);
 }
 
@@ -745,11 +745,11 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
     };
     assert_ne!(signature_msgs[1], msg_signature_different);
 
-    let signs_before = dump_signatures(&testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.txid());
     // Commit `msg_signature_different` into blockchain
     testkit.create_block_with_transactions(txvec![msg_signature_different.clone()]);
     // Ensure that service ignores it
-    let signs_after = dump_signatures(&testkit, &tx.id());
+    let signs_after = dump_signatures(&testkit, &tx.txid());
     assert_eq!(signs_before, signs_after);
 }
 
@@ -784,14 +784,14 @@ fn test_anchoring_signature_input_from_different_validator() {
         )
     };
 
-    let signs_before = dump_signatures(&testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.txid());
     // Commit `msg_signature_different` into blockchain
     requests.expect(vec![
         confirmations_request(&testkit.current_funding_tx(), 50),
     ]);
     testkit.create_block_with_transactions(txvec![msg_signature_wrong.clone()]);
     // Ensure that service ignores it
-    let signs_after = dump_signatures(&testkit, &tx.id());
+    let signs_after = dump_signatures(&testkit, &tx.txid());
     assert_eq!(signs_before, signs_after);
 }
 
@@ -837,10 +837,10 @@ fn test_anchoring_signature_unknown_output_address() {
         MsgAnchoringSignature::new(keypair.0, validator_0, tx.clone(), 0, &signature, keypair.1)
     };
 
-    let signs_before = dump_signatures(&testkit, &tx.id());
+    let signs_before = dump_signatures(&testkit, &tx.txid());
     // Commit `msg_signature_wrong` into blockchain
     testkit.create_block_with_transactions(txvec![msg_signature_wrong]);
     // Ensure that service ignores it
-    let signs_after = dump_signatures(&testkit, &tx.id());
+    let signs_after = dump_signatures(&testkit, &tx.txid());
     assert_eq!(signs_before, signs_after);
 }

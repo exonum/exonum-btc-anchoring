@@ -78,8 +78,8 @@ libsodium
 libssl
 listunspent
 locktime
-Mainnet
 mainnet
+Mainnet
 maintainer's
 markdownlint
 memorydb
@@ -205,3 +205,4 @@ vout
 vsize
 whitelisted
 writeln
+wtxid

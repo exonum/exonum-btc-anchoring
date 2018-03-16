@@ -207,7 +207,7 @@ fn test_auditing_lect_lost_funding_tx() {
     requests.expect(vec![
         request! {
             method: "getrawtransaction",
-            params: [&lect_tx.id().to_string(), 0],
+            params: [&lect_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
     ]);
@@ -273,7 +273,7 @@ fn test_auditing_lect_lost_current_lect() {
     requests.expect(vec![
         request! {
             method: "getrawtransaction",
-            params: [&lect_tx.id().to_string(), 0],
+            params: [&lect_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
     ]);

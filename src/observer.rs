@@ -157,7 +157,7 @@ impl AnchoringChainObserver {
                 }
             }
 
-            let confirmations = self.client.get_transaction_confirmations(lect.id())?;
+            let confirmations = self.client.get_transaction_confirmations(lect.txid())?;
             if confirmations.as_ref() >= Some(&actual_cfg.utxo_confirmations) {
                 trace!(
                     "Adds transaction to chain, height={}, content={:#?}",
@@ -215,7 +215,7 @@ impl AnchoringChainObserver {
         actual_cfg: &AnchoringConfig,
         tx: &BitcoinTx,
     ) -> Result<bool, ServiceError> {
-        let txid = tx.id();
+        let txid = tx.txid();
         let anchoring_schema = AnchoringSchema::new(fork);
 
         let mut lect_count = 0;

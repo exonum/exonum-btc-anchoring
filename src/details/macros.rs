@@ -89,13 +89,11 @@ macro_rules! implement_serde_hex {
         }
     }
 
-    impl ::std::string::ToString for $name {
-        fn to_string(&self) -> String {
+    impl ::std::fmt::Display for $name {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
             use $crate::exonum::encoding::serialize::ToHex;
-            let mut out = String::new();
-            self.write_hex(&mut out).unwrap();
-            out
-        }
+            self.write_hex(f)
+        }       
     }
 
     impl ::serde::Serialize for $name {
@@ -104,7 +102,7 @@ macro_rules! implement_serde_hex {
         {
             ser.serialize_str(&self.to_string())
         }
-    }
+    }    
 
     impl<'de> ::serde::Deserialize<'de> for $name {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
@@ -179,7 +177,7 @@ macro_rules! implement_tx_wrapper {
     implement_wrapper! {RawBitcoinTx, $name}
 
     impl $name {
-        pub fn id(&self) -> TxId {
+        pub fn txid(&self) -> TxId {
             // Clear witness data
             let tx = {
                 let mut tx = self.0.clone();
@@ -189,11 +187,11 @@ macro_rules! implement_tx_wrapper {
             TxId::from(tx.bitcoin_hash())
         }
 
-        pub fn wid(&self) -> TxId {
+        pub fn wtxid(&self) -> TxId {
             TxId::from(self.0.bitcoin_hash())
         }
 
-        pub fn nid(&self) -> TxId {
+        pub fn ntxid(&self) -> TxId {
             TxId::from(self.0.ntxid())
         }
 

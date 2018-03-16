@@ -861,7 +861,7 @@ fn test_transit_unchanged_self_key_recover_with_funding_tx() {
                 height,
                 hash,
                 &[],
-                Some(previous_anchored_tx.id()),
+                Some(previous_anchored_tx.txid()),
                 &following_addr,
             )
             .1
@@ -979,7 +979,7 @@ fn test_transit_changed_self_key_recover_with_funding_tx() {
                 height,
                 hash,
                 &[],
-                Some(previous_anchored_tx.id()),
+                Some(previous_anchored_tx.txid()),
                 &following_addr,
             )
             .1
@@ -1119,7 +1119,7 @@ fn test_transit_changed_self_key_recover_without_funding_tx() {
                 height,
                 hash,
                 &[],
-                Some(anchored_tx.id()),
+                Some(anchored_tx.txid()),
                 &following_addr,
             )
             .1
@@ -1259,7 +1259,7 @@ fn test_transit_add_validators_recover_without_funding_tx() {
                 height,
                 hash,
                 &[],
-                Some(initial_funding_tx.id()),
+                Some(initial_funding_tx.txid()),
                 &following_addr,
             )
             .1
@@ -1357,7 +1357,7 @@ fn test_transit_msg_signature_incorrect_output_address() {
         testkit.gen_anchoring_signatures(&tx)
     };
     // Try to send different messages
-    let txid = different_signatures[0].tx().id();
+    let txid = different_signatures[0].tx().txid();
     let signs_before = dump_signatures(&testkit, &txid);
     // Try to commit tx
     let different_signatures = different_signatures
@@ -1673,7 +1673,7 @@ fn test_transit_after_exclude_from_validator() {
         confirmations_request(&transition_tx, 1000),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.id().to_string(), 0],
+            params: [&anchored_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string()),
         },
         request! {

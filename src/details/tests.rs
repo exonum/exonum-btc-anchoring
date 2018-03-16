@@ -148,7 +148,7 @@ fn test_anchoring_txid() {
 
     let txid_hex = "0e4167aeb4769de5ad8d64d1b2342330c2b6aadc0ed9ad0d26ae8eafb18d9c87";
     let txid = btc::TxId::from_hex(txid_hex).unwrap();
-    let txid2 = tx.id();
+    let txid2 = tx.txid();
 
     assert_eq!(txid2.be_hex_string(), txid_hex);
     assert_eq!(txid2, txid);
@@ -543,7 +543,7 @@ fn test_anchoring_tx_prev_chain() {
     let tx = TransactionBuilder::with_prev_tx(&prev_tx, 0)
         .fee(1000)
         .payload(Height::zero(), Hash::default())
-        .prev_tx_chain(Some(prev_tx.id()))
+        .prev_tx_chain(Some(prev_tx.txid()))
         .send_to(
             btc::Address::from_base58check("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1").unwrap(),
         )
@@ -551,7 +551,7 @@ fn test_anchoring_tx_prev_chain() {
         .unwrap();
 
 
-    assert_eq!(tx.payload().prev_tx_chain, Some(prev_tx.id()));
+    assert_eq!(tx.payload().prev_tx_chain, Some(prev_tx.txid()));
 }
 
 #[test]
@@ -825,7 +825,7 @@ mod rpc {
                 .payload(block_height, block_hash)
                 .send_to(addr.clone())
                 .fee(fee)
-                .prev_tx_chain(Some(funding_tx.id()))
+                .prev_tx_chain(Some(funding_tx.txid()))
                 .into_transaction()
                 .unwrap();
             trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());

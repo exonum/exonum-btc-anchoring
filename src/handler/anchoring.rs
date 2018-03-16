@@ -192,7 +192,7 @@ impl AnchoringHandler {
         context: &ServiceContext,
     ) -> Result<(), ServiceError> {
         trace!("Try finalize proposal tx");
-        let txid = proposal.id();
+        let txid = proposal.txid();
 
         let proposal_height = proposal.payload().block_height;
         if multisig.common.latest_anchoring_height(context.height()) !=
@@ -214,7 +214,7 @@ impl AnchoringHandler {
         if let Some(signatures) = collected_signatures {
             let new_lect = proposal.finalize(&multisig.redeem_script, signatures);
             // Send transaction if it needs
-            if self.client().get_transaction(new_lect.id())?.is_none() {
+            if self.client().get_transaction(new_lect.txid())?.is_none() {
                 self.client().send_transaction(new_lect.clone().into())?;
                 trace!(
                     "Sent signed_tx={:#?}, to={}",

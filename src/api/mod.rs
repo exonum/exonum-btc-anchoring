@@ -62,13 +62,13 @@ impl From<BitcoinTx> for AnchoringInfo {
         match TxKind::from(tx) {
             TxKind::Anchoring(tx) => {
                 AnchoringInfo {
-                    txid: tx.id(),
+                    txid: tx.txid(),
                     payload: Some(tx.payload()),
                 }
             }
             TxKind::FundingTx(tx) => {
                 AnchoringInfo {
-                    txid: tx.id(),
+                    txid: tx.txid(),
                     payload: None,
                 }
             }

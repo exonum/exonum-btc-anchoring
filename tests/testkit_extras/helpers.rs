@@ -113,9 +113,9 @@ pub fn confirmations_request(raw: &RawBitcoinTx, confirmations: u64) -> TestRequ
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     request! {
         method: "getrawtransaction",
-        params: [&tx.id().to_string(), 1],
+        params: [&tx.txid(), 1],
         response: {
-            "hash":&tx.id().to_string(),
+            "hash":&tx.txid(),
             "hex":&tx.to_hex(),
             "confirmations": confirmations,
             "locktime":1_088_682,
@@ -152,7 +152,7 @@ pub fn get_transaction_request(raw: &RawBitcoinTx) -> TestRequest {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     request! {
         method: "getrawtransaction",
-        params: [&tx.id().to_string(), 0],
+        params: [&tx.txid(), 0],
         response: &tx.to_hex()
     }
 }
@@ -162,7 +162,7 @@ pub fn send_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<TestRequest> {
     vec![
         request! {
             method: "getrawtransaction",
-            params: [&tx.id().to_string(), 0],
+            params: [&tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -178,7 +178,7 @@ pub fn resend_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<TestRequest> {
     vec![
         request! {
             method: "getrawtransaction",
-            params: [&tx.id().to_string(), 1],
+            params: [&tx.txid(), 1],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -192,7 +192,7 @@ pub fn resend_raw_transaction_requests(raw: &RawBitcoinTx) -> Vec<TestRequest> {
 pub fn listunspent_entry(raw: &RawBitcoinTx, addr: &btc::Address, confirmations: u64) -> Value {
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     json!({
-        "txid": &tx.id().to_string(),
+        "txid": &tx.txid(),
         "address": &addr.to_base58check(),
         "confirmations": confirmations,
         "vout": 0,
@@ -232,7 +232,7 @@ pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
         confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.id().to_string(), 0],
+            params: [&anchored_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {
@@ -271,7 +271,7 @@ pub fn anchor_first_block_lect_normal(testkit: &mut AnchoringTestKit) {
         },
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.id().to_string(), 0],
+            params: [&anchored_tx.txid(), 0],
             response: &anchored_tx.to_hex()
         },
     ]);
@@ -372,7 +372,7 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
         confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "getrawtransaction",
-            params: [&anchored_tx.id().to_string(), 0],
+            params: [&anchored_tx.txid(), 0],
             error: RpcError::NoInformation("Unable to find tx".to_string())
         },
         request! {

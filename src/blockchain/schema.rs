@@ -66,7 +66,7 @@ impl StorageKey for KnownSignatureId {
 impl<'a> From<&'a MsgAnchoringSignature> for KnownSignatureId {
     fn from(msg: &'a MsgAnchoringSignature) -> KnownSignatureId {
         KnownSignatureId {
-            txid: msg.tx().id(),
+            txid: msg.tx().txid(),
             validator_id: msg.validator(),
             input: msg.input(),
         }
@@ -316,7 +316,7 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
             let mut lects = self.lects_mut(validator_key);
             let tx = tx.into();
             let idx = lects.len();
-            let txid = tx.id();
+            let txid = tx.txid();
             lects.push(LectContent::new(&msg_hash, tx.clone()));
             (tx, txid, idx)
         };
@@ -327,7 +327,7 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
 
     /// Adds signature to known if it is correct.
     pub fn add_known_signature(&mut self, msg: MsgAnchoringSignature) -> Result<(), ValidateError> {
-        let ntxid = msg.tx().nid();
+        let ntxid = msg.tx().ntxid();
         let signature_id = KnownSignatureId::from(&msg);
         if self.known_signatures().get(&signature_id).is_some() {
             Err(ValidateError::SignatureDifferent)
