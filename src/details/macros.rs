@@ -180,6 +180,16 @@ macro_rules! implement_tx_wrapper {
 
     impl $name {
         pub fn id(&self) -> TxId {
+            // Clear witness data
+            let tx = {
+                let mut tx = self.0.clone();
+                tx.witness.clear();
+                tx
+            };
+            TxId::from(tx.bitcoin_hash())
+        }
+
+        pub fn wid(&self) -> TxId {
             TxId::from(self.0.bitcoin_hash())
         }
 
@@ -193,8 +203,11 @@ macro_rules! implement_tx_wrapper {
             self.write_hex(&mut out).unwrap();
             out
         }
-    }
 
+        pub fn has_witness(&self) -> bool {
+            !self.0.witness.is_empty()
+        }
+    }
 
     impl $crate::exonum::encoding::serialize::ToHex for $name {
         fn write_hex<W: fmt::Write>(&self, w: &mut W) -> fmt::Result {
