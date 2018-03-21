@@ -178,14 +178,7 @@ macro_rules! implement_tx_wrapper {
 
     impl $name {
         pub fn id(&self) -> TxId {
-            let hash = if self.has_witness() {
-                // Clear witness data
-                let mut tx = self.0.clone();
-                tx.witness.clear();
-                tx.bitcoin_hash()
-            } else {
-                self.bitcoin_hash()
-            };
+            let hash = self.0.txid();
             TxId::from(hash)
         }
 
