@@ -59,7 +59,12 @@
 
 extern crate bitcoin;
 extern crate byteorder;
+#[macro_use]
+extern crate display_derive;
 extern crate exonum_bitcoinrpc as bitcoinrpc;
+extern crate failure;
+#[macro_use]
+extern crate failure_derive;
 #[macro_use]
 extern crate log;
 extern crate secp256k1;
@@ -69,12 +74,6 @@ extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 extern crate toml;
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
-#[macro_use]
-extern crate display_derive;
-
 
 #[macro_use]
 extern crate exonum;
@@ -102,7 +101,7 @@ pub mod observer;
 pub mod cmd;
 
 pub use details::btc::{gen_btc_keypair, gen_btc_keypair_with_rng, Network as BitcoinNetwork};
-pub use details::rpc::{RpcClient, AnchoringRpcConfig, BitcoinRelay};
+pub use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
 pub use blockchain::consensus_storage::AnchoringConfig;
 pub use local_storage::AnchoringNodeConfig;
 pub use service::{gen_anchoring_testnet_config, gen_anchoring_testnet_config_with_rng,

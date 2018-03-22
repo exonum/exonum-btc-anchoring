@@ -13,8 +13,8 @@
 // limitations under the License.
 
 extern crate exonum;
-extern crate exonum_configuration as configuration;
 extern crate exonum_btc_anchoring as anchoring;
+extern crate exonum_configuration as configuration;
 
 use exonum::helpers::fabric::NodeBuilder;
 use exonum::helpers;

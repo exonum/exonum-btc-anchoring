@@ -21,7 +21,7 @@ use bitcoin::network::constants::Network;
 use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
 
-use super::{PublicKey, RedeemScript, Address};
+use super::{Address, PublicKey, RedeemScript};
 
 // TODO implement errors
 

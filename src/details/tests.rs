@@ -28,7 +28,7 @@ use secp256k1::Secp256k1;
 use exonum::helpers::{self, Height};
 use exonum::crypto::Hash;
 use exonum::storage::StorageValue;
-use exonum::encoding::serialize::{FromHex, encode_hex};
+use exonum::encoding::serialize::{encode_hex, FromHex};
 use exonum::encoding::Field;
 
 use details::btc::transactions::{sign_tx_input, verify_tx_input, AnchoringTx, BitcoinTx,
@@ -151,7 +151,26 @@ fn test_anchoring_txid() {
     let txid2 = tx.id();
 
     assert_eq!(txid2.be_hex_string(), txid_hex);
+    assert_eq!(txid2.to_string(), txid_hex);
     assert_eq!(txid2, txid);
+    assert_eq!(txid2, tx.wid());
+}
+
+#[test]
+fn test_segwit_txid() {
+    let tx = BitcoinTx::from_hex(
+        "02000000000101a4fe140f92eb5fa5a4788b6271a22f07fa91cb2f8ac328cd00\
+         65bfc43adb16c9010000001716001446decf32d70ee1fad5aa11d02158810316e6790bfeffffff02a086010000\
+         00000017a9147f1423e3359d1754ae9427e313c1d9581f3f280a87e8e520070000000017a914b83c7a100c7ff4\
+         91e5edb5f1dfcd39e298e50f4b87024830450221008f9378080defdb2029f9c96e149e85e93d8fb860a1c06a7c\
+         98890809077eec8b02206049967206a4bd35f8fa4c59a8cd9f46b08e48f794a6b325986b4e9227b9d8d3012103\
+         7f72563a0750831ab4fb762e01cfe368ddd412042be6b78af5ee5a9bd38d0ed093a81300",
+    ).unwrap();
+    let txid_hex = "6ed431718c73787ad92e6bcbd6ac7c8151e08dffeeebb6d9e5af2d25b6837d98";
+    let wtxid_hex = "73ef5a203b8e90202ac75cb41c497c14852b88b098e951c1cb49f14738176b8f";
+
+    assert_eq!(tx.id().to_string(), txid_hex);
+    assert_eq!(tx.wid().to_string(), wtxid_hex);
 }
 
 #[test]
@@ -550,7 +569,6 @@ fn test_anchoring_tx_prev_chain() {
         .into_transaction()
         .unwrap();
 
-
     assert_eq!(tx.payload().prev_tx_chain, Some(prev_tx.id()));
 }
 
@@ -747,7 +765,7 @@ mod rpc {
             }
             builder.into_transaction().unwrap()
         };
-        trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
+        trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.id());
 
         let inputs = tx.inputs().collect::<Vec<_>>();
         let signatures = make_signatures(redeem_script, &tx, inputs.as_slice(), priv_keys);
@@ -758,7 +776,7 @@ mod rpc {
         assert_eq!(payload.block_height, block_height);
         assert_eq!(payload.block_hash, block_hash);
 
-        trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.txid());
+        trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.id());
         let unspent_transactions = client.unspent_transactions(to).unwrap();
         let lect_tx = &unspent_transactions[0];
         assert_eq!(lect_tx.body.0, tx.0);
@@ -828,12 +846,12 @@ mod rpc {
                 .prev_tx_chain(Some(funding_tx.id()))
                 .into_transaction()
                 .unwrap();
-            trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.txid());
+            trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.id());
 
             let signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
             let tx = tx.finalize(&redeem_script, signatures);
             client.send_transaction(tx.clone().into()).unwrap();
-            trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.txid());
+            trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.id());
 
             assert!(
                 funding_tx
@@ -959,12 +977,12 @@ mod rpc {
                 .fee(fee)
                 .into_transaction()
                 .unwrap();
-            trace!("Proposed anchoring_tx={:#?}, txid={}", tx, tx.txid());
+            trace!("Proposed anchoring_tx={:#?}, txid={}", tx, tx.id());
 
             let signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
             let tx = tx.finalize(&redeem_script, signatures);
             client.send_transaction(tx.clone().into()).unwrap();
-            trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.txid());
+            trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.id());
 
             assert!(
                 funding_tx

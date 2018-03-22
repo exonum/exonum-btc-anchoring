@@ -26,7 +26,7 @@ use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 
-use super::{AnchoringHandler, LectKind, MultisigAddress, collect_signatures};
+use super::{collect_signatures, AnchoringHandler, LectKind, MultisigAddress};
 
 #[doc(hidden)]
 impl AnchoringHandler {
@@ -51,7 +51,6 @@ impl AnchoringHandler {
         }
         Ok(())
     }
-
 
     pub fn try_create_proposal_tx(
         &mut self,
@@ -228,13 +227,13 @@ impl AnchoringHandler {
             info!(
                 "ANCHORING ====== anchored_height={}, txid={}, remaining_funds={}",
                 new_lect.payload().block_height,
-                new_lect.txid(),
+                new_lect.id(),
                 new_lect.amount()
             );
 
             info!(
                 "LECT ====== txid={}, total_count={}",
-                new_lect.txid(),
+                new_lect.id(),
                 AnchoringSchema::new(context.snapshot())
                     .lects(self.anchoring_key(multisig.common, context))
                     .len()

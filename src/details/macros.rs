@@ -89,12 +89,10 @@ macro_rules! implement_serde_hex {
         }
     }
 
-    impl ::std::string::ToString for $name {
-        fn to_string(&self) -> String {
+    impl ::std::fmt::Display for $name {
+        fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
             use $crate::exonum::encoding::serialize::ToHex;
-            let mut out = String::new();
-            self.write_hex(&mut out).unwrap();
-            out
+            self.write_hex(f)
         }
     }
 
@@ -180,6 +178,11 @@ macro_rules! implement_tx_wrapper {
 
     impl $name {
         pub fn id(&self) -> TxId {
+            let hash = self.0.txid();
+            TxId::from(hash)
+        }
+
+        pub fn wid(&self) -> TxId {
             TxId::from(self.0.bitcoin_hash())
         }
 
@@ -188,11 +191,15 @@ macro_rules! implement_tx_wrapper {
         }
 
         pub fn txid(&self) -> String {
-            self.0.bitcoin_hash().be_hex_string()
+            self.id().to_string()
         }
 
         pub fn ntxid(&self) -> String {
-            self.0.ntxid().be_hex_string()
+            self.nid().to_string()
+        }
+
+        pub fn wtxid(&self) -> String {
+            self.wid().to_string()
         }
 
         pub fn to_hex(&self) -> String {
@@ -201,8 +208,11 @@ macro_rules! implement_tx_wrapper {
             self.write_hex(&mut out).unwrap();
             out
         }
-    }
 
+        pub fn has_witness(&self) -> bool {
+            !self.0.witness.is_empty()
+        }
+    }
 
     impl $crate::exonum::encoding::serialize::ToHex for $name {
         fn write_hex<W: fmt::Write>(&self, w: &mut W) -> fmt::Result {

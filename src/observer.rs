@@ -22,7 +22,7 @@ use bitcoin::util::base58::ToBase58;
 use exonum::blockchain::{Blockchain, Schema};
 use exonum::storage::Fork;
 
-use details::rpc::{RpcClient, AnchoringRpcConfig, BitcoinRelay};
+use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
 use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
 use blockchain::schema::AnchoringSchema;
 use blockchain::consensus_storage::AnchoringConfig;

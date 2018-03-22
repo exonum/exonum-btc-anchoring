@@ -84,7 +84,7 @@ impl AnchoringHandler {
             }
         }
 
-        info!("CHECKED_INITIAL_LECT ====== txid={}", tx.txid());
+        info!("CHECKED_INITIAL_LECT ====== txid={}", tx.id());
         Ok(())
     }
 
@@ -97,7 +97,7 @@ impl AnchoringHandler {
             }
         }
 
-        info!("CHECKED_LECT ====== txid={}", tx.txid());
+        info!("CHECKED_LECT ====== txid={}", tx.id());
         Ok(())
     }
 }

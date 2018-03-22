@@ -13,22 +13,22 @@
 // limitations under the License.
 
 extern crate bitcoin;
-extern crate exonum_bitcoinrpc as bitcoinrpc;
-extern crate secp256k1;
-extern crate rand;
-extern crate serde;
-extern crate libc;
 extern crate byteorder;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate serde_json;
-#[macro_use]
-extern crate pretty_assertions;
 extern crate exonum;
+extern crate exonum_bitcoinrpc as bitcoinrpc;
 extern crate exonum_btc_anchoring;
 #[macro_use]
 extern crate exonum_testkit;
+extern crate libc;
+#[macro_use]
+extern crate log;
+#[macro_use]
+extern crate pretty_assertions;
+extern crate rand;
+extern crate secp256k1;
+extern crate serde;
+#[macro_use]
+extern crate serde_json;
 
 #[macro_use]
 pub mod testkit_extras;
@@ -77,7 +77,6 @@ fn test_anchoring_funding_tx_waiting() {
     requests.expect(vec![confirmations_request(&funding_tx, 0)]);
     testkit.create_block();
 }
-
 
 // We anchor first block and receive lect
 // problems: None
@@ -494,7 +493,6 @@ fn test_anchoring_signature_nonexistent_tx() {
             keypair.1,
         )
     };
-
 
     let signs_before = dump_signatures(&testkit, &tx.id());
     // Commit `msg_sign` into blockchain

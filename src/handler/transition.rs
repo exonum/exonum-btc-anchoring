@@ -98,7 +98,7 @@ impl AnchoringHandler {
             confirmations
         );
         if confirmations.is_none() {
-            trace!("Resend transition transaction, txid={}", lect.txid());
+            trace!("Resend transition transaction, txid={}", lect.id());
             self.client().send_transaction(lect)?;
         }
         Ok(())

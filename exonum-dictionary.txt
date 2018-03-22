@@ -78,8 +78,8 @@ libsodium
 libssl
 listunspent
 locktime
-Mainnet
 mainnet
+Mainnet
 maintainer's
 markdownlint
 memorydb
@@ -105,8 +105,8 @@ oneshot
 OP_CHECKSIG
 OP_EQUALVERIFY
 openssl
-passwd
 PASSWD
+passwd
 peekable
 permissioned
 postcondition
@@ -147,6 +147,7 @@ scriptSig
 scriptSigs
 secp
 seedable
+segwit
 sendrawtransaction
 sendtoaddress
 serde
@@ -186,6 +187,7 @@ toolchain
 txhex
 txid
 txindex
+txinfo
 txvec
 tymethod
 unboxed
@@ -205,3 +207,4 @@ vout
 vsize
 whitelisted
 writeln
+wtxid

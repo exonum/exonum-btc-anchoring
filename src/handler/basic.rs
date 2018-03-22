@@ -228,7 +228,7 @@ impl AnchoringHandler {
             match TxKind::from(actual_lect) {
                 TxKind::FundingTx(tx) => {
                     if tx.find_out(&actual_addr).is_some() {
-                        trace!("Checking funding_tx={:#?}, txid={}", tx, tx.txid());
+                        trace!("Checking funding_tx={:#?}, txid={}", tx, tx.id());
                         // Wait until funding_tx got enough confirmation
                         let confirmations = self.client().get_transaction_confirmations(tx.id())?;
                         if !is_enough_confirmations(&actual, confirmations) {
@@ -499,7 +499,7 @@ impl AnchoringHandler {
 
         info!(
             "LECT ====== txid={}, total_count={}",
-            lect.txid(),
+            lect.id(),
             lects_count
         );
 
