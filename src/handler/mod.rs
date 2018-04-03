@@ -58,7 +58,9 @@ pub struct MultisigAddress<'a> {
 #[doc(hidden)]
 #[derive(Debug)]
 pub enum AnchoringState {
-    Anchoring { cfg: AnchoringConfig },
+    Anchoring {
+        cfg: AnchoringConfig,
+    },
     Transition {
         from: AnchoringConfig,
         to: AnchoringConfig,
@@ -71,7 +73,9 @@ pub enum AnchoringState {
         lect: BitcoinTx,
         confirmations: Option<u64>,
     },
-    Auditing { cfg: AnchoringConfig },
+    Auditing {
+        cfg: AnchoringConfig,
+    },
     Broken,
 }
 

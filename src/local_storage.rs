@@ -75,11 +75,9 @@ where
     S: Serializer,
 {
     let keypairs = map.iter()
-        .map(|(address, private_key)| {
-            AnchoringKeypair {
-                address: address.to_string(),
-                private_key: private_key.clone(),
-            }
+        .map(|(address, private_key)| AnchoringKeypair {
+            address: address.to_string(),
+            private_key: private_key.clone(),
         })
         .collect::<Vec<_>>();
 
@@ -95,9 +93,7 @@ where
     let keypairs: Vec<AnchoringKeypair> = Vec::deserialize(deserializer)?;
     let map = keypairs
         .iter()
-        .map(|keypair| {
-            (keypair.address.to_string(), keypair.private_key.clone())
-        })
+        .map(|keypair| (keypair.address.to_string(), keypair.private_key.clone()))
         .collect::<BTreeMap<_, _>>();
     Ok(map)
 }

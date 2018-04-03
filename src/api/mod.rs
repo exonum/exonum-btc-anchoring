@@ -124,9 +124,9 @@ impl PublicApi {
     pub fn following_address(&self) -> Result<Option<btc::Address>, ApiError> {
         let snapshot = self.blockchain.snapshot();
         let schema = AnchoringSchema::new(snapshot);
-        let following_addr = schema.following_anchoring_config().map(|cfg| {
-            cfg.redeem_script().1
-        });
+        let following_addr = schema
+            .following_anchoring_config()
+            .map(|cfg| cfg.redeem_script().1);
         Ok(following_addr)
     }
 

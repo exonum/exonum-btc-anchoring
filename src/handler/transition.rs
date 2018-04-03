@@ -73,8 +73,7 @@ impl AnchoringHandler {
                         warn!(
                             "Insufficient confirmations for create transition transaction, \
                              tx={:#?}, confirmations={}",
-                            lect,
-                            confirmations
+                            lect, confirmations
                         );
                     }
                 }
@@ -132,11 +131,7 @@ impl AnchoringHandler {
                 genesis_cfg.funding_tx().id()
             }
         };
-        self.try_create_anchoring_tx_chain(
-            &multisig,
-            Some(lect_txid),
-            state,
-        )?;
+        self.try_create_anchoring_tx_chain(&multisig, Some(lect_txid), state)?;
 
         // Try to finalize new tx chain propose if it exist
         if let Some(proposal) = self.proposal_tx.clone() {

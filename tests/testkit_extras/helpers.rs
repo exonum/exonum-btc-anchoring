@@ -244,9 +244,7 @@ pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
     testkit.create_block_with_transactions(signatures);
 
     let txs = (0..4)
-        .map(|idx| {
-            gen_service_tx_lect(testkit, ValidatorId(idx), &anchored_tx, 1)
-        })
+        .map(|idx| gen_service_tx_lect(testkit, ValidatorId(idx), &anchored_tx, 1))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&txs[0].hash()));
@@ -312,9 +310,7 @@ pub fn anchor_first_block_lect_different(testkit: &mut AnchoringTestKit) {
     testkit.create_block();
 
     let txs = (0..4)
-        .map(|idx| {
-            gen_service_tx_lect(testkit, ValidatorId(idx), &other_lect, 2)
-        })
+        .map(|idx| gen_service_tx_lect(testkit, ValidatorId(idx), &other_lect, 2))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&txs[0].hash()));
@@ -347,9 +343,7 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
     testkit.create_block();
 
     let txs = (0..4)
-        .map(|idx| {
-            gen_service_tx_lect(testkit, ValidatorId(idx), &other_lect, 2)
-        })
+        .map(|idx| gen_service_tx_lect(testkit, ValidatorId(idx), &other_lect, 2))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&txs[0].hash()));
@@ -424,9 +418,7 @@ pub fn anchor_second_block_normal(testkit: &mut AnchoringTestKit) {
     testkit.create_block_with_transactions(signatures);
 
     let txs = (0..4)
-        .map(|idx| {
-            gen_service_tx_lect(testkit, ValidatorId(idx), &anchored_tx, 2)
-        })
+        .map(|idx| gen_service_tx_lect(testkit, ValidatorId(idx), &anchored_tx, 2))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&txs[0].hash()));
@@ -516,9 +508,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
     testkit.create_block_with_transactions(signatures);
 
     let lects = (0..4)
-        .map(|id| {
-            gen_service_tx_lect(testkit, ValidatorId(id), &transition_tx, 2)
-        })
+        .map(|id| gen_service_tx_lect(testkit, ValidatorId(id), &transition_tx, 2))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
@@ -546,10 +536,8 @@ pub fn gen_following_cfg_exclude_validator(
 
     let following_addr = service_cfg.redeem_script().1;
     for (id, ref mut node) in testkit.nodes_mut().iter_mut().enumerate() {
-        node.private_keys.insert(
-            following_addr.to_string(),
-            priv_keys[id].clone(),
-        );
+        node.private_keys
+            .insert(following_addr.to_string(), priv_keys[id].clone());
     }
 
     cfg.set_actual_from(from_height);

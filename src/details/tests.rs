@@ -175,7 +175,8 @@ fn test_segwit_txid() {
 
 #[test]
 fn test_anchoring_tx_serde() {
-    let hex = "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c099010000000\
+    let hex =
+        "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c099010000000\
          0ffffffff0240899500000000001976a914b85133a96a5cadf6cddcfb1d17c79f42c3bbc9dd88ac00000000000\
          000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd\
          004cd1e7500000000";
@@ -188,7 +189,8 @@ fn test_anchoring_tx_serde() {
 
 #[test]
 fn test_anchoring_tx_encoding_struct() {
-    let hex = "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c099010000000\
+    let hex =
+        "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c099010000000\
          0ffffffff0240899500000000001976a914b85133a96a5cadf6cddcfb1d17c79f42c3bbc9dd88ac00000000000\
          000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd\
          004cd1e7500000000";
@@ -201,7 +203,8 @@ fn test_anchoring_tx_encoding_struct() {
 
 #[test]
 fn test_anchoring_tx_message_field_rw_correct() {
-    let hex = "010000000141d7585a6cb11e78c27fab0e8f8f8ede9285d6601fd4c4ab72cdadbb3b7af8030000000000\
+    let hex =
+        "010000000141d7585a6cb11e78c27fab0e8f8f8ede9285d6601fd4c4ab72cdadbb3b7af8030000000000\
          ffffffff02000000000000000017a914e084a290cf26998909b4fa5b42088918eeefee97870000000000\
          000000326a3045584f4e554d0100020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef0\
          3baf0603fd4b0cd004cd1e7500000000";
@@ -217,7 +220,8 @@ fn test_anchoring_tx_message_field_rw_correct() {
 
 #[test]
 fn test_bitcoin_tx_message_field_rw_correct() {
-    let hex = "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c099010000000\
+    let hex =
+        "010000000148f4ae90d8c514a739f17dbbd405442171b09f1044183080b23b6557ce82c099010000000\
          0ffffffff0240899500000000001976a914b85133a96a5cadf6cddcfb1d17c79f42c3bbc9dd88ac00000000000\
          000002e6a2c6a2a6a28020000000000000062467691cf583d4fa78b18fafaf9801f505e0ef03baf0603fd4b0cd\
          004cd1e7500000000";
@@ -284,7 +288,8 @@ fn test_anchoring_tx_message_field_rw_without_payload_check() {
 fn test_anchoring_tx_message_field_rw_wrong_check() {
     // Correct non-anchoring tx, created by command:
     // `bitcoin-cli sendtoaddress "mynkNvvoysgzn3CX51KwyKyNVbEJEHs8Cw" 0.1`
-    let hex = "02000000011b8ac5ff25dfe2b4675e86d77dda493ade980206ee6a7833729f07a2f1f49982000000004\
+    let hex =
+        "02000000011b8ac5ff25dfe2b4675e86d77dda493ade980206ee6a7833729f07a2f1f49982000000004\
          84730440220620a9ea6cfe4f575d2edffa815705a50b95b3eec9e0259abe94a087fafebf59902200c4cd654a50\
          6137726bf608288539879d4ee939a3dc5bb8d4411bcbd2a0d836001feffffff0200d7e849000000001976a9146\
          18396019f30e77caaea0ec2d5ec5280e26ff23f88ac80969800000000001976a914c86ef8fb71b99cac9e5b1be\
@@ -304,7 +309,8 @@ fn test_funding_tx_message_field_rw_wrong_tx_kind_check() {
     // `bitcoin-cli sendtoaddress "n4a3q23iUKZsmmrT5bVkeAsyqzvR5TmUbf" 0.0001` see transaction
     // b63170f59291c916b04fc65e110e4cbb7e835150ad1d62e6c03e929b832b4391 in the
     // https://www.blocktrail.com/tBTC
-    let hex = "020000000197714d5c9db6334fc5043562a477abac3e4dae088fc94d68a7a634ec98b48373010000006\
+    let hex =
+        "020000000197714d5c9db6334fc5043562a477abac3e4dae088fc94d68a7a634ec98b48373010000006\
          b483045022100a1a611cd455850681814b62cc138491f5e91b4e561ae38c7b26d6f5ba3253e4202203bc7aadc4\
          0452a5e1f76f025e198a7badf8374e476e51ab0baf5e1fe952d37cd012103231378cfe95565fe969e6a0fb6a70\
          2e2f97c8d48c395315c0f5075214aa19811feffffff0210270000000000001976a914fce0c2a6f0ff5d7ff9681\
@@ -332,7 +338,8 @@ fn test_bitcoin_tx_message_field_rw_incorrect_check() {
 
 #[test]
 fn test_redeem_script_from_pubkeys() {
-    let redeem_script_hex = "5321027db7837e51888e94c094703030d162c682c8dba312210f44ff440fbd5e5c247\
+    let redeem_script_hex =
+        "5321027db7837e51888e94c094703030d162c682c8dba312210f44ff440fbd5e5c247\
          32102bdd272891c9e4dfc3962b1fdffd5a59732019816f9db4833634dbdaf01a401a52103280883dc31ccaee34\
          218819aaa245480c35a33acd91283586ff6d1284ed681e52103e2bc790a6e32bf5a766919ff55b1f9e9914e13a\
          ed84f502c0e4171976e19deb054ae";
@@ -449,8 +456,8 @@ fn test_anchoring_tx_sign() {
     ].iter()
         .map(|x| btc::PublicKey::from_hex(x).unwrap())
         .collect::<Vec<_>>();
-    let redeem_script = btc::RedeemScript::from_pubkeys(pub_keys.iter(), 3)
-        .compressed(Network::Testnet);
+    let redeem_script =
+        btc::RedeemScript::from_pubkeys(pub_keys.iter(), 3).compressed(Network::Testnet);
 
     let prev_tx = AnchoringTx::from_hex(
         "01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d\
@@ -479,9 +486,8 @@ fn test_anchoring_tx_sign() {
         .add_funds(&funding_tx, 0)
         .payload(
             Height(10),
-            Hash::from_hex(
-                "164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9",
-            ).unwrap(),
+            Hash::from_hex("164d236bbdb766e64cec57847e3a0509d4fc77fa9c17b7e61e48f7a3eaa8dbc9")
+                .unwrap(),
         )
         .fee(1000)
         .send_to(btc::Address::from_script(&redeem_script, Network::Testnet))
@@ -500,12 +506,7 @@ fn test_anchoring_tx_sign() {
 
     for (input, signs) in &signatures {
         for (id, signature) in signs.iter().enumerate() {
-            assert!(tx.verify_input(
-                &redeem_script,
-                *input,
-                &pub_keys[id],
-                signature.as_ref(),
-            ));
+            assert!(tx.verify_input(&redeem_script, *input, &pub_keys[id], signature.as_ref(),));
         }
     }
 }
@@ -563,9 +564,7 @@ fn test_anchoring_tx_prev_chain() {
         .fee(1000)
         .payload(Height::zero(), Hash::default())
         .prev_tx_chain(Some(prev_tx.id()))
-        .send_to(
-            btc::Address::from_base58check("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1").unwrap(),
-        )
+        .send_to(btc::Address::from_base58check("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1").unwrap())
         .into_transaction()
         .unwrap();
 
@@ -645,12 +644,7 @@ fn test_tx_verify_incorrect_signature() {
     let mut btc_signature = tx.sign_input(&redeem_script, 0, &priv_keys[0]);
     btc_signature[8] = btc_signature[8].wrapping_add(63);
 
-    assert!(!tx.verify_input(
-        &redeem_script,
-        0,
-        &pub_key,
-        &btc_signature,
-    ));
+    assert!(!tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature,));
 }
 
 /// Verifies that non-strict DER signatures do not pass verification
@@ -669,18 +663,8 @@ fn test_tx_verify_non_strict_der_signature() {
     btc_signature_2[1] = btc_signature_2[1].wrapping_add(1);
 
     assert!(btc_signature_1 != btc_signature_2);
-    assert!(tx.verify_input(
-        &redeem_script,
-        0,
-        &pub_key,
-        &btc_signature_1,
-    ));
-    assert!(!tx.verify_input(
-        &redeem_script,
-        0,
-        &pub_key,
-        &btc_signature_2,
-    ));
+    assert!(tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature_1,));
+    assert!(!tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature_2,));
 }
 
 #[test]

@@ -187,10 +187,12 @@ impl Payload {
         let mut instructions = script.into_iter();
         instructions
             .next()
-            .and_then(|instr| if instr == Instruction::Op(All::OP_RETURN) {
-                instructions.next()
-            } else {
-                None
+            .and_then(|instr| {
+                if instr == Instruction::Op(All::OP_RETURN) {
+                    instructions.next()
+                } else {
+                    None
+                }
             })
             .and_then(|instr| {
                 if let Instruction::PushBytes(bytes) = instr {
@@ -319,8 +321,8 @@ mod tests {
     #[test]
     fn test_payload_non_op_return() {
         // Payload from old anchoring transaction
-        let script_pubkey = Script::from_hex("a91472b7506704dc074fa46359251052e781d96f939a87")
-            .unwrap();
+        let script_pubkey =
+            Script::from_hex("a91472b7506704dc074fa46359251052e781d96f939a87").unwrap();
         assert_eq!(Payload::from_script(&script_pubkey), None);
     }
 }

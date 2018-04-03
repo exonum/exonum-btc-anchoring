@@ -85,15 +85,13 @@ impl TestClient {
             format!(
                 "expected response for method={}, \
                  params={:#?}",
-                method,
-                params
+                method, params
             ).as_str(),
         );
 
         assert_eq!(expected.method, method);
         assert_eq!(
-            &expected.params,
-            params,
+            &expected.params, params,
             "Invalid params for method {}!",
             method
         );
@@ -117,8 +115,10 @@ impl TestClient {
     }
 
     pub fn sendtoaddress(&self, addr: &str, amount: &str) -> Result<String> {
-        let params =
-            vec![serde_json::to_value(addr).unwrap(), serde_json::to_value(amount).unwrap()];
+        let params = vec![
+            serde_json::to_value(addr).unwrap(),
+            serde_json::to_value(amount).unwrap(),
+        ];
         self.request("sendtoaddress", params)
     }
 
@@ -160,8 +160,7 @@ impl TestClient {
         // special case for decode {"result":null}
         let r: Result<Option<bool>> = self.request("importaddress", params);
         match r {
-            Ok(_) |
-            Err(Error::Rpc(RpcError::NoErrorOrResult)) => Ok(()),
+            Ok(_) | Err(Error::Rpc(RpcError::NoErrorOrResult)) => Ok(()),
             Err(e) => Err(e),
         }
     }
@@ -213,18 +212,14 @@ impl BitcoinRelay for TestClient {
             let confirmations = Some(info.confirmations);
             if let Some(raw_tx) = self.get_transaction(txid)? {
                 match TxKind::from(raw_tx) {
-                    TxKind::Anchoring(tx) => {
-                        txs.push(TxInfo {
-                            body: tx.into(),
-                            confirmations,
-                        })
-                    }
-                    TxKind::FundingTx(tx) => {
-                        txs.push(TxInfo {
-                            body: tx.into(),
-                            confirmations,
-                        })
-                    }
+                    TxKind::Anchoring(tx) => txs.push(TxInfo {
+                        body: tx.into(),
+                        confirmations,
+                    }),
+                    TxKind::FundingTx(tx) => txs.push(TxInfo {
+                        body: tx.into(),
+                        confirmations,
+                    }),
                     TxKind::Other(_) => {}
                 }
             }
