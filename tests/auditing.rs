@@ -61,10 +61,8 @@ fn gen_following_cfg(
 
     let following_addr = service_cfg.redeem_script().1;
     for (id, ref mut node) in testkit.nodes_mut().iter_mut().enumerate() {
-        node.private_keys.insert(
-            following_addr.to_string(),
-            priv_keys[id].clone(),
-        );
+        node.private_keys
+            .insert(following_addr.to_string(), priv_keys[id].clone());
     }
 
     cfg.set_actual_from(from_height);
@@ -113,9 +111,7 @@ pub fn exclude_node_from_validators(testkit: &mut AnchoringTestKit) {
     testkit.create_block_with_transactions(signatures);
 
     let lects = (0..4)
-        .map(|id| {
-            gen_service_tx_lect(testkit, ValidatorId(id), &transition_tx, 2)
-        })
+        .map(|id| gen_service_tx_lect(testkit, ValidatorId(id), &transition_tx, 2))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
@@ -170,7 +166,9 @@ fn test_auditing_no_consensus_in_lect() {
 
     assert_eq!(
         testkit.take_handler_errors()[0],
-        HandlerError::LectNotFound { height: next_anchoring_height.next() }
+        HandlerError::LectNotFound {
+            height: next_anchoring_height.next(),
+        }
     );
 }
 

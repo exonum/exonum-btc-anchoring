@@ -57,7 +57,7 @@ impl CommandExtension for GenerateNodeConfig {
                 "Host of bitcoind.",
                 None,
                 "anchoring-host",
-                false
+                false,
             ),
             Argument::new_named(
                 "ANCHORING_RPC_USER",
@@ -65,7 +65,7 @@ impl CommandExtension for GenerateNodeConfig {
                 "User to login into bitcoind.",
                 None,
                 "anchoring-user",
-                false
+                false,
             ),
             Argument::new_named(
                 "ANCHORING_RPC_PASSWD",
@@ -73,7 +73,7 @@ impl CommandExtension for GenerateNodeConfig {
                 "Password to login into bitcoind.",
                 None,
                 "anchoring-password",
-                false
+                false,
             ),
             Argument::new_named(
                 "ANCHORING_OBSERVER_CHECK_INTERVAL",
@@ -82,15 +82,15 @@ impl CommandExtension for GenerateNodeConfig {
                  (in milliseconds).",
                 None,
                 "anchoring-observer-check-interval",
-                false
+                false,
             ),
         ]
     }
 
     fn execute(&self, mut context: Context) -> Result<Context, failure::Error> {
-        let host = context.arg("ANCHORING_RPC_HOST").expect(
-            "Expected ANCHORING_RPC_HOST",
-        );
+        let host = context
+            .arg("ANCHORING_RPC_HOST")
+            .expect("Expected ANCHORING_RPC_HOST");
         let user = context.arg("ANCHORING_RPC_USER").ok();
         let passwd = context.arg("ANCHORING_RPC_PASSWD").ok();
         let observer_check_interval = context.arg("ANCHORING_OBSERVER_CHECK_INTERVAL").ok();
@@ -118,7 +118,7 @@ impl CommandExtension for GenerateNodeConfig {
             vec![
                 (
                     "anchoring_pub_key".to_owned(),
-                    Value::try_from(p.to_string()).unwrap()
+                    Value::try_from(p.to_string()).unwrap(),
                 ),
             ].into_iter(),
         );
@@ -144,19 +144,19 @@ impl CommandExtension for GenerateNodeConfig {
             vec![
                 (
                     "anchoring_sec_key".to_owned(),
-                    Value::try_from(s.to_base58check()).unwrap()
+                    Value::try_from(s.to_base58check()).unwrap(),
                 ),
                 (
                     "anchoring_pub_key".to_owned(),
-                    Value::try_from(p.to_string()).unwrap()
+                    Value::try_from(p.to_string()).unwrap(),
                 ),
                 (
                     "rpc_config".to_owned(),
-                    Value::try_from(rpc_config).unwrap()
+                    Value::try_from(rpc_config).unwrap(),
                 ),
                 (
                     "observer_config".to_owned(),
-                    Value::try_from(observer_config).unwrap()
+                    Value::try_from(observer_config).unwrap(),
                 ),
             ].into_iter(),
         );
@@ -178,7 +178,7 @@ impl CommandExtension for GenerateCommonConfig {
                 "The frequency of anchoring in blocks",
                 None,
                 "anchoring-frequency",
-                false
+                false,
             ),
             Argument::new_named(
                 "ANCHORING_UTXO_CONFIRMATIONS",
@@ -186,7 +186,7 @@ impl CommandExtension for GenerateCommonConfig {
                 "The minimum number of confirmations for anchoring transactions",
                 None,
                 "anchoring-utxo-confirmations",
-                false
+                false,
             ),
             Argument::new_named(
                 "ANCHORING_FEE",
@@ -194,7 +194,7 @@ impl CommandExtension for GenerateCommonConfig {
                 "Fee that anchoring nodes should use.",
                 None,
                 "anchoring-fee",
-                false
+                false,
             ),
             Argument::new_named(
                 "ANCHORING_NETWORK",
@@ -202,7 +202,7 @@ impl CommandExtension for GenerateCommonConfig {
                 "Anchoring network type.",
                 None,
                 "anchoring-network",
-                false
+                false,
             ),
         ]
     }
@@ -216,9 +216,9 @@ impl CommandExtension for GenerateCommonConfig {
             "Expected `ANCHORING_FEE` \
              in cmd.",
         );
-        let network = context.arg::<String>("ANCHORING_NETWORK").expect(
-            "No network type found.",
-        );
+        let network = context
+            .arg::<String>("ANCHORING_NETWORK")
+            .expect("No network type found.");
 
         let mut values: BTreeMap<String, Value> = context.get(keys::SERVICES_CONFIG).expect(
             "Expected services_config \
@@ -229,16 +229,16 @@ impl CommandExtension for GenerateCommonConfig {
             vec![
                 (
                     "anchoring_frequency".to_owned(),
-                    Value::try_from(anchoring_frequency).unwrap()
+                    Value::try_from(anchoring_frequency).unwrap(),
                 ),
                 (
                     "anchoring_utxo_confirmations".to_owned(),
-                    Value::try_from(anchoring_utxo_confirmations).unwrap()
+                    Value::try_from(anchoring_utxo_confirmations).unwrap(),
                 ),
                 ("anchoring_fee".to_owned(), Value::try_from(fee).unwrap()),
                 (
                     "anchoring_network".to_owned(),
-                    Value::try_from(network).unwrap()
+                    Value::try_from(network).unwrap(),
                 ),
             ].into_iter(),
         );
@@ -258,7 +258,7 @@ impl CommandExtension for Finalize {
                 "Txid of the initial funding tx",
                 None,
                 "anchoring-funding-txid",
-                false
+                false,
             ),
             Argument::new_named(
                 "ANCHORING_CREATE_FUNDING_TX",
@@ -266,7 +266,7 @@ impl CommandExtension for Finalize {
                 "Create initial funding tx with given amount in satoshis",
                 None,
                 "anchoring-create-funding-tx",
-                false
+                false,
             ),
         ]
     }
@@ -371,10 +371,9 @@ impl CommandExtension for Finalize {
             AnchoringConfig::new_with_funding_tx(network, pub_keys, tx.into())
         };
 
-        anchoring_config.private_keys.insert(
-            address.to_base58check(),
-            priv_key.clone(),
-        );
+        anchoring_config
+            .private_keys
+            .insert(address.to_base58check(), priv_key.clone());
 
         genesis_cfg.fee = fee;
         genesis_cfg.frequency = frequency;

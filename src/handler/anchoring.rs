@@ -194,8 +194,8 @@ impl AnchoringHandler {
         let txid = proposal.id();
 
         let proposal_height = proposal.payload().block_height;
-        if multisig.common.latest_anchoring_height(context.height()) !=
-            multisig.common.latest_anchoring_height(proposal_height)
+        if multisig.common.latest_anchoring_height(context.height())
+            != multisig.common.latest_anchoring_height(proposal_height)
         {
             warn!(
                 "Unable to finalize anchoring tx for height={}",

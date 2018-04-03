@@ -165,10 +165,9 @@ impl AnchoringChainObserver {
                     lect
                 );
 
-                anchoring_schema.anchoring_tx_chain_mut().put(
-                    &height,
-                    lect.clone(),
-                );
+                anchoring_schema
+                    .anchoring_tx_chain_mut()
+                    .put(&height, lect.clone());
             }
 
             let prev_txid = payload.prev_tx_chain.unwrap_or_else(|| lect.prev_hash());

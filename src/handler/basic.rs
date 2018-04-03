@@ -47,9 +47,9 @@ impl AnchoringHandler {
 
     #[doc(hidden)]
     pub fn validator_id(&self, context: &ServiceContext) -> ValidatorId {
-        context.validator_id().expect(
-            "Request `validator_id` only from validator node.",
-        )
+        context
+            .validator_id()
+            .expect("Request `validator_id` only from validator node.")
     }
 
     #[doc(hidden)]
@@ -104,10 +104,9 @@ impl AnchoringHandler {
 
     /// Adds a `private_key` for the corresponding anchoring `address`.
     pub fn add_private_key(&mut self, address: &btc::Address, private_key: btc::PrivateKey) {
-        self.node.private_keys.insert(
-            address.to_base58check(),
-            private_key,
-        );
+        self.node
+            .private_keys
+            .insert(address.to_base58check(), private_key);
     }
 
     #[doc(hidden)]
@@ -170,16 +169,15 @@ impl AnchoringHandler {
             lect
         } else {
             let prev_cfg = anchoring_schema.previous_anchoring_config().unwrap();
-            let is_recovering =
-                if let Some(prev_lect) = anchoring_schema.collect_lects(&prev_cfg) {
-                    match TxKind::from(prev_lect) {
-                        TxKind::FundingTx(_) => prev_cfg.redeem_script().1 != actual_addr,
-                        TxKind::Anchoring(tx) => tx.output_address(actual.network) != actual_addr,
-                        TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
-                    }
-                } else {
-                    true
-                };
+            let is_recovering = if let Some(prev_lect) = anchoring_schema.collect_lects(&prev_cfg) {
+                match TxKind::from(prev_lect) {
+                    TxKind::FundingTx(_) => prev_cfg.redeem_script().1 != actual_addr,
+                    TxKind::Anchoring(tx) => tx.output_address(actual.network) != actual_addr,
+                    TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
+                }
+            } else {
+                true
+            };
 
             if is_recovering {
                 let state = AnchoringState::Recovering {
@@ -259,9 +257,8 @@ impl AnchoringHandler {
                     // If the lect encodes a transition to a new anchoring address,
                     // we need to wait until it reaches enough confirmations.
                     if actual_lect_is_transition(&actual, &actual_lect, &anchoring_schema) {
-                        let confirmations = self.client().get_transaction_confirmations(
-                            actual_lect.id(),
-                        )?;
+                        let confirmations = self.client()
+                            .get_transaction_confirmations(actual_lect.id())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
                                 lect: actual_lect.into(),
@@ -510,9 +507,10 @@ impl AnchoringHandler {
             lects_count,
             state.secret_key(),
         );
-        state.transaction_sender().send(Box::new(lect_msg)).expect(
-            "Can't send lect transaction.",
-        );
+        state
+            .transaction_sender()
+            .send(Box::new(lect_msg))
+            .expect("Can't send lect transaction.");
     }
 }
 

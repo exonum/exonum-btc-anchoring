@@ -105,9 +105,9 @@ impl Transaction for MsgAnchoringSignature {
     fn execute(&self, fork: &mut Fork) -> ExecutionResult {
         self.validate(fork)?;
         let mut anchoring_schema = AnchoringSchema::new(fork);
-        anchoring_schema.add_known_signature(self.clone()).map_err(
-            Into::into,
-        )
+        anchoring_schema
+            .add_known_signature(self.clone())
+            .map_err(Into::into)
     }
 }
 
@@ -170,11 +170,10 @@ where
     let prev_txid = tx.payload().prev_tx_chain.unwrap_or_else(|| tx.prev_hash());
     // Get `AnchoringConfig` for prev_tx
     let anchoring_cfg = {
-        let prev_tx = anchoring_schema.known_txs().get(&prev_txid).ok_or_else(
-            || {
-                ValidateError::LectWithoutQuorum
-            },
-        )?;
+        let prev_tx = anchoring_schema
+            .known_txs()
+            .get(&prev_txid)
+            .ok_or_else(|| ValidateError::LectWithoutQuorum)?;
         let cfg_height = match TxKind::from(prev_tx) {
             TxKind::Anchoring(tx) => Ok(tx.payload().block_height),
             TxKind::FundingTx(_) => Ok(Height::zero()),
@@ -187,8 +186,10 @@ where
         let mut prev_lects_count = 0;
         for key in &anchoring_cfg.anchoring_keys {
             if let Some(prev_lect_idx) = anchoring_schema.find_lect_position(key, &prev_txid) {
-                let prev_lect = anchoring_schema.lects(key).get(prev_lect_idx).expect(
-                    &format!(
+                let prev_lect = anchoring_schema
+                    .lects(key)
+                    .get(prev_lect_idx)
+                    .expect(&format!(
                         "Lect with \
                          index {} is \
                          absent in \
@@ -197,8 +198,7 @@ where
                          {}",
                         prev_lect_idx,
                         key.to_string()
-                    ),
-                );
+                    ));
                 assert_eq!(
                     prev_txid,
                     prev_lect.tx().id(),

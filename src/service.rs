@@ -180,10 +180,9 @@ where
 
     let genesis_cfg = AnchoringConfig::new_with_funding_tx(network, pub_keys, tx);
     for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
-        node_cfg.private_keys.insert(
-            address.to_base58check(),
-            priv_keys[idx].clone(),
-        );
+        node_cfg
+            .private_keys
+            .insert(address.to_base58check(), priv_keys[idx].clone());
     }
 
     (genesis_cfg, node_cfgs)
@@ -212,7 +211,9 @@ impl PublicApiHandler {
     /// and anchoring node `config`.
     pub fn new(blockchain: &Blockchain, config: &AnchoringNodeConfig) -> PublicApiHandler {
         let mut router = Router::new();
-        let api = PublicApi { blockchain: blockchain.clone() };
+        let api = PublicApi {
+            blockchain: blockchain.clone(),
+        };
         api.wire(&mut router);
 
         let observer = if config.observer.enabled {
@@ -220,7 +221,9 @@ impl PublicApiHandler {
             let mut observer =
                 AnchoringChainObserver::new(blockchain.clone(), rpc_cfg, &config.observer);
 
-            Some(thread::spawn(move || { observer.run().unwrap(); }))
+            Some(thread::spawn(move || {
+                observer.run().unwrap();
+            }))
         } else {
             None
         };

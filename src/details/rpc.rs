@@ -148,18 +148,14 @@ impl BitcoinRelay for RpcClient {
             let confirmations = Some(info.confirmations);
             if let Some(raw_tx) = self.get_transaction(txid)? {
                 match TxKind::from(raw_tx) {
-                    TxKind::Anchoring(tx) => {
-                        txs.push(TxInfo {
-                            body: tx.into(),
-                            confirmations,
-                        })
-                    }
-                    TxKind::FundingTx(tx) => {
-                        txs.push(TxInfo {
-                            body: tx.into(),
-                            confirmations,
-                        })
-                    }
+                    TxKind::Anchoring(tx) => txs.push(TxInfo {
+                        body: tx.into(),
+                        confirmations,
+                    }),
+                    TxKind::FundingTx(tx) => txs.push(TxInfo {
+                        body: tx.into(),
+                        confirmations,
+                    }),
                     TxKind::Other(_) => {}
                 }
             }

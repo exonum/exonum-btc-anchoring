@@ -75,17 +75,14 @@ fn gen_following_cfg(
 
     let following_addr = anchoring_cfg.redeem_script().1;
     for (id, ref mut node) in testkit.nodes_mut().iter_mut().enumerate() {
-        node.private_keys.insert(
-            following_addr.to_string(),
-            priv_keys[id].clone(),
-        );
+        node.private_keys
+            .insert(following_addr.to_string(), priv_keys[id].clone());
     }
     cfg_proposal.set_service_config(ANCHORING_SERVICE_NAME, anchoring_cfg.clone());
 
-    testkit.handler().add_private_key(
-        &following_addr,
-        priv_keys[0].clone(),
-    );
+    testkit
+        .handler()
+        .add_private_key(&following_addr, priv_keys[0].clone());
     (cfg_proposal, anchoring_cfg)
 }
 
@@ -121,17 +118,14 @@ fn gen_following_cfg_unchanged_self_key(
 
     let following_addr = anchoring_cfg.redeem_script().1;
     for (id, ref mut node) in testkit.nodes_mut().iter_mut().enumerate() {
-        node.private_keys.insert(
-            following_addr.to_string(),
-            priv_keys[id].clone(),
-        );
+        node.private_keys
+            .insert(following_addr.to_string(), priv_keys[id].clone());
     }
     cfg_proposal.set_service_config(ANCHORING_SERVICE_NAME, anchoring_cfg.clone());
 
-    testkit.handler().add_private_key(
-        &following_addr,
-        priv_keys[0].clone(),
-    );
+    testkit
+        .handler()
+        .add_private_key(&following_addr, priv_keys[0].clone());
     (cfg_proposal, anchoring_cfg)
 }
 
@@ -139,7 +133,11 @@ fn gen_following_cfg_add_two_validators_changed_self_key(
     testkit: &mut AnchoringTestKit,
     from_height: Height,
     funds: Option<FundingTx>,
-) -> (TestNetworkConfiguration, AnchoringConfig, Vec<AnchoringNodeConfig>) {
+) -> (
+    TestNetworkConfiguration,
+    AnchoringConfig,
+    Vec<AnchoringNodeConfig>,
+) {
     // Create new keypair for testkit node
     let (self_keypair, anchoring_keypairs, exonum_keypairs) = {
         let mut rng: StdRng = SeedableRng::from_seed([18, 252, 3, 117].as_ref());
@@ -153,11 +151,11 @@ fn gen_following_cfg_add_two_validators_changed_self_key(
         let exonum_keypairs = vec![
             (
                 gen_keypair_from_seed(&Seed::new([212; 32])),
-                gen_keypair_from_seed(&Seed::new([213; 32]))
+                gen_keypair_from_seed(&Seed::new([213; 32])),
             ),
             (
                 gen_keypair_from_seed(&Seed::new([214; 32])),
-                gen_keypair_from_seed(&Seed::new([215; 32]))
+                gen_keypair_from_seed(&Seed::new([215; 32])),
             ),
         ];
         (self_keypair, anchoring_keypairs, exonum_keypairs)
@@ -183,22 +181,18 @@ fn gen_following_cfg_add_two_validators_changed_self_key(
     let following_addr = anchoring_cfg.redeem_script().1;
     for keypair in &anchoring_keypairs {
         let mut new_node = testkit.nodes()[0].clone();
-        new_node.private_keys.insert(
-            following_addr.to_string(),
-            keypair.1.clone(),
-        );
+        new_node
+            .private_keys
+            .insert(following_addr.to_string(), keypair.1.clone());
         new_nodes.push(new_node);
     }
     for (id, ref mut node) in testkit.nodes_mut().iter_mut().enumerate() {
-        node.private_keys.insert(
-            following_addr.to_string(),
-            anchoring_priv_keys[id].clone(),
-        );
+        node.private_keys
+            .insert(following_addr.to_string(), anchoring_priv_keys[id].clone());
     }
-    testkit.handler().add_private_key(
-        &following_addr,
-        anchoring_priv_keys[0].clone(),
-    );
+    testkit
+        .handler()
+        .add_private_key(&following_addr, anchoring_priv_keys[0].clone());
 
     // Update consensus config
     let mut validators = cfg_proposal.validators().to_vec();
@@ -336,9 +330,7 @@ fn test_transit_changed_self_key_normal() {
 
     let lects = (0..4)
         .map(ValidatorId)
-        .map(|id| {
-            gen_service_tx_lect(&testkit, id, &anchored_tx, lects_count(&testkit, id))
-        })
+        .map(|id| gen_service_tx_lect(&testkit, id, &anchored_tx, lects_count(&testkit, id)))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
@@ -631,9 +623,7 @@ fn test_transit_config_with_funding_tx() {
 
     let lects = (0..4)
         .map(ValidatorId)
-        .map(|id| {
-            gen_service_tx_lect(&testkit, id, &anchored_tx, lects_count(&testkit, id))
-        })
+        .map(|id| gen_service_tx_lect(&testkit, id, &anchored_tx, lects_count(&testkit, id)))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
@@ -1021,9 +1011,7 @@ fn test_transit_changed_self_key_recover_with_funding_tx() {
     testkit.create_block_with_transactions(signatures);
     let lects = (0..4)
         .map(ValidatorId)
-        .map(|id| {
-            gen_service_tx_lect(&testkit, id, &new_chain_tx, lects_count(&testkit, id))
-        })
+        .map(|id| gen_service_tx_lect(&testkit, id, &new_chain_tx, lects_count(&testkit, id)))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
@@ -1154,9 +1142,7 @@ fn test_transit_changed_self_key_recover_without_funding_tx() {
 
     let lects = (0..4)
         .map(ValidatorId)
-        .map(|id| {
-            gen_service_tx_lect(&testkit, id, &new_chain_tx, lects_count(&testkit, id))
-        })
+        .map(|id| gen_service_tx_lect(&testkit, id, &new_chain_tx, lects_count(&testkit, id)))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
@@ -1294,9 +1280,7 @@ fn test_transit_add_validators_recover_without_funding_tx() {
 
     let lects = (0..4)
         .map(ValidatorId)
-        .map(|id| {
-            gen_service_tx_lect(&testkit, id, &new_chain_tx, lects_count(&testkit, id))
-        })
+        .map(|id| gen_service_tx_lect(&testkit, id, &new_chain_tx, lects_count(&testkit, id)))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));
@@ -1544,10 +1528,8 @@ fn test_transit_after_exclude_from_validator() {
 
         let following_addr = service_cfg.redeem_script().1;
         for (id, ref mut node) in testkit.nodes_mut().iter_mut().enumerate() {
-            node.private_keys.insert(
-                following_addr.to_string(),
-                priv_keys[id].clone(),
-            );
+            node.private_keys
+                .insert(following_addr.to_string(), priv_keys[id].clone());
         }
 
         // Add a new nodes configs with private keys
@@ -1560,10 +1542,9 @@ fn test_transit_after_exclude_from_validator() {
             );
         }
         // Add private key for service handler
-        testkit.handler().add_private_key(
-            &following_addr,
-            anchoring_keypairs[0].1.clone(),
-        );
+        testkit
+            .handler()
+            .add_private_key(&following_addr, anchoring_keypairs[0].1.clone());
         // Update consensus config
         let cfg_proposal = {
             let mut cfg_proposal = testkit.configuration_change_proposal();
@@ -1598,9 +1579,7 @@ fn test_transit_after_exclude_from_validator() {
     let transition_tx = testkit.latest_anchored_tx();
     let lects = (0..3)
         .map(ValidatorId)
-        .map(|id| {
-            gen_service_tx_lect(&testkit, id, &transition_tx, lects_count(&testkit, id))
-        })
+        .map(|id| gen_service_tx_lect(&testkit, id, &transition_tx, lects_count(&testkit, id)))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
 
@@ -1828,9 +1807,7 @@ fn test_transit_changed_self_key_observer() {
 
     let lects = (0..4)
         .map(ValidatorId)
-        .map(|id| {
-            gen_service_tx_lect(&testkit, id, &third_anchored_tx, lects_count(&testkit, id))
-        })
+        .map(|id| gen_service_tx_lect(&testkit, id, &third_anchored_tx, lects_count(&testkit, id)))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
     assert!(testkit.mempool().contains_key(&lects[0].hash()));

@@ -110,12 +110,13 @@ impl FundingTx {
         self.0
             .output
             .iter()
-            .position(|output| if let Some(Instruction::PushBytes(bytes)) =
-                output.script_pubkey.into_iter().nth(1)
-            {
-                Hash160::from(bytes) == redeem_script_hash
-            } else {
-                false
+            .position(|output| {
+                if let Some(Instruction::PushBytes(bytes)) = output.script_pubkey.into_iter().nth(1)
+                {
+                    Hash160::from(bytes) == redeem_script_hash
+                } else {
+                    false
+                }
             })
             .map(|x| x as u32)
     }
@@ -140,12 +141,12 @@ impl AnchoringTx {
         let script = &self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].script_pubkey;
         let bytes = script
             .into_iter()
-            .filter_map(|instruction| if let Instruction::PushBytes(bytes) =
-                instruction
-            {
-                Some(bytes)
-            } else {
-                None
+            .filter_map(|instruction| {
+                if let Instruction::PushBytes(bytes) = instruction {
+                    Some(bytes)
+                } else {
+                    None
+                }
             })
             .next()
             .unwrap();
@@ -346,13 +347,11 @@ where
     I: Iterator<Item = &'a (RawBitcoinTx, u32)>,
 {
     let inputs = inputs
-        .map(|&(ref unspent_tx, utxo_vout)| {
-            TxIn {
-                prev_hash: unspent_tx.bitcoin_hash(),
-                prev_index: utxo_vout,
-                script_sig: Script::new(),
-                sequence: 0xFFFF_FFFF,
-            }
+        .map(|&(ref unspent_tx, utxo_vout)| TxIn {
+            prev_hash: unspent_tx.bitcoin_hash(),
+            prev_index: utxo_vout,
+            script_sig: Script::new(),
+            sequence: 0xFFFF_FFFF,
         })
         .collect::<Vec<_>>();
 
@@ -438,9 +437,7 @@ fn finalize_anchoring_transaction(
 }
 
 fn find_payload(tx: &RawBitcoinTx) -> Option<Payload> {
-    tx.output.get(ANCHORING_TX_DATA_OUTPUT as usize).and_then(
-        |output| {
-            Payload::from_script(&output.script_pubkey)
-        },
-    )
+    tx.output
+        .get(ANCHORING_TX_DATA_OUTPUT as usize)
+        .and_then(|output| Payload::from_script(&output.script_pubkey))
 }
