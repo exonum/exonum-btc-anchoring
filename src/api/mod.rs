@@ -16,7 +16,6 @@
 
 use router::Router;
 use iron::prelude::*;
-use bitcoin::util::base58::ToBase58;
 
 use exonum::blockchain::Blockchain;
 use exonum::crypto::Hash;
@@ -166,13 +165,13 @@ impl Api for PublicApi {
 
         let api = self.clone();
         let actual_address = move |_: &mut Request| -> IronResult<Response> {
-            let addr = api.actual_address()?.to_base58check();
+            let addr = api.actual_address()?.to_string();
             api.ok_response(&json!(addr))
         };
 
         let api = self.clone();
         let following_address = move |_: &mut Request| -> IronResult<Response> {
-            let addr = api.following_address()?.map(|addr| addr.to_base58check());
+            let addr = api.following_address()?.map(|addr| addr.to_string());
             api.ok_response(&json!(addr))
         };
 

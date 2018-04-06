@@ -42,37 +42,32 @@ macro_rules! implement_wrapper {
     )
 }
 
-macro_rules! implement_base58_wrapper {
+macro_rules! implement_str_conversion {
     ($from:ident, $to:ident) => (
-        impl ToBase58 for $to {
-            fn base58_layout(&self) -> Vec<u8> {
-                self.0.base58_layout()
-            }
-        }
-
-        impl FromBase58 for $to {
-            fn from_base58_layout(data: Vec<u8>) -> Result<$to, FromBase58Error> {
-                $from::from_base58_layout(data).map($to)
-            }
-        }
-
         impl ::std::str::FromStr for $to {
-            type Err = ::bitcoin::util::base58::Error;
+            type Err = <$from as ::std::str::FromStr>::Err;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
-                $to::from_base58check(s)
+                Ok($to::from($from::from_str(s)?))
             }
         }
 
-        impl ::std::string::ToString for $to {
-            fn to_string(&self) -> String {
-                self.to_base58check()
+        impl From<&'static str> for $to {
+            fn from(s: &'static str) -> $to {
+                use ::std::str::FromStr;
+                $to::from_str(s).unwrap()
+            }
+        }
+
+        impl ::std::fmt::Display for $to {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+                f.write_str(&self.0.to_string())
             }
         }
 
         impl fmt::Debug for $to {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-                write!(f, "\"{}({})\"", stringify!($to), self.to_base58check())
+                write!(f, "\"{}({})\"", stringify!($to), self.to_string())
             }
         }
     )
@@ -133,13 +128,13 @@ macro_rules! implement_serde_hex {
 )
 }
 
-macro_rules! implement_serde_base58check {
+macro_rules! implement_serde_string {
 ($name:ident) => (
     impl ::serde::Serialize for $name {
         fn serialize<S>(&self, ser: S) -> ::std::result::Result<S::Ok, S::Error>
             where S: ::serde::Serializer
         {
-            ser.serialize_str(&self.to_base58check())
+            ser.serialize_str(&self.to_string())
         }
     }
 
@@ -147,26 +142,24 @@ macro_rules! implement_serde_base58check {
         fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where D: ::serde::Deserializer<'de>
         {
-            struct Base58Visitor;
+            struct FromStrVisitor;
 
-            impl<'v> ::serde::de::Visitor<'v> for Base58Visitor {
+            impl<'v> ::serde::de::Visitor<'v> for FromStrVisitor {
                 type Value = $name;
 
                 fn expecting(&self, fmt: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-                    write!(fmt, "Expected base58 represented string")
+                    write!(fmt, "Unable to decode string")
                 }
 
-                fn visit_str<E>(self, hex: &str) -> Result<$name, E>
+                fn visit_str<E>(self, s: &str) -> Result<$name, E>
                     where E: ::serde::de::Error
                 {
-                    match $name::from_base58check(hex) {
-                        Ok(value) => Ok(value),
-                        Err(_) => Err(::serde::de::Error::custom("Wrong base58")),
-                    }
+                    use ::std::str::FromStr;
+                    $name::from_str(s).map_err(|_| ::serde::de::Error::custom("Wrong string"))
                 }
             }
 
-            deserializer.deserialize_str(Base58Visitor)
+            deserializer.deserialize_str(FromStrVisitor)
         }
     }
 )

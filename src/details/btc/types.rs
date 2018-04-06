@@ -16,15 +16,14 @@ use std::borrow::Cow;
 use std::ops::Deref;
 use std::fmt;
 
-pub use bitcoin::blockdata::transaction::Transaction as RawTransaction;
-pub use bitcoin::util::address::{Address as RawAddress, Privkey as RawPrivkey};
-pub use bitcoin::blockdata::script::Script as RawScript;
 use bitcoin::blockdata::script::Builder;
 use bitcoin::util::hash::Sha256dHash;
-use bitcoin::util::base58::{Error as FromBase58Error, FromBase58, ToBase58};
-
-pub use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
+pub use bitcoin::blockdata::transaction::Transaction as RawTransaction;
+pub use bitcoin::util::address::Address as RawAddress;
+pub use bitcoin::util::privkey::Privkey as RawPrivkey;
+pub use bitcoin::blockdata::script::Script as RawScript;
+pub use secp256k1::key::PublicKey as RawPublicKey;
 
 use exonum::crypto::{hash, CryptoHash, Hash};
 use exonum::encoding::serialize::{encode_hex, FromHex, FromHexError, ToHex};
@@ -39,7 +38,7 @@ pub struct TxId(Sha256dHash);
 pub struct PrivateKey(pub RawPrivkey);
 #[derive(Debug, Clone, Copy, PartialEq, Hash, Eq)]
 pub struct PublicKey(pub RawPublicKey);
-#[derive(Clone, PartialEq, Eq)]
+#[derive(Clone, PartialEq)]
 pub struct Address(pub RawAddress);
 #[derive(Debug, Clone, PartialEq)]
 pub struct RedeemScript(pub RawScript);
@@ -52,14 +51,14 @@ implement_wrapper! {RawAddress, Address}
 implement_wrapper! {RawPrivkey, PrivateKey}
 implement_wrapper! {RawScript, RedeemScript}
 
-implement_base58_wrapper! {RawAddress, Address}
-implement_base58_wrapper! {RawPrivkey, PrivateKey}
+implement_str_conversion! {RawAddress, Address}
+implement_str_conversion! {RawPrivkey, PrivateKey}
 
 implement_serde_hex! {PublicKey}
 implement_serde_hex! {RedeemScript}
 implement_serde_hex! {TxId}
-implement_serde_base58check! {Address}
-implement_serde_base58check! {PrivateKey}
+implement_serde_string! {Address}
+implement_serde_string! {PrivateKey}
 
 implement_pod_as_ref_field! { TxId }
 

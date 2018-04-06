@@ -15,12 +15,12 @@
 extern crate rand;
 
 use std::collections::HashMap;
+use std::str::FromStr;
 
 use serde_json;
-use rand::Rng;
+use rand::{Rng, SeedableRng, StdRng};
 use bitcoin::network::constants::Network;
-use bitcoin::util::base58::{FromBase58, ToBase58};
-use bitcoin::util::address::Privkey as RawPrivateKey;
+use bitcoin::util::privkey::Privkey as RawPrivateKey;
 use bitcoin::blockdata::transaction::SigHashType;
 use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
@@ -37,7 +37,7 @@ use details::btc;
 use details::btc::HexValueEx;
 
 pub fn dummy_anchoring_tx(redeem_script: &btc::RedeemScript) -> AnchoringTx {
-    let addr = btc::Address::from_script(redeem_script, Network::Testnet);
+    let addr = redeem_script.to_address(Network::Testnet);
     let input_tx = AnchoringTx::from_hex(
         "01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f\
          5c98f369a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd417\
@@ -106,11 +106,11 @@ pub fn make_signatures(
 #[test]
 fn test_privkey_serde_wif() {
     let privkey_str = "cTvVLNQvaku9XG8LvKXEfWBvxehnj9S67FB3GZPP6mnY4c94AstC";
-    let privkey = btc::PrivateKey::from_base58check(privkey_str).unwrap();
+    let privkey = btc::PrivateKey::from(privkey_str);
 
     assert!(privkey.compressed);
     assert_eq!(privkey.network, Network::Testnet);
-    assert_eq!(privkey.to_base58check(), privkey_str);
+    assert_eq!(privkey.to_string(), privkey_str);
 }
 
 #[test]
@@ -386,9 +386,8 @@ fn test_sign_raw_transaction() {
          e0ef03baf0603fd4b0cd004cd1e7500000000",
     ).unwrap();
 
-    let priv_key = RawPrivateKey::from_base58check(
-        "cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE",
-    ).unwrap();
+    let priv_key =
+        RawPrivateKey::from_str("cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE").unwrap();
     let pub_key = {
         let context = Secp256k1::new();
         RawPublicKey::from_secret_key(&context, priv_key.secret_key()).unwrap()
@@ -445,7 +444,7 @@ fn test_anchoring_tx_sign() {
         "cT2S5KgUQJ41G6RnakJ2XcofvoxK68L9B44hfFTnH4ddygaxi7rc",
         "cRUKB8Nrhxwd5Rh6rcX3QK1h7FosYPw5uzEsuPpzLcDNErZCzSaj",
     ].iter()
-        .map(|x| btc::PrivateKey::from_base58check(x).unwrap())
+        .map(|x| btc::PrivateKey::from_str(x).unwrap())
         .collect::<Vec<_>>();
 
     let pub_keys = [
@@ -490,7 +489,7 @@ fn test_anchoring_tx_sign() {
                 .unwrap(),
         )
         .fee(1000)
-        .send_to(btc::Address::from_script(&redeem_script, Network::Testnet))
+        .send_to(redeem_script.to_address(Network::Testnet))
         .into_transaction()
         .unwrap();
 
@@ -564,7 +563,7 @@ fn test_anchoring_tx_prev_chain() {
         .fee(1000)
         .payload(Height::zero(), Hash::default())
         .prev_tx_chain(Some(prev_tx.id()))
-        .send_to(btc::Address::from_base58check("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1").unwrap())
+        .send_to(btc::Address::from("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1"))
         .into_transaction()
         .unwrap();
 
@@ -678,6 +677,22 @@ fn test_tx_verify_sighash_type_wrong() {
     *btc_signature.last_mut().unwrap() = SigHashType::Single.as_u32() as u8;
 
     assert!(tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature));
+}
+
+#[test]
+fn test_gen_p2sh_address() {
+    let mut rng: StdRng = SeedableRng::from_seed([1, 2, 3, 4].as_ref());
+
+    let network = btc::Network::Testnet;
+    let pub_keys = (0..4)
+        .map(|_| btc::gen_btc_keypair_with_rng(network, &mut rng).0)
+        .collect::<Vec<_>>();
+    let redeem_script = btc::RedeemScript::from_pubkeys(&pub_keys, 3).compressed(network);
+    let address = redeem_script.to_address(network);
+    assert_eq!(
+        address,
+        btc::Address::from("2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA")
+    );
 }
 
 // rpc tests. Works through `rpc` by given env variables.

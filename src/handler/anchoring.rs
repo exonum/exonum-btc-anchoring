@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bitcoin::util::base58::ToBase58;
-
 use exonum::blockchain::{Schema, ServiceContext};
 use exonum::helpers::Height;
 use exonum::encoding::serialize::encode_hex;
@@ -36,7 +34,7 @@ impl AnchoringHandler {
         context: &ServiceContext,
     ) -> Result<(), ServiceError> {
         let multisig = self.multisig_address(cfg);
-        trace!("Anchoring state, addr={}", multisig.addr.to_base58check());
+        trace!("Anchoring state, addr={}", multisig.addr.to_string());
 
         if context.height().0 % self.node.check_lect_frequency == 0 {
             // First of all we try to update our lect and actual configuration
@@ -218,9 +216,7 @@ impl AnchoringHandler {
                 trace!(
                     "Sent signed_tx={:#?}, to={}",
                     new_lect,
-                    new_lect
-                        .output_address(multisig.common.network)
-                        .to_base58check()
+                    new_lect.output_address(multisig.common.network).to_string()
                 );
             }
 

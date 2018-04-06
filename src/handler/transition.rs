@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bitcoin::util::base58::ToBase58;
-
 use exonum::blockchain::ServiceContext;
 
 use error::Error as ServiceError;
@@ -38,7 +36,7 @@ impl AnchoringHandler {
         };
         trace!(
             "Transition state, addr={}, following_config={:#?}",
-            multisig.addr.to_base58check(),
+            multisig.addr,
             to
         );
 
@@ -118,7 +116,7 @@ impl AnchoringHandler {
 
         trace!(
             "Starting a new tx chain to addr={} from scratch",
-            multisig.addr.to_base58check()
+            multisig.addr
         );
 
         let lect_txid = {

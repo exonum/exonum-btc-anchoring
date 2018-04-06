@@ -105,8 +105,8 @@ oneshot
 OP_CHECKSIG
 OP_EQUALVERIFY
 openssl
-PASSWD
 passwd
+PASSWD
 peekable
 permissioned
 postcondition
@@ -117,11 +117,12 @@ precommits
 prevote
 prevotes
 println
-privkey
 Privkey
+privkey
 pubkey
 pubkeyhash
 pubkeys
+PUSHBYTES
 readonly
 reddit
 regtest

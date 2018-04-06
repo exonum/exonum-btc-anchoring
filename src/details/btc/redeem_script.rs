@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bitcoin::blockdata::script::{Builder, Script};
 use bitcoin::blockdata::opcodes::All;
+use bitcoin::blockdata::script::{Builder, Script};
 use bitcoin::blockdata::script::Instruction;
-use bitcoin::util::base58::FromBase58;
-use bitcoin::util::address::Address as RawAddress;
 use bitcoin::network::constants::Network;
+use bitcoin::util::address::{Address as RawAddress, Payload as AddressPayload};
+use bitcoin::util::base58;
 use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
 
@@ -53,7 +53,7 @@ impl RedeemScript {
         let mut builder = Builder::new().push_int(i64::from(majority_count));
         let mut total_count = 0;
         for addr in addrs {
-            let bytes = Vec::<u8>::from_base58check(addr).unwrap();
+            let bytes = base58::from_check(addr).unwrap();
             builder = builder.push_slice(bytes.as_slice());
             total_count += 1;
         }
@@ -66,7 +66,7 @@ impl RedeemScript {
     }
 
     pub fn to_address(&self, network: Network) -> Address {
-        RawAddress::from_script(network, self).into()
+        RawAddress::p2sh(self, network).into()
     }
 
     pub fn compressed(&self, network: Network) -> RedeemScript {
@@ -80,8 +80,12 @@ impl RedeemScript {
                         builder = builder.push_slice(bytes);
                     } else {
                         let pubkey = RawPublicKey::from_slice(&context, bytes).unwrap();
-                        let addr = RawAddress::from_key(network, &pubkey, true);
-                        builder = builder.push_slice(addr.hash[..].as_ref());
+                        let addr = RawAddress::p2pk(&pubkey, network);
+                        if let AddressPayload::PubkeyHash(ref hash) = addr.payload {
+                            builder = builder.push_slice(hash[..].as_ref());
+                        } else {
+                            panic!("Wrong address type");
+                        }
                     }
                 }
                 Instruction::Op(opcode) => builder = builder.push_opcode(opcode),
@@ -92,7 +96,6 @@ impl RedeemScript {
     }
 
     pub fn script_pubkey(&self, network: Network) -> Script {
-        let addr = RawAddress::from_script(network, self);
-        addr.script_pubkey()
+        self.to_address(network).script_pubkey()
     }
 }

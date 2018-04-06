@@ -17,8 +17,6 @@
 use std::time::Duration;
 use std::thread::sleep;
 
-use bitcoin::util::base58::ToBase58;
-
 use exonum::blockchain::{Blockchain, Schema};
 use exonum::storage::Fork;
 
@@ -192,10 +190,7 @@ impl AnchoringChainObserver {
     ) -> Result<Option<AnchoringTx>, ServiceError> {
         let actual_addr = actual_cfg.redeem_script().1;
 
-        trace!(
-            "Tries to find lect for the addr: {}",
-            actual_addr.to_base58check()
-        );
+        trace!("Tries to find lect for the addr: {}", actual_addr);
 
         let unspent_txs: Vec<_> = self.client.unspent_transactions(&actual_addr)?;
         for tx in unspent_txs {

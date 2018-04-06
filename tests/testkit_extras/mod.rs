@@ -85,6 +85,8 @@ impl AnchoringTestKit {
             node.check_lect_frequency = CHECK_LECT_FREQUENCY;
         }
 
+        println!("config generated");
+
         client.requests().expect(vec![
             request! {
                 method: "importaddress",

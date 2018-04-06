@@ -15,7 +15,6 @@
 // FIXME: Sometimes clippy incorrectly calculates lifetimes.
 #![cfg_attr(feature="cargo-clippy", allow(let_and_return))]
 
-use bitcoin::util::base58::ToBase58;
 use serde_json::Value;
 
 use exonum::messages::Message;
@@ -193,7 +192,7 @@ pub fn listunspent_entry(raw: &RawBitcoinTx, addr: &btc::Address, confirmations:
     let tx = BitcoinTx::from_raw(raw.clone()).unwrap();
     json!({
         "txid": &tx.id(),
-        "address": &addr.to_base58check(),
+        "address": &addr,
         "confirmations": confirmations,
         "vout": 0,
         "account": "multisig",
@@ -213,7 +212,7 @@ pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
         confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr]],
             response: [
                 listunspent_entry(&testkit.current_funding_tx(), &anchoring_addr, 50)
             ]
@@ -300,7 +299,7 @@ pub fn anchor_first_block_lect_different(testkit: &mut AnchoringTestKit) {
     requests.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr]],
             response: [
                 listunspent_entry(&other_lect, &anchoring_addr, 0)
             ]
@@ -333,7 +332,7 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
     requests.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr]],
             response: [
                 listunspent_entry(&other_lect, &anchoring_addr, 0)
             ]
@@ -352,7 +351,7 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
         confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr]],
             response: [
                 listunspent_entry(&other_lect, &anchoring_addr, 100)
             ]
@@ -394,7 +393,7 @@ pub fn anchor_second_block_normal(testkit: &mut AnchoringTestKit) {
     requests.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr]],
             response: [
                 listunspent_entry(&testkit.latest_anchored_tx(), &anchoring_addr, 1)
             ]
@@ -425,7 +424,7 @@ pub fn anchor_second_block_normal(testkit: &mut AnchoringTestKit) {
     requests.expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr]],
             response: [
                 listunspent_entry(&anchored_tx, &anchoring_addr, 100)
             ]
@@ -444,7 +443,7 @@ pub fn anchor_first_block_without_other_signatures(testkit: &mut AnchoringTestKi
         confirmations_request(&testkit.current_funding_tx(), 50),
         request! {
             method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr.to_base58check()]],
+            params: [0, 9_999_999, [&anchoring_addr]],
             response: [
                 listunspent_entry(&testkit.current_funding_tx(), &anchoring_addr, 50)
             ]

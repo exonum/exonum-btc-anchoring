@@ -15,8 +15,6 @@
 use std::collections::HashSet;
 use std::sync::mpsc;
 
-use bitcoin::util::base58::ToBase58;
-
 use exonum::blockchain::ServiceContext;
 use exonum::storage::Snapshot;
 use exonum::helpers::{Height, ValidatorId};
@@ -76,7 +74,7 @@ impl AnchoringHandler {
     #[doc(hidden)]
     pub fn multisig_address<'a>(&self, common: &'a AnchoringConfig) -> MultisigAddress<'a> {
         let (redeem_script, addr) = common.redeem_script();
-        let addr_str = addr.to_base58check();
+        let addr_str = addr.to_string();
         let priv_key = self.node
             .private_keys
             .get(&addr_str)
@@ -106,7 +104,7 @@ impl AnchoringHandler {
     pub fn add_private_key(&mut self, address: &btc::Address, private_key: btc::PrivateKey) {
         self.node
             .private_keys
-            .insert(address.to_base58check(), private_key);
+            .insert(address.to_string(), private_key);
     }
 
     #[doc(hidden)]
@@ -416,7 +414,7 @@ impl AnchoringHandler {
         trace!(
             "Checking funding_tx={:#?}, addr={} availability",
             funding_tx,
-            multisig.addr.to_base58check()
+            multisig.addr
         );
         if let Some(info) = self.client()
             .unspent_transactions(&multisig.addr)?
