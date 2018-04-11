@@ -45,3 +45,8 @@ pretty_assertions = "0.5.1"
 [features]
 default = []
 rpc_tests = []
+
+[patch.crates-io]
+exonum = { git = "https://github.com/exonum/exonum" }
+exonum-configuration = { git = "https://github.com/exonum/exonum" }
+exonum-testkit = { git = "https://github.com/exonum/exonum" }

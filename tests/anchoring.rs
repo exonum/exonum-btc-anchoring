@@ -156,15 +156,15 @@ fn test_anchoring_second_block_additional_funds() {
         &anchoring_addr,
     );
 
-    assert!(testkit.mempool().contains_key(&signatures[0].hash()));
-    assert!(testkit.mempool().contains_key(&signatures[1].hash()));
+    assert!(testkit.is_tx_in_pool(&signatures[0].hash()));
+    assert!(testkit.is_tx_in_pool(&signatures[1].hash()));
 
     let anchored_tx = &mut testkit.latest_anchored_tx();
     requests.expect(send_raw_transaction_requests(anchored_tx));
 
     testkit.create_block_with_transactions(signatures);
     let lect = gen_service_tx_lect(&testkit, ValidatorId(0), anchored_tx, 2);
-    assert!(testkit.mempool().contains_key(&lect.hash()));
+    assert!(testkit.is_tx_in_pool(&lect.hash()));
 }
 
 // We anchor second block after successfully anchored first
@@ -204,7 +204,7 @@ fn test_anchoring_second_block_lect_lost() {
         .map(|id| gen_service_tx_lect(&testkit, id, &prev_anchored_tx, 3))
         .map(Box::<Transaction>::from)
         .collect::<Vec<_>>();
-    assert!(testkit.mempool().contains_key(&txs[0].hash()));
+    assert!(testkit.is_tx_in_pool(&txs[0].hash()));
 
     // Trying to resend lost lect tx
     requests.expect(vec![
@@ -280,7 +280,7 @@ fn test_anchoring_find_lect_chain_normal() {
     testkit.create_block();
 
     let lect = gen_service_tx_lect(&testkit, ValidatorId(0), &current_anchored_tx, 2);
-    assert!(testkit.mempool().contains_key(&lect.hash()));
+    assert!(testkit.is_tx_in_pool(&lect.hash()));
 }
 
 // We find lect, whose prev_hash is not known
