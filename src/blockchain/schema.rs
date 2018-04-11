@@ -102,11 +102,7 @@ where
     /// Returns table that keeps the lect index for every anchoring txid for the validator
     /// with given `validator_key`.
     pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapIndex<&T, btc::TxId, u64> {
-        MapIndex::new_in_family(
-            "btc_anchoring.lect_indexes",
-            validator_key,
-            &self.view,
-        )
+        MapIndex::new_in_family("btc_anchoring.lect_indexes", validator_key, &self.view)
     }
 
     /// Returns the table of known signatures, where key is the tuple `(txid, validator_id, input)`.
@@ -256,11 +252,7 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         &mut self,
         validator_key: &btc::PublicKey,
     ) -> ProofListIndex<&mut Fork, LectContent> {
-        ProofListIndex::new_in_family(
-            "btc_anchoring.lects",
-            validator_key,
-            &mut self.view,
-        )
+        ProofListIndex::new_in_family("btc_anchoring.lects", validator_key, &mut self.view)
     }
 
     /// Mutable variant of the [`lect_indexes`][1] index.
@@ -270,11 +262,7 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         &mut self,
         validator_key: &btc::PublicKey,
     ) -> MapIndex<&mut Fork, btc::TxId, u64> {
-        MapIndex::new_in_family(
-            "btc_anchoring.lect_indexes",
-            validator_key,
-            &mut self.view,
-        )
+        MapIndex::new_in_family("btc_anchoring.lect_indexes", validator_key, &mut self.view)
     }
 
     /// Mutable variant of the [`known_signatures`][1] index.

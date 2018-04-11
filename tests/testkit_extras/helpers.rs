@@ -377,10 +377,7 @@ pub fn anchor_first_block_lect_lost(testkit: &mut AnchoringTestKit) {
     ]);
     testkit.create_block();
     let lect = gen_service_tx_lect(testkit, ValidatorId(0), &anchored_tx, 3);
-    assert!(
-        testkit
-            .is_tx_in_pool(&lect.hash())
-    );
+    assert!(testkit.is_tx_in_pool(&lect.hash()));
     testkit.set_latest_anchored_tx(None);
 }
 

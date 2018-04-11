@@ -22,7 +22,7 @@ use std::env;
 use tempdir::TempDir;
 
 use exonum::node::Node;
-use exonum::storage::{RocksDB, DbOptions};
+use exonum::storage::{DbOptions, RocksDB};
 use exonum::helpers::{generate_testnet_config, init_logger};
 
 use exonum_btc_anchoring::{gen_anchoring_testnet_config, AnchoringRpcConfig, AnchoringService,
@@ -70,7 +70,7 @@ fn main() {
                     create_if_missing: true,
                     ..DbOptions::default()
                 };
-                let path = destdir.join(idx.to_string());                
+                let path = destdir.join(idx.to_string());
                 RocksDB::open(&path, &options).expect("Unable to create database")
             };
             // Create node[idx]
