@@ -17,6 +17,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Updated to the [Exonum 0.7](https://github.com/exonum/exonum/releases/tag/v0.7)
   release (#122).
 
+### Fixed
+
+- Fixed an issue with the identifiers of funding transactions with the witness data [ECR-1220]
+  (#122).
+
 ## 0.6.1 - 2018-03-22
 
 ### Fixed
