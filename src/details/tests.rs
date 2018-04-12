@@ -718,7 +718,6 @@ mod rpc {
     use super::*;
 
     use bitcoin::network::constants::Network;
-    use bitcoin::util::base58::ToBase58;
     use bitcoinrpc;
 
     use exonum::crypto::{hash, Hash};
@@ -752,7 +751,7 @@ mod rpc {
         I: IntoIterator<Item = &'a btc::PublicKey>,
     {
         let redeem_script = btc::RedeemScript::from_pubkeys(pub_keys, count).compressed(network);
-        let addr = btc::Address::from_script(&redeem_script, network);
+        let addr = redeem_script.to_address(network);
 
         client.watch_address(&addr, false)?;
         Ok((redeem_script, addr))
@@ -884,9 +883,7 @@ mod rpc {
             tx
         };
 
-        let utxos = client
-            .listunspent(0, 9999999, &[addr.to_base58check()])
-            .unwrap();
+        let utxos = client.listunspent(0, 9999999, &[addr.to_string()]).unwrap();
         trace!("utxos={:#?}", utxos);
 
         // Send anchoring txs
@@ -1015,9 +1012,7 @@ mod rpc {
             tx
         };
 
-        let utxos = client
-            .listunspent(0, 9999999, &[addr.to_base58check()])
-            .unwrap();
+        let utxos = client.listunspent(0, 9999999, &[addr.to_string()]).unwrap();
         trace!("utxos={:#?}", utxos);
 
         // Send anchoring txs
