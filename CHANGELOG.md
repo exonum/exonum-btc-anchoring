@@ -11,10 +11,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Internal improvements
 
-- Updated to the [Rust-bitcoin 0.7.0](https://github.com/rust-bitcoin/rust-bitcoin/releases/tag/0.12)
+- Updated to the [Rust-bitcoin 0.12](https://github.com/rust-bitcoin/rust-bitcoin/releases/tag/0.12)
   release (#122).
 
-- Updated to the [Exonum 0.7.0](https://github.com/exonum/exonum/releases/tag/v0.7)
+- Updated to the [Exonum 0.7](https://github.com/exonum/exonum/releases/tag/v0.7)
   release (#122).
 
 ## 0.6.1 - 2018-03-22

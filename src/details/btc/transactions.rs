@@ -351,7 +351,7 @@ where
 {
     let inputs = inputs
         .map(|&(ref unspent_tx, utxo_vout)| TxIn {
-            prev_hash: unspent_tx.bitcoin_hash(),
+            prev_hash: unspent_tx.txid(),
             prev_index: utxo_vout,
             script_sig: Script::new(),
             sequence: 0xFFFF_FFFF,
