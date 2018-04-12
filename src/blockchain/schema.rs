@@ -17,7 +17,7 @@ use std::collections::hash_map::{Entry, HashMap};
 use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
-use exonum::blockchain::{gen_prefix, Schema, StoredConfiguration};
+use exonum::blockchain::{Schema, StoredConfiguration};
 use exonum::storage::{Fork, ListIndex, MapIndex, ProofListIndex, Snapshot, StorageKey};
 use exonum::crypto::Hash;
 use exonum::helpers::{Height, ValidatorId};
@@ -91,22 +91,18 @@ where
     /// Returns table that contains signatures for the anchoring transaction with
     /// the given normalized `txid`.
     pub fn signatures(&self, txid: &btc::TxId) -> ListIndex<&T, MsgAnchoringSignature> {
-        ListIndex::with_prefix("btc_anchoring.signatures", gen_prefix(txid), &self.view)
+        ListIndex::new_in_family("btc_anchoring.signatures", txid, &self.view)
     }
 
     /// Returns table that saves a list of lects for the validator with the given `validator_key`.
     pub fn lects(&self, validator_key: &btc::PublicKey) -> ProofListIndex<&T, LectContent> {
-        ProofListIndex::with_prefix("btc_anchoring.lects", gen_prefix(validator_key), &self.view)
+        ProofListIndex::new_in_family("btc_anchoring.lects", validator_key, &self.view)
     }
 
     /// Returns table that keeps the lect index for every anchoring txid for the validator
     /// with given `validator_key`.
     pub fn lect_indexes(&self, validator_key: &btc::PublicKey) -> MapIndex<&T, btc::TxId, u64> {
-        MapIndex::with_prefix(
-            "btc_anchoring.lect_indexes",
-            gen_prefix(validator_key),
-            &self.view,
-        )
+        MapIndex::new_in_family("btc_anchoring.lect_indexes", validator_key, &self.view)
     }
 
     /// Returns the table of known signatures, where key is the tuple `(txid, validator_id, input)`.
@@ -227,7 +223,7 @@ where
         let cfg = self.actual_anchoring_config();
         let mut lect_hashes = Vec::new();
         for key in &cfg.anchoring_keys {
-            lect_hashes.push(self.lects(key).root_hash());
+            lect_hashes.push(self.lects(key).merkle_root());
         }
         lect_hashes
     }
@@ -246,7 +242,7 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         &mut self,
         txid: &btc::TxId,
     ) -> ListIndex<&mut Fork, MsgAnchoringSignature> {
-        ListIndex::with_prefix("btc_anchoring.signatures", gen_prefix(txid), &mut self.view)
+        ListIndex::new_in_family("btc_anchoring.signatures", txid, &mut self.view)
     }
 
     /// Mutable variant of the [`lects`][1] index.
@@ -256,11 +252,7 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         &mut self,
         validator_key: &btc::PublicKey,
     ) -> ProofListIndex<&mut Fork, LectContent> {
-        ProofListIndex::with_prefix(
-            "btc_anchoring.lects",
-            gen_prefix(validator_key),
-            &mut self.view,
-        )
+        ProofListIndex::new_in_family("btc_anchoring.lects", validator_key, &mut self.view)
     }
 
     /// Mutable variant of the [`lect_indexes`][1] index.
@@ -270,11 +262,7 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         &mut self,
         validator_key: &btc::PublicKey,
     ) -> MapIndex<&mut Fork, btc::TxId, u64> {
-        MapIndex::with_prefix(
-            "btc_anchoring.lect_indexes",
-            gen_prefix(validator_key),
-            &mut self.view,
-        )
+        MapIndex::new_in_family("btc_anchoring.lect_indexes", validator_key, &mut self.view)
     }
 
     /// Mutable variant of the [`known_signatures`][1] index.

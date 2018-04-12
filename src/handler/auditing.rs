@@ -12,8 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bitcoin::util::base58::ToBase58;
-
 use exonum::blockchain::ServiceContext;
 
 use error::Error as ServiceError;
@@ -66,7 +64,7 @@ impl AnchoringHandler {
             let e = HandlerError::IncorrectLect {
                 reason: format!(
                     "Initial funding_tx has no outputs with address={}",
-                    addr.to_base58check()
+                    addr.to_string()
                 ),
                 tx: tx.into(),
             };

@@ -20,7 +20,6 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use bitcoin::network::constants::Network;
-use bitcoin::util::base58::ToBase58;
 use failure;
 use toml::Value;
 
@@ -31,11 +30,10 @@ use exonum::node::NodeConfig;
 use exonum::encoding::serialize::FromHex;
 
 use service::AnchoringService;
-use super::{gen_btc_keypair, AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig};
 use details::btc::{self, PrivateKey, PublicKey};
 use details::rpc::{BitcoinRelay, RpcClient};
-use bitcoin::util::base58::FromBase58;
 use observer::AnchoringObserverConfig;
+use super::{gen_btc_keypair, AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig};
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 /// Anchoring configuration that should be saved into the file
@@ -144,7 +142,7 @@ impl CommandExtension for GenerateNodeConfig {
             vec![
                 (
                     "anchoring_sec_key".to_owned(),
-                    Value::try_from(s.to_base58check()).unwrap(),
+                    Value::try_from(s.to_string()).unwrap(),
                 ),
                 (
                     "anchoring_pub_key".to_owned(),
@@ -332,7 +330,7 @@ impl CommandExtension for Finalize {
             _ => panic!("Wrong network type"),
         };
 
-        let priv_key: PrivateKey = PrivateKey::from_base58check(&sec_key).unwrap();
+        let priv_key: PrivateKey = PrivateKey::from_str(&sec_key).unwrap();
         //TODO: validate config keys
         let _pub_key = PublicKey::from_hex(&pub_key).unwrap();
         let pub_keys: Vec<_> = public_config_list
@@ -373,7 +371,7 @@ impl CommandExtension for Finalize {
 
         anchoring_config
             .private_keys
-            .insert(address.to_base58check(), priv_key.clone());
+            .insert(address.to_string(), priv_key.clone());
 
         genesis_cfg.fee = fee;
         genesis_cfg.frequency = frequency;

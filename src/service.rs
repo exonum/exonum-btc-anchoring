@@ -16,7 +16,6 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::ops::Drop;
 
-use bitcoin::util::base58::ToBase58;
 use iron::{Handler, Request, Response};
 use iron::prelude::IronResult;
 use serde_json;
@@ -116,10 +115,10 @@ impl Service for AnchoringService {
         let mut handler = self.handler.lock().unwrap();
         match handler.handle_commit(state) {
             Err(ServiceError::Handler(e @ HandlerError::IncorrectLect { .. })) => {
-                panic!("A critical error occured: {}", e)
+                panic!("A critical error occurred: {}", e)
             }
             Err(ServiceError::Handler(e)) => {
-                error!("An error in handler occured: {}", e);
+                error!("An error in handler occurred: {}", e);
                 if let Some(sink) = handler.errors_sink.as_ref() {
                     let res = sink.send(e);
                     if let Err(err) = res {
@@ -128,7 +127,7 @@ impl Service for AnchoringService {
                 }
             }
             Err(e) => {
-                error!("An error occured: {:?}", e);
+                error!("An error occurred: {:?}", e);
             }
             Ok(()) => (),
         }
@@ -182,9 +181,8 @@ where
     for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
         node_cfg
             .private_keys
-            .insert(address.to_base58check(), priv_keys[idx].clone());
+            .insert(address.to_string(), priv_keys[idx].clone());
     }
-
     (genesis_cfg, node_cfgs)
 }
 
@@ -217,7 +215,7 @@ impl PublicApiHandler {
         api.wire(&mut router);
 
         let observer = if config.observer.enabled {
-            let rpc_cfg = config.rpc.clone().expect("Rpc config is not setted");
+            let rpc_cfg = config.rpc.clone().expect("Rpc config is not set");
             let mut observer =
                 AnchoringChainObserver::new(blockchain.clone(), rpc_cfg, &config.observer);
 

@@ -22,8 +22,8 @@ use bitcoin::util::hash::Hash160;
 use bitcoin::network::serialize::{deserialize, serialize, serialize_hex, BitcoinHash};
 use bitcoin::blockdata::transaction::{TxIn, TxOut};
 use bitcoin::blockdata::script::{Builder, Script};
-use bitcoin::util::base58::ToBase58;
-use bitcoin::util::address::{Address, Privkey, Type};
+use bitcoin::util::address::{Address, Payload as AddressPayload};
+use bitcoin::util::privkey::Privkey;
 use bitcoin::network::constants::Network;
 use bitcoin::blockdata::transaction::SigHashType;
 use secp256k1::key::{PublicKey, SecretKey};
@@ -106,7 +106,11 @@ implement_serde_hex! {BitcoinTx}
 
 impl FundingTx {
     pub fn find_out(&self, addr: &btc::Address) -> Option<u32> {
-        let redeem_script_hash = addr.hash;
+        let redeem_script_hash = if let AddressPayload::ScriptHash(hash) = addr.payload {
+            hash
+        } else {
+            return None;
+        };
         self.0
             .output
             .iter()
@@ -127,7 +131,7 @@ impl FundingTx {
         addr: &btc::Address,
     ) -> Result<Option<bitcoinrpc::UnspentTransactionInfo>, RpcError> {
         let txid = self.id().to_string();
-        let txs = client.listunspent(0, 9_999_999, &[addr.to_base58check()])?;
+        let txs = client.listunspent(0, 9_999_999, &[addr.to_string()])?;
         Ok(txs.into_iter().find(|txinfo| txinfo.txid == txid))
     }
 }
@@ -152,9 +156,8 @@ impl AnchoringTx {
             .unwrap();
 
         Address {
-            ty: Type::ScriptHash,
+            payload: AddressPayload::ScriptHash(Hash160::from(bytes)),
             network,
-            hash: Hash160::from(bytes),
         }.into()
     }
 
@@ -348,7 +351,7 @@ where
 {
     let inputs = inputs
         .map(|&(ref unspent_tx, utxo_vout)| TxIn {
-            prev_hash: unspent_tx.bitcoin_hash(),
+            prev_hash: unspent_tx.txid(),
             prev_index: utxo_vout,
             script_sig: Script::new(),
             sequence: 0xFFFF_FFFF,

@@ -15,29 +15,29 @@
 extern crate rand;
 
 use std::collections::HashMap;
+use std::str::FromStr;
 
-use serde_json;
-use rand::Rng;
-use bitcoin::network::constants::Network;
-use bitcoin::util::base58::{FromBase58, ToBase58};
-use bitcoin::util::address::Privkey as RawPrivateKey;
 use bitcoin::blockdata::transaction::SigHashType;
+use bitcoin::network::constants::Network;
+use bitcoin::util::privkey::Privkey as RawPrivateKey;
+use rand::{Rng, SeedableRng, StdRng};
 use secp256k1::key::PublicKey as RawPublicKey;
 use secp256k1::Secp256k1;
+use serde_json;
 
-use exonum::helpers::{self, Height};
 use exonum::crypto::Hash;
-use exonum::storage::StorageValue;
 use exonum::encoding::serialize::{encode_hex, FromHex};
 use exonum::encoding::Field;
+use exonum::helpers::{self, Height};
+use exonum::storage::StorageValue;
 
+use details::btc;
 use details::btc::transactions::{sign_tx_input, verify_tx_input, AnchoringTx, BitcoinTx,
                                  FundingTx, TransactionBuilder, TxKind};
-use details::btc;
 use details::btc::HexValueEx;
 
 pub fn dummy_anchoring_tx(redeem_script: &btc::RedeemScript) -> AnchoringTx {
-    let addr = btc::Address::from_script(redeem_script, Network::Testnet);
+    let addr = redeem_script.to_address(Network::Testnet);
     let input_tx = AnchoringTx::from_hex(
         "01000000019aaf09d7e73a5f9ab394f1358bfb3dbde7b15b983d715f\
          5c98f369a3f0a288a70000000000ffffffff02b80b00000000000017a914f18eb74087f751109cc9052befd417\
@@ -106,11 +106,11 @@ pub fn make_signatures(
 #[test]
 fn test_privkey_serde_wif() {
     let privkey_str = "cTvVLNQvaku9XG8LvKXEfWBvxehnj9S67FB3GZPP6mnY4c94AstC";
-    let privkey = btc::PrivateKey::from_base58check(privkey_str).unwrap();
+    let privkey = btc::PrivateKey::from(privkey_str);
 
     assert!(privkey.compressed);
     assert_eq!(privkey.network, Network::Testnet);
-    assert_eq!(privkey.to_base58check(), privkey_str);
+    assert_eq!(privkey.to_string(), privkey_str);
 }
 
 #[test]
@@ -171,6 +171,22 @@ fn test_segwit_txid() {
 
     assert_eq!(tx.id().to_string(), txid_hex);
     assert_eq!(tx.wid().to_string(), wtxid_hex);
+}
+
+#[test]
+fn test_segwit_tx_builder() {
+    // Testnet transaction with id 6f3c41d81bfa04b6a96501344ddff630188ccf48c2fd4cf14cf02c3574f29844
+    let tx = FundingTx::from_hex("0200000000010103397c68945f02ced8dd61c4bfec516f585ff02b368ba6728bd112ef34d9b8541f00000017160014f3b1b3819c1290cd5d675c1319dc7d9d98d571bcfeffffff02a08601000000000017a914a144400568670200cf28be347be9126654cee14387d8f7d4000000000017a914b583eb93b9f86a878a90e0f16e1114c4b08ba8a6870247304402202cb276925bb2e932c2c5b0636c2dd6c360ae3178f1103e1d751b1caf12ab39ae0220387bd6e6a82a80da5a61b32a96653b2f2f6746fe58fd8a444db02ad4bce1bfb2012103150514f05f3e3f40c7b404b16f8a09c2c71bad3ba8da5dd1e411a7069cc080a0e8b81300").unwrap();
+    let anchoring_tx = TransactionBuilder::with_prev_tx(&tx, 0)
+        .fee(1000)
+        .payload(Height(0), Hash::zero())
+        .send_to(btc::Address::from_str("2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA").unwrap())
+        .into_transaction()
+        .unwrap();
+    assert_eq!(
+        anchoring_tx.0.input[0].prev_hash.to_string(),
+        "6f3c41d81bfa04b6a96501344ddff630188ccf48c2fd4cf14cf02c3574f29844",
+    );
 }
 
 #[test]
@@ -386,9 +402,8 @@ fn test_sign_raw_transaction() {
          e0ef03baf0603fd4b0cd004cd1e7500000000",
     ).unwrap();
 
-    let priv_key = RawPrivateKey::from_base58check(
-        "cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE",
-    ).unwrap();
+    let priv_key =
+        RawPrivateKey::from_str("cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE").unwrap();
     let pub_key = {
         let context = Secp256k1::new();
         RawPublicKey::from_secret_key(&context, priv_key.secret_key()).unwrap()
@@ -445,7 +460,7 @@ fn test_anchoring_tx_sign() {
         "cT2S5KgUQJ41G6RnakJ2XcofvoxK68L9B44hfFTnH4ddygaxi7rc",
         "cRUKB8Nrhxwd5Rh6rcX3QK1h7FosYPw5uzEsuPpzLcDNErZCzSaj",
     ].iter()
-        .map(|x| btc::PrivateKey::from_base58check(x).unwrap())
+        .map(|x| btc::PrivateKey::from_str(x).unwrap())
         .collect::<Vec<_>>();
 
     let pub_keys = [
@@ -490,7 +505,7 @@ fn test_anchoring_tx_sign() {
                 .unwrap(),
         )
         .fee(1000)
-        .send_to(btc::Address::from_script(&redeem_script, Network::Testnet))
+        .send_to(redeem_script.to_address(Network::Testnet))
         .into_transaction()
         .unwrap();
 
@@ -564,7 +579,7 @@ fn test_anchoring_tx_prev_chain() {
         .fee(1000)
         .payload(Height::zero(), Hash::default())
         .prev_tx_chain(Some(prev_tx.id()))
-        .send_to(btc::Address::from_base58check("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1").unwrap())
+        .send_to(btc::Address::from("2N1mHzwKTmjnC7JjqeGFBRKYE4WDTjTfop1"))
         .into_transaction()
         .unwrap();
 
@@ -680,6 +695,22 @@ fn test_tx_verify_sighash_type_wrong() {
     assert!(tx.verify_input(&redeem_script, 0, &pub_key, &btc_signature));
 }
 
+#[test]
+fn test_gen_p2sh_address() {
+    let mut rng: StdRng = SeedableRng::from_seed([1, 2, 3, 4].as_ref());
+
+    let network = btc::Network::Testnet;
+    let pub_keys = (0..4)
+        .map(|_| btc::gen_btc_keypair_with_rng(network, &mut rng).0)
+        .collect::<Vec<_>>();
+    let redeem_script = btc::RedeemScript::from_pubkeys(&pub_keys, 3).compressed(network);
+    let address = redeem_script.to_address(network);
+    assert_eq!(
+        address,
+        btc::Address::from("2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA")
+    );
+}
+
 // rpc tests. Works through `rpc` by given env variables.
 // See the `anchoring_client` method on top of this file.
 #[cfg(feature = "rpc_tests")]
@@ -690,12 +721,12 @@ mod rpc {
     use bitcoin::util::base58::ToBase58;
     use bitcoinrpc;
 
-    use exonum::helpers::{self, Height};
     use exonum::crypto::{hash, Hash};
+    use exonum::helpers::{self, Height};
 
-    use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
-    use details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
     use details::btc;
+    use details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
+    use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
 
     fn anchoring_client() -> RpcClient {
         use std::env;
