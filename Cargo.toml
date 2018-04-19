@@ -18,7 +18,7 @@ travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 exonum = "0.7.0"
 exonum_bitcoinrpc = "0.5.1"
 
-bitcoin="0.12.0"
+bitcoin="0.13.0"
 byteorder = "1.0.0"
 clap = "2.22.1"
 display_derive = "0.0.0"
@@ -35,6 +35,10 @@ serde_derive = "1.0.0"
 serde_json = "1.0.0"
 tempdir = "0.3.5"
 toml = "0.4.0"
+
+[dependencies.btc-transaction-utils]
+git = "https://github.com/exonum/btc-transaction-utils.git"
+# rev = "91508aae0e54a8c8a728b97d2a3dbd5c8268ffe1"
 
 [dev-dependencies]
 exonum-testkit = "0.7.0"

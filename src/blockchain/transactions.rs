@@ -87,7 +87,17 @@ impl MsgAnchoringSignature {
                 return Err(ValidateError::MsgWithIncorrectAddress);
             }
             verify_anchoring_tx_payload(&tx, &core_schema)?;
-            if !tx.verify_input(&redeem_script, self.input(), pub_key, self.signature()) {
+            let prev_tx = anchoring_schema
+                .known_txs()
+                .get(&tx.prev_hash())
+                .ok_or_else(|| ValidateError::SignatureIncorrect)?;
+            if !tx.verify_input(
+                &redeem_script,
+                self.input(),
+                &prev_tx,
+                pub_key,
+                self.signature(),
+            ) {
                 return Err(ValidateError::SignatureIncorrect);
             }
             Ok(())

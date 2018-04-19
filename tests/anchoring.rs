@@ -480,7 +480,12 @@ fn test_anchoring_signature_nonexistent_tx() {
         .send_to(addr.clone())
         .into_transaction()
         .unwrap();
-    let signature = tx.sign_input(&redeem_script, 0, &testkit.priv_keys(&addr)[1]);
+    let signature = tx.sign_input(
+        &redeem_script,
+        0,
+        &testkit.latest_anchored_tx(),
+        &testkit.priv_keys(&addr)[1],
+    );
     let validator_1 = ValidatorId(1);
     let msg_sign = {
         let keypair = testkit.validator(validator_1).service_keypair();
@@ -520,7 +525,12 @@ fn test_anchoring_signature_incorrect_payload() {
         .send_to(addr.clone())
         .into_transaction()
         .unwrap();
-    let signature = tx.sign_input(&redeem_script, 0, &testkit.priv_keys(&addr)[1]);
+    let signature = tx.sign_input(
+        &redeem_script,
+        0,
+        &testkit.latest_anchored_tx(),
+        &testkit.priv_keys(&addr)[1],
+    );
     let validator_1 = ValidatorId(1);
     let msg_sign = {
         let keypair = testkit.validator(validator_1).service_keypair();
@@ -708,6 +718,7 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
     let tx = {
         let mut tx = testkit.latest_anchored_tx().clone();
         tx.0.input[0].script_sig = Script::new();
+        tx.0.input[0].witness.clear();
         tx
     };
 
@@ -718,11 +729,12 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
         let priv_key = &testkit.priv_keys(&addr)[1];
 
         let mut different_signature =
-            sign_tx_input_with_nonce(&tx, 0, &redeem_script, priv_key.secret_key(), 2);
+            sign_tx_input_with_nonce(&tx, 0, redeem_script.as_ref(), priv_key.secret_key(), 2);
         assert!(verify_tx_input(
             &tx,
             0,
             &redeem_script,
+            &testkit.current_funding_tx(),
             pub_key,
             different_signature.as_ref(),
         ));
@@ -803,28 +815,30 @@ fn test_anchoring_signature_unknown_output_address() {
     anchor_first_block(&mut testkit);
     anchor_first_block_lect_normal(&mut testkit);
 
-    let tx = {
+    let (tx, prev_tx) = {
         let (_, addr) = {
             let mut anchoring_cfg = testkit.current_cfg().clone();
             anchoring_cfg.anchoring_keys.swap(1, 2);
             anchoring_cfg.redeem_script()
         };
 
-        TransactionBuilder::with_prev_tx(&testkit.latest_anchored_tx(), 0)
+        let tx = TransactionBuilder::with_prev_tx(&testkit.latest_anchored_tx(), 0)
             .fee(1000)
             .payload(Height::zero(), Hash::zero())
             .send_to(addr)
             .into_transaction()
-            .unwrap()
+            .unwrap();
+        (tx, testkit.latest_anchored_tx().clone())
     };
     let (redeem_script, addr) = testkit.current_cfg().redeem_script();
     let priv_key = &mut testkit.current_priv_keys()[0];
-    let signature = tx.sign_input(&redeem_script, 0, priv_key);
+    let signature = tx.sign_input(&redeem_script, 0, &prev_tx, priv_key);
 
     assert_ne!(tx.output_address(Network::Testnet), addr);
     assert!(tx.verify_input(
         &redeem_script,
         0,
+        &prev_tx,
         &testkit.current_cfg().anchoring_keys[0],
         &signature,
     ));

@@ -159,8 +159,13 @@ impl AnchoringHandler {
         multisig: &MultisigAddress,
         context: &ServiceContext,
     ) -> Result<(), ServiceError> {
+        let prev_tx = AnchoringSchema::new(context.snapshot())
+            .known_txs()
+            .get(&proposal.prev_hash())
+            .unwrap();
         for input in proposal.inputs() {
-            let signature = proposal.sign_input(&multisig.redeem_script, input, &multisig.priv_key);
+            let signature =
+                proposal.sign_input(&multisig.redeem_script, input, &prev_tx, &multisig.priv_key);
 
             let sign_msg = MsgAnchoringSignature::new(
                 context.public_key(),

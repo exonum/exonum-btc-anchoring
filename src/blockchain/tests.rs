@@ -18,7 +18,6 @@ use exonum::helpers::ValidatorId;
 use exonum::encoding::serialize::FromHex;
 
 use bitcoin::blockdata::transaction::SigHashType;
-use bitcoin::network::constants::Network;
 use serde_json;
 
 use details::btc;
@@ -116,7 +115,11 @@ fn test_sighash_type_single_in_msg_signature() {
 #[test]
 fn test_signed_input_in_msg_signature_tx_body() {
     let (pub_keys, priv_keys) = gen_anchoring_keys(4);
-    let redeem_script = btc::RedeemScript::from_pubkeys(&pub_keys, 3).compressed(Network::Bitcoin);
+    let pub_keys = pub_keys.into_iter().map(|x| x.0);
+    let redeem_script = btc::RedeemScriptBuilder::with_public_keys(pub_keys)
+        .quorum(3)
+        .to_script()
+        .unwrap();
 
     let tx = dummy_anchoring_tx(&redeem_script);
     let btc_signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
@@ -139,7 +142,11 @@ fn test_signed_input_in_msg_signature_tx_body() {
 #[test]
 fn test_nonexistent_input_in_msg_signature_tx_body() {
     let (pub_keys, priv_keys) = gen_anchoring_keys(4);
-    let redeem_script = btc::RedeemScript::from_pubkeys(&pub_keys, 3).compressed(Network::Bitcoin);
+    let pub_keys = pub_keys.into_iter().map(|x| x.0);
+    let redeem_script = btc::RedeemScriptBuilder::with_public_keys(pub_keys)
+        .quorum(3)
+        .to_script()
+        .unwrap();
 
     let tx = dummy_anchoring_tx(&redeem_script);
     let btc_signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);

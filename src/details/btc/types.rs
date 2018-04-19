@@ -12,12 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::borrow::Cow;
 use std::ops::Deref;
 use std::fmt;
 
 use bitcoin::blockdata::script::Builder;
 use bitcoin::util::hash::Sha256dHash;
+use bitcoin::network::constants::Network;
+use btc_transaction_utils::{multisig::RedeemScript, p2wsh};
 use secp256k1::Secp256k1;
 pub use bitcoin::blockdata::transaction::Transaction as RawTransaction;
 pub use bitcoin::util::address::Address as RawAddress;
@@ -25,10 +26,9 @@ pub use bitcoin::util::privkey::Privkey as RawPrivkey;
 pub use bitcoin::blockdata::script::Script as RawScript;
 pub use secp256k1::key::PublicKey as RawPublicKey;
 
-use exonum::crypto::{hash, CryptoHash, Hash};
 use exonum::encoding::serialize::{encode_hex, FromHex, FromHexError, ToHex};
 use exonum::encoding::Field;
-use exonum::storage::{StorageKey, StorageValue};
+use exonum::storage::StorageKey;
 
 use super::HexValueEx;
 
@@ -40,8 +40,6 @@ pub struct PrivateKey(pub RawPrivkey);
 pub struct PublicKey(pub RawPublicKey);
 #[derive(Clone, PartialEq)]
 pub struct Address(pub RawAddress);
-#[derive(Debug, Clone, PartialEq)]
-pub struct RedeemScript(pub RawScript);
 
 pub type Signature = Vec<u8>;
 
@@ -49,13 +47,11 @@ implement_wrapper! {Sha256dHash, TxId}
 implement_wrapper! {RawPublicKey, PublicKey}
 implement_wrapper! {RawAddress, Address}
 implement_wrapper! {RawPrivkey, PrivateKey}
-implement_wrapper! {RawScript, RedeemScript}
 
 implement_str_conversion! {RawAddress, Address}
 implement_str_conversion! {RawPrivkey, PrivateKey}
 
 implement_serde_hex! {PublicKey}
-implement_serde_hex! {RedeemScript}
 implement_serde_hex! {TxId}
 implement_serde_string! {Address}
 implement_serde_string! {PrivateKey}
@@ -128,25 +124,6 @@ impl ToHex for PublicKey {
     }
 }
 
-impl FromHex for RedeemScript {
-    type Error = FromHexError;
-
-    fn from_hex<T: AsRef<[u8]>>(v: T) -> Result<Self, Self::Error> {
-        let bytes = Vec::<u8>::from_hex(v)?;
-        Ok(RedeemScript::from(Builder::from(bytes).into_script()))
-    }
-}
-
-impl ToHex for RedeemScript {
-    fn write_hex<W: fmt::Write>(&self, w: &mut W) -> fmt::Result {
-        self.0.clone().into_vec().write_hex(w)
-    }
-
-    fn write_hex_upper<W: fmt::Write>(&self, w: &mut W) -> fmt::Result {
-        self.0.clone().into_vec().write_hex_upper(w)
-    }
-}
-
 impl HexValueEx for RawScript {
     fn to_hex(&self) -> String {
         encode_hex(self.clone().into_vec())
@@ -154,22 +131,6 @@ impl HexValueEx for RawScript {
     fn from_hex<T: AsRef<str>>(v: T) -> ::std::result::Result<Self, FromHexError> {
         let bytes = Vec::<u8>::from_hex(v.as_ref())?;
         Ok(Builder::from(bytes).into_script())
-    }
-}
-
-impl StorageValue for RedeemScript {
-    fn into_bytes(self) -> Vec<u8> {
-        self.0.into_vec()
-    }
-
-    fn from_bytes(v: Cow<[u8]>) -> RedeemScript {
-        RedeemScript(RawScript::from(v.into_owned()))
-    }
-}
-
-impl CryptoHash for RedeemScript {
-    fn hash(&self) -> Hash {
-        hash(self.0.clone().into_vec().as_ref())
     }
 }
 
@@ -184,5 +145,12 @@ impl StorageKey for TxId {
 
     fn read(buffer: &[u8]) -> Self {
         TxId::from_slice(buffer).unwrap()
+    }
+}
+
+impl Address {
+    pub fn from_script(redeem_script: &RedeemScript, network: Network) -> Address {
+        let raw_address = p2wsh::address(redeem_script, network);
+        Address(raw_address)
     }
 }

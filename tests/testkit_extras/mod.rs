@@ -27,7 +27,8 @@ use exonum_testkit::{TestKit, TestKitBuilder};
 use exonum_btc_anchoring::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
                            AnchoringNodeConfig, AnchoringService, ANCHORING_SERVICE_NAME};
 use exonum_btc_anchoring::details::btc;
-use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
+use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, FundingTx, RawBitcoinTx,
+                                                       TransactionBuilder};
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringSignature;
 use exonum_btc_anchoring::handler::{collect_signatures, AnchoringHandler};
 use exonum_btc_anchoring::error::HandlerError;
@@ -85,12 +86,15 @@ impl AnchoringTestKit {
             node.check_lect_frequency = CHECK_LECT_FREQUENCY;
         }
 
-        println!("config generated");
-
         client.requests().expect(vec![
             request! {
                 method: "importaddress",
-                params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
+                params: [
+                    "tb1qn5mmecjkj4us6uhr5tc453k96hrzcwr3l9d8fkc7fg8zwur50y4qfdclp7",
+                    "multisig",
+                    false,
+                    false
+                ]
             },
         ]);
         let requests = client.requests();
@@ -221,7 +225,8 @@ impl AnchoringTestKit {
                 .unwrap_or_else(|| {
                     let cfg = self.current_cfg();
                     let tx = cfg.funding_tx().clone();
-                    let input = tx.find_out(&cfg.redeem_script().1).unwrap();
+                    let input = tx.find_out(&cfg.redeem_script().1)
+                        .expect("Unable to find output");
                     (tx.0.clone(), input)
                 });
 
@@ -236,7 +241,7 @@ impl AnchoringTestKit {
             }
 
             let tx = builder.into_transaction().unwrap();
-            let signs = self.gen_anchoring_signatures(&tx);
+            let signs = self.gen_anchoring_signatures(&tx, &prev_tx);
             let signed_tx = self.finalize_tx(tx.clone(), signs.clone());
             (tx, signed_tx, signs)
         };
@@ -259,7 +264,11 @@ impl AnchoringTestKit {
         tx.finalize(&self.current_redeem_script(), collected_signs)
     }
 
-    pub fn gen_anchoring_signatures(&self, tx: &AnchoringTx) -> Vec<MsgAnchoringSignature> {
+    pub fn gen_anchoring_signatures(
+        &self,
+        tx: &AnchoringTx,
+        prev_tx: &RawBitcoinTx,
+    ) -> Vec<MsgAnchoringSignature> {
         let (redeem_script, addr) = self.current_cfg().redeem_script();
 
         let priv_keys = self.priv_keys(&addr);
@@ -267,7 +276,7 @@ impl AnchoringTestKit {
         for (validator, priv_key) in priv_keys.iter().enumerate() {
             let validator = ValidatorId(validator as u16);
             for input in tx.inputs() {
-                let signature = tx.sign_input(&redeem_script, input, priv_key);
+                let signature = tx.sign_input(&redeem_script, input, &prev_tx, priv_key);
                 let keypair = self.validator(validator).service_keypair();
                 signs.push(MsgAnchoringSignature::new(
                     keypair.0,
@@ -290,28 +299,23 @@ fn gen_sandbox_anchoring_config(
     let requests = vec![
         request! {
             method: "importaddress",
-            params: ["2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA", "multisig", false, false]
+            params: ["tb1qn5mmecjkj4us6uhr5tc453k96hrzcwr3l9d8fkc7fg8zwur50y4qfdclp7", "multisig", false, false]
         },
         request! {
             method: "sendtoaddress",
             params: [
-                "2NFGToas8B6sXqsmtGwL1H4kC5fGWSpTcYA",
+                "tb1qn5mmecjkj4us6uhr5tc453k96hrzcwr3l9d8fkc7fg8zwur50y4qfdclp7",
                 "0.00004"
             ],
-            response: "a788a2f0a369f3985c5f713d985bb1e7bd3dfb8b35f194b39a5f3ae7d709af9a"
+            response: "5d934477840e1dc36a8900ae91b02ab9e40e47d946e45f3e58288db760c4aeb1"
         },
         request! {
             method: "getrawtransaction",
             params: [
-                "a788a2f0a369f3985c5f713d985bb1e7bd3dfb8b35f194b39a5f3ae7d709af9a",
+                "5d934477840e1dc36a8900ae91b02ab9e40e47d946e45f3e58288db760c4aeb1",
                 0
             ],
-            response: "0100000001e56b729856ecd8a9712cb86a8a702bbd05478b0a323f06d2bcfdce373fc9c71b0\
-                10000006a4730440220410e697174595270abbf2e2542ce42186ef6d48fc0dcf9a2c26cb639d6d9e89\
-                30220735ff3e6f464d426eec6dd5acfda268624ef628aab38124a1a0b82c1670dddd50121032375139\
-                6efcc7e842b522b9d95d84a4f0e4663861124150860d0f728c2cc7d56feffffff02a00f00000000000\
-                017a914f18eb74087f751109cc9052befd4177a52c9a30a870313d70b000000001976a914eed3fc59a\
-                211ef5cbf1986971cae80bcc983d23a88ac35ae1000"
+            response: "020000000001010d7d0b800827c45ff80603c74d8aec4c62ca1ad12f4115ac1f18c2dba293d25c00000000171600149cd7992b80bda416f5acff608dc1aa2cb7e41d28feffffff02a899700a00000000160014e3dabb36a139f4d5d3712835929d41504a21f9c9a00f0000000000002200209d37bce25695790d72e3a2f15a46c5d5c62c3871f95a74db1e4a0e277074792a02483045022100bc572cd3b1e2fa8f17487f965920946c940f860be595584a4c5fe273fa01b40502206317b780bbe7fe80ea240572967f7d70530c99a381a794727adadcfc271f5955012103e876e56f29fb47eb260e63a26516079443f854769ffae3fe572835ee6c8ed361c9bc1300"
         },
     ];
     client.requests().expect(requests);

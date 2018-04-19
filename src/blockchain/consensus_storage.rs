@@ -98,10 +98,12 @@ impl AnchoringConfig {
     /// Creates compressed `RedeemScript` from public keys in config.
     pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
-        let redeem_script =
-            btc::RedeemScript::from_pubkeys(self.anchoring_keys.iter(), majority_count)
-                .compressed(self.network);
-        let addr = redeem_script.to_address(self.network);
+        let redeem_script = btc::RedeemScriptBuilder::with_public_keys(
+            self.anchoring_keys.iter().map(|x| x.0.clone()),
+        ).quorum(majority_count as usize)
+            .to_script()
+            .unwrap();
+        let addr = btc::Address::from_script(&redeem_script, self.network);
         (redeem_script, addr)
     }
 

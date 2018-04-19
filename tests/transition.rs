@@ -1338,7 +1338,7 @@ fn test_transit_msg_signature_incorrect_output_address() {
             .send_to(testkit.current_addr())
             .into_transaction()
             .unwrap();
-        testkit.gen_anchoring_signatures(&tx)
+        testkit.gen_anchoring_signatures(&tx, &testkit.latest_anchored_tx())
     };
     // Try to send different messages
     let txid = different_signatures[0].tx().id();
