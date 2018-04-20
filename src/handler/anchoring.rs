@@ -18,7 +18,6 @@ use exonum::encoding::serialize::encode_hex;
 
 use error::Error as ServiceError;
 use details::btc;
-use details::btc::HexValueEx;
 use details::btc::transactions::{AnchoringTx, RawBitcoinTx, TransactionBuilder};
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;

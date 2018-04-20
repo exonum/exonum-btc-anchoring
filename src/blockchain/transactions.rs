@@ -47,9 +47,9 @@ impl MsgAnchoringSignature {
             );
             return false;
         }
-        // Check that input scriptSigs are empty
+        // Check that inputs do not contain witness data.
         for input in &tx.input {
-            if !input.script_sig.is_empty() {
+            if !input.witness.is_empty() {
                 warn!(
                     "Received msg with non empty input scriptSigs, content={:#?}",
                     self

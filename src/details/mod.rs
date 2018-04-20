@@ -19,5 +19,5 @@ pub mod btc;
 pub mod rpc;
 pub mod error;
 
-// #[cfg(test)]
-// pub mod tests;
+#[cfg(test)]
+pub mod tests;
