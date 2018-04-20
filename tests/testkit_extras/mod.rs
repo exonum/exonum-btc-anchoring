@@ -299,7 +299,12 @@ fn gen_sandbox_anchoring_config(
     let requests = vec![
         request! {
             method: "importaddress",
-            params: ["tb1qn5mmecjkj4us6uhr5tc453k96hrzcwr3l9d8fkc7fg8zwur50y4qfdclp7", "multisig", false, false]
+            params: [
+                "tb1qn5mmecjkj4us6uhr5tc453k96hrzcwr3l9d8fkc7fg8zwur50y4qfdclp7",
+                "multisig",
+                false,
+                false
+            ]
         },
         request! {
             method: "sendtoaddress",
@@ -315,7 +320,13 @@ fn gen_sandbox_anchoring_config(
                 "5d934477840e1dc36a8900ae91b02ab9e40e47d946e45f3e58288db760c4aeb1",
                 0
             ],
-            response: "020000000001010d7d0b800827c45ff80603c74d8aec4c62ca1ad12f4115ac1f18c2dba293d25c00000000171600149cd7992b80bda416f5acff608dc1aa2cb7e41d28feffffff02a899700a00000000160014e3dabb36a139f4d5d3712835929d41504a21f9c9a00f0000000000002200209d37bce25695790d72e3a2f15a46c5d5c62c3871f95a74db1e4a0e277074792a02483045022100bc572cd3b1e2fa8f17487f965920946c940f860be595584a4c5fe273fa01b40502206317b780bbe7fe80ea240572967f7d70530c99a381a794727adadcfc271f5955012103e876e56f29fb47eb260e63a26516079443f854769ffae3fe572835ee6c8ed361c9bc1300"
+            response: "020000000001010d7d0b800827c45ff80603c74d8aec4c62ca1ad12f4115ac1f18c2dba293d\
+                25c00000000171600149cd7992b80bda416f5acff608dc1aa2cb7e41d28feffffff02a899700a00000\
+                000160014e3dabb36a139f4d5d3712835929d41504a21f9c9a00f0000000000002200209d37bce2569\
+                5790d72e3a2f15a46c5d5c62c3871f95a74db1e4a0e277074792a02483045022100bc572cd3b1e2fa8\
+                f17487f965920946c940f860be595584a4c5fe273fa01b40502206317b780bbe7fe80ea240572967f7\
+                d70530c99a381a794727adadcfc271f5955012103e876e56f29fb47eb260e63a26516079443f854769\
+                ffae3fe572835ee6c8ed361c9bc1300"
         },
     ];
     client.requests().expect(requests);

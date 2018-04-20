@@ -17,12 +17,8 @@ use std::collections::HashMap;
 use std::ops::Deref;
 
 use bitcoin::blockdata::script::Script;
-use bitcoin::blockdata::script::Instruction;
 use bitcoin::blockdata::transaction::{TxIn, TxOut};
-use bitcoin::network::constants::Network;
 use bitcoin::network::serialize::{deserialize, serialize, serialize_hex, BitcoinHash};
-use bitcoin::util::address::{Address, Payload as AddressPayload};
-use bitcoin::util::hash::Hash160;
 use bitcoin::util::privkey::Privkey;
 use bitcoinrpc;
 use btc_transaction_utils::{TxInRef, p2wsh};
@@ -128,24 +124,8 @@ impl AnchoringTx {
         self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].value
     }
 
-    pub fn output_address(&self, network: Network) -> btc::Address {
-        let script = &self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].script_pubkey;
-        let bytes = script
-            .into_iter()
-            .filter_map(|instruction| {
-                if let Instruction::PushBytes(bytes) = instruction {
-                    Some(bytes)
-                } else {
-                    None
-                }
-            })
-            .next()
-            .unwrap();
-
-        Address {
-            payload: AddressPayload::ScriptHash(Hash160::from(bytes)),
-            network,
-        }.into()
+    pub fn script_pubkey(&self) -> &Script {
+        &self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].script_pubkey
     }
 
     pub fn inputs(&self) -> ::std::ops::Range<u32> {
@@ -404,7 +384,12 @@ pub fn verify_tx_input(
 ) -> bool {
     let signer = p2wsh::InputSigner::new(subscript.clone());
     signer
-        .verify_input(TxInRef::new(tx, input), prev_tx, pub_key, signature)
+        .verify_input(
+            TxInRef::new(tx, input),
+            prev_tx,
+            pub_key,
+            signature.split_last().unwrap().1,
+        )
         .is_ok()
 }
 

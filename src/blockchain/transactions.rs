@@ -76,21 +76,28 @@ impl MsgAnchoringSignature {
         let anchoring_cfg = anchoring_schema.actual_anchoring_config();
         if let Some(pub_key) = anchoring_cfg.anchoring_keys.get(id) {
             let (redeem_script, addr) = anchoring_cfg.redeem_script();
-            let tx_addr = tx.output_address(anchoring_cfg.network);
+            let tx_script_pubkey = tx.script_pubkey();
             // Use following address if it exists
             let addr = if let Some(following) = anchoring_schema.following_anchoring_config() {
                 following.redeem_script().1
             } else {
                 addr
             };
-            if tx_addr != addr {
+            if tx_script_pubkey != &addr.script_pubkey() {
                 return Err(ValidateError::MsgWithIncorrectAddress);
             }
             verify_anchoring_tx_payload(&tx, &core_schema)?;
-            let prev_tx = anchoring_schema
-                .known_txs()
-                .get(&tx.prev_hash())
-                .ok_or_else(|| ValidateError::SignatureIncorrect)?;
+            // Check funding tx as prev tx because we can not add them to
+            // the `known_txs` automatically.
+            let prev_tx = if anchoring_cfg.funding_tx().id() == tx.prev_hash() {
+                anchoring_cfg.funding_tx().clone().0
+            } else {
+                anchoring_schema
+                    .known_txs()
+                    .get(&tx.prev_hash())
+                    .ok_or_else(|| ValidateError::LectWithIncorrectContent)?
+                    .0
+            };
             if !tx.verify_input(
                 &redeem_script,
                 self.input(),

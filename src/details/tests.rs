@@ -458,8 +458,6 @@ fn test_redeem_script_pubkey() {
 
 #[test]
 fn test_anchoring_tx_sign() {
-    let _ = helpers::init_logger();
-
     let priv_keys = [
         "cVC9eJN5peJemWn1byyWcWDevg6xLNXtACjHJWmrR5ynsCu8mkQE",
         "cMk66oMazTgquBVaBLHzDi8FMgAaRN3tSf6iZykf9bCh3D3FsLX1",
@@ -805,8 +803,6 @@ mod rpc {
 
     #[test]
     fn test_rpc_nonexistent_transaction_get_info() {
-        let _ = helpers::init_logger();
-
         let client = anchoring_client();
 
         let txid = btc::TxId::from_hex(
@@ -818,8 +814,6 @@ mod rpc {
 
     #[test]
     fn test_rpc_unspent_funding_tx() {
-        let _ = helpers::init_logger();
-
         let client = anchoring_client();
 
         let (validators, _) = gen_anchoring_keys(4);
@@ -837,8 +831,6 @@ mod rpc {
 
     #[test]
     fn test_rpc_anchoring_tx_chain() {
-        let _ = helpers::init_logger();
-
         let client = anchoring_client();
 
         let (validators, priv_keys) = gen_anchoring_keys(4);
@@ -967,8 +959,6 @@ mod rpc {
     #[test]
     #[should_panic(expected = "InsufficientFunds")]
     fn test_rpc_anchoring_tx_chain_insufficient_funds() {
-        let _ = helpers::init_logger();
-
         let client = anchoring_client();
 
         let (validators, priv_keys) = gen_anchoring_keys(4);

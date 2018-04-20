@@ -226,7 +226,6 @@ pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
         testkit.gen_anchoring_tx_with_signatures(Height::zero(), hash, &[], None, &anchoring_addr);
     let anchored_tx = testkit.latest_anchored_tx();
     testkit.create_block();
-    return;
 
     assert!(testkit.is_tx_in_pool(&signatures[0].hash()));
     requests.expect(vec![
@@ -238,8 +237,8 @@ pub fn anchor_first_block(testkit: &mut AnchoringTestKit) {
         },
         request! {
             method: "sendrawtransaction",
-            params: [anchored_tx.to_hex()],
-            response: anchored_tx.to_hex()
+            params: [anchored_tx],
+            response: anchored_tx
         },
     ]);
     testkit.create_block_with_transactions(signatures);
@@ -263,7 +262,7 @@ pub fn anchor_first_block_lect_normal(testkit: &mut AnchoringTestKit) {
     testkit.requests().expect(vec![
         request! {
             method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr.to_string()]],
+            params: [0, 9_999_999, [&anchoring_addr]],
             response: [
                 listunspent_entry(&anchored_tx, &anchoring_addr, 0),
             ]
@@ -271,7 +270,7 @@ pub fn anchor_first_block_lect_normal(testkit: &mut AnchoringTestKit) {
         request! {
             method: "getrawtransaction",
             params: [&anchored_tx.id(), 0],
-            response: &anchored_tx.to_hex()
+            response: &anchored_tx
         },
     ]);
     testkit.create_block();

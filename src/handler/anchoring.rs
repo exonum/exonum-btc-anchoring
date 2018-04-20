@@ -19,7 +19,7 @@ use exonum::encoding::serialize::encode_hex;
 use error::Error as ServiceError;
 use details::btc;
 use details::btc::HexValueEx;
-use details::btc::transactions::{AnchoringTx, TransactionBuilder};
+use details::btc::transactions::{AnchoringTx, RawBitcoinTx, TransactionBuilder};
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
@@ -102,14 +102,10 @@ impl AnchoringHandler {
                 .send_to(multisig.addr.clone())
                 .into_transaction()?;
 
-            trace!(
-                "initial_proposal={:#?}, txhex={}",
-                proposal,
-                proposal.0.to_hex()
-            );
+            trace!("initial_proposal={:?}", proposal,);
 
             // Sign proposal
-            self.sign_proposal_tx(proposal, multisig, context)?;
+            self.sign_proposal_tx(proposal, &funding_tx, multisig, context)?;
         } else {
             warn!("Funding transaction is not suitable.");
         }
@@ -144,28 +140,32 @@ impl AnchoringHandler {
         };
 
         trace!(
-            "proposal={:#?}, to={:?}, height={}, hash={}",
+            "proposal={:?}, to={:?}, height={}, hash={}",
             proposal,
             multisig.addr,
             height,
             hash.to_hex()
         );
-        self.sign_proposal_tx(proposal, multisig, context)
+        self.sign_proposal_tx(proposal, &lect, multisig, context)
     }
 
     pub fn sign_proposal_tx(
         &mut self,
         proposal: AnchoringTx,
+        prev_tx: &RawBitcoinTx,
         multisig: &MultisigAddress,
         context: &ServiceContext,
     ) -> Result<(), ServiceError> {
-        let prev_tx = AnchoringSchema::new(context.snapshot())
-            .known_txs()
-            .get(&proposal.prev_hash())
-            .unwrap();
         for input in proposal.inputs() {
             let signature =
                 proposal.sign_input(&multisig.redeem_script, input, &prev_tx, &multisig.priv_key);
+            debug_assert!(proposal.verify_input(
+                &multisig.redeem_script,
+                input,
+                &prev_tx,
+                self.anchoring_key(multisig.common, context),
+                &signature
+            ));
 
             let sign_msg = MsgAnchoringSignature::new(
                 context.public_key(),
@@ -177,7 +177,7 @@ impl AnchoringHandler {
             );
 
             trace!(
-                "Sign input msg={:#?}, sighex={}",
+                "Sign input msg={:?}, sighex={}",
                 sign_msg,
                 encode_hex(signature)
             );
@@ -218,11 +218,7 @@ impl AnchoringHandler {
             // Send transaction if it needs
             if self.client().get_transaction(new_lect.id())?.is_none() {
                 self.client().send_transaction(new_lect.clone().into())?;
-                trace!(
-                    "Sent signed_tx={:#?}, to={}",
-                    new_lect,
-                    new_lect.output_address(multisig.common.network).to_string()
-                );
+                trace!("Sent signed_tx={:#?}, to={}", new_lect, multisig.addr,);
             }
 
             info!(

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 extern crate bitcoin;
+extern crate btc_transaction_utils;
 extern crate byteorder;
 extern crate exonum;
 extern crate exonum_bitcoinrpc as bitcoinrpc;

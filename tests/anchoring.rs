@@ -13,6 +13,7 @@
 // limitations under the License.
 
 extern crate bitcoin;
+extern crate btc_transaction_utils;
 extern crate byteorder;
 extern crate exonum;
 extern crate exonum_bitcoinrpc as bitcoinrpc;
@@ -35,8 +36,6 @@ pub mod testkit_extras;
 
 use std::ops::Deref;
 
-use bitcoin::blockdata::transaction::SigHashType;
-use bitcoin::network::constants::Network;
 use bitcoin::blockdata::script::Script;
 
 use exonum::blockchain::Transaction;
@@ -728,8 +727,14 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
         let pub_key = &cfg.anchoring_keys[1];
         let priv_key = &testkit.priv_keys(&addr)[1];
 
-        let mut different_signature =
-            sign_tx_input_with_nonce(&tx, 0, redeem_script.as_ref(), priv_key.secret_key(), 2);
+        let mut different_signature = sign_tx_input_with_nonce(
+            &tx,
+            0,
+            &redeem_script,
+            &testkit.current_funding_tx(),
+            priv_key.secret_key(),
+            2,
+        );
         assert!(verify_tx_input(
             &tx,
             0,
@@ -739,7 +744,6 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
             different_signature.as_ref(),
         ));
 
-        different_signature.push(SigHashType::All.as_u32() as u8);
         assert_ne!(different_signature, signature_msgs[1].signature());
 
         let validator_1 = ValidatorId(1);
@@ -834,7 +838,7 @@ fn test_anchoring_signature_unknown_output_address() {
     let priv_key = &mut testkit.current_priv_keys()[0];
     let signature = tx.sign_input(&redeem_script, 0, &prev_tx, priv_key);
 
-    assert_ne!(tx.output_address(Network::Testnet), addr);
+    assert_ne!(tx.script_pubkey(), &addr.script_pubkey());
     assert!(tx.verify_input(
         &redeem_script,
         0,
