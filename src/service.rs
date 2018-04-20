@@ -172,7 +172,7 @@ where
 
     let address = {
         let majority_count = ::majority_count(count);
-        let keys = pub_keys.iter().map(|x| x.0.clone());
+        let keys = pub_keys.iter().map(|x| x.0);
         let redeem_script = btc::RedeemScriptBuilder::with_public_keys(keys)
             .quorum(majority_count as usize)
             .to_script()

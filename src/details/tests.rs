@@ -622,7 +622,7 @@ mod rpc {
     use bitcoinrpc;
 
     use exonum::crypto::{hash, Hash};
-    use exonum::helpers::{self, Height};
+    use exonum::helpers::Height;
 
     use details::btc;
     use details::btc::transactions::{AnchoringTx, FundingTx, TransactionBuilder};
@@ -644,7 +644,6 @@ mod rpc {
 
     pub fn create_multisig_address<'a, I>(
         client: &BitcoinRelay,
-        network: btc::Network,
         count: u8,
         pub_keys: I,
     ) -> Result<(btc::RedeemScript, btc::Address), bitcoinrpc::Error>
@@ -723,8 +722,7 @@ mod rpc {
 
         let majority_count = ::majority_count(4);
         let (_, address) =
-            create_multisig_address(&client, Network::Testnet, majority_count, validators.iter())
-                .unwrap();
+            create_multisig_address(&client, majority_count, validators.iter()).unwrap();
 
         let funding_tx = client.send_to_address(&address, 1000).unwrap();
         let info = funding_tx.has_unspent_info(&client, &address).unwrap();
@@ -739,8 +737,7 @@ mod rpc {
         let (validators, priv_keys) = gen_anchoring_keys(4);
         let majority_count = ::majority_count(4);
         let (redeem_script, addr) =
-            create_multisig_address(&client, Network::Testnet, majority_count, validators.iter())
-                .unwrap();
+            create_multisig_address(&client, majority_count, validators.iter()).unwrap();
         trace!("multisig_address={:#?}", redeem_script);
 
         let fee = 1000;
@@ -826,12 +823,8 @@ mod rpc {
         // Send to next addr
         let (validators2, priv_keys2) = gen_anchoring_keys(6);
         let majority_count2 = ::majority_count(6);
-        let (redeem_script2, addr2) = create_multisig_address(
-            &client,
-            Network::Testnet,
-            majority_count2,
-            validators2.iter(),
-        ).unwrap();
+        let (redeem_script2, addr2) =
+            create_multisig_address(&client, majority_count2, validators2.iter()).unwrap();
 
         trace!("new_multisig_address={:#?}", redeem_script2);
         utxo_tx = send_anchoring_tx(
@@ -867,8 +860,7 @@ mod rpc {
         let (validators, priv_keys) = gen_anchoring_keys(4);
         let majority_count = ::majority_count(4);
         let (redeem_script, addr) =
-            create_multisig_address(&client, Network::Testnet, majority_count, validators.iter())
-                .unwrap();
+            create_multisig_address(&client, majority_count, validators.iter()).unwrap();
         trace!("multisig_address={:#?}", redeem_script);
 
         let fee = 1000;

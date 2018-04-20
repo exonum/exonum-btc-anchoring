@@ -99,7 +99,7 @@ impl AnchoringConfig {
     pub fn redeem_script(&self) -> (btc::RedeemScript, btc::Address) {
         let majority_count = self.majority_count();
         let redeem_script = btc::RedeemScriptBuilder::with_public_keys(
-            self.anchoring_keys.iter().map(|x| x.0.clone()),
+            self.anchoring_keys.iter().map(|x| x.0),
         ).quorum(majority_count as usize)
             .to_script()
             .unwrap();

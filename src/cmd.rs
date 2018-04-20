@@ -351,7 +351,7 @@ impl CommandExtension for Finalize {
 
         let majority_count = ::majority_count(public_config_list.len() as u8);
         let address = btc::Address::from_script(
-            &btc::RedeemScriptBuilder::with_public_keys(pub_keys.iter().map(|pk| pk.0.clone()))
+            &btc::RedeemScriptBuilder::with_public_keys(pub_keys.iter().map(|pk| pk.0))
                 .quorum(majority_count as usize)
                 .to_script()?,
             network,

@@ -145,7 +145,7 @@ impl AnchoringHandler {
             height,
             hash.to_hex()
         );
-        self.sign_proposal_tx(proposal, &lect, multisig, context)
+        self.sign_proposal_tx(proposal, lect, multisig, context)
     }
 
     pub fn sign_proposal_tx(
@@ -157,11 +157,11 @@ impl AnchoringHandler {
     ) -> Result<(), ServiceError> {
         for input in proposal.inputs() {
             let signature =
-                proposal.sign_input(&multisig.redeem_script, input, &prev_tx, &multisig.priv_key);
+                proposal.sign_input(&multisig.redeem_script, input, prev_tx, &multisig.priv_key);
             debug_assert!(proposal.verify_input(
                 &multisig.redeem_script,
                 input,
-                &prev_tx,
+                prev_tx,
                 self.anchoring_key(multisig.common, context),
                 &signature
             ));
