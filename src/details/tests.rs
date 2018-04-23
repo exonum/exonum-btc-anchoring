@@ -589,7 +589,7 @@ fn test_tx_verify_sighash_type_wrong() {
 
 // rpc tests. Works through `rpc` by given env variables.
 // See the `anchoring_client` method on top of this file.
-// #[cfg(feature = "rpc_tests")]
+#[cfg(feature = "rpc_tests")]
 mod rpc {
     use super::*;
 
@@ -639,13 +639,13 @@ mod rpc {
         block_height: Height,
         block_hash: Hash,
         priv_keys: &[btc::PrivateKey],
-        anchoring_tx: AnchoringTx,
+        prev_tx: &AnchoringTx,
         additional_funds: &[FundingTx],
         fee: u64,
     ) -> AnchoringTx {
         let (tx, prev_txs) = {
-            let mut prev_txs = vec![&anchoring_tx.0];
-            let mut builder = TransactionBuilder::with_prev_tx(&anchoring_tx, 0)
+            let mut prev_txs = vec![&prev_tx.0];
+            let mut builder = TransactionBuilder::with_prev_tx(prev_tx, 0)
                 .fee(fee)
                 .payload(block_height, block_hash)
                 .send_to(to.clone());
@@ -703,7 +703,6 @@ mod rpc {
 
     #[test]
     fn test_rpc_anchoring_tx_chain() {
-        let _ = ::exonum::helpers::init_logger();
         let client = anchoring_client();
 
         let (validators, priv_keys) = gen_anchoring_keys(4);
@@ -732,7 +731,8 @@ mod rpc {
                 .unwrap();
             trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.id());
 
-            let signatures = make_signatures(&redeem_script, &tx, &[&funding_tx.0], &priv_keys[0..3]);
+            let signatures =
+                make_signatures(&redeem_script, &tx, &[&funding_tx.0], &priv_keys[0..3]);
             let tx = tx.finalize(&redeem_script, signatures);
             client.send_transaction(tx.clone().into()).unwrap();
             trace!("Sent anchoring_tx={:?}, txid={}", tx, tx.id());
@@ -767,7 +767,7 @@ mod rpc {
                 block_height,
                 block_hash,
                 &priv_keys[0..3],
-                utxo_tx,
+                &utxo_tx,
                 &[],
                 fee,
             );
@@ -788,14 +788,14 @@ mod rpc {
             block_height,
             block_hash,
             &priv_keys[0..3],
-            utxo_tx,
+            &utxo_tx,
             &[funding_tx],
             fee,
         );
 
         // Send to next addr
         let (validators2, priv_keys2) = gen_anchoring_keys(6);
-        let majority_count2 = ::majority_count(6);
+        let majority_count2 = 5;
         let (redeem_script2, addr2) =
             create_multisig_address(&client, majority_count2, validators2.iter()).unwrap();
 
@@ -807,7 +807,7 @@ mod rpc {
             block_height,
             block_hash,
             &priv_keys[0..3],
-            utxo_tx,
+            &utxo_tx,
             &[],
             fee,
         );
@@ -818,8 +818,8 @@ mod rpc {
             &addr2,
             block_height,
             block_hash,
-            &priv_keys2[0..3],
-            utxo_tx,
+            &priv_keys2[0..5],
+            &utxo_tx,
             &[],
             fee,
         );
@@ -855,7 +855,8 @@ mod rpc {
                 .unwrap();
             trace!("Proposed anchoring_tx={:?}, txid={}", tx, tx.id());
 
-            let signatures = make_signatures(&redeem_script, &tx, &[&funding_tx.0], &priv_keys[0..3]);
+            let signatures =
+                make_signatures(&redeem_script, &tx, &[&funding_tx.0], &priv_keys[0..3]);
             let tx = tx.finalize(&redeem_script, signatures);
             client.send_transaction(tx.clone().into()).unwrap();
             trace!("Sent anchoring_tx={:?}, txid={}", tx, tx.id());
@@ -890,7 +891,7 @@ mod rpc {
                 block_height,
                 block_hash,
                 &priv_keys[0..3],
-                utxo_tx,
+                &utxo_tx,
                 &[],
                 fee,
             );
@@ -909,7 +910,7 @@ mod rpc {
             block_height,
             block_hash,
             &priv_keys[0..3],
-            utxo_tx,
+            &utxo_tx,
             &[],
             fee,
         );
