@@ -276,7 +276,7 @@ impl AnchoringTestKit {
         for (validator, priv_key) in priv_keys.iter().enumerate() {
             let validator = ValidatorId(validator as u16);
             for input in tx.inputs() {
-                let signature = tx.sign_input(&redeem_script, input, &prev_tx, priv_key);
+                let signature = tx.sign_input(&redeem_script, input, prev_tx, priv_key);
                 let keypair = self.validator(validator).service_keypair();
                 signs.push(MsgAnchoringSignature::new(
                     keypair.0,
