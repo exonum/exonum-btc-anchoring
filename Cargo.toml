@@ -38,7 +38,7 @@ toml = "0.4.0"
 
 [dependencies.btc-transaction-utils]
 git = "https://github.com/exonum/btc-transaction-utils.git"
-# rev = "91508aae0e54a8c8a728b97d2a3dbd5c8268ffe1"
+rev = "7651ddc4007f3032dd12c5d02524969df73c19d0"
 
 [dev-dependencies]
 exonum-testkit = "0.7.0"
