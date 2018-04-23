@@ -123,7 +123,7 @@ fn test_signed_input_in_msg_signature_tx_body() {
         .unwrap();
 
     let (prev_tx, tx) = dummy_anchoring_txs(&redeem_script);
-    let btc_signatures = make_signatures(&redeem_script, &tx, &prev_tx, &[0], &priv_keys);
+    let btc_signatures = make_signatures(&redeem_script, &tx, &[&prev_tx.0], &priv_keys);
     let signed_tx = tx.clone().finalize(&redeem_script, btc_signatures.clone());
 
     assert_ne!(signed_tx.bitcoin_hash(), tx.bitcoin_hash());
@@ -150,7 +150,7 @@ fn test_nonexistent_input_in_msg_signature_tx_body() {
         .unwrap();
 
     let (prev_tx, tx) = dummy_anchoring_txs(&redeem_script);
-    let btc_signatures = make_signatures(&redeem_script, &tx, prev_tx.as_ref(), &[0], &priv_keys);
+    let btc_signatures = make_signatures(&redeem_script, &tx, &[&prev_tx.0], &priv_keys);
 
     let msg = MsgAnchoringSignature::new_with_signature(
         &PublicKey::zero(),

@@ -19,7 +19,6 @@ use std::str::FromStr;
 
 use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::constants::Network;
-use rand::Rng;
 use serde_json;
 
 use exonum::crypto::Hash;
@@ -74,38 +73,18 @@ pub fn gen_anchoring_keys(count: usize) -> (Vec<btc::PublicKey>, Vec<btc::Privat
 pub fn make_signatures(
     redeem_script: &btc::RedeemScript,
     proposal: &AnchoringTx,
-    prev_tx: &RawBitcoinTx,
-    inputs: &[u32],
+    prev_txs: &[&RawBitcoinTx],
     priv_keys: &[btc::PrivateKey],
 ) -> HashMap<u32, Vec<btc::Signature>> {
-    let majority_count = (priv_keys.len() as u8) * 2 / 3 + 1;
-
-    let mut signatures = inputs
-        .iter()
-        .map(|input| (*input, vec![None; priv_keys.len()]))
-        .collect::<Vec<_>>();
-    let mut priv_keys = priv_keys.iter().enumerate().collect::<Vec<_>>();
-    rand::thread_rng().shuffle(&mut priv_keys);
-
-    for (input_idx, input) in inputs.iter().enumerate() {
-        let priv_keys_iter = priv_keys.iter().take(majority_count as usize);
-        for &(id, priv_key) in priv_keys_iter {
-            let sign = proposal.sign_input(redeem_script, *input, prev_tx, priv_key);
-            signatures[input_idx].1[id] = Some(sign);
-        }
-    }
-
-    signatures
-        .iter()
-        .map(|signs| {
-            let input = signs.0;
-            let signs = signs
-                .1
+    proposal
+        .inputs()
+        .map(|idx| {
+            let prev_tx = &prev_txs[idx as usize];
+            let signatures = priv_keys
                 .iter()
-                .filter_map(|x| x.clone())
-                .take(majority_count as usize)
+                .map(|pk| proposal.sign_input(redeem_script, idx, prev_tx, pk))
                 .collect::<Vec<_>>();
-            (input, signs)
+            (idx, signatures)
         })
         .collect::<HashMap<_, _>>()
 }
@@ -388,10 +367,6 @@ fn test_anchoring_tx_sign() {
         .map(|x| btc::PublicKey::from_hex(x).unwrap())
         .collect::<Vec<_>>();
     let redeem_script = redeem_script_testnet(&pub_keys, 3);
-    println!(
-        "{}",
-        ::btc_transaction_utils::p2wsh::address(&redeem_script, Network::Testnet).to_string(),
-    );
 
     let prev_tx = AnchoringTx::from_hex(
         "01000000014970bd8d76edf52886f62e3073714bddc6c33bccebb6b1d\
@@ -614,7 +589,7 @@ fn test_tx_verify_sighash_type_wrong() {
 
 // rpc tests. Works through `rpc` by given env variables.
 // See the `anchoring_client` method on top of this file.
-#[cfg(feature = "rpc_tests")]
+// #[cfg(feature = "rpc_tests")]
 mod rpc {
     use super::*;
 
@@ -668,35 +643,31 @@ mod rpc {
         additional_funds: &[FundingTx],
         fee: u64,
     ) -> AnchoringTx {
-        let tx = {
+        let (tx, prev_txs) = {
+            let mut prev_txs = vec![&anchoring_tx.0];
             let mut builder = TransactionBuilder::with_prev_tx(&anchoring_tx, 0)
                 .fee(fee)
                 .payload(block_height, block_hash)
                 .send_to(to.clone());
-            for funding_tx in additional_funds {
+            for funding_tx in additional_funds.iter() {
                 let out = funding_tx.find_out(to).unwrap();
                 builder = builder.add_funds(funding_tx, out);
+                prev_txs.push(&funding_tx.0);
             }
-            builder.into_transaction().unwrap()
+            (builder.into_transaction().unwrap(), prev_txs)
         };
         trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.id());
 
-        let inputs = tx.inputs().collect::<Vec<_>>();
-        let signatures = make_signatures(
-            redeem_script,
-            &tx,
-            &anchoring_tx,
-            inputs.as_slice(),
-            priv_keys,
-        );
+        let signatures = make_signatures(redeem_script, &tx, &prev_txs, priv_keys);
         let tx = tx.finalize(redeem_script, signatures);
+        trace!("Finalized tx={:#?}", tx);
         client.send_transaction(tx.clone().into()).unwrap();
 
         let payload = tx.payload();
         assert_eq!(payload.block_height, block_height);
         assert_eq!(payload.block_hash, block_hash);
 
-        trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.id());
+        trace!("Sent anchoring_tx={:?}, txid={}", tx, tx.id());
         let unspent_transactions = client.unspent_transactions(to).unwrap();
         let lect_tx = &unspent_transactions[0];
         assert_eq!(lect_tx.body.0, tx.0);
@@ -732,24 +703,25 @@ mod rpc {
 
     #[test]
     fn test_rpc_anchoring_tx_chain() {
+        let _ = ::exonum::helpers::init_logger();
         let client = anchoring_client();
 
         let (validators, priv_keys) = gen_anchoring_keys(4);
         let majority_count = ::majority_count(4);
         let (redeem_script, addr) =
             create_multisig_address(&client, majority_count, validators.iter()).unwrap();
-        trace!("multisig_address={:#?}", redeem_script);
+        trace!("multisig_address={}", redeem_script);
 
         let fee = 1000;
         let block_height = Height(2);
         let block_hash = hash(&[1, 3, 5]);
 
         // Make anchoring txs chain
-        let total_funds = 4000;
+        let total_funds = 8000;
         let mut utxo_tx = {
             let funding_tx = client.send_to_address(&addr, total_funds).unwrap();
             let out = funding_tx.find_out(&addr).unwrap();
-            trace!("funding_tx={:#?}", funding_tx);
+            trace!("funding_tx={:?}", funding_tx);
 
             let tx = TransactionBuilder::with_prev_tx(&funding_tx, out)
                 .payload(block_height, block_hash)
@@ -760,10 +732,10 @@ mod rpc {
                 .unwrap();
             trace!("Proposal anchoring_tx={:#?}, txid={}", tx, tx.id());
 
-            let signatures = make_signatures(&redeem_script, &tx, &funding_tx, &[0], &priv_keys);
+            let signatures = make_signatures(&redeem_script, &tx, &[&funding_tx.0], &priv_keys[0..3]);
             let tx = tx.finalize(&redeem_script, signatures);
             client.send_transaction(tx.clone().into()).unwrap();
-            trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.id());
+            trace!("Sent anchoring_tx={:?}, txid={}", tx, tx.id());
 
             assert!(
                 funding_tx
@@ -782,7 +754,7 @@ mod rpc {
         };
 
         let utxos = client.listunspent(0, 9999999, &[addr.to_string()]).unwrap();
-        trace!("utxos={:#?}", utxos);
+        trace!("utxos={:?}", utxos);
 
         // Send anchoring txs
         let mut out_funds = utxo_tx.amount();
@@ -794,7 +766,7 @@ mod rpc {
                 &addr,
                 block_height,
                 block_hash,
-                &priv_keys,
+                &priv_keys[0..3],
                 utxo_tx,
                 &[],
                 fee,
@@ -808,13 +780,14 @@ mod rpc {
 
         // Try to add funding input
         let funding_tx = client.send_to_address(&addr, fee * 3).unwrap();
+        trace!("Add funding tx: {:?}", funding_tx);
         utxo_tx = send_anchoring_tx(
             &client,
             &redeem_script,
             &addr,
             block_height,
             block_hash,
-            &priv_keys,
+            &priv_keys[0..3],
             utxo_tx,
             &[funding_tx],
             fee,
@@ -826,14 +799,14 @@ mod rpc {
         let (redeem_script2, addr2) =
             create_multisig_address(&client, majority_count2, validators2.iter()).unwrap();
 
-        trace!("new_multisig_address={:#?}", redeem_script2);
+        trace!("new_multisig_address={:?}", redeem_script2);
         utxo_tx = send_anchoring_tx(
             &client,
             &redeem_script,
             &addr2,
             block_height,
             block_hash,
-            &priv_keys,
+            &priv_keys[0..3],
             utxo_tx,
             &[],
             fee,
@@ -845,7 +818,7 @@ mod rpc {
             &addr2,
             block_height,
             block_hash,
-            &priv_keys2,
+            &priv_keys2[0..3],
             utxo_tx,
             &[],
             fee,
@@ -854,14 +827,14 @@ mod rpc {
 
     #[test]
     #[should_panic(expected = "InsufficientFunds")]
-    fn test_rpc_anchoring_tx_chain_insufficient_funds() {
+    fn test_rpc_anchoring_tx_insufficient_funds() {
         let client = anchoring_client();
 
         let (validators, priv_keys) = gen_anchoring_keys(4);
         let majority_count = ::majority_count(4);
         let (redeem_script, addr) =
             create_multisig_address(&client, majority_count, validators.iter()).unwrap();
-        trace!("multisig_address={:#?}", redeem_script);
+        trace!("multisig_address={:?}", redeem_script);
 
         let fee = 1000;
         let block_height = Height(2);
@@ -872,7 +845,7 @@ mod rpc {
         let mut utxo_tx = {
             let funding_tx = client.send_to_address(&addr, total_funds).unwrap();
             let out = funding_tx.find_out(&addr).unwrap();
-            trace!("funding_tx={:#?}", funding_tx);
+            trace!("funding_tx={:?}", funding_tx);
 
             let tx = TransactionBuilder::with_prev_tx(&funding_tx, out)
                 .payload(block_height, block_hash)
@@ -880,12 +853,12 @@ mod rpc {
                 .fee(fee)
                 .into_transaction()
                 .unwrap();
-            trace!("Proposed anchoring_tx={:#?}, txid={}", tx, tx.id());
+            trace!("Proposed anchoring_tx={:?}, txid={}", tx, tx.id());
 
-            let signatures = make_signatures(&redeem_script, &tx, &funding_tx, &[0], &priv_keys);
+            let signatures = make_signatures(&redeem_script, &tx, &[&funding_tx.0], &priv_keys[0..3]);
             let tx = tx.finalize(&redeem_script, signatures);
             client.send_transaction(tx.clone().into()).unwrap();
-            trace!("Sent anchoring_tx={:#?}, txid={}", tx, tx.id());
+            trace!("Sent anchoring_tx={:?}, txid={}", tx, tx.id());
 
             assert!(
                 funding_tx
@@ -904,7 +877,7 @@ mod rpc {
         };
 
         let utxos = client.listunspent(0, 9999999, &[addr.to_string()]).unwrap();
-        trace!("utxos={:#?}", utxos);
+        trace!("utxos={:?}", utxos);
 
         // Send anchoring txs
         let mut out_funds = utxo_tx.amount();
@@ -916,7 +889,7 @@ mod rpc {
                 &addr,
                 block_height,
                 block_hash,
-                &priv_keys,
+                &priv_keys[0..3],
                 utxo_tx,
                 &[],
                 fee,
@@ -935,7 +908,7 @@ mod rpc {
             &addr,
             block_height,
             block_hash,
-            &priv_keys,
+            &priv_keys[0..3],
             utxo_tx,
             &[],
             fee,

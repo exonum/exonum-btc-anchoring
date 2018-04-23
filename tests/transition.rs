@@ -470,7 +470,6 @@ fn test_transit_config_with_funding_tx() {
         gen_following_cfg(&mut testkit, cfg_change_height, Some(funding_tx.clone()));
     testkit.commit_configuration_change(cfg_proposal);
     let (_, following_addr) = following_cfg.redeem_script();
-    println!("{}", following_addr.to_string());
 
     // Check insufficient confirmations case
     let anchored_tx = testkit.latest_anchored_tx();
@@ -807,7 +806,6 @@ fn test_transit_unchanged_self_key_recover_with_funding_tx() {
     );
     testkit.commit_configuration_change(cfg_proposal);
     let (_, following_addr) = following_cfg.redeem_script();
-    println!("{}", following_addr.to_string());
 
     // Check insufficient confirmations case
     let anchored_tx = testkit.latest_anchored_tx();
@@ -1042,7 +1040,6 @@ fn test_transit_changed_self_key_recover_without_funding_tx() {
         gen_following_cfg(&mut testkit, first_cfg_change_height, None);
     testkit.commit_configuration_change(cfg_proposal);
     let (_, following_addr) = following_cfg.redeem_script();
-    println!("{}", following_addr.to_string());
 
     // Check insufficient confirmations case
     let anchored_tx = testkit.latest_anchored_tx();
