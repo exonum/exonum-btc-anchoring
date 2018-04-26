@@ -20,6 +20,7 @@ use std::str::FromStr;
 use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::constants::Network;
 use serde_json;
+use secp256k1::{PublicKey as RawPublicKey, Secp256k1};
 
 use exonum::crypto::Hash;
 use exonum::encoding::serialize::FromHex;

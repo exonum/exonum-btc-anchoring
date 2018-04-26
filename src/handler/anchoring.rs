@@ -104,7 +104,7 @@ impl AnchoringHandler {
             trace!("initial_proposal={:?}", proposal,);
 
             // Sign proposal
-            self.sign_proposal_tx(proposal, &funding_tx, multisig, context)?;
+            self.sign_proposal_tx(proposal, &[funding_tx.0], multisig, context)?;
         } else {
             warn!("Funding transaction is not suitable.");
         }
@@ -123,19 +123,23 @@ impl AnchoringHandler {
             .get(height.0)
             .unwrap();
 
-        let proposal = {
+        let (proposal, prev_txs) = {
+            let mut prev_txs = vec![lect.0.clone()];
+
             let mut builder = TransactionBuilder::with_prev_tx(lect, 0)
                 .fee(multisig.common.fee)
                 .payload(height, hash)
                 .send_to(multisig.addr.clone());
+                
             if let Some(funds) = self.available_funding_tx(multisig)? {
                 let out = funds.find_out(&multisig.addr).expect(
                     "Funding tx has proper \
                      multisig output",
                 );
                 builder = builder.add_funds(&funds, out);
+                prev_txs.push(funds.0);
             }
-            builder.into_transaction()?
+            (builder.into_transaction()?, prev_txs)
         };
 
         trace!(
@@ -145,19 +149,23 @@ impl AnchoringHandler {
             height,
             hash.to_hex()
         );
-        self.sign_proposal_tx(proposal, lect, multisig, context)
+        self.sign_proposal_tx(proposal, &prev_txs, multisig, context)
     }
 
     pub fn sign_proposal_tx(
         &mut self,
         proposal: AnchoringTx,
-        prev_tx: &RawBitcoinTx,
+        prev_txs: &[RawBitcoinTx],
         multisig: &MultisigAddress,
         context: &ServiceContext,
     ) -> Result<(), ServiceError> {
         for input in proposal.inputs() {
+            let prev_tx = &prev_txs[input as usize];
             let signature =
                 proposal.sign_input(&multisig.redeem_script, input, prev_tx, &multisig.priv_key);
+
+            debug_assert_eq!(proposal.input[input as usize].prev_hash, prev_tx.txid());
+
             debug_assert!(proposal.verify_input(
                 &multisig.redeem_script,
                 input,

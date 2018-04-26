@@ -65,6 +65,7 @@ impl MsgAnchoringSignature {
         let anchoring_schema = AnchoringSchema::new(&view);
 
         let tx = self.tx();
+        let prev_txid = tx.input[self.input() as usize].prev_hash.into();
         let id = self.validator().0 as usize;
         let actual_cfg = core_schema.actual_configuration();
         // Verify from field
@@ -89,12 +90,12 @@ impl MsgAnchoringSignature {
             verify_anchoring_tx_payload(&tx, &core_schema)?;
             // Check funding tx as prev tx because we can not add them to
             // the `known_txs` automatically.
-            let prev_tx = if anchoring_cfg.funding_tx().id() == tx.prev_hash() {
+            let prev_tx = if anchoring_cfg.funding_tx().id() == prev_txid {
                 anchoring_cfg.funding_tx().clone().0
             } else {
                 anchoring_schema
                     .known_txs()
-                    .get(&tx.prev_hash())
+                    .get(&prev_txid)
                     .ok_or_else(|| ValidateError::LectWithIncorrectContent)?
                     .0
             };

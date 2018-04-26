@@ -235,13 +235,16 @@ impl AnchoringTestKit {
                 .prev_tx_chain(prev_tx_chain)
                 .send_to(addr.clone())
                 .fee(1000);
+            
+            let mut prev_txs = vec![prev_tx];
             for fund in funds {
                 let out = fund.find_out(addr).unwrap();
                 builder = builder.add_funds(fund, out);
+                prev_txs.push(fund.0.clone());
             }
 
             let tx = builder.into_transaction().unwrap();
-            let signs = self.gen_anchoring_signatures(&tx, &prev_tx);
+            let signs = self.gen_anchoring_signatures(&tx, &prev_txs);
             let signed_tx = self.finalize_tx(tx.clone(), signs.clone());
             (tx, signed_tx, signs)
         };
@@ -267,7 +270,7 @@ impl AnchoringTestKit {
     pub fn gen_anchoring_signatures(
         &self,
         tx: &AnchoringTx,
-        prev_tx: &RawBitcoinTx,
+        prev_txs: &[RawBitcoinTx],
     ) -> Vec<MsgAnchoringSignature> {
         let (redeem_script, addr) = self.current_cfg().redeem_script();
 
@@ -276,6 +279,7 @@ impl AnchoringTestKit {
         for (validator, priv_key) in priv_keys.iter().enumerate() {
             let validator = ValidatorId(validator as u16);
             for input in tx.inputs() {
+                let prev_tx = &prev_txs[input as usize];
                 let signature = tx.sign_input(&redeem_script, input, prev_tx, priv_key);
                 let keypair = self.validator(validator).service_keypair();
                 signs.push(MsgAnchoringSignature::new(
