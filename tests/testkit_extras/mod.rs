@@ -235,7 +235,7 @@ impl AnchoringTestKit {
                 .prev_tx_chain(prev_tx_chain)
                 .send_to(addr.clone())
                 .fee(1000);
-            
+
             let mut prev_txs = vec![prev_tx];
             for fund in funds {
                 let out = fund.find_out(addr).unwrap();

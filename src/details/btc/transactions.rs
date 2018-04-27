@@ -372,6 +372,7 @@ pub fn sign_tx_input(
     signer
         .sign_input(TxInRef::new(tx, input), prev_tx, sec_key)
         .unwrap()
+        .into()
 }
 
 pub fn verify_tx_input(

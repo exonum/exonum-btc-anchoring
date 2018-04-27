@@ -130,7 +130,7 @@ impl AnchoringHandler {
                 .fee(multisig.common.fee)
                 .payload(height, hash)
                 .send_to(multisig.addr.clone());
-                
+
             if let Some(funds) = self.available_funding_tx(multisig)? {
                 let out = funds.find_out(&multisig.addr).expect(
                     "Funding tx has proper \
