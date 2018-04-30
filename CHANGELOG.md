@@ -7,6 +7,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Breaking changes
+
+- Service switched to using p2wsh address format. (#123)
+  Now anchoring service uses segwit addresses in
+  [p2wsh](https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#P2WSH) form.
+  This change increases the limit on the number of validators,
+  increases anchoring security and reduces fees for use.
+
+  But the anchoring transactions in old format are incompatible with the new,
+  so you can't just update the existing blockchain to the new anchoring version.
+
+### Internal improvements
+
+- Updated to the [Rust-bitcoin 0.13](https://github.com/rust-bitcoin/rust-bitcoin/releases/tag/0.13)
+  release (#123).
+
 ## 0.7 - 2018-04-11
 
 ### Internal improvements
