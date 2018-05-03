@@ -210,7 +210,7 @@ impl From<RawBitcoinTx> for TxKind {
         if find_payload(&tx).is_some() {
             TxKind::Anchoring(AnchoringTx::from(tx))
         } else {
-            // Find output with funds and p2wsh script_pubkey
+            // Finds output with funds and p2wsh script_pubkey
             for out in &tx.output {
                 if out.value > 0 && out.script_pubkey.is_v0_p2wsh() {
                     return TxKind::FundingTx(FundingTx::from(tx.clone()));

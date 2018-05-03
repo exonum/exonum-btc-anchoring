@@ -9,14 +9,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Breaking changes
 
-- Service switched to using p2wsh address format. (#123)
-  Now anchoring service uses segwit addresses in
-  [p2wsh](https://github.com/bitcoin/bips/blob/master/bip-0141.mediawiki#P2WSH) form.
-  This change increases the limit on the number of validators,
-  increases anchoring security and reduces fees for use.
+- The anchoring service has been switched to using p2wsh address format. (#123)
+  It now uses segwit addresses....
+  This change increases the limit on the number of validators and anchoring security
+  as well as reduces fees for applying thereof.
 
-  But the anchoring transactions in old format are incompatible with the new,
-  so you can't just update the existing blockchain to the new anchoring version.
+  Note that the old format of anchoring transactions is incompatible with the new one.
+  Hence, update of the existing blockchain to the new anchoring version is not possible.
+  For use of a new anchoring format a new blockchain has to be launched.
 
 ### Internal improvements
 

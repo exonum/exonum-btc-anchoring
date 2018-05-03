@@ -39,7 +39,7 @@ impl MsgAnchoringSignature {
             return false;
         }
         let tx = self.tx();
-        // Check that the signature is provided for an existing anchoring tx input
+        // Checks that the signature is provided for an existing anchoring tx input
         if tx.input.len() as u32 <= self.input() {
             warn!(
                 "Received msg for non-existing input index, content={:#?}",
@@ -47,11 +47,11 @@ impl MsgAnchoringSignature {
             );
             return false;
         }
-        // Check that inputs do not contain witness data.
+        // Checks that inputs do not contain witness data.
         for input in &tx.input {
             if !input.witness.is_empty() {
                 warn!(
-                    "Received msg with non empty input scriptSigs, content={:#?}",
+                    "Received msg with non-empty input scriptSigs, content={:#?}",
                     self
                 );
                 return false;
@@ -88,8 +88,8 @@ impl MsgAnchoringSignature {
                 return Err(ValidateError::MsgWithIncorrectAddress);
             }
             verify_anchoring_tx_payload(&tx, &core_schema)?;
-            // Check funding tx as prev tx because we can not add them to
-            // the `known_txs` automatically.
+            // Checks whether funding tx is suitable as prev tx because they are not added to
+            // the known_txs automatically.
             let prev_tx = if anchoring_cfg.funding_tx().id() == prev_txid {
                 anchoring_cfg.funding_tx().clone().0
             } else {
