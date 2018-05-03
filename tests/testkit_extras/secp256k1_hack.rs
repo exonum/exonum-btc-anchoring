@@ -16,8 +16,8 @@ use std::mem;
 
 use libc::c_void;
 use byteorder::{ByteOrder, LittleEndian};
-use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::SigHashType;
+use btc_transaction_utils::{TxInRef, multisig::RedeemScript, p2wsh};
 use secp256k1::ffi;
 use secp256k1::{ContextFlag, Secp256k1};
 use secp256k1::{Message, Signature};
@@ -87,15 +87,21 @@ fn sign_with_nonce(
 pub fn sign_tx_input_with_nonce(
     tx: &RawBitcoinTx,
     input: usize,
-    subscript: &Script,
+    subscript: &RedeemScript,
+    prev_tx: &RawBitcoinTx,
     sec_key: &SecretKey,
     nonce: u64,
 ) -> Vec<u8> {
-    let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
+    let sighash = {
+        let mut signer = p2wsh::InputSigner::new(subscript.clone());
+        signer.signature_hash(TxInRef::new(tx, input), prev_tx)
+    };
     // Make signature
     let mut context = Secp256k1::new();
     let msg = Message::from_slice(&sighash[..]).unwrap();
-    let sign = sign_with_nonce(&mut context, &msg, sec_key, nonce).unwrap();
-    // Serialize signature
-    sign.serialize_der(&context)
+    let mut sign = sign_with_nonce(&mut context, &msg, sec_key, nonce)
+        .unwrap()
+        .serialize_der(&context);
+    sign.push(SigHashType::All as u8);
+    sign
 }

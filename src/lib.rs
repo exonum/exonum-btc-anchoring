@@ -58,6 +58,7 @@
 #![deny(missing_docs, missing_debug_implementations)]
 
 extern crate bitcoin;
+extern crate btc_transaction_utils;
 extern crate byteorder;
 #[macro_use]
 extern crate display_derive;

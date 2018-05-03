@@ -170,10 +170,15 @@ where
         priv_keys.push(priv_key.clone());
     }
 
-    let majority_count = ::majority_count(count);
-    let address = btc::RedeemScript::from_pubkeys(&pub_keys, majority_count)
-        .compressed(network)
-        .to_address(network);
+    let address = {
+        let majority_count = ::majority_count(count);
+        let keys = pub_keys.iter().map(|x| x.0);
+        let redeem_script = btc::RedeemScriptBuilder::with_public_keys(keys)
+            .quorum(majority_count as usize)
+            .to_script()
+            .unwrap();
+        btc::Address::from_script(&redeem_script, network)
+    };
     client.watch_address(&address, false).unwrap();
     let tx = client.send_to_address(&address, total_funds).unwrap();
 

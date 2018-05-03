@@ -57,7 +57,7 @@ impl AnchoringHandler {
                 state,
             ) {
                 LectKind::Anchoring(lect) => {
-                    if lect.output_address(multisig.common.network) == multisig.addr {
+                    if lect.script_pubkey() == &multisig.addr.script_pubkey() {
                         return Ok(());
                     }
                     // check that we have enough confirmations

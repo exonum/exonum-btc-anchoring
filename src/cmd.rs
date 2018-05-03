@@ -344,15 +344,18 @@ impl CommandExtension for Finalize {
                     .unwrap();
                 PublicKey::from_hex(&key).unwrap()
             })
-            .collect();
+            .collect::<Vec<_>>();
         let client = RpcClient::from(rpc.clone());
         let mut anchoring_config = AnchoringNodeConfig::new(Some(rpc));
         anchoring_config.observer = observer;
 
         let majority_count = ::majority_count(public_config_list.len() as u8);
-        let address = btc::RedeemScript::from_pubkeys(&pub_keys, majority_count)
-            .compressed(network)
-            .to_address(network);
+        let address = btc::Address::from_script(
+            &btc::RedeemScriptBuilder::with_public_keys(pub_keys.iter().map(|pk| pk.0))
+                .quorum(majority_count as usize)
+                .to_script()?,
+            network,
+        );
 
         let mut genesis_cfg = if let Some(total_funds) = create_funding_tx_with_amount {
             client.watch_address(&address, false).unwrap();

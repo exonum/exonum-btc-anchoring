@@ -13,6 +13,7 @@
 // limitations under the License.
 
 extern crate bitcoin;
+extern crate btc_transaction_utils;
 extern crate byteorder;
 extern crate exonum;
 extern crate exonum_bitcoinrpc as bitcoinrpc;
@@ -226,16 +227,14 @@ fn test_auditing_lect_incorrect_funding_tx() {
     testkit.create_blocks_until(height);
 
     let lect_tx = BitcoinTx::from_hex(
-        "020000000152f2e44424d6cc16ce29566b54468084d1d15329b28e\
-         8fc7cb9d9d783b8a76d3010000006b4830450221009e5ae44ba558\
-         6e4aadb9e1bc5369cc9fe9f16c12ff94454ac90414f1c5a3df9002\
-         20794b24afab7501ba12ea504853a31359d718c2a7ff6dd2688e95\
-         c5bc6634ce39012102f81d4470a303a508bf03de893223c89360a5\
-         d093e3095560b71de245aaf45d57feffffff028096980000000000\
-         17a914dcfbafb4c432a24dd4b268570d26d7841a20fbbd87e7cc39\
-         0a000000001976a914b3203ee5a42f8f524d14397ef10b84277f78\
-         4b4a88acd81d1100",
+        "02000000000101beaf6f1d54b9de13e0643bda743842b250a636a840a9d66ad5140ba84ba3c98f0000000000f\
+         effffff02f460700a00000000160014cd56612aab60cf8b11163ab409c6bbe9a35586b2a00f00000000000022\
+         00209d37bce25695790d72e3a2f15a46c5d5c62c3871f95a74db1e4a0e277074792a02483045022100d5dfaa4\
+         0ee361ce58025abb3a9dca50ef92777600dd119d722bebb5bf90b79690220049f77648ab668859f50c3d2286f\
+         1aacd0b98eebc69ac82649536b89eb6d8265012102ba681aae633b5c58c9bf6a8017a1b7cf8d0cb176017304f\
+         f27d49dc8ff309fc236bd1300",
     ).unwrap();
+
     let lects = (0..3)
         .map(ValidatorId)
         .map(|id| {

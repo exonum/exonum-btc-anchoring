@@ -15,7 +15,6 @@
 //! Module contains some wrappers over types from `Bitcoin` crate.
 
 mod types;
-mod redeem_script;
 mod private_key;
 mod public_key;
 pub mod payload;
@@ -31,8 +30,9 @@ use exonum::encoding::serialize::FromHexError;
 
 #[doc(hidden)]
 /// For test purpose only
-pub use self::types::{Address, PrivateKey, PublicKey, RawTransaction, RedeemScript, Signature,
-                      TxId};
+pub use self::types::{Address, PrivateKey, PublicKey, RawTransaction, Signature, TxId};
+#[doc(hidden)]
+pub use btc_transaction_utils::multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError};
 pub use bitcoin::network::constants::Network;
 
 #[doc(hidden)]

@@ -18,13 +18,13 @@ use exonum::helpers::ValidatorId;
 use exonum::encoding::serialize::FromHex;
 
 use bitcoin::blockdata::transaction::SigHashType;
-use bitcoin::network::constants::Network;
+use bitcoin::network::serialize::BitcoinHash;
 use serde_json;
 
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
 use blockchain::dto::{LectContent, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
-use details::tests::{dummy_anchoring_tx, gen_anchoring_keys, make_signatures};
+use details::tests::{dummy_anchoring_txs, gen_anchoring_keys, make_signatures};
 
 #[test]
 fn test_lect_content_encoding_struct() {
@@ -116,14 +116,18 @@ fn test_sighash_type_single_in_msg_signature() {
 #[test]
 fn test_signed_input_in_msg_signature_tx_body() {
     let (pub_keys, priv_keys) = gen_anchoring_keys(4);
-    let redeem_script = btc::RedeemScript::from_pubkeys(&pub_keys, 3).compressed(Network::Bitcoin);
+    let pub_keys = pub_keys.into_iter().map(|x| x.0);
+    let redeem_script = btc::RedeemScriptBuilder::with_public_keys(pub_keys)
+        .quorum(3)
+        .to_script()
+        .unwrap();
 
-    let tx = dummy_anchoring_tx(&redeem_script);
-    let btc_signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
+    let (prev_tx, tx) = dummy_anchoring_txs(&redeem_script);
+    let btc_signatures = make_signatures(&redeem_script, &tx, &[&prev_tx.0], &priv_keys);
     let signed_tx = tx.clone().finalize(&redeem_script, btc_signatures.clone());
 
-    assert!(signed_tx.nid() != signed_tx.id());
-    assert_eq!(signed_tx.nid(), tx.id());
+    assert_ne!(signed_tx.bitcoin_hash(), tx.bitcoin_hash());
+    assert_eq!(signed_tx.id(), tx.nid());
 
     let msg = MsgAnchoringSignature::new_with_signature(
         &PublicKey::zero(),
@@ -139,10 +143,14 @@ fn test_signed_input_in_msg_signature_tx_body() {
 #[test]
 fn test_nonexistent_input_in_msg_signature_tx_body() {
     let (pub_keys, priv_keys) = gen_anchoring_keys(4);
-    let redeem_script = btc::RedeemScript::from_pubkeys(&pub_keys, 3).compressed(Network::Bitcoin);
+    let pub_keys = pub_keys.into_iter().map(|x| x.0);
+    let redeem_script = btc::RedeemScriptBuilder::with_public_keys(pub_keys)
+        .quorum(3)
+        .to_script()
+        .unwrap();
 
-    let tx = dummy_anchoring_tx(&redeem_script);
-    let btc_signatures = make_signatures(&redeem_script, &tx, &[0], &priv_keys);
+    let (prev_tx, tx) = dummy_anchoring_txs(&redeem_script);
+    let btc_signatures = make_signatures(&redeem_script, &tx, &[&prev_tx.0], &priv_keys);
 
     let msg = MsgAnchoringSignature::new_with_signature(
         &PublicKey::zero(),

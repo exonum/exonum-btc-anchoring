@@ -66,7 +66,7 @@ impl StorageKey for KnownSignatureId {
 impl<'a> From<&'a MsgAnchoringSignature> for KnownSignatureId {
     fn from(msg: &'a MsgAnchoringSignature) -> KnownSignatureId {
         KnownSignatureId {
-            txid: msg.tx().id(),
+            txid: msg.tx().nid(),
             validator_id: msg.validator(),
             input: msg.input(),
         }

@@ -23,28 +23,28 @@ pub enum Error {
     MsgFromNonValidator = 0,
     /// Received lect with the incorrect payload
     #[display(fmt = "Received message with the incorrect payload")]
-    MsgWithIncorrectPayload,
+    MsgWithIncorrectPayload = 1,
     /// Received message with the incorrect output address
     #[display(fmt = "Received message with the incorrect output address")]
-    MsgWithIncorrectAddress,
+    MsgWithIncorrectAddress = 2,
     /// Received lect with prev_lect without +2/3 confirmations
     #[display(fmt = "Received lect with prev_lect without +2/3 confirmations")]
-    LectWithoutQuorum,
+    LectWithoutQuorum = 3,
     /// Received lect with incorrect funding_tx
     #[display(fmt = "Received lect with incorrect funding_tx")]
-    LectWithIncorrectFunding,
+    LectWithIncorrectFunding = 4,
     /// Received lect with incorrect content
     #[display(fmt = "Received lect with incorrect content")]
-    LectWithIncorrectContent,
+    LectWithIncorrectContent = 5,
     /// Received lect with wrong count
     #[display(fmt = "Received lect with wrong count")]
-    LectWithWrongCount,
+    LectWithWrongCount = 6,
     /// Received message with the incorrect signature
     #[display(fmt = "Received message with the incorrect signature")]
-    SignatureIncorrect,
+    SignatureIncorrect = 7,
     /// Received another signature for given tx propose
     #[display(fmt = "Received another signature for given tx propose")]
-    SignatureDifferent,
+    SignatureDifferent = 8,
 }
 
 impl Error {

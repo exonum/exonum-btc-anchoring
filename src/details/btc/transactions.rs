@@ -16,30 +16,24 @@ use std::fmt;
 use std::collections::HashMap;
 use std::ops::Deref;
 
-use bitcoin::blockdata::script::Instruction;
-use bitcoin::blockdata::opcodes::All;
-use bitcoin::util::hash::Hash160;
-use bitcoin::network::serialize::{deserialize, serialize, serialize_hex, BitcoinHash};
+use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::{TxIn, TxOut};
-use bitcoin::blockdata::script::{Builder, Script};
-use bitcoin::util::address::{Address, Payload as AddressPayload};
+use bitcoin::network::serialize::{deserialize, serialize, serialize_hex, BitcoinHash};
 use bitcoin::util::privkey::Privkey;
-use bitcoin::network::constants::Network;
-use bitcoin::blockdata::transaction::SigHashType;
-use secp256k1::key::{PublicKey, SecretKey};
-use secp256k1::{Message, Secp256k1, Signature};
 use bitcoinrpc;
+use btc_transaction_utils::{TxInRef, p2wsh};
+use secp256k1::key::{PublicKey, SecretKey};
 
 use exonum::crypto::{hash, Hash};
 use exonum::encoding::serialize::{FromHex, FromHexError};
 use exonum::helpers::Height;
 use exonum::storage::StorageValue;
 
-use details::rpc::{Error as RpcError, RpcClient};
 use details::btc;
 use details::btc::{HexValueEx, RedeemScript, TxId};
-use details::error::Error as InternalError;
 use details::btc::payload::{Payload, PayloadBuilder};
+use details::error::Error as InternalError;
+use details::rpc::{Error as RpcError, RpcClient};
 
 pub type RawBitcoinTx = ::bitcoin::blockdata::transaction::Transaction;
 
@@ -106,22 +100,11 @@ implement_serde_hex! {BitcoinTx}
 
 impl FundingTx {
     pub fn find_out(&self, addr: &btc::Address) -> Option<u32> {
-        let redeem_script_hash = if let AddressPayload::ScriptHash(hash) = addr.payload {
-            hash
-        } else {
-            return None;
-        };
+        let script_pubkey = addr.0.script_pubkey();
         self.0
             .output
             .iter()
-            .position(|output| {
-                if let Some(Instruction::PushBytes(bytes)) = output.script_pubkey.into_iter().nth(1)
-                {
-                    Hash160::from(bytes) == redeem_script_hash
-                } else {
-                    false
-                }
-            })
+            .position(|output| output.script_pubkey == script_pubkey)
             .map(|x| x as u32)
     }
 
@@ -141,24 +124,8 @@ impl AnchoringTx {
         self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].value
     }
 
-    pub fn output_address(&self, network: Network) -> btc::Address {
-        let script = &self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].script_pubkey;
-        let bytes = script
-            .into_iter()
-            .filter_map(|instruction| {
-                if let Instruction::PushBytes(bytes) = instruction {
-                    Some(bytes)
-                } else {
-                    None
-                }
-            })
-            .next()
-            .unwrap();
-
-        Address {
-            payload: AddressPayload::ScriptHash(Hash160::from(bytes)),
-            network,
-        }.into()
+    pub fn script_pubkey(&self) -> &Script {
+        &self.0.output[ANCHORING_TX_FUNDS_OUTPUT as usize].script_pubkey
     }
 
     pub fn inputs(&self) -> ::std::ops::Range<u32> {
@@ -177,24 +144,34 @@ impl AnchoringTx {
         &self,
         redeem_script: &btc::RedeemScript,
         input: u32,
+        prev_tx: &RawBitcoinTx,
         priv_key: &Privkey,
     ) -> btc::Signature {
-        let mut sign_data =
-            sign_tx_input(self, input as usize, redeem_script, priv_key.secret_key());
-        sign_data.push(SigHashType::All.as_u32() as u8);
-        sign_data
+        sign_tx_input(
+            self,
+            input as usize,
+            redeem_script,
+            prev_tx,
+            priv_key.secret_key(),
+        )
     }
 
     pub fn verify_input(
         &self,
         redeem_script: &RedeemScript,
         input: u32,
+        prev_tx: &RawBitcoinTx,
         pub_key: &PublicKey,
         signature: &[u8],
     ) -> bool {
-        // Cuts off btc related sighash type byte
-        let signature = &signature[0..signature.len() - 1];
-        verify_tx_input(self, input as usize, redeem_script, pub_key, signature)
+        verify_tx_input(
+            self,
+            input as usize,
+            redeem_script,
+            prev_tx,
+            pub_key,
+            signature,
+        )
     }
 
     pub fn finalize(
@@ -233,9 +210,9 @@ impl From<RawBitcoinTx> for TxKind {
         if find_payload(&tx).is_some() {
             TxKind::Anchoring(AnchoringTx::from(tx))
         } else {
-            // Find output with funds and p2sh script_pubkey
+            // Finds output with funds and p2wsh script_pubkey
             for out in &tx.output {
-                if out.value > 0 && out.script_pubkey.is_p2sh() {
+                if out.value > 0 && out.script_pubkey.is_v0_p2wsh() {
                     return TxKind::FundingTx(FundingTx::from(tx.clone()));
                 }
             }
@@ -355,6 +332,7 @@ where
             prev_index: utxo_vout,
             script_sig: Script::new(),
             sequence: 0xFFFF_FFFF,
+            witness: Vec::default(),
         })
         .collect::<Vec<_>>();
 
@@ -379,7 +357,6 @@ where
         lock_time: 0,
         input: inputs,
         output: outputs,
-        witness: vec![],
     };
     AnchoringTx::from(tx)
 }
@@ -387,34 +364,34 @@ where
 pub fn sign_tx_input(
     tx: &RawBitcoinTx,
     input: usize,
-    subscript: &Script,
+    subscript: &RedeemScript,
+    prev_tx: &RawBitcoinTx,
     sec_key: &SecretKey,
 ) -> Vec<u8> {
-    let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
-    // Make signature
-    let context = Secp256k1::new();
-    let msg = Message::from_slice(&sighash[..]).unwrap();
-    let sign = context.sign(&msg, sec_key).unwrap();
-    // Serialize signature
-    sign.serialize_der(&context)
+    let mut signer = p2wsh::InputSigner::new(subscript.clone());
+    signer
+        .sign_input(TxInRef::new(tx, input), prev_tx, sec_key)
+        .unwrap()
+        .into()
 }
 
 pub fn verify_tx_input(
     tx: &RawBitcoinTx,
     input: usize,
-    subscript: &Script,
+    subscript: &RedeemScript,
+    prev_tx: &RawBitcoinTx,
     pub_key: &PublicKey,
     signature: &[u8],
 ) -> bool {
-    let sighash = tx.signature_hash(input, subscript, SigHashType::All.as_u32());
-    let msg = Message::from_slice(&sighash[..]).unwrap();
-
-    let context = Secp256k1::new();
-    if let Ok(sign) = Signature::from_der(&context, signature) {
-        context.verify(&msg, &sign, pub_key).is_ok()
-    } else {
-        false
-    }
+    let signer = p2wsh::InputSigner::new(subscript.clone());
+    signer
+        .verify_input(
+            TxInRef::new(tx, input),
+            prev_tx,
+            pub_key,
+            signature.split_last().unwrap().1,
+        )
+        .is_ok()
 }
 
 fn finalize_anchoring_transaction(
@@ -422,19 +399,9 @@ fn finalize_anchoring_transaction(
     redeem_script: &btc::RedeemScript,
     signatures: HashMap<u32, Vec<btc::Signature>>,
 ) -> AnchoringTx {
-    let redeem_script_bytes = redeem_script.0.clone().into_vec();
-    // build scriptSig
+    let signer = p2wsh::InputSigner::new(redeem_script.clone());
     for (out, signatures) in signatures {
-        anchoring_tx.0.input[out as usize].script_sig = {
-            let mut builder = Builder::new();
-            builder = builder.push_opcode(All::OP_PUSHBYTES_0);
-            for sign in &signatures {
-                builder = builder.push_slice(sign.as_ref());
-            }
-            builder
-                .push_slice(redeem_script_bytes.as_ref())
-                .into_script()
-        };
+        anchoring_tx.0.input[out as usize].witness = signer.witness_data(signatures);
     }
     anchoring_tx
 }

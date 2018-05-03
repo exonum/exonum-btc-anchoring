@@ -203,7 +203,7 @@ macro_rules! implement_tx_wrapper {
         }
 
         pub fn has_witness(&self) -> bool {
-            !self.0.witness.is_empty()
+            self.0.input.iter().any(|input| input.witness.is_empty())
         }
     }
 

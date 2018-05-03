@@ -13,6 +13,7 @@
 // limitations under the License.
 
 extern crate bitcoin;
+extern crate btc_transaction_utils;
 extern crate byteorder;
 extern crate exonum;
 extern crate exonum_bitcoinrpc as bitcoinrpc;
@@ -458,14 +459,12 @@ fn test_transit_config_with_funding_tx() {
     anchor_first_block_lect_normal(&mut testkit);
 
     let funding_tx = FundingTx::from_hex(
-        "0200000001a4f68040d03b137746fd10351c163ed4e826fd70d3db9c6\
-         457c63a5e8571a47c010000006a47304402202d09a52acc5b9a40c1d8\
-         9dc39c877c394b7b6804cda2bd6549bb7c66b9a1b73b02206b8a9d2ff\
-         830c639050b96f97461d0f833c9e3632aaba5d704d1656de95248ca01\
-         2103e82393d87254777a79476a92f5a4debeba4b5dea4d7f0df8f8319\
-         be605327bebfeffffff02a08601000000000017a914ee6737f9c8f5a7\
-         3bece543883a670ff3056d353387418ea107000000001976a91454cf1\
-         d2fe5f7aa552c419c07914af8dea318888988ac222e1100",
+        "0200000000010160e35919cf83fd0e2917748b0afa34311e89d3d08e070110151a5778fc83fd9a0000000000f\
+         effffff02a0916e0a00000000160014a211578341dd850b6519800a55024bdb2db1ddf8a08601000000000022\
+         0020c0276efb42fd5a690fc6c60a23bb2bc6a9e0562a4252c4004dfb662df83f0e9702483045022100d5fa802\
+         7e7f70bf551359f62f148720ec6319df529d642744c4002f6d6a7a708022048351e6c3927d604573676176fdd\
+         4b2fdb417aebf29c1f9abf14e4f028f984de012103bc41dc4c74188a89b41bbb70cae102b68590f183c7ce5ca\
+         124be3a6756b1543412bd1300",
     ).unwrap();
     let (cfg_proposal, following_cfg) =
         gen_following_cfg(&mut testkit, cfg_change_height, Some(funding_tx.clone()));
@@ -793,14 +792,12 @@ fn test_transit_unchanged_self_key_recover_with_funding_tx() {
     anchor_first_block_lect_normal(&mut testkit);
 
     let funding_tx = FundingTx::from_hex(
-        "0200000001cc68f92d3a37bfcb956e5d2dd0d1a38e5755892e26dfba4\
-         f6c5607590fe9ba9b010000006a473044022073ef329fbe124b158980\
-         ba33970550bc915f8fa9af464aa4e60fa33ecc8b76ac022036aa7ded6\
-         d720c2ba086f091c648e3a633b313189b3a873653d5e95c29b0476c01\
-         2103c799495eac26b9fcf31da64e70ebf3a3a073edb4e26136655c426\
-         823ca49f8ebfeffffff02c106a007000000001976a914f950ca6e1756\
-         d97f075b3a4f24ba890ee075083788aca08601000000000017a9142bf\
-         681d557af5259acdb53b40a99ab426f40330f87252e1100",
+        "02000000000101bd536be036302f230fac2b172b92a7e151e3d30a39fd2f630730024089c89c850000000000f\
+         effffff02670a6d0a00000000160014ef8949227c2624837cdf02620ca54ff7d2de9070a08601000000000022\
+         00205f391975ee3f84e481bb1e32bba337b62facc3f5020acb390506ffe9bb89ae6502473044022059bdc5f78\
+         0353075a66edb6d265bbb3bc8b6f822eae8df5e0c25df5f3aba4028022053ac6f99abfdf9d398faa24e38f4d5\
+         eff486c7e745033fdaaacbfbe463ba2bee0121036c812cf0fa389c7bf9f46e598b22a90d16bb81a6c1f244fcc\
+         c4c6a05491a98ef3abd1300",
     ).unwrap();
     let (cfg_proposal, following_cfg) = gen_following_cfg_unchanged_self_key(
         &mut testkit,
@@ -914,14 +911,12 @@ fn test_transit_changed_self_key_recover_with_funding_tx() {
     anchor_first_block_lect_normal(&mut testkit);
 
     let funding_tx = FundingTx::from_hex(
-        "0200000001b658a16511311568670756f3912f890441d5ea069eadf50\
-         f73bcaeaf6fa91ac4000000006b483045022100da8016735aa4a31e34\
-         e9a52876491952d5bcbc53dba6ee86501ad6665806d5fe02204b0df7d\
-         5678c53ba0507a588ffd239d3ec1150ea218323534bd65feab3067886\
-         012102da41e6c40a472b97a09dea858d8bc69c805ecc180d0955132c9\
-         8a2ad04111401feffffff02213c8f07000000001976a914dfd62142b0\
-         5559d396b2e036b4916e9873cfb79188aca08601000000000017a914e\
-         e6737f9c8f5a73bece543883a670ff3056d3533877b2e1100",
+        "02000000000101c84b13ffd67bbe041ac574aa5a9b3625675a8ec0e567aa131d26d92815399db90000000000f\
+         effffff02a086010000000000220020c0276efb42fd5a690fc6c60a23bb2bc6a9e0562a4252c4004dfb662df8\
+         3f0e972e836b0a00000000160014cf5c4c21440a983e79f13ebf15413da104c10a5602473044022065ec46d80\
+         e46d33ba641aa7d70fe7e9330963e716fc77fb6055e9faa2101c51502203b173df0281839faac8ac5e9379b6f\
+         9ced03b24e8294bc18bbe005f49135e53a012103b6c905dc00a9f40537bf888aab969503819460a25f39d4476\
+         fb654bd31a719453fbd1300",
     ).unwrap();
     let (cfg_proposal, following_cfg) =
         gen_following_cfg(&mut testkit, cfg_change_height, Some(funding_tx.clone()));
@@ -1034,14 +1029,12 @@ fn test_transit_changed_self_key_recover_without_funding_tx() {
     anchor_first_block_lect_normal(&mut testkit);
 
     let funding_tx = FundingTx::from_hex(
-        "0200000001b658a16511311568670756f3912f890441d5ea069eadf50\
-         f73bcaeaf6fa91ac4000000006b483045022100da8016735aa4a31e34\
-         e9a52876491952d5bcbc53dba6ee86501ad6665806d5fe02204b0df7d\
-         5678c53ba0507a588ffd239d3ec1150ea218323534bd65feab3067886\
-         012102da41e6c40a472b97a09dea858d8bc69c805ecc180d0955132c9\
-         8a2ad04111401feffffff02213c8f07000000001976a914dfd62142b0\
-         5559d396b2e036b4916e9873cfb79188aca08601000000000017a914e\
-         e6737f9c8f5a73bece543883a670ff3056d3533877b2e1100",
+        "02000000000101bf38388e54b384527be79b3f073ed96e28dd90d2ec151ee89123652cf1fc35790100000000f\
+         effffff02f5fb690a000000001600140d2481bfc824b8d44f010ede3aa310986190c2aca08601000000000022\
+         0020c0276efb42fd5a690fc6c60a23bb2bc6a9e0562a4252c4004dfb662df83f0e9702473044022015dd0b7a3\
+         6ad6c95c9a0fc2329c40b67a95ae96c62475890887a77395d1ce2c5022034bb49c53ec8f9f985887023b85688\
+         2b13aa2966bc64e1be182eb71605c5d2ee01210360b8005275219721562b49cbd0acfc7e60f57123b2e84e9c8\
+         42b1e500c2e86e13fbd1300",
     ).unwrap();
     let (cfg_proposal, following_cfg) =
         gen_following_cfg(&mut testkit, first_cfg_change_height, None);
@@ -1164,14 +1157,12 @@ fn test_transit_add_validators_recover_without_funding_tx() {
     anchor_first_block_lect_normal(&mut testkit);
 
     let funding_tx = FundingTx::from_hex(
-        "0200000001e4333634a7b42fb770802a219f175bca28e63bab7457a50\
-         77785cff95c411c0c010000006b483045022100b2a37136c2fd7f86da\
-         af62e824470d7e95a2083df9cb78a1afb04ad5e98f035202201886fdc\
-         78413f02baf99fce4bc00238911e25d959da95798349e16b1fb330e4c\
-         0121027f096c405b55de7746866dec411582c322c9875824d0545765e\
-         4635cb3581d82feffffff0231d58807000000001976a914ff2f437f7f\
-         71ca7af810013b05a52bbd17a9774088aca08601000000000017a914f\
-         975aeb4dffaf76ec07ef3dd5b8b778863feea3487542f1100",
+        "02000000000101f9c28254f81acaf9f6d6bfde5611812b488ed6aaf3fa6cd8d0e511a16235b2db0000000000f\
+         effffff02a00f0000000000002200202457deee7f0cbd45e4fad2dd180d7163f7758719b292ab154ffe314ba6\
+         92ff0fbb50700a00000000160014051433cc35d247df9f0fccf5f09d152af37bb5da0247304402204b4f80846\
+         bd190af39acd790515acdde1dc09980b377e51fdfe185acdb7c309d022036bc81b3828401619e0c970e1af1bf\
+         2866131e536882e91128fcee62bb633344012103672484f9775e10cba3372d8fe38ab048b24c328503b085246\
+         9fbd683ffa499ca3abd1300",
     ).unwrap();
     let initial_funding_tx = testkit.current_funding_tx();
 
@@ -1338,7 +1329,7 @@ fn test_transit_msg_signature_incorrect_output_address() {
             .send_to(testkit.current_addr())
             .into_transaction()
             .unwrap();
-        testkit.gen_anchoring_signatures(&tx)
+        testkit.gen_anchoring_signatures(&tx, &[testkit.latest_anchored_tx().0])
     };
     // Try to send different messages
     let txid = different_signatures[0].tx().id();

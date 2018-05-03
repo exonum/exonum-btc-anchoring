@@ -39,7 +39,7 @@ impl MsgAnchoringSignature {
             return false;
         }
         let tx = self.tx();
-        // Check that the signature is provided for an existing anchoring tx input
+        // Checks that the signature is provided for an existing anchoring tx input
         if tx.input.len() as u32 <= self.input() {
             warn!(
                 "Received msg for non-existing input index, content={:#?}",
@@ -47,11 +47,11 @@ impl MsgAnchoringSignature {
             );
             return false;
         }
-        // Check that input scriptSigs are empty
+        // Checks that inputs do not contain witness data.
         for input in &tx.input {
-            if !input.script_sig.is_empty() {
+            if !input.witness.is_empty() {
                 warn!(
-                    "Received msg with non empty input scriptSigs, content={:#?}",
+                    "Received msg with non-empty input scriptSigs, content={:#?}",
                     self
                 );
                 return false;
@@ -65,6 +65,7 @@ impl MsgAnchoringSignature {
         let anchoring_schema = AnchoringSchema::new(&view);
 
         let tx = self.tx();
+        let prev_txid = tx.input[self.input() as usize].prev_hash.into();
         let id = self.validator().0 as usize;
         let actual_cfg = core_schema.actual_configuration();
         // Verify from field
@@ -76,18 +77,35 @@ impl MsgAnchoringSignature {
         let anchoring_cfg = anchoring_schema.actual_anchoring_config();
         if let Some(pub_key) = anchoring_cfg.anchoring_keys.get(id) {
             let (redeem_script, addr) = anchoring_cfg.redeem_script();
-            let tx_addr = tx.output_address(anchoring_cfg.network);
+            let tx_script_pubkey = tx.script_pubkey();
             // Use following address if it exists
             let addr = if let Some(following) = anchoring_schema.following_anchoring_config() {
                 following.redeem_script().1
             } else {
                 addr
             };
-            if tx_addr != addr {
+            if tx_script_pubkey != &addr.script_pubkey() {
                 return Err(ValidateError::MsgWithIncorrectAddress);
             }
             verify_anchoring_tx_payload(&tx, &core_schema)?;
-            if !tx.verify_input(&redeem_script, self.input(), pub_key, self.signature()) {
+            // Checks whether funding tx is suitable as prev tx because they are not added to
+            // the known_txs automatically.
+            let prev_tx = if anchoring_cfg.funding_tx().id() == prev_txid {
+                anchoring_cfg.funding_tx().clone().0
+            } else {
+                anchoring_schema
+                    .known_txs()
+                    .get(&prev_txid)
+                    .ok_or_else(|| ValidateError::LectWithIncorrectContent)?
+                    .0
+            };
+            if !tx.verify_input(
+                &redeem_script,
+                self.input(),
+                &prev_tx,
+                pub_key,
+                self.signature(),
+            ) {
                 return Err(ValidateError::SignatureIncorrect);
             }
             Ok(())

@@ -170,7 +170,7 @@ impl AnchoringHandler {
             let is_recovering = if let Some(prev_lect) = anchoring_schema.collect_lects(&prev_cfg) {
                 match TxKind::from(prev_lect) {
                     TxKind::FundingTx(_) => prev_cfg.redeem_script().1 != actual_addr,
-                    TxKind::Anchoring(tx) => tx.output_address(actual.network) != actual_addr,
+                    TxKind::Anchoring(tx) => tx.script_pubkey() != &actual_addr.script_pubkey(),
                     TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
                 }
             } else {
@@ -196,8 +196,8 @@ impl AnchoringHandler {
 
             match TxKind::from(actual_lect) {
                 TxKind::Anchoring(lect) => {
-                    let lect_addr = lect.output_address(actual.network);
-                    if lect_addr == following_addr {
+                    let lect_script_pubkey = lect.script_pubkey().clone();
+                    if lect_script_pubkey == following_addr.script_pubkey() {
                         let confirmations = self.client().get_transaction_confirmations(lect.id())?;
                         // Lect now is transition transaction
                         AnchoringState::Waiting {
@@ -224,7 +224,7 @@ impl AnchoringHandler {
             match TxKind::from(actual_lect) {
                 TxKind::FundingTx(tx) => {
                     if tx.find_out(&actual_addr).is_some() {
-                        trace!("Checking funding_tx={:#?}, txid={}", tx, tx.id());
+                        trace!("Checking funding_tx={:?}, txid={}", tx, tx.id());
                         // Wait until funding_tx got enough confirmation
                         let confirmations = self.client().get_transaction_confirmations(tx.id())?;
                         if !is_enough_confirmations(&actual, confirmations) {
@@ -243,9 +243,9 @@ impl AnchoringHandler {
                     }
                 }
                 TxKind::Anchoring(actual_lect) => {
-                    let actual_lect_addr = actual_lect.output_address(actual.network);
+                    let actual_lect_script_pubkey = actual_lect.script_pubkey().clone();
                     // Ensure that we did not miss transition lect
-                    if actual_lect_addr != actual_addr {
+                    if actual_lect_script_pubkey != actual_addr.script_pubkey() {
                         let state = AnchoringState::Recovering {
                             prev_cfg: anchoring_schema.previous_anchoring_config().unwrap(),
                             actual_cfg: actual,
@@ -254,7 +254,7 @@ impl AnchoringHandler {
                     }
                     // If the lect encodes a transition to a new anchoring address,
                     // we need to wait until it reaches enough confirmations.
-                    if actual_lect_is_transition(&actual, &actual_lect, &anchoring_schema) {
+                    if actual_lect_is_transition(&actual_lect, &anchoring_schema) {
                         let confirmations = self.client()
                             .get_transaction_confirmations(actual_lect.id())?;
                         if !is_enough_confirmations(&actual, confirmations) {
@@ -268,7 +268,7 @@ impl AnchoringHandler {
 
                     AnchoringState::Anchoring { cfg: actual }
                 }
-                TxKind::Other(tx) => panic!("Incorrect lect found={:#?}", tx),
+                TxKind::Other(tx) => panic!("Incorrect lect found={:?}", tx),
             }
         };
         Ok(state)
@@ -412,7 +412,7 @@ impl AnchoringHandler {
         }
 
         trace!(
-            "Checking funding_tx={:#?}, addr={} availability",
+            "Checking funding_tx={:?}, addr={} availability",
             funding_tx,
             multisig.addr
         );
@@ -422,7 +422,7 @@ impl AnchoringHandler {
             .find(|tx| tx.body.0 == funding_tx.0)
         {
             trace!(
-                "available_funding_tx={:#?}, confirmations={:?}",
+                "available_funding_tx={:?}, confirmations={:?}",
                 funding_tx,
                 info.confirmations
             );
@@ -464,7 +464,7 @@ impl AnchoringHandler {
                     return Ok(false);
                 };
 
-                trace!("Check prev lect={:#?}", prev_lect);
+                trace!("Check prev lect={:?}", prev_lect);
 
                 let lect_height = match TxKind::from(prev_lect) {
                     TxKind::FundingTx(_) => Height::zero(),
@@ -513,11 +513,7 @@ impl AnchoringHandler {
 }
 
 /// Transition lects cannot be recovered without breaking of current anchoring chain.
-fn actual_lect_is_transition<T>(
-    actual: &AnchoringConfig,
-    actual_lect: &AnchoringTx,
-    schema: &AnchoringSchema<T>,
-) -> bool
+fn actual_lect_is_transition<T>(actual_lect: &AnchoringTx, schema: &AnchoringSchema<T>) -> bool
 where
     T: AsRef<Snapshot>,
 {
@@ -527,24 +523,24 @@ where
     }
 
     let prev_lect_id = actual_lect.prev_hash();
-    let actual_lect_addr = actual_lect.output_address(actual.network);
+    let actual_lect_script_pubkey = actual_lect.script_pubkey();
 
     if let Some(prev_lect) = schema.known_txs().get(&prev_lect_id) {
         match TxKind::from(prev_lect) {
             TxKind::Anchoring(prev_lect) => {
-                let prev_lect_addr = prev_lect.output_address(actual.network);
-                prev_lect_addr != actual_lect_addr
+                let prev_lect_script_pubkey = prev_lect.script_pubkey();
+                prev_lect_script_pubkey != actual_lect_script_pubkey
             }
             TxKind::FundingTx(tx) => {
                 let genesis_cfg = schema.genesis_anchoring_config();
                 if &tx == genesis_cfg.funding_tx() {
-                    let prev_lect_addr = genesis_cfg.redeem_script().1;
-                    prev_lect_addr != actual_lect_addr
+                    let prev_lect_script_pubkey = genesis_cfg.redeem_script().1.script_pubkey();
+                    &prev_lect_script_pubkey != actual_lect_script_pubkey
                 } else {
                     false
                 }
             }
-            TxKind::Other(tx) => panic!("Incorrect prev_lect found={:#?}", tx),
+            TxKind::Other(tx) => panic!("Incorrect prev_lect found={:?}", tx),
         }
     } else {
         false
