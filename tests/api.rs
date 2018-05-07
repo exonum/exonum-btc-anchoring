@@ -39,7 +39,7 @@ use exonum::encoding::serialize::FromHex;
 use exonum_testkit::{ApiKind, TestKitApi};
 
 use exonum_btc_anchoring::ANCHORING_SERVICE_NAME;
-use exonum_btc_anchoring::api::{AnchoringInfo, LectInfo};
+use exonum_btc_anchoring::api::{AnchoringInfo, LectInfo, AnchoredBlockHeaderProof};
 use exonum_btc_anchoring::observer::AnchoringChainObserver;
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
 use exonum_btc_anchoring::details::btc;
@@ -57,6 +57,8 @@ trait AnchoringApi {
     fn following_address(&self) -> Option<btc::Address>;
 
     fn nearest_lect(&self, height: u64) -> Option<AnchoringTx>;
+
+    fn anchored_block_header_proof(&self, height: u64) -> serde_json::Value;
 }
 
 impl AnchoringApi for TestKitApi {
@@ -91,6 +93,13 @@ impl AnchoringApi for TestKitApi {
             &format!("/v1/nearest_lect/{}", height),
         )
     }
+
+    fn anchored_block_header_proof(&self, height: u64) -> serde_json::Value {
+        self.get(
+            ApiKind::Service(ANCHORING_SERVICE_NAME),
+            &format!("/v1/block_header_proof/{}", height),
+        )
+    }    
 }
 
 // Test normal api usage
@@ -199,7 +208,7 @@ fn test_api_public_get_following_address_existent() {
     assert_eq!(api.following_address(), Some(following_addr));
 }
 
-// try to get following address when it does not exists
+// Try to get following address when it does not exists
 // result: Returns null
 #[test]
 fn test_api_public_get_following_address_nonexistent() {
@@ -255,4 +264,20 @@ fn test_api_anchoring_observer_normal() {
     assert_eq!(api.nearest_lect(1), Some(second_anchored_tx));
     // Check that there are no anchoring transactions for heights that greater than 10
     assert_eq!(api.nearest_lect(11), None);
+}
+
+// Try to get proof of existence for the anchored block. 
+#[test]
+fn test_api_anchored_block_header_proof() {
+    let mut testkit = AnchoringTestKit::default();
+    anchor_first_block(&mut testkit);
+    // Check proof for the genesis block
+    let genesis_block_proof = testkit.api().anchored_block_header_proof(0);
+    println!("{}", ::serde_json::to_string_pretty(&genesis_block_proof).unwrap());
+
+    anchor_first_block_lect_normal(&mut testkit);
+    anchor_second_block_normal(&mut testkit);
+    // Check proof for the second block
+    let second_block_proof = testkit.api().anchored_block_header_proof(10);
+    println!("{}", ::serde_json::to_string_pretty(&second_block_proof).unwrap());    
 }

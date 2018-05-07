@@ -122,6 +122,11 @@ where
         MapIndex::new("btc_anchoring.tx_chain", &self.view)
     }
 
+    /// Returns a list of hashes of exonum block headers.
+    pub fn anchored_blocks(&self) -> ProofListIndex<&T, Hash> {
+        ProofListIndex::new("btc_anchoring.anchored_blocks", &self.view)
+    }
+
     /// Returns the actual anchoring configuration.
     pub fn actual_anchoring_config(&self) -> AnchoringConfig {
         let schema = Schema::new(&self.view);
@@ -221,11 +226,12 @@ where
     /// It contains a list of `root_hash` of the actual `lects` tables.
     pub fn state_hash(&self) -> Vec<Hash> {
         let cfg = self.actual_anchoring_config();
-        let mut lect_hashes = Vec::new();
-        for key in &cfg.anchoring_keys {
-            lect_hashes.push(self.lects(key).merkle_root());
-        }
-        lect_hashes
+        let mut state_hashes = vec![self.anchored_blocks().merkle_root()];
+        let lect_hashes = cfg.anchoring_keys
+            .iter()
+            .map(|key| self.lects(key).merkle_root());
+        state_hashes.extend(lect_hashes);
+        state_hashes
     }
 
     fn parse_config(&self, cfg: &StoredConfiguration) -> AnchoringConfig {
@@ -281,11 +287,18 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         MapIndex::new("btc_anchoring.known_txs", &mut self.view)
     }
 
-    /// Mutable variant of the [`signatures`][1] index.
+    /// Mutable variant of the [`anchoring_tx_chain`][1] index.
     ///
     /// [1]: struct.AnchoringSchema.html#method.anchoring_tx_chain
     pub fn anchoring_tx_chain_mut(&mut self) -> MapIndex<&mut Fork, u64, AnchoringTx> {
         MapIndex::new("btc_anchoring.tx_chain", &mut self.view)
+    }
+
+    /// Mutable variant of the [`anchored_blocks`][1] index.
+    ///
+    /// [1]: struct.AnchoringSchema.html#method.anchored_blocks
+    pub fn anchored_blocks_mut(&mut self) -> ProofListIndex<&mut Fork, Hash> {
+        ProofListIndex::new("btc_anchoring.anchored_blocks", &mut self.view)
     }
 
     /// Creates and commits the genesis anchoring configuration from the proposed `cfg`.

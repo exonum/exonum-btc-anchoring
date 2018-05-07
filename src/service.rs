@@ -23,7 +23,8 @@ use serde_json::value::Value;
 use rand::{thread_rng, Rng};
 use router::Router;
 
-use exonum::blockchain::{ApiContext, Blockchain, Service, ServiceContext, Transaction};
+use exonum::blockchain::{ApiContext, Blockchain, Schema as CoreSchema, Service, ServiceContext,
+                         Transaction};
 use exonum::crypto::Hash;
 use exonum::messages::RawTransaction;
 use exonum::encoding::Error as StreamStructError;
@@ -130,6 +131,15 @@ impl Service for AnchoringService {
                 error!("An error occurred: {:?}", e);
             }
             Ok(()) => (),
+        }
+    }
+
+    fn execute(&self, fork: &mut Fork) {
+        // Writes hash of the latest block to the proof list index.
+        if let Some(block_header_hash) = CoreSchema::new(&fork).block_hashes_by_height().last() {
+            AnchoringSchema::new(fork)
+                .anchored_blocks_mut()
+                .push(block_header_hash)
         }
     }
 
