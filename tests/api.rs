@@ -39,7 +39,7 @@ use exonum::encoding::serialize::FromHex;
 use exonum_testkit::{ApiKind, TestKitApi};
 
 use exonum_btc_anchoring::ANCHORING_SERVICE_NAME;
-use exonum_btc_anchoring::api::{AnchoringInfo, LectInfo, AnchoredBlockHeaderProof};
+use exonum_btc_anchoring::api::{AnchoringInfo, LectInfo};
 use exonum_btc_anchoring::observer::AnchoringChainObserver;
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
 use exonum_btc_anchoring::details::btc;
@@ -99,7 +99,7 @@ impl AnchoringApi for TestKitApi {
             ApiKind::Service(ANCHORING_SERVICE_NAME),
             &format!("/v1/block_header_proof/{}", height),
         )
-    }    
+    }
 }
 
 // Test normal api usage
@@ -266,18 +266,24 @@ fn test_api_anchoring_observer_normal() {
     assert_eq!(api.nearest_lect(11), None);
 }
 
-// Try to get proof of existence for the anchored block. 
+// Try to get proof of existence for the anchored block.
 #[test]
 fn test_api_anchored_block_header_proof() {
     let mut testkit = AnchoringTestKit::default();
     anchor_first_block(&mut testkit);
     // Check proof for the genesis block
     let genesis_block_proof = testkit.api().anchored_block_header_proof(0);
-    println!("{}", ::serde_json::to_string_pretty(&genesis_block_proof).unwrap());
+    println!(
+        "{}",
+        ::serde_json::to_string_pretty(&genesis_block_proof).unwrap()
+    );
 
     anchor_first_block_lect_normal(&mut testkit);
     anchor_second_block_normal(&mut testkit);
     // Check proof for the second block
     let second_block_proof = testkit.api().anchored_block_header_proof(10);
-    println!("{}", ::serde_json::to_string_pretty(&second_block_proof).unwrap());    
+    println!(
+        "{}",
+        ::serde_json::to_string_pretty(&second_block_proof).unwrap()
+    );
 }
