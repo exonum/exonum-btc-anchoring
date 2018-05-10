@@ -12,21 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// pub mod payload;
-
-use bitcoin::util::hash;
-
-use std::ops::Deref;
-
-#[derive(Debug, Clone, Copy, Index, From, Into, LowerHex, PartialEq, Display)]
-pub struct Sha256dHash {
-    inner: hash::Sha256dHash
-}
-
-impl Deref for Sha256dHash {
-    type Target = hash::Sha256dHash;
-
-    fn deref(&self) -> &hash::Sha256dHash {
-        &self.inner
-    }
-}
+/// Anchoring service id.
+pub const ANCHORING_SERVICE_ID: u16 = 3;
+/// Anchoring service name.
+pub const ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
