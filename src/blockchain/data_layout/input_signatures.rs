@@ -34,6 +34,10 @@ impl InputSignatures {
         self.content[index] = Some(signature);
     }
 
+    pub fn len(&self) -> usize {
+        self.content.iter().filter(|x| x.is_some()).count()
+    }
+
     pub fn into_iter(self) -> impl Iterator<Item = Vec<u8>> {
         self.content.into_iter().filter_map(|x| x)
     }
@@ -105,11 +109,16 @@ impl CryptoHash for InputSignatures {
 #[test]
 fn test_input_signatures_storage_value() {
     let mut signatures = InputSignatures::new(4);
-    let data = vec![b"abacaba".to_vec(), b"cabaaba".to_vec()];
+    let data = vec![
+        b"abacaba1224634abcfdfdfca353".to_vec(),
+        b"abacaba1224634abcfdfdfca353ee2224774".to_vec(),
+    ];
     signatures.insert(ValidatorId(3), data[1].clone());
     signatures.insert(ValidatorId(1), data[0].clone());
-    
-    let bytes = signatures.into_bytes();
+    assert_eq!(signatures.len(), 2);
+
+    let bytes = signatures.clone().into_bytes();
     let signatures2 = InputSignatures::from_bytes(bytes.into());
+    assert_eq!(signatures, signatures2);
     assert_eq!(signatures2.into_iter().collect::<Vec<_>>(), data);
 }
