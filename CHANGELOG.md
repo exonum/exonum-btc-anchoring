@@ -23,6 +23,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Updated to the [Rust-bitcoin 0.13](https://github.com/rust-bitcoin/rust-bitcoin/releases/tag/0.13)
   release (#123).
 
+### Fixed
+
+- Fixed bug with the `nearest_lect` endpoint that sometimes didn't return actual data [ECR-1387]. (#125)
+
 ## 0.7 - 2018-04-11
 
 ### Internal improvements
