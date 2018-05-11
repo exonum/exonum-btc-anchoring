@@ -12,7 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::storage::{Snapshot, ProofListIndex, ValueSetIndex};
+use exonum::blockchain::{Schema, ValidatorKeys};
+use exonum::crypto::{Hash, PublicKey};
+use exonum::storage::{ProofListIndex, ProofMapIndex, Snapshot};
+
+use super::data_layout::*;
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {
@@ -21,13 +25,14 @@ macro_rules! define_names {
             $name:ident => $value:expr;
         )+
     ) => (
-        $(const $name: &str = concat!("core.", $value);)*
+        $(const $name: &str = concat!("btc_anchoring.", $value);)*
     )
 }
 
 define_names!(
     TRANSACTIONS_CHAIN => "transactions_chain";
-    FOLLOWING_SIGNATURES => "following_signatures";
+    TRANSACTION_SIGNATURES => "transaction_signatures";
+    SPENT_FUNDING_TRANSACTIONS => "spent_funding_transactions";
 );
 
 /// Information schema for `exonum-btc-anchoring`.
@@ -43,18 +48,27 @@ impl<T: AsRef<Snapshot>> AnchoringSchema<T> {
     }
 
     pub fn anchoring_transactions_chain(&self) -> ProofListIndex<&T, Vec<u8>> {
-        ProofListIndex::new(
-            TRANSACTIONS_CHAIN,
-            &self.snapshot,
-        )
+        ProofListIndex::new(TRANSACTIONS_CHAIN, &self.snapshot)
     }
 
-    pub fn following_transaction_signatures(&self) -> ValueSetIndex<&T, Vec<u8>> {
-        ValueSetIndex::new(FOLLOWING_SIGNATURES, &self.snapshot)
+    pub fn spent_funding_transactions(&self) -> ProofMapIndex<&T, Hash, Vec<u8>> {
+        ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, &self.snapshot)
+    }
+
+    pub fn transaction_signatures(
+        &self,
+        validator: &PublicKey,
+    ) -> ProofMapIndex<&T, TxInputId, Vec<u8>> {
+        ProofMapIndex::new_in_family(TRANSACTION_SIGNATURES, validator, &self.snapshot)
     }
 
     /// Returns hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
-        vec![self.anchoring_transactions_chain().merkle_root()]
+        let mut table_hashes = vec![
+            self.anchoring_transactions_chain().merkle_root(),
+            self.spent_funding_transactions().merkle_root(),
+        ];
+        // TODO extend by the transaction_signatures
+        table_hashes
     }
 }

@@ -204,6 +204,7 @@ txhex
 txid
 txindex
 txinfo
+txout
 txvec
 tymethod
 unboxed

@@ -16,8 +16,11 @@
 
 #[macro_use]
 extern crate derive_more;
-
+#[macro_use]
 extern crate exonum;
+#[macro_use]
+extern crate serde_derive;
+
 extern crate bitcoin;
 extern crate byteorder;
 extern crate btc_transaction_utils;
