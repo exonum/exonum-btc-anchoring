@@ -101,3 +101,15 @@ impl CryptoHash for InputSignatures {
         InputSignaturesStored::from(self.clone()).hash()
     }
 }
+
+#[test]
+fn test_input_signatures_storage_value() {
+    let mut signatures = InputSignatures::new(4);
+    let data = vec![b"abacaba".to_vec(), b"cabaaba".to_vec()];
+    signatures.insert(ValidatorId(3), data[1].clone());
+    signatures.insert(ValidatorId(1), data[0].clone());
+    
+    let bytes = signatures.into_bytes();
+    let signatures2 = InputSignatures::from_bytes(bytes.into());
+    assert_eq!(signatures2.into_iter().collect::<Vec<_>>(), data);
+}

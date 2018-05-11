@@ -13,8 +13,7 @@
 // limitations under the License.
 
 use exonum::crypto::{self, CryptoHash, Hash};
-use exonum::helpers::ValidatorId;
-use exonum::storage::{HashedKey, StorageKey, StorageValue};
+use exonum::storage::{HashedKey, StorageKey};
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
