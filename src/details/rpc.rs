@@ -104,12 +104,20 @@ pub trait BitcoinRelay: 'static + ::std::fmt::Debug + Send + Sync {
 
 macro_rules! retry {
     ($expr:expr) => {{
+        use std::time::Duration;
+        use std::thread;
+
+        let mut delay = Duration::from_millis(500);
+        let delay_increment = Duration::from_millis(1000);
+
         let mut res = $expr;
         for _ in 0..5 {
             if res.is_ok() {
                 break;
             }
-            res = $expr
+            res = $expr;
+            thread::sleep(delay);
+            delay += delay_increment;
         }
         res
     }};
