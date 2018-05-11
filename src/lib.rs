@@ -22,10 +22,10 @@ extern crate exonum;
 extern crate serde_derive;
 
 extern crate bitcoin;
-extern crate byteorder;
 extern crate btc_transaction_utils;
+extern crate byteorder;
 
-pub use service::{ANCHORING_SERVICE_NAME, ANCHORING_SERVICE_ID};
+pub use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 
 pub mod blockchain;
 pub mod btc;

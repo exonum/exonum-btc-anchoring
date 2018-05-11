@@ -1,3 +1,8 @@
+// Copyright 2018 The Exonum Team
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
 //
 //   http://www.apache.org/licenses/LICENSE-2.0
 //
@@ -7,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bitcoin::blockdata::transaction;
+pub use self::input_signatures::InputSignatures;
+pub use self::tx_input_id::TxInputId;
 
-#[derive(Debug, Clone, From, Into, PartialEq)]
-pub struct Transaction(transaction::Transaction);
+mod input_signatures;
+mod tx_input_id;

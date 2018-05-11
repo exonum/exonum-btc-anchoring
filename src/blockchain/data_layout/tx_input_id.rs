@@ -12,8 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::{Hash, CryptoHash, self};
-use exonum::storage::{StorageKey, HashedKey};
+use exonum::crypto::{self, CryptoHash, Hash};
+use exonum::helpers::ValidatorId;
+use exonum::storage::{HashedKey, StorageKey, StorageValue};
 
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 
@@ -27,10 +28,7 @@ pub struct TxInputId {
 
 impl TxInputId {
     pub fn new(txid: Hash, index: u32) -> TxInputId {
-        TxInputId {
-            txid, 
-            index,
-        }
+        TxInputId { txid, index }
     }
 }
 

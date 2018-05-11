@@ -58,13 +58,13 @@ impl<T: AsRef<Snapshot>> AnchoringSchema<T> {
     pub fn transaction_signatures(
         &self,
         validator: &PublicKey,
-    ) -> ProofMapIndex<&T, TxInputId, Vec<u8>> {
+    ) -> ProofMapIndex<&T, TxInputId, InputSignatures> {
         ProofMapIndex::new_in_family(TRANSACTION_SIGNATURES, validator, &self.snapshot)
     }
 
     /// Returns hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
-        let mut table_hashes = vec![
+        let table_hashes = vec![
             self.anchoring_transactions_chain().merkle_root(),
             self.spent_funding_transactions().merkle_root(),
         ];

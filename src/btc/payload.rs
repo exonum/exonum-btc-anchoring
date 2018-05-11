@@ -15,9 +15,9 @@
 use exonum::crypto::Hash;
 use exonum::helpers::Height;
 
-use byteorder::{ByteOrder, LittleEndian};
-use bitcoin::blockdata::script::{Builder, Instruction, Script};
 use bitcoin::blockdata::opcodes::All;
+use bitcoin::blockdata::script::{Builder, Instruction, Script};
+use byteorder::{ByteOrder, LittleEndian};
 
 const PAYLOAD_PREFIX: &[u8] = b"EXONUM";
 const PAYLOAD_HEADER_LEN: usize = 8;
