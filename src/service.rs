@@ -12,35 +12,36 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use std::ops::Drop;
 use std::sync::{Arc, Mutex};
 use std::thread;
-use std::ops::Drop;
 
-use iron::{Handler, Request, Response};
 use iron::prelude::IronResult;
-use serde_json;
-use serde_json::value::Value;
+use iron::{Handler, Request, Response};
 use rand::{thread_rng, Rng};
 use router::Router;
+use serde_json;
+use serde_json::value::Value;
 
-use exonum::blockchain::{ApiContext, Blockchain, Schema as CoreSchema, Service, ServiceContext,
-                         Transaction};
-use exonum::crypto::Hash;
-use exonum::messages::RawTransaction;
-use exonum::encoding::Error as StreamStructError;
-use exonum::storage::{Fork, Snapshot};
 use exonum::api::Api;
+use exonum::blockchain::{
+    ApiContext, Blockchain, Schema as CoreSchema, Service, ServiceContext, Transaction,
+};
+use exonum::crypto::Hash;
+use exonum::encoding::Error as StreamStructError;
+use exonum::messages::RawTransaction;
+use exonum::storage::{Fork, Snapshot};
 
 use api::PublicApi;
+use blockchain::consensus_storage::AnchoringConfig;
+use blockchain::dto;
+use blockchain::schema::AnchoringSchema;
 use details::btc;
 use details::rpc::{BitcoinRelay, RpcClient};
-use local_storage::AnchoringNodeConfig;
-use handler::AnchoringHandler;
-use blockchain::consensus_storage::AnchoringConfig;
-use blockchain::schema::AnchoringSchema;
-use blockchain::dto;
 use error::Error as ServiceError;
 use handler::error::Error as HandlerError;
+use handler::AnchoringHandler;
+use local_storage::AnchoringNodeConfig;
 use observer::AnchoringChainObserver;
 
 /// Anchoring service id.
@@ -136,11 +137,13 @@ impl Service for AnchoringService {
 
     fn execute(&self, fork: &mut Fork) {
         // Writes hash of the latest block to the proof list index.
-        if let Some(block_header_hash) = CoreSchema::new(&fork).block_hashes_by_height().last() {
-            AnchoringSchema::new(fork)
-                .anchored_blocks_mut()
-                .push(block_header_hash)
-        }
+        let block_header_hash = CoreSchema::new(&fork)
+            .block_hashes_by_height()
+            .last()
+            .expect("An attempt to invoke execute during the genesis block initialization.");
+        AnchoringSchema::new(fork)
+            .anchored_blocks_mut()
+            .push(block_header_hash)
     }
 
     /// Public api implementation.

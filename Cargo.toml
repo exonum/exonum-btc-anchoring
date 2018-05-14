@@ -51,6 +51,6 @@ default = []
 rpc_tests = []
 
 [patch.crates-io]
-exonum = { git = "https://github.com/aleksuss/exonum.git", rev = "186257faf298a0cfd4a71d23f914c31216d21dfb" }
-exonum-configuration = { git = "https://github.com/aleksuss/exonum.git", rev = "186257faf298a0cfd4a71d23f914c31216d21dfb" }
-exonum-testkit = { git = "https://github.com/aleksuss/exonum.git", rev = "186257faf298a0cfd4a71d23f914c31216d21dfb" }
+exonum = { git = "https://github.com/exonum/exonum.git", rev = "7aa8fac54a47f31894a86119b25dfdc6a33f28ec" }
+exonum-configuration = { git = "https://github.com/exonum/exonum.git", rev = "7aa8fac54a47f31894a86119b25dfdc6a33f28ec" }
+exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "7aa8fac54a47f31894a86119b25dfdc6a33f28ec" }
