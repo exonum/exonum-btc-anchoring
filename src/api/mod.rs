@@ -63,11 +63,13 @@ pub struct LectInfo {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AnchoredBlockHeaderProof {
     /// Latest authorized block in the blockchain
-    latest_authorized_block: BlockProof,
+    pub latest_authorized_block: BlockProof,
     /// Proof to the whole database table.
-    to_table: MapProof<Hash, Hash>,
+    pub to_table: MapProof<Hash, Hash>,
     /// Proof to the specific header in this table.
-    to_block_header: ListProof<Hash>,
+    pub to_block_header: ListProof<Hash>,
+    /// Previous from the current height.
+    pub height: Height,
 }
 
 impl From<BitcoinTx> for AnchoringInfo {
@@ -175,11 +177,13 @@ impl PublicApi {
         let to_table: MapProof<Hash, Hash> =
             core_schema.get_proof_to_service_table(ANCHORING_SERVICE_ID, 0);
         let to_block_header = anchoring_schema.anchored_blocks().get_proof(height);
+        let height = Height(anchoring_schema.anchored_blocks().len());
 
         AnchoredBlockHeaderProof {
             latest_authorized_block,
             to_table,
             to_block_header,
+            height,
         }
     }
 }

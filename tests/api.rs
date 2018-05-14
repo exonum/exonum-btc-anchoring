@@ -19,6 +19,8 @@ extern crate exonum;
 extern crate exonum_bitcoinrpc as bitcoinrpc;
 extern crate exonum_btc_anchoring;
 extern crate exonum_testkit;
+#[macro_use]
+extern crate failure;
 extern crate libc;
 #[macro_use]
 extern crate log;
@@ -33,19 +35,21 @@ extern crate serde_json;
 #[macro_use]
 pub mod testkit_extras;
 
-use exonum::messages::Message;
-use exonum::helpers::{Height, ValidatorId};
+use exonum::blockchain::{Blockchain, StoredConfiguration};
+use exonum::crypto::{Hash, CryptoHash};
 use exonum::encoding::serialize::FromHex;
+use exonum::helpers::{Height, ValidatorId};
+use exonum::messages::Message;
 use exonum_testkit::{ApiKind, TestKitApi};
 
-use exonum_btc_anchoring::ANCHORING_SERVICE_NAME;
-use exonum_btc_anchoring::api::{AnchoringInfo, LectInfo};
-use exonum_btc_anchoring::observer::AnchoringChainObserver;
+use exonum_btc_anchoring::api::{AnchoredBlockHeaderProof, AnchoringInfo, LectInfo};
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, BitcoinTx};
-use testkit_extras::{AnchoringTestKit, TestClient};
+use exonum_btc_anchoring::observer::AnchoringChainObserver;
+use exonum_btc_anchoring::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 use testkit_extras::helpers::*;
+use testkit_extras::{AnchoringTestKit, TestClient};
 
 trait AnchoringApi {
     fn actual_lect(&self) -> Option<AnchoringInfo>;
@@ -58,7 +62,7 @@ trait AnchoringApi {
 
     fn nearest_lect(&self, height: u64) -> Option<AnchoringTx>;
 
-    fn anchored_block_header_proof(&self, height: u64) -> serde_json::Value;
+    fn anchored_block_header_proof(&self, height: u64) -> AnchoredBlockHeaderProof;
 }
 
 impl AnchoringApi for TestKitApi {
@@ -94,11 +98,59 @@ impl AnchoringApi for TestKitApi {
         )
     }
 
-    fn anchored_block_header_proof(&self, height: u64) -> serde_json::Value {
+    fn anchored_block_header_proof(&self, height: u64) -> AnchoredBlockHeaderProof {
         self.get(
             ApiKind::Service(ANCHORING_SERVICE_NAME),
             &format!("/v1/block_header_proof/{}", height),
         )
+    }
+}
+
+trait ValidateProof {
+    type Output;
+
+    fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error>;
+}
+
+impl ValidateProof for AnchoredBlockHeaderProof {
+    type Output = (u64, Hash);
+
+    fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error> {
+        // Checks precommits.
+        for precommit in self.latest_authorized_block.precommits {
+            let validator_id = precommit.validator().0 as usize;
+            let validator_keys = actual_config.validator_keys
+                .get(validator_id)
+                .ok_or_else(|| format_err!("Unable to find validator with the given id"))?;
+            ensure!(
+                precommit.verify_signature(&validator_keys.consensus_key),
+                "Precommit verification failed"
+            );
+            ensure!(
+                precommit.block_hash() == &self.latest_authorized_block.block.hash(),
+                "Block hash doesn't match"
+            );
+        }
+
+        // Checks state_hash.
+        let checked_table_proof = self.to_table.check()?;
+        ensure!(
+            checked_table_proof.merkle_root() == *self.latest_authorized_block.block.state_hash(),
+            "State hash doesn't match"
+        );
+        let proof_entry = checked_table_proof
+            .entries()
+            .get(0)
+            .cloned()
+            .ok_or_else(|| format_err!("Unable to get `to_block_header` entry"))?;
+        let table_location = Blockchain::service_table_unique_key(ANCHORING_SERVICE_ID, 0);
+        ensure!(proof_entry.0 == &table_location, "Invalid table location");
+        // Validates value.
+        let values = self.to_block_header
+            .validate(*proof_entry.1, self.height.0)
+            .map_err(|e| format_err!("An error occurred {:?}", e))?;
+        ensure!(values.len() == 1, "Invalid values count");
+        Ok((values[0].0, values[0].1.clone()))
     }
 }
 
@@ -270,20 +322,19 @@ fn test_api_anchoring_observer_normal() {
 #[test]
 fn test_api_anchored_block_header_proof() {
     let mut testkit = AnchoringTestKit::default();
+    let cfg = testkit.actual_configuration();
     anchor_first_block(&mut testkit);
     // Check proof for the genesis block
     let genesis_block_proof = testkit.api().anchored_block_header_proof(0);
-    println!(
-        "{}",
-        ::serde_json::to_string_pretty(&genesis_block_proof).unwrap()
-    );
+    let value = genesis_block_proof.validate(&cfg).unwrap();
+    assert_eq!(value.0, 0);
+    assert_eq!(value.1, testkit.block_hash_on_height(Height(0)));
 
     anchor_first_block_lect_normal(&mut testkit);
     anchor_second_block_normal(&mut testkit);
     // Check proof for the second block
     let second_block_proof = testkit.api().anchored_block_header_proof(10);
-    println!(
-        "{}",
-        ::serde_json::to_string_pretty(&second_block_proof).unwrap()
-    );
+    let value = second_block_proof.validate(&cfg).unwrap();
+    assert_eq!(value.0, 10);
+    assert_eq!(value.1, testkit.block_hash_on_height(Height(10)));
 }
