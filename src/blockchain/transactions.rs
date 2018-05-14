@@ -14,18 +14,18 @@
 
 use bitcoin::blockdata::transaction::SigHashType;
 
-use exonum::crypto::CryptoHash;
 use exonum::blockchain::{ExecutionResult, Schema, Transaction};
+use exonum::crypto::CryptoHash;
+use exonum::helpers::Height;
 use exonum::messages::Message;
 use exonum::storage::{Fork, Snapshot};
-use exonum::helpers::Height;
 
+use super::Error as ValidateError;
+use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use blockchain::schema::AnchoringSchema;
-use blockchain::consensus_storage::AnchoringConfig;
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, TxKind};
-use super::Error as ValidateError;
 
 impl MsgAnchoringSignature {
     pub fn verify_content(&self) -> bool {

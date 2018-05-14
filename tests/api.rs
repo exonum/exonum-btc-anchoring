@@ -36,7 +36,7 @@ extern crate serde_json;
 pub mod testkit_extras;
 
 use exonum::blockchain::{Blockchain, StoredConfiguration};
-use exonum::crypto::{Hash, CryptoHash};
+use exonum::crypto::{CryptoHash, Hash};
 use exonum::encoding::serialize::FromHex;
 use exonum::helpers::{Height, ValidatorId};
 use exonum::messages::Message;
@@ -119,7 +119,8 @@ impl ValidateProof for AnchoredBlockHeaderProof {
         // Checks precommits.
         for precommit in self.latest_authorized_block.precommits {
             let validator_id = precommit.validator().0 as usize;
-            let validator_keys = actual_config.validator_keys
+            let validator_keys = actual_config
+                .validator_keys
                 .get(validator_id)
                 .ok_or_else(|| format_err!("Unable to find validator with the given id"))?;
             ensure!(

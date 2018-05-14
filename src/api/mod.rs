@@ -23,12 +23,12 @@ use exonum::crypto::Hash;
 use exonum::helpers::Height;
 use exonum::storage::{ListProof, MapProof};
 
+use ANCHORING_SERVICE_ID;
 use blockchain::dto::LectContent;
 use blockchain::schema::AnchoringSchema;
 use details::btc;
-use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
 use details::btc::TxId;
-use ANCHORING_SERVICE_ID;
+use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
 
 pub use details::btc::payload::Payload;
 
@@ -59,7 +59,7 @@ pub struct LectInfo {
     pub content: AnchoringInfo,
 }
 
-/// Proof of existence for the exonum block with the given hash
+/// A proof of existence for the exonum block with the given hash.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AnchoredBlockHeaderProof {
     /// Latest authorized block in the blockchain
@@ -164,6 +164,8 @@ impl PublicApi {
     }
 
     /// Returns the proof of existence for block with the given height.
+    ///
+    /// `GET /{api_prefix}/v1/block_header_proof/:height`
     pub fn anchored_block_header_proof(&self, height: u64) -> AnchoredBlockHeaderProof {
         let view = self.blockchain.snapshot();
         let core_schema = CoreSchema::new(&view);

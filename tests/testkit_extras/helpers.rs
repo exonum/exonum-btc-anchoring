@@ -24,17 +24,17 @@ use exonum::messages::Message;
 
 use exonum_testkit::{TestKit, TestNetworkConfiguration};
 
-use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};
 use exonum_btc_anchoring::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use exonum_btc_anchoring::blockchain::schema::AnchoringSchema;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{BitcoinTx, RawBitcoinTx, TxFromRaw};
+use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};
 
 use super::{AnchoringTestKit, TestRequest};
 
-pub use bitcoinrpc::RpcError as JsonRpcError;
-pub use bitcoinrpc::Error as RpcError;
 pub use super::secp256k1_hack::sign_tx_input_with_nonce;
+pub use bitcoinrpc::Error as RpcError;
+pub use bitcoinrpc::RpcError as JsonRpcError;
 
 pub fn gen_service_tx_lect(
     testkit: &TestKit,

@@ -14,8 +14,8 @@
 
 use byteorder::{ByteOrder, LittleEndian};
 
-use bitcoin::blockdata::script::{Builder, Instruction, Script};
 use bitcoin::blockdata::opcodes::All;
+use bitcoin::blockdata::script::{Builder, Instruction, Script};
 
 use exonum::crypto::Hash;
 use exonum::helpers::Height;

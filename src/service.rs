@@ -24,9 +24,8 @@ use serde_json;
 use serde_json::value::Value;
 
 use exonum::api::Api;
-use exonum::blockchain::{
-    ApiContext, Blockchain, Schema as CoreSchema, Service, ServiceContext, Transaction,
-};
+use exonum::blockchain::{ApiContext, Blockchain, Schema as CoreSchema, Service, ServiceContext,
+                         Transaction};
 use exonum::crypto::Hash;
 use exonum::encoding::Error as StreamStructError;
 use exonum::messages::RawTransaction;
@@ -39,8 +38,8 @@ use blockchain::schema::AnchoringSchema;
 use details::btc;
 use details::rpc::{BitcoinRelay, RpcClient};
 use error::Error as ServiceError;
-use handler::error::Error as HandlerError;
 use handler::AnchoringHandler;
+use handler::error::Error as HandlerError;
 use local_storage::AnchoringNodeConfig;
 use observer::AnchoringChainObserver;
 

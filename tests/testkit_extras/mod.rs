@@ -13,32 +13,32 @@
 // limitations under the License.
 
 use std::ops::{Deref, DerefMut};
-use std::sync::{Arc, Mutex, MutexGuard};
 use std::sync::mpsc;
+use std::sync::{Arc, Mutex, MutexGuard};
 
 use rand::{SeedableRng, StdRng};
 use serde_json;
 
-use exonum::crypto::Hash;
 use exonum::blockchain::{Schema, Transaction};
+use exonum::crypto::Hash;
 use exonum::helpers::{Height, ValidatorId};
 use exonum_testkit::{TestKit, TestKitBuilder};
 
-use exonum_btc_anchoring::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
-                           AnchoringNodeConfig, AnchoringService, ANCHORING_SERVICE_NAME};
+pub use self::rpc::{TestClient, TestRequest, TestRequests};
+use exonum_btc_anchoring::blockchain::dto::MsgAnchoringSignature;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, FundingTx, RawBitcoinTx,
                                                        TransactionBuilder};
-use exonum_btc_anchoring::blockchain::dto::MsgAnchoringSignature;
-use exonum_btc_anchoring::handler::{collect_signatures, AnchoringHandler};
 use exonum_btc_anchoring::error::HandlerError;
-pub use self::rpc::{TestClient, TestRequest, TestRequests};
+use exonum_btc_anchoring::handler::{collect_signatures, AnchoringHandler};
+use exonum_btc_anchoring::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
+                           AnchoringNodeConfig, AnchoringService, ANCHORING_SERVICE_NAME};
 
 #[macro_use]
 mod macros;
+pub mod helpers;
 mod rpc;
 pub mod secp256k1_hack;
-pub mod helpers;
 
 pub const ANCHORING_FREQUENCY: u64 = 10;
 pub const ANCHORING_UTXO_CONFIRMATIONS: u64 = 24;

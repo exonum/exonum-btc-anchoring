@@ -15,8 +15,8 @@
 use std::error;
 use std::fmt;
 
-use exonum::storage::Error as StorageError;
 use exonum::api::ApiError;
+use exonum::storage::Error as StorageError;
 
 #[derive(Debug)]
 pub enum Error {

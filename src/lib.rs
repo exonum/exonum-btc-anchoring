@@ -86,30 +86,30 @@ extern crate router;
 #[macro_use]
 extern crate pretty_assertions;
 
+pub mod api;
+pub mod blockchain;
+pub mod cmd;
 #[doc(hidden)]
 pub mod details;
-pub mod blockchain;
 #[doc(hidden)]
-pub mod local_storage;
-#[doc(hidden)]
-pub mod service;
+pub mod error;
 #[doc(hidden)]
 pub mod handler;
 #[doc(hidden)]
-pub mod error;
-pub mod api;
+pub mod local_storage;
 pub mod observer;
-pub mod cmd;
+#[doc(hidden)]
+pub mod service;
 
+pub use blockchain::consensus_storage::AnchoringConfig;
+pub use cmd::AnchoringServiceFactory as ServiceFactory;
 pub use details::btc::{gen_btc_keypair, gen_btc_keypair_with_rng, Network as BitcoinNetwork};
 pub use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
-pub use blockchain::consensus_storage::AnchoringConfig;
+pub use error::Error;
+pub use handler::AnchoringHandler;
 pub use local_storage::AnchoringNodeConfig;
 pub use service::{gen_anchoring_testnet_config, gen_anchoring_testnet_config_with_rng,
                   AnchoringService, ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
-pub use cmd::AnchoringServiceFactory as ServiceFactory;
-pub use handler::AnchoringHandler;
-pub use error::Error;
 
 #[doc(hidden)]
 pub fn majority_count(cnt: u8) -> u8 {

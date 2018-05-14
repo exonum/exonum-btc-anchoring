@@ -15,18 +15,18 @@
 //! Blockchain implementation details for the anchoring service.
 
 #[doc(hidden)]
-pub mod schema;
+pub mod consensus_storage;
 #[doc(hidden)]
 pub mod dto;
 #[doc(hidden)]
-pub mod transactions;
-#[doc(hidden)]
-pub mod consensus_storage;
-#[doc(hidden)]
 pub mod error;
+#[doc(hidden)]
+pub mod schema;
 #[cfg(test)]
 mod tests;
+#[doc(hidden)]
+pub mod transactions;
 
-pub use self::schema::{AnchoringSchema, KnownSignatureId};
 pub use self::dto::{LectContent, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 pub use self::error::Error;
+pub use self::schema::{AnchoringSchema, KnownSignatureId};

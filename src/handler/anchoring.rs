@@ -13,15 +13,15 @@
 // limitations under the License.
 
 use exonum::blockchain::{Schema, ServiceContext};
-use exonum::helpers::Height;
 use exonum::encoding::serialize::encode_hex;
+use exonum::helpers::Height;
 
-use error::Error as ServiceError;
+use blockchain::consensus_storage::AnchoringConfig;
+use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use blockchain::schema::AnchoringSchema;
 use details::btc;
 use details::btc::transactions::{AnchoringTx, RawBitcoinTx, TransactionBuilder};
-use blockchain::consensus_storage::AnchoringConfig;
-use blockchain::schema::AnchoringSchema;
-use blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
+use error::Error as ServiceError;
 
 use super::{collect_signatures, AnchoringHandler, LectKind, MultisigAddress};
 

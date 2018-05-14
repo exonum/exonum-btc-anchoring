@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops::Deref;
 use std::fmt;
+use std::ops::Deref;
 
 use bitcoin::blockdata::script::Builder;
-use bitcoin::util::hash::Sha256dHash;
+pub use bitcoin::blockdata::script::Script as RawScript;
+pub use bitcoin::blockdata::transaction::Transaction as RawTransaction;
 use bitcoin::network::constants::Network;
+pub use bitcoin::util::address::Address as RawAddress;
+use bitcoin::util::hash::Sha256dHash;
+pub use bitcoin::util::privkey::Privkey as RawPrivkey;
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh};
 use secp256k1::Secp256k1;
-pub use bitcoin::blockdata::transaction::Transaction as RawTransaction;
-pub use bitcoin::util::address::Address as RawAddress;
-pub use bitcoin::util::privkey::Privkey as RawPrivkey;
-pub use bitcoin::blockdata::script::Script as RawScript;
 pub use secp256k1::key::PublicKey as RawPublicKey;
 
-use exonum::encoding::serialize::{encode_hex, FromHex, FromHexError, ToHex};
 use exonum::encoding::Field;
+use exonum::encoding::serialize::{encode_hex, FromHex, FromHexError, ToHex};
 use exonum::storage::StorageKey;
 
 use super::HexValueEx;

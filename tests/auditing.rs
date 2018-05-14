@@ -34,15 +34,15 @@ extern crate serde_json;
 #[macro_use]
 pub mod testkit_extras;
 
-use exonum::helpers::{Height, ValidatorId};
 use exonum::blockchain::Transaction;
 use exonum::encoding::serialize::FromHex;
+use exonum::helpers::{Height, ValidatorId};
 use exonum_testkit::TestNetworkConfiguration;
 
-use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};
-use exonum_btc_anchoring::handler::error::Error as HandlerError;
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
 use exonum_btc_anchoring::details::btc::transactions::BitcoinTx;
+use exonum_btc_anchoring::handler::error::Error as HandlerError;
+use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};
 use testkit_extras::AnchoringTestKit;
 use testkit_extras::helpers::*;
 

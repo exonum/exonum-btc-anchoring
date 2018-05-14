@@ -18,16 +18,16 @@ use byteorder::{BigEndian, ByteOrder};
 use serde_json::value::from_value;
 
 use exonum::blockchain::{Schema, StoredConfiguration};
-use exonum::storage::{Fork, ListIndex, MapIndex, ProofListIndex, Snapshot, StorageKey};
 use exonum::crypto::Hash;
 use exonum::helpers::{Height, ValidatorId};
+use exonum::storage::{Fork, ListIndex, MapIndex, ProofListIndex, Snapshot, StorageKey};
 
+use super::Error as ValidateError;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::{LectContent, MsgAnchoringSignature};
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
 use service::ANCHORING_SERVICE_NAME;
-use super::Error as ValidateError;
 
 /// Unique identifier of signature for the `AnchoringTx`.
 #[derive(Debug, Clone)]

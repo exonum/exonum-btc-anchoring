@@ -14,12 +14,12 @@
 
 use std::borrow::Cow;
 
-use serde_json;
 use serde::{Deserialize, Deserializer};
+use serde_json;
 
-use exonum::storage::StorageValue;
 use exonum::crypto::{hash, CryptoHash, Hash};
 use exonum::helpers::Height;
+use exonum::storage::StorageValue;
 
 use details::btc;
 use details::btc::transactions::FundingTx;
