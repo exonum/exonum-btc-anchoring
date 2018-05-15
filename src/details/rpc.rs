@@ -102,9 +102,30 @@ pub trait BitcoinRelay: 'static + ::std::fmt::Debug + Send + Sync {
     fn config(&self) -> AnchoringRpcConfig;
 }
 
+macro_rules! retry {
+    ($expr:expr) => {{
+        use std::time::Duration;
+        use std::thread;
+
+        let mut delay = Duration::from_millis(500);
+        let delay_increment = Duration::from_millis(1000);
+
+        let mut res = $expr;
+        for _ in 0..5 {
+            if res.is_ok() {
+                break;
+            }
+            res = $expr;
+            thread::sleep(delay);
+            delay += delay_increment;
+        }
+        res
+    }};
+}
+
 impl BitcoinRelay for RpcClient {
     fn get_transaction(&self, txid: btc::TxId) -> Result<Option<BitcoinTx>> {
-        let r = self.getrawtransaction(&txid.to_string());
+        let r = retry!(self.getrawtransaction(&txid.to_string()));
         match r {
             Ok(tx) => Ok(Some(BitcoinTx::from_hex(tx).unwrap())),
             Err(bitcoinrpc::Error::NoInformation(_)) => Ok(None),
@@ -113,7 +134,7 @@ impl BitcoinRelay for RpcClient {
     }
 
     fn get_transaction_info(&self, txid: btc::TxId) -> Result<Option<TxInfo>> {
-        let info = match self.getrawtransaction_verbose(&txid.to_string()) {
+        let info = match retry!(self.getrawtransaction_verbose(&txid.to_string())) {
             Ok(info) => Ok(info),
             Err(bitcoinrpc::Error::NoInformation(_)) => return Ok(None),
             Err(e) => Err(e),
@@ -122,26 +143,25 @@ impl BitcoinRelay for RpcClient {
     }
 
     fn watch_address(&self, addr: &btc::Address, rescan: bool) -> Result<()> {
-        self.importaddress(&addr.to_string(), "multisig", false, rescan)
+        retry!(self.importaddress(&addr.to_string(), "multisig", false, rescan))
     }
 
     fn send_transaction(&self, tx: BitcoinTx) -> Result<()> {
         let tx_hex = tx.to_hex();
-        self.sendrawtransaction(&tx_hex)?;
-        Ok(())
+        retry!(self.sendrawtransaction(&tx_hex).map(drop))
     }
 
     fn send_to_address(&self, addr: &btc::Address, satoshis: u64) -> Result<FundingTx> {
         let addr = addr.to_string();
         let funds_str = (satoshis as f64 / SATOSHI_DIVISOR).to_string();
-        let utxo_txid = self.sendtoaddress(&addr, &funds_str)?;
+        let utxo_txid = retry!(self.sendtoaddress(&addr, &funds_str))?;
         // TODO rewrite Error types to avoid unwraps.
         let utxo_txid = btc::TxId::from_hex(&utxo_txid).unwrap();
         Ok(FundingTx::from(self.get_transaction(utxo_txid)?.unwrap()))
     }
 
     fn unspent_transactions(&self, addr: &btc::Address) -> Result<Vec<TxInfo>> {
-        let unspent_txs = self.listunspent(0, 9_999_999, &[addr.to_string()])?;
+        let unspent_txs = retry!(self.listunspent(0, 9_999_999, &[addr.to_string()]))?;
         let mut txs = Vec::new();
         for info in unspent_txs {
             let txid = btc::TxId::from_hex(&info.txid).unwrap();
