@@ -12,6 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub use self::payload::Payload;
+pub use self::transaction::Transaction;
+
 #[macro_use]
 mod macros;
 

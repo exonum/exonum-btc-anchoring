@@ -16,6 +16,7 @@ use exonum::blockchain::{Schema, ValidatorKeys};
 use exonum::crypto::{Hash, PublicKey};
 use exonum::storage::{ProofListIndex, ProofMapIndex, Snapshot};
 
+use btc::Transaction;
 use super::data_layout::*;
 
 /// Defines `&str` constants with given name and value.
@@ -47,11 +48,11 @@ impl<T: AsRef<Snapshot>> AnchoringSchema<T> {
         AnchoringSchema { snapshot }
     }
 
-    pub fn anchoring_transactions_chain(&self) -> ProofListIndex<&T, Vec<u8>> {
+    pub fn anchoring_transactions_chain(&self) -> ProofListIndex<&T, Transaction> {
         ProofListIndex::new(TRANSACTIONS_CHAIN, &self.snapshot)
     }
 
-    pub fn spent_funding_transactions(&self) -> ProofMapIndex<&T, Hash, Vec<u8>> {
+    pub fn spent_funding_transactions(&self) -> ProofMapIndex<&T, Hash, Transaction> {
         ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, &self.snapshot)
     }
 

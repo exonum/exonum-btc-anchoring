@@ -232,8 +232,8 @@ impl From<PayloadV1> for Payload {
 #[cfg(test)]
 mod tests {
     use exonum::crypto::{hash, Hash};
+    use exonum::encoding::serialize::{decode_hex, encode_hex};
     use exonum::helpers::Height;
-    use exonum::encoding::serialize::{encode_hex, decode_hex};
 
     use bitcoin::blockdata::script::Script;
 
@@ -333,8 +333,7 @@ mod tests {
     #[test]
     fn test_payload_non_op_return() {
         // Payload from old anchoring transaction
-        let script_pubkey =
-            Script::from_hex("a91472b7506704dc074fa46359251052e781d96f939a87");
+        let script_pubkey = Script::from_hex("a91472b7506704dc074fa46359251052e781d96f939a87");
         assert_eq!(Payload::from_script(&script_pubkey), None);
     }
 }
