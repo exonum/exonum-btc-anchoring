@@ -59,7 +59,7 @@ pub struct LectInfo {
     pub content: AnchoringInfo,
 }
 
-/// A proof of existence for an anchored or a non-anchored Exonum block with the given hash.
+/// A proof of existence for an anchored or a non-anchored Exonum block at the given height.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AnchoredBlockHeaderProof {
     /// Latest authorized block in the blockchain.
