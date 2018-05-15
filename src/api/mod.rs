@@ -59,16 +59,16 @@ pub struct LectInfo {
     pub content: AnchoringInfo,
 }
 
-/// A proof of existence for the exonum block with the given hash.
+/// A proof of existence for an anchored or a non-anchored Exonum block with the given hash.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AnchoredBlockHeaderProof {
-    /// Latest authorized block in the blockchain
+    /// Latest authorized block in the blockchain.
     pub latest_authorized_block: BlockProof,
-    /// Proof to the whole database table.
+    /// Proof for the whole database table.
     pub to_table: MapProof<Hash, Hash>,
-    /// Proof to the specific header in this table.
+    /// Proof for the specific header in this table.
     pub to_block_header: ListProof<Hash>,
-    /// Previous from the current height.
+    /// An actual Exonum blockchain height.
     pub height: Height,
 }
 
@@ -163,7 +163,9 @@ impl PublicApi {
         Ok(None)
     }
 
-    /// Returns the proof of existence for block with the given height.
+    /// A method that provides cryptographic proofs for Exonum blocks including those anchored to
+    /// Bitcoin blockchain. The proof is an apparent evidence of availability of a certain Exonum
+    /// block in the blockchain.
     ///
     /// `GET /{api_prefix}/v1/block_header_proof/:height`
     pub fn anchored_block_header_proof(&self, height: u64) -> AnchoredBlockHeaderProof {

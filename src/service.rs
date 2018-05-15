@@ -135,7 +135,7 @@ impl Service for AnchoringService {
     }
 
     fn execute(&self, fork: &mut Fork) {
-        // Writes hash of the latest block to the proof list index.
+        // Writes a hash of the latest block to the proof list index.
         let block_header_hash = CoreSchema::new(&fork)
             .block_hashes_by_height()
             .last()

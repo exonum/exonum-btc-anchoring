@@ -155,7 +155,7 @@ impl ValidateProof for AnchoredBlockHeaderProof {
     }
 }
 
-// Test normal api usage
+// Test normal api usage.
 #[test]
 fn test_api_public_common() {
     let mut testkit = AnchoringTestKit::default();
@@ -180,7 +180,7 @@ fn test_api_public_common() {
     }
 }
 
-// Try to get lect from nonexistent validator id
+// Tries to get lect from nonexistent validator id.
 // result: Panic
 #[test]
 #[should_panic(expected = "Unknown validator id")]
@@ -190,7 +190,7 @@ fn test_api_public_get_lect_nonexistent_validator() {
     api.current_lect_of_validator(100);
 }
 
-// Try to get current lect when there is no agreed [or consensus] lect.
+// Tries to get current lect when there is no agreed [or consensus] lect.
 // result: Returns null
 #[test]
 fn test_api_public_get_lect_unavailable() {
@@ -226,7 +226,7 @@ fn test_api_public_get_lect_unavailable() {
     assert_eq!(api.actual_lect(), None);
 }
 
-// Try to get actual anchoring address
+// Tries to get actual anchoring address.
 #[test]
 fn test_api_public_get_current_address() {
     let testkit = AnchoringTestKit::default();
@@ -234,7 +234,7 @@ fn test_api_public_get_current_address() {
     assert_eq!(api.actual_address(), testkit.current_addr());
 }
 
-// try to get following address
+// Tries to get following address.
 #[test]
 fn test_api_public_get_following_address_existent() {
     let mut testkit = AnchoringTestKit::default();
@@ -261,7 +261,7 @@ fn test_api_public_get_following_address_existent() {
     assert_eq!(api.following_address(), Some(following_addr));
 }
 
-// Try to get following address when it does not exists
+// Tries to get the following address which does not exist.
 // result: Returns null
 #[test]
 fn test_api_public_get_following_address_nonexistent() {
@@ -310,22 +310,22 @@ fn test_api_anchoring_observer_normal() {
 
     let api = testkit.api();
 
-    // Check that `first_anchored_tx` anchors the block at height 0.
+    // Checks that `first_anchored_tx` anchors the block at height 0.
     assert_eq!(api.nearest_lect(0), Some(first_anchored_tx));
-    // Check that closest anchoring transaction for height 1 is
+    // Checks that closest anchoring transaction for height 1 is
     // `second_anchored_tx` that anchors the block at height 10.
     assert_eq!(api.nearest_lect(1), Some(second_anchored_tx));
-    // Check that there are no anchoring transactions for heights that greater than 10
+    // Checks that there are no anchoring transactions for heights that greater than 10
     assert_eq!(api.nearest_lect(11), None);
 }
 
-// Try to get proof of existence for the anchored block.
+// Tries to get a proof of existence for an anchored block.
 #[test]
 fn test_api_anchored_block_header_proof() {
     let mut testkit = AnchoringTestKit::default();
     let cfg = testkit.actual_configuration();
     anchor_first_block(&mut testkit);
-    // Check proof for the genesis block
+    // Checks proof for the genesis block.
     let genesis_block_proof = testkit.api().anchored_block_header_proof(0);
     let value = genesis_block_proof.validate(&cfg).unwrap();
     assert_eq!(value.0, 0);
@@ -333,7 +333,7 @@ fn test_api_anchored_block_header_proof() {
 
     anchor_first_block_lect_normal(&mut testkit);
     anchor_second_block_normal(&mut testkit);
-    // Check proof for the second block
+    // Checks proof for the second block.
     let second_block_proof = testkit.api().anchored_block_header_proof(10);
     let value = second_block_proof.validate(&cfg).unwrap();
     assert_eq!(value.0, 10);

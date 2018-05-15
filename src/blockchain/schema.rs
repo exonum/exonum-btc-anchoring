@@ -122,7 +122,7 @@ where
         MapIndex::new("btc_anchoring.tx_chain", &self.view)
     }
 
-    /// Returns a list of hashes of exonum block headers.
+    /// Returns a list of hashes of Exonum blocks headers.
     pub fn anchored_blocks(&self) -> ProofListIndex<&T, Hash> {
         ProofListIndex::new("btc_anchoring.anchored_blocks", &self.view)
     }
