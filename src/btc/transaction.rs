@@ -16,7 +16,7 @@ impl_wrapper_for_bitcoin_type! { Transaction }
 
 #[cfg(test)]
 mod tests {
-    use exonum::encoding::serialize::{FromHex};
+    use exonum::encoding::serialize::FromHex;
     use exonum::storage::StorageValue;
 
     use super::Transaction;

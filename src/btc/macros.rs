@@ -17,6 +17,7 @@ macro_rules! impl_wrapper_for_bitcoin_type {
     ($name:ident) => {
         impl_wrapper_for_bitcoin_consensus_encoding! { $name }
         impl_string_conversions_for_hex! { $name }
+        impl_serde_str! { $name }
     };
 }
 
@@ -72,13 +73,13 @@ macro_rules! impl_string_conversions_for_hex {
     ($name:ident) => {
         impl ::std::fmt::LowerHex for $name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-                use ::exonum::encoding::serialize::ToHex;
+                use exonum::encoding::serialize::ToHex;
                 let mut buf = String::new();
                 self.write_hex(&mut buf).unwrap();
                 write!(f, "{}", buf)
             }
         }
-    
+
         impl ::std::fmt::Display for $name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
                 write!(f, "{:x}", self)
@@ -89,8 +90,31 @@ macro_rules! impl_string_conversions_for_hex {
             type Err = ::failure::Error;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
-                use ::exonum::encoding::serialize::FromHex;
+                use exonum::encoding::serialize::FromHex;
                 Self::from_hex(s).map_err(From::from)
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! impl_serde_str {
+    ($name:ident) => {
+        impl ::serde::Serialize for $name {
+            fn serialize<S>(&self, ser: S) -> ::std::result::Result<S::Ok, S::Error>
+            where
+                S: ::serde::Serializer,
+            {
+                ::serde_str::serialize(self, ser)
+            }
+        }
+
+        impl<'de> ::serde::Deserialize<'de> for $name {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: ::serde::Deserializer<'de>,
+            {
+                ::serde_str::deserialize(deserializer)
             }
         }
     };

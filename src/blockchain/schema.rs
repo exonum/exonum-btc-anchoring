@@ -16,8 +16,8 @@ use exonum::blockchain::{Schema, ValidatorKeys};
 use exonum::crypto::{Hash, PublicKey};
 use exonum::storage::{ProofListIndex, ProofMapIndex, Snapshot};
 
-use btc::Transaction;
 use super::data_layout::*;
+use btc::Transaction;
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {

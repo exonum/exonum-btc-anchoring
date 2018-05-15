@@ -15,25 +15,25 @@
 use exonum::crypto::{self, CryptoHash, Hash};
 use exonum::storage::{HashedKey, StorageKey};
 
-use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use std::io::{Cursor, Read, Write};
 
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TxInputId {
     pub txid: Hash,
-    pub index: u32,
+    pub input: u32,
 }
 
 impl TxInputId {
-    pub fn new(txid: Hash, index: u32) -> TxInputId {
-        TxInputId { txid, index }
+    pub fn new(txid: Hash, input: u32) -> TxInputId {
+        TxInputId { txid, input }
     }
 }
 
 impl StorageKey for TxInputId {
     fn size(&self) -> usize {
-        self.txid.size() + self.index.size()
+        self.txid.size() + self.input.size()
     }
 
     fn read(inp: &[u8]) -> Self {
@@ -44,14 +44,14 @@ impl StorageKey for TxInputId {
             reader.read(&mut txid).unwrap();
             Hash::new(txid)
         };
-        let index = reader.read_u32::<BigEndian>().unwrap();
-        TxInputId { txid, index }
+        let input = reader.read_u32::<LittleEndian>().unwrap();
+        TxInputId { txid, input }
     }
 
     fn write(&self, out: &mut [u8]) {
         let mut writer = Cursor::new(out);
         writer.write(self.txid.as_ref()).unwrap();
-        writer.write_u32::<BigEndian>(self.index).unwrap();
+        writer.write_u32::<LittleEndian>(self.input).unwrap();
     }
 }
 
@@ -69,7 +69,7 @@ impl HashedKey for TxInputId {}
 fn test_tx_input_id_storage_key() {
     let txout = TxInputId {
         txid: crypto::hash(&[1, 2, 3]),
-        index: 2,
+        input: 2,
     };
 
     let mut buf = vec![0u8; txout.size()];

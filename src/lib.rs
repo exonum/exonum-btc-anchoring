@@ -26,6 +26,9 @@ extern crate serde_derive;
 extern crate bitcoin;
 extern crate btc_transaction_utils;
 extern crate byteorder;
+extern crate secp256k1;
+extern crate serde;
+extern crate serde_str;
 
 pub use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 
