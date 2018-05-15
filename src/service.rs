@@ -145,7 +145,7 @@ impl Service for AnchoringService {
             .push(block_header_hash)
     }
 
-    /// Public api implementation.
+    /// Public API implementation.
     /// See [`PublicApi`](api/struct.PublicApi.html) for details.
     fn public_api_handler(&self, context: &ApiContext) -> Option<Box<Handler>> {
         let handler = self.handler.lock().unwrap();

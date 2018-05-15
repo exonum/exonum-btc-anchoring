@@ -122,7 +122,7 @@ impl ValidateProof for AnchoredBlockHeaderProof {
             let validator_keys = actual_config
                 .validator_keys
                 .get(validator_id)
-                .ok_or_else(|| format_err!("Unable to find validator with the given id"))?;
+                .ok_or_else(|| format_err!("Unable to find validator with the given id: {}", validator_id))?;
             ensure!(
                 precommit.verify_signature(&validator_keys.consensus_key),
                 "Precommit verification failed"
@@ -151,11 +151,11 @@ impl ValidateProof for AnchoredBlockHeaderProof {
             .validate(*proof_entry.1, self.height.0)
             .map_err(|e| format_err!("An error occurred {:?}", e))?;
         ensure!(values.len() == 1, "Invalid values count");
-        Ok((values[0].0, values[0].1.clone()))
+        Ok((values[0].0, *values[0].1))
     }
 }
 
-// Test normal api usage.
+// Test normal API usage.
 #[test]
 fn test_api_public_common() {
     let mut testkit = AnchoringTestKit::default();
@@ -180,7 +180,7 @@ fn test_api_public_common() {
     }
 }
 
-// Tries to get lect from nonexistent validator id.
+// Tries to get LECT from nonexistent validator id.
 // result: Panic
 #[test]
 #[should_panic(expected = "Unknown validator id")]
@@ -190,7 +190,7 @@ fn test_api_public_get_lect_nonexistent_validator() {
     api.current_lect_of_validator(100);
 }
 
-// Tries to get current lect when there is no agreed [or consensus] lect.
+// Tries to get current LECT when there is no agreed [or consensus] LECT.
 // result: Returns null
 #[test]
 fn test_api_public_get_lect_unavailable() {
@@ -315,7 +315,7 @@ fn test_api_anchoring_observer_normal() {
     // Checks that closest anchoring transaction for height 1 is
     // `second_anchored_tx` that anchors the block at height 10.
     assert_eq!(api.nearest_lect(1), Some(second_anchored_tx));
-    // Checks that there are no anchoring transactions for heights that greater than 10
+    // Checks that there are no anchoring transactions for heights that are greater than 10.
     assert_eq!(api.nearest_lect(11), None);
 }
 

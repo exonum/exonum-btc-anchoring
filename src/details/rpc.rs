@@ -43,7 +43,7 @@ pub struct AnchoringRpcConfig {
     pub password: Option<String>,
 }
 
-/// Client for the `Bitcoind` rpc api, for more information visit
+/// Client for the `Bitcoind` RPC API, for more information visit
 /// this [site](https://en.bitcoin.it/wiki/Original_Bitcoin_client/API_calls_list).
 #[derive(Debug)]
 pub struct AnchoringRpc(pub RpcClient);

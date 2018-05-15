@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Anchoring rest api implementation.
+//! Anchoring rest API implementation.
 
 use iron::prelude::*;
 use router::Router;
@@ -34,7 +34,7 @@ pub use details::btc::payload::Payload;
 
 mod error;
 
-/// Public api implementation.
+/// Public API implementation.
 #[derive(Debug, Clone)]
 pub struct PublicApi {
     /// Exonum blockchain instance.
@@ -68,7 +68,7 @@ pub struct AnchoredBlockHeaderProof {
     pub to_table: MapProof<Hash, Hash>,
     /// Proof for the specific header in this table.
     pub to_block_header: ListProof<Hash>,
-    /// An actual Exonum blockchain height.
+    /// Actual Exonum blockchain height.
     pub height: Height,
 }
 

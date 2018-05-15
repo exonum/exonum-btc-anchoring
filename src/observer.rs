@@ -36,7 +36,7 @@ pub type Height = u64;
 pub struct AnchoringObserverConfig {
     /// An interval of anchoring chain checks.
     pub check_interval: Milliseconds,
-    /// If this option enabled observer thread will launch with in the public api handler.
+    /// If this option enabled observer thread will launch with in the public API handler.
     pub enabled: bool,
 }
 
