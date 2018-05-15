@@ -22,6 +22,8 @@ extern crate exonum;
 extern crate failure;
 #[macro_use]
 extern crate serde_derive;
+#[macro_use]
+extern crate serde_json;
 
 extern crate bitcoin;
 extern crate btc_transaction_utils;
@@ -35,3 +37,4 @@ pub use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 pub mod blockchain;
 pub mod btc;
 pub mod service;
+pub mod config;
