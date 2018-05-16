@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::{Schema};
+use exonum::blockchain::Schema;
 use exonum::crypto::{Hash, PublicKey};
-use exonum::storage::{ProofListIndex, ProofMapIndex, Snapshot, Fork};
+use exonum::storage::{Fork, ProofListIndex, ProofMapIndex, Snapshot};
 
 use super::data_layout::*;
 use btc::Transaction;
@@ -86,7 +86,9 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
         ProofListIndex::new(TRANSACTIONS_CHAIN, &mut self.snapshot)
     }
 
-    pub fn spent_funding_transactions_mut(&mut self) -> ProofMapIndex<&mut Fork, Hash, Transaction> {
+    pub fn spent_funding_transactions_mut(
+        &mut self,
+    ) -> ProofMapIndex<&mut Fork, Hash, Transaction> {
         ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, &mut self.snapshot)
     }
 

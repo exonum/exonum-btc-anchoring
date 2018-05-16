@@ -22,8 +22,8 @@ pub use self::transaction::Transaction;
 mod macros;
 
 pub mod payload;
-pub mod transaction;
 pub mod rpc;
+pub mod transaction;
 
 /// A Bitcoin ECDSA private key.
 #[derive(Clone, From, Into, PartialEq)]

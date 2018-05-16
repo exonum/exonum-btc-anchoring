@@ -43,7 +43,7 @@ impl GlobalConfig {
         keys: impl IntoIterator<Item = PublicKey>,
     ) -> Result<GlobalConfig, RedeemScriptError> {
         // TODO implement blank constructor.
-        let mut builder = RedeemScriptBuilder::with_quorum(0); 
+        let mut builder = RedeemScriptBuilder::with_quorum(0);
         // Collects keys and computes total count.
         let total = keys.into_iter().fold(0, |total, public_key| {
             builder.public_key(public_key.0);
