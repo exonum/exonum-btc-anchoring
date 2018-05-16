@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::{Schema, ValidatorKeys};
+use exonum::blockchain::{Schema};
 use exonum::crypto::{Hash, PublicKey};
-use exonum::storage::{ProofListIndex, ProofMapIndex, Snapshot};
+use exonum::storage::{ProofListIndex, ProofMapIndex, Snapshot, Fork};
 
 use super::data_layout::*;
 use btc::Transaction;
@@ -65,11 +65,35 @@ impl<T: AsRef<Snapshot>> AnchoringSchema<T> {
 
     /// Returns hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
-        let table_hashes = vec![
+        let mut table_hashes = vec![
             self.anchoring_transactions_chain().merkle_root(),
             self.spent_funding_transactions().merkle_root(),
         ];
-        // TODO extend by the transaction_signatures
+
+        let transaction_signatures = Schema::new(&self.snapshot)
+            .actual_configuration()
+            .validator_keys
+            .into_iter()
+            .map(|keys| self.transaction_signatures(&keys.service_key).merkle_root());
+        table_hashes.extend(transaction_signatures);
+
         table_hashes
+    }
+}
+
+impl<'a> AnchoringSchema<&'a mut Fork> {
+    pub fn anchoring_transactions_chain_mut(&mut self) -> ProofListIndex<&mut Fork, Transaction> {
+        ProofListIndex::new(TRANSACTIONS_CHAIN, &mut self.snapshot)
+    }
+
+    pub fn spent_funding_transactions_mut(&mut self) -> ProofMapIndex<&mut Fork, Hash, Transaction> {
+        ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, &mut self.snapshot)
+    }
+
+    pub fn transaction_signatures_mut(
+        &mut self,
+        validator: &PublicKey,
+    ) -> ProofMapIndex<&mut Fork, TxInputId, InputSignatures> {
+        ProofMapIndex::new_in_family(TRANSACTION_SIGNATURES, validator, &mut self.snapshot)
     }
 }

@@ -19,6 +19,7 @@ use exonum::messages::Message;
 use exonum::storage::Fork;
 
 use btc_transaction_utils::InputSignatureRef;
+use secp256k1::{Secp256k1, self};
 
 use super::data_layout::TxInputId;
 use ANCHORING_SERVICE_ID;
@@ -51,14 +52,15 @@ impl Signature {
         }
     }
 
-    pub fn input_signature(&self) -> Option<InputSignatureRef> {
-        InputSignatureRef::from_bytes(self.content())
+    pub fn input_signature(&self, context: &Secp256k1) -> Result<InputSignatureRef, secp256k1::Error> {
+        InputSignatureRef::from_bytes(context, self.content())
     }
 }
 
 impl Transaction for Signature {
     fn verify(&self) -> bool {
-        self.input_signature().is_some() && self.verify_signature(self.from())
+        let context = Secp256k1::without_caps();
+        self.input_signature(&context).is_ok() && self.verify_signature(self.from())
     }
 
     fn execute(&self, _fork: &mut Fork) -> ExecutionResult {

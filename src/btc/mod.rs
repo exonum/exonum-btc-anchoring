@@ -23,6 +23,7 @@ mod macros;
 
 pub mod payload;
 pub mod transaction;
+pub mod rpc;
 
 /// A Bitcoin ECDSA private key.
 #[derive(Clone, From, Into, PartialEq)]
@@ -31,8 +32,6 @@ pub struct Privkey(pub privkey::Privkey);
 /// A Secp256k1 public key, used for verification of signatures.
 #[derive(Debug, Clone, From, Into, PartialEq)]
 pub struct PublicKey(pub secp256k1::PublicKey);
-
-
 
 impl ToString for Privkey {
     fn to_string(&self) -> String {
