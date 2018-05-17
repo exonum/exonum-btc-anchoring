@@ -8,16 +8,24 @@
 // limitations under the License.
 
 use exonum::crypto::Hash;
+use exonum::helpers::Height;
 
 use bitcoin::blockdata::script::Script;
-use bitcoin::blockdata::transaction::{self, TxOut};
+use bitcoin::blockdata::transaction::{self, TxIn, TxOut};
+use btc_transaction_utils::multisig::RedeemScript;
 
-use super::Payload;
+use super::{Payload, PayloadBuilder};
 
 #[derive(Debug, Clone, From, Into, PartialEq)]
 pub struct Transaction(pub transaction::Transaction);
 
 impl_wrapper_for_bitcoin_type! { Transaction }
+
+impl AsRef<transaction::Transaction> for Transaction {
+    fn as_ref(&self) -> &transaction::Transaction {
+        &self.0
+    }
+}
 
 impl Transaction {
     pub fn id(&self) -> Hash {
@@ -27,18 +35,139 @@ impl Transaction {
         Hash::new(bytes)
     }
 
-    pub fn payload(&self) -> Option<Payload> {
-        let out = self.0.output.get(1)?;
-        Payload::from_script(&out.script_pubkey)
-    }
-
-    pub fn find_out<S: AsRef<Script>>(&self, script_pubkey: S) -> Option<(usize, &TxOut)> {
-        let script_pubkey = script_pubkey.as_ref();
+    pub fn find_out(&self, script_pubkey: &Script) -> Option<(usize, &TxOut)> {
         self.0
             .output
             .iter()
             .enumerate()
             .find(|out| &out.1.script_pubkey == script_pubkey)
+    }
+
+    pub fn anchoring_payload(&self) -> Option<Payload> {
+        let out = self.0.output.get(1)?;
+        Payload::from_script(&out.script_pubkey)
+    }
+
+    pub fn anchoring_metadata(&self) -> Option<(&Script, Payload)> {
+        let payload = self.anchoring_payload()?;
+        let script_pubkey = self.0.output.get(0).map(|out| &out.script_pubkey)?;
+        Some((script_pubkey, payload))
+    }
+}
+
+#[derive(Debug)]
+pub struct AnchoringTransactionBuilder {
+    script_pubkey: Script,
+    prev_tx: Option<Transaction>,
+    additional_funds: Vec<(usize, Transaction)>,
+    fee: Option<u64>,
+    payload: Option<(Height, Hash)>,
+}
+
+#[derive(Debug, Copy, Clone, PartialEq, Display, Fail)]
+pub enum BuilderError {
+    #[display(fmt = "Insufficient funds to construct a new anchoring transaction, total fee: {}, total balance: {}",
+              _0, _1)]
+    InsufficientFunds { total_fee: u64, balance: u64 },
+}
+
+impl AnchoringTransactionBuilder {
+    pub fn new(redeem_script: RedeemScript) -> AnchoringTransactionBuilder {
+        AnchoringTransactionBuilder {
+            script_pubkey: redeem_script.as_ref().to_v0_p2wsh(),
+            prev_tx: None,
+            additional_funds: Vec::default(),
+            fee: None,
+            payload: None,
+        }
+    }
+
+    pub fn prev_tx(&mut self, tx: Transaction) -> &mut Self {
+        assert_eq!(
+            tx.anchoring_metadata().unwrap().0,
+            &self.script_pubkey,
+            "Output address in a previous anchoring transaction is not suitable."
+        );
+
+        self.prev_tx = Some(tx);
+        self
+    }
+
+    pub fn fee(&mut self, fee: u64) -> &mut Self {
+        self.fee = Some(fee);
+        self
+    }
+
+    pub fn payload(&mut self, block_height: Height, block_hash: Hash) -> &mut Self {
+        self.payload = Some((block_height, block_hash));
+        self
+    }
+
+    pub fn additional_funds(&mut self, tx: Transaction) -> &mut Self {
+        let out = tx.find_out(&self.script_pubkey)
+            .expect("Funding transaction doesn't contains outputs to the anchoring address.")
+            .0;
+
+        self.additional_funds.push((out, tx));
+        self
+    }
+
+    pub fn create(mut self) -> Result<Transaction, BuilderError> {
+        // Collects inputs.
+        let (input, balance) = {
+            let mut balance = 0;
+            let input = self.prev_tx
+                .into_iter()
+                .map(|tx| (0, tx))
+                .chain(self.additional_funds.into_iter())
+                .map(|(out_index, tx)| {
+                    let out = &tx.0.output[out_index];
+                    balance += out.value;
+                    TxIn {
+                        prev_hash: tx.0.txid(),
+                        prev_index: out_index as u32,
+                        script_sig: Script::default(),
+                        sequence: 0xFFFFFFFF,
+                        witness: Vec::default(),
+                    }
+                })
+                .collect::<Vec<_>>();
+            (input, balance)
+        };
+        // Computes payload script.
+        let (block_height, block_hash) = self.payload.take().expect("Payload isn't set.");
+        let payload_script = PayloadBuilder::new()
+            .block_hash(block_hash)
+            .block_height(block_height)
+            .into_script();
+        // Creates unsigned transaction.
+        let mut transaction = Transaction::from(transaction::Transaction {
+            version: 2,
+            lock_time: 0,
+            input,
+            output: vec![
+                TxOut {
+                    value: balance,
+                    script_pubkey: self.script_pubkey,
+                },
+                TxOut {
+                    value: 0,
+                    script_pubkey: payload_script,
+                },
+            ],
+        });
+        // Computes a total fee value.
+        let size_in_bytes = {
+            let bytes = ::bitcoin::network::serialize::serialize(&transaction.0).unwrap();
+            bytes.len() as u64
+        };
+        let total_fee = self.fee.expect("Fee per byte isn't set.") * size_in_bytes;
+        if total_fee > balance {
+            return Err(BuilderError::InsufficientFunds { total_fee, balance });
+        }
+        // Sets the corresponding fee.
+        transaction.0.output[0].value -= total_fee;
+        Ok(transaction)
     }
 }
 
@@ -52,7 +181,7 @@ mod tests {
     use bitcoin::network::constants::Network;
     use bitcoin::util::address::Address;
 
-    use super::Transaction;
+    use super::{AnchoringTransactionBuilder, Transaction};
 
     #[test]
     fn test_transaction_conversions() {
@@ -85,7 +214,7 @@ mod tests {
     }
 
     #[test]
-    fn test_anchoring_tx_payload() {
+    fn test_anchoring_tx_metadata() {
         let tx: Transaction = Transaction::from_hex(
             "01000000000101348ead2317da8c6ae12305af07e33b8c0320c9319f21007a704e44f32e7a75500000000\
              000ffffffff0250ec0e00000000002200200f2602a87bbdb59fdf4babfffd568ef39a85cf2f08858c8847\
@@ -100,7 +229,7 @@ mod tests {
              a5d81129928d6d5b6dcb7b57c8991b21033ea315ab975c6424740c305db3f07b62b1121e27d3052b9a30d\
              b56a8b504713c53ae00000000",
         ).unwrap();
-        let payload = tx.payload().unwrap();
+        let (script_pubkey, payload) = tx.anchoring_metadata().unwrap();
 
         assert_eq!(payload.block_height, Height(21000));
         assert_eq!(
@@ -111,8 +240,28 @@ mod tests {
         );
         assert_eq!(payload.prev_tx_chain, None);
         assert_eq!(
-            Address::p2wsh(&tx.0.output[0].script_pubkey, Network::Testnet).to_string(),
+            Address::p2wsh(script_pubkey, Network::Testnet).to_string(),
             "tb1qgjg3s5u93cuvf5y8pc2aw259gf7spj7x3a4k09lc6a4gtnhg8l0su4axp4"
         );
+    }
+
+    #[test]
+    fn test_anchoring_transaction_builder_simple() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn test_anchoring_transaction_builder_funds() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn test_anchoring_transaction_builder_incorrect_prev_tx() {
+        unimplemented!();
+    }
+
+    #[test]
+    fn test_anchoring_transaction_builder_incorrect_funds() {
+        unimplemented!();
     }
 }

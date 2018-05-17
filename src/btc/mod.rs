@@ -15,8 +15,8 @@
 use bitcoin::util::privkey;
 use secp256k1;
 
-pub use self::payload::Payload;
-pub use self::transaction::Transaction;
+pub use self::payload::{Payload, PayloadBuilder};
+pub use self::transaction::{AnchoringTransactionBuilder, Transaction};
 
 #[macro_use]
 mod macros;

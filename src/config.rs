@@ -31,7 +31,7 @@ pub struct GlobalConfig {
     pub redeem_script: RedeemScript,
     /// Interval in blocks between anchored blocks.
     pub anchoring_interval: u64,
-    /// Fee per KB in satoshi.
+    /// Fee per byte in satoshi.
     pub transaction_fee: u64,
     /// Funding transaction.
     pub funding_transaction: Option<Transaction>,
@@ -49,7 +49,7 @@ impl GlobalConfig {
             builder.public_key(public_key.0);
             total + 1
         });
-        // finalizes script.
+        // Finalizes script.
         let redeem_script = builder.quorum(byzantine_quorum(total)).to_script()?;
 
         Ok(GlobalConfig {
