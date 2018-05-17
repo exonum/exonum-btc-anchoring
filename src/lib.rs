@@ -34,15 +34,18 @@ extern crate serde_json;
 extern crate bitcoin;
 extern crate btc_transaction_utils;
 extern crate byteorder;
+extern crate exonum_bitcoinrpc as bitcoin_rpc;
 extern crate secp256k1;
 extern crate serde;
 extern crate serde_str;
-extern crate exonum_bitcoinrpc as bitcoin_rpc;
+
+// #[cfg(test)]
+extern crate toml;
 
 pub use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 
 pub mod blockchain;
 pub mod btc;
 pub mod config;
-pub mod service;
 pub mod rpc;
+pub mod service;

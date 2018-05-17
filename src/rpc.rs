@@ -33,7 +33,8 @@ pub struct TransactionInfo {
 /// Information provider about the Bitcoin network.
 pub trait BtcRelay: Send + Sync {
     /// Sends funds to the given address.
-    fn send_to_address(&self, addr: &Address, satoshis: u64) -> Result<Transaction, failure::Error>;
+    fn send_to_address(&self, addr: &Address, satoshis: u64)
+        -> Result<Transaction, failure::Error>;
     /// Retrieves information about transaction with the given id.
     fn transaction_info(&self, id: &Hash) -> Result<Option<TransactionInfo>, failure::Error>;
     /// Sends raw transaction to the bitcoin network.
@@ -81,7 +82,11 @@ impl From<BitcoinRpcClient> for Box<BtcRelay> {
 }
 
 impl BtcRelay for BitcoinRpcClient {
-    fn send_to_address(&self, addr: &Address, satoshis: u64) -> Result<Transaction, failure::Error> {
+    fn send_to_address(
+        &self,
+        addr: &Address,
+        satoshis: u64,
+    ) -> Result<Transaction, failure::Error> {
         let amount = satoshis as f64 / SATOSHI_DIVISOR;
         let txid = self.0
             .sendtoaddress(&addr.to_string(), &amount.to_string())?;

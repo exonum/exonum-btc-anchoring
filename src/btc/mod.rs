@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use bitcoin::util::address;
 use bitcoin::util::privkey;
 use secp256k1;
 
@@ -25,12 +26,16 @@ pub mod payload;
 pub mod transaction;
 
 /// A Bitcoin ECDSA private key.
-#[derive(Clone, From, Into, PartialEq)]
+#[derive(Clone, From, Into, PartialEq, Eq)]
 pub struct Privkey(pub privkey::Privkey);
 
 /// A Secp256k1 public key, used for verification of signatures.
-#[derive(Debug, Clone, From, Into, PartialEq)]
+#[derive(Debug, Clone, From, Into, PartialEq, Eq)]
 pub struct PublicKey(pub secp256k1::PublicKey);
+
+/// A Bitcoin address
+#[derive(Debug, Clone, From, Into, PartialEq)]
+pub struct Address(pub address::Address);
 
 impl ToString for Privkey {
     fn to_string(&self) -> String {
@@ -75,7 +80,45 @@ impl ::exonum::encoding::serialize::ToHex for PublicKey {
     }
 }
 
-impl_serde_str! { Privkey }
+impl ::std::str::FromStr for Address {
+    type Err = <address::Address as ::std::str::FromStr>::Err;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let inner = address::Address::from_str(s)?;
+        Ok(Address(inner))
+    }
+}
+
+impl ::std::fmt::Display for Address {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        write!(f, "{}", self.0.to_string())
+    }
+}
+
+impl Eq for Address {}
+
+impl PartialOrd for Address {
+    fn partial_cmp(&self, other: &Address) -> Option<::std::cmp::Ordering> {
+        Some(self.to_string().cmp(&other.to_string()))
+    }
+}
+
+impl Ord for Address {
+    fn cmp(&self, other: &Address) -> ::std::cmp::Ordering {
+        // TODO: Add `Ord` to the underlying crates.
+        self.to_string().cmp(&other.to_string())
+    }
+}
+
+impl ::std::hash::Hash for Address {
+    fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
+        // TODO: Add `Hash` to the underlying crates.
+        self.to_string().hash(state)
+    }
+}
 
 impl_string_conversions_for_hex! { PublicKey }
+
+impl_serde_str! { Privkey }
 impl_serde_str! { PublicKey }
+impl_serde_str! { Address }
