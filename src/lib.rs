@@ -37,6 +37,7 @@ extern crate byteorder;
 extern crate secp256k1;
 extern crate serde;
 extern crate serde_str;
+extern crate exonum_bitcoinrpc as bitcoin_rpc;
 
 pub use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 
@@ -44,3 +45,4 @@ pub mod blockchain;
 pub mod btc;
 pub mod config;
 pub mod service;
+pub mod rpc;

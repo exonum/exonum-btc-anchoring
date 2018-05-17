@@ -66,7 +66,8 @@ pub struct AnchoringTransactionBuilder {
 
 #[derive(Debug, Copy, Clone, PartialEq, Display, Fail)]
 pub enum BuilderError {
-    #[display(fmt = "Insufficient funds to construct a new anchoring transaction, total fee: {}, total balance: {}",
+    #[display(fmt = "Insufficient funds to construct a new anchoring transaction,\
+                     total fee is {}, total balance is {}",
               _0, _1)]
     InsufficientFunds { total_fee: u64, balance: u64 },
 }

@@ -22,7 +22,6 @@ pub use self::transaction::{AnchoringTransactionBuilder, Transaction};
 mod macros;
 
 pub mod payload;
-pub mod rpc;
 pub mod transaction;
 
 /// A Bitcoin ECDSA private key.

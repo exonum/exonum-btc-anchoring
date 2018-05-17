@@ -20,6 +20,12 @@ use btc_transaction_utils::multisig::{RedeemScript, RedeemScriptBuilder, RedeemS
 use btc_transaction_utils::p2wsh;
 
 use btc::{PublicKey, Transaction};
+use rpc::BitcoinRpcConfig;
+
+/// Returns sufficient number of keys for the given validators number.
+pub fn byzantine_quorum(total: usize) -> usize {
+    ::exonum::node::state::State::byzantine_majority_count(total)
+}
 
 /// Consensus parameters in the BTC anchoring.
 #[derive(Debug, Serialize, Deserialize, PartialEq)]
@@ -66,9 +72,13 @@ impl GlobalConfig {
     }
 }
 
-/// Returns sufficient number of keys for the given validators number.
-pub fn byzantine_quorum(total: usize) -> usize {
-    ::exonum::node::state::State::byzantine_majority_count(total)
+/// Local part of anchoring service configuration stored on a local machine.
+#[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]
+pub struct LocalConfig {
+    /// Rpc configuration. Must exist if node is validator.
+    /// Otherwise node can only check `lect` payload without any checks with `bitcoind`.
+    pub rpc: Option<BitcoinRpcConfig>,
+
 }
 
 #[derive(Serialize, Deserialize)]
