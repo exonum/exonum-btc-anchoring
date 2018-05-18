@@ -35,6 +35,7 @@ extern crate bitcoin;
 extern crate btc_transaction_utils;
 extern crate byteorder;
 extern crate exonum_bitcoinrpc as bitcoin_rpc;
+extern crate rand;
 extern crate secp256k1;
 extern crate serde;
 extern crate serde_str;

@@ -15,8 +15,10 @@
 pub use self::payload::{Payload, PayloadBuilder};
 pub use self::transaction::{AnchoringTransactionBuilder, Transaction};
 
+use bitcoin::network::constants::Network;
 use bitcoin::util::address;
 use bitcoin::util::privkey;
+use rand::{self, Rng};
 use secp256k1;
 
 #[macro_use]
@@ -30,7 +32,7 @@ pub mod transaction;
 pub struct Privkey(pub privkey::Privkey);
 
 /// A Secp256k1 public key, used for verification of signatures.
-#[derive(Debug, Clone, From, Into, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct PublicKey(pub secp256k1::PublicKey);
 
 /// A Bitcoin address
@@ -122,3 +124,21 @@ impl_string_conversions_for_hex! { PublicKey }
 impl_serde_str! { Privkey }
 impl_serde_str! { PublicKey }
 impl_serde_str! { Address }
+
+/// Generates public and secret keys for Bitcoin node
+/// using given random number generator.
+pub fn gen_keypair_with_rng<R: Rng>(network: Network, rng: &mut R) -> (PublicKey, Privkey) {
+    let context = secp256k1::Secp256k1::new();
+    let sk = secp256k1::key::SecretKey::new(&context, rng);
+
+    let priv_key = privkey::Privkey::from_secret_key(sk, true, network);
+    let pub_key = secp256k1::PublicKey::from_secret_key(&context, &sk).unwrap();
+    (pub_key.into(), priv_key.into())
+}
+
+/// Same as [`gen_btc_keypair_with_rng`](fn.gen_btc_keypair_with_rng.html)
+/// but it uses default random number generator.
+pub fn gen_keypair(network: Network) -> (PublicKey, Privkey) {
+    let mut rng = rand::thread_rng();
+    gen_keypair_with_rng(network, &mut rng)
+}

@@ -144,12 +144,10 @@ where
     }
 
     fn input_value(&self, context: &Context) -> Result<Self::OutputType, failure::Error> {
-        Ok(
-            context
-                .arg::<Self::ParsedType>(self.name)
-                .ok()
-                .or(self.default.clone()),
-        )
+        Ok(context
+            .arg::<Self::ParsedType>(self.name)
+            .ok()
+            .or(self.default.clone()))
     }
 
     fn output_value(

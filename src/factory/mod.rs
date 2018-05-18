@@ -17,6 +17,7 @@ use exonum::helpers::fabric::{self, keys, Argument, CommandExtension, CommandNam
                               ServiceFactory};
 use exonum::node::NodeConfig;
 
+use bitcoin::network::constants::Network;
 use failure;
 use serde::Serialize;
 use serde::de::DeserializeOwned;
@@ -27,15 +28,25 @@ use std::io;
 use std::str::FromStr;
 
 use self::args::{NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
+use btc::gen_keypair;
 use rpc::BitcoinRpcConfig;
 
 mod args;
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum BtcNetwork {
     Bitcoin,
     Testnet,
+}
+
+impl From<BtcNetwork> for Network {
+    fn from(n: BtcNetwork) -> Network {
+        match n {
+            BtcNetwork::Bitcoin => Network::Bitcoin,
+            BtcNetwork::Testnet => Network::Testnet,
+        }
+    }
 }
 
 impl FromStr for BtcNetwork {
@@ -145,7 +156,33 @@ impl CommandExtension for GenerateNodeConfig {
         let mut services_secret_configs: BTreeMap<String, toml::Value> = context
             .get(keys::SERVICES_SECRET_CONFIGS)
             .unwrap_or_default();
+        let mut services_public_configs: BTreeMap<String, toml::Value> = context
+            .get(keys::SERVICES_PUBLIC_CONFIGS)
+            .unwrap_or_default();
+        let common_configs = context.get(keys::COMMON_CONFIG).unwrap_or_default();
 
+        // Inserts bitcoin keypair.
+        let network = BTC_ANCHORING_NETWORK.output_value(&common_configs.services_config)?;
+        let keypair = gen_keypair(network.into());
+
+        services_public_configs.insert(
+            "btc_anchoring_public_key".to_owned(),
+            toml::Value::try_from(keypair.0)?,
+        );
+        services_secret_configs.extend(
+            vec![
+                (
+                    "btc_anchoring_public_key".to_owned(),
+                    toml::Value::try_from(keypair.0)?,
+                ),
+                (
+                    "btc_anchoring_secret_key".to_owned(),
+                    toml::Value::try_from(keypair.1)?,
+                ),
+            ].into_iter(),
+        );
+
+        // Inserts rpc host.
         if let Some(host) = BTC_ANCHORING_RPC_HOST.input_value(&context)? {
             let rpc_config = BitcoinRpcConfig {
                 host,
@@ -157,8 +194,9 @@ impl CommandExtension for GenerateNodeConfig {
                 toml::Value::try_from(rpc_config)?,
             );
         };
-
+        // Push changes to the context.
         context.set(keys::SERVICES_SECRET_CONFIGS, services_secret_configs);
+        context.set(keys::SERVICES_PUBLIC_CONFIGS, services_public_configs);
         Ok(context)
     }
 }
