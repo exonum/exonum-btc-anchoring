@@ -44,14 +44,6 @@ pub struct GlobalConfig {
     pub funding_transaction: Option<Transaction>,
 }
 
-#[derive(Serialize, Deserialize)]
-#[serde(remote = "Network")]
-#[serde(rename_all = "snake_case")]
-enum NetworkRef {
-    Bitcoin,
-    Testnet,
-}
-
 impl GlobalConfig {
     pub fn new(
         network: Network,
@@ -82,7 +74,7 @@ impl GlobalConfig {
 }
 
 /// Local part of anchoring service configuration stored on a local machine.
-#[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
 pub struct LocalConfig {
     /// Rpc configuration. Must exist if node is validator.
     /// Otherwise node can only check `lect` payload without any checks with `bitcoind`.
@@ -90,6 +82,23 @@ pub struct LocalConfig {
     /// Set of private keys for each anchoring address.
     #[serde(with = "flatten_keypairs")]
     pub private_keys: HashMap<Address, Privkey>,
+}
+
+/// BTC anchoring configuration.
+#[derive(Debug, Serialize, Deserialize, PartialEq)]
+pub struct Config {
+    /// Public part of the configuration stored in the blockchain.
+    pub global: GlobalConfig,
+    /// Local part of the configuration stored at the local machine.
+    pub local: LocalConfig,
+}
+
+#[derive(Serialize, Deserialize)]
+#[serde(remote = "Network")]
+#[serde(rename_all = "snake_case")]
+enum NetworkRef {
+    Bitcoin,
+    Testnet,
 }
 
 mod flatten_keypairs {

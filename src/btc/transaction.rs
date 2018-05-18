@@ -182,7 +182,7 @@ mod tests {
     use bitcoin::network::constants::Network;
     use bitcoin::util::address::Address;
 
-    use super::{AnchoringTransactionBuilder, Transaction};
+    use super::Transaction;
 
     #[test]
     fn test_transaction_conversions() {

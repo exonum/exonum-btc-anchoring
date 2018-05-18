@@ -38,14 +38,14 @@ define_names!(
 
 /// Information schema for `exonum-btc-anchoring`.
 #[derive(Debug)]
-pub struct AnchoringSchema<T> {
+pub struct BtcAnchoringSchema<T> {
     snapshot: T,
 }
 
-impl<T: AsRef<Snapshot>> AnchoringSchema<T> {
+impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
     /// Constructs schema for the given database `snapshot`.
     pub fn new(snapshot: T) -> Self {
-        AnchoringSchema { snapshot }
+        BtcAnchoringSchema { snapshot }
     }
 
     pub fn anchoring_transactions_chain(&self) -> ProofListIndex<&T, Transaction> {
@@ -81,7 +81,7 @@ impl<T: AsRef<Snapshot>> AnchoringSchema<T> {
     }
 }
 
-impl<'a> AnchoringSchema<&'a mut Fork> {
+impl<'a> BtcAnchoringSchema<&'a mut Fork> {
     pub fn anchoring_transactions_chain_mut(&mut self) -> ProofListIndex<&mut Fork, Transaction> {
         ProofListIndex::new(TRANSACTIONS_CHAIN, &mut self.snapshot)
     }

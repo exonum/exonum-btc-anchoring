@@ -38,14 +38,14 @@ extern crate exonum_bitcoinrpc as bitcoin_rpc;
 extern crate secp256k1;
 extern crate serde;
 extern crate serde_str;
-
-// #[cfg(test)]
 extern crate toml;
 
-pub use service::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
+pub use factory::BtcAnchoringFactory as ServiceFactory;
+pub use service::{BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME};
 
 pub mod blockchain;
 pub mod btc;
 pub mod config;
+pub mod factory;
 pub mod rpc;
 pub mod service;

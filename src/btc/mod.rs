@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+pub use self::payload::{Payload, PayloadBuilder};
+pub use self::transaction::{AnchoringTransactionBuilder, Transaction};
+
 use bitcoin::util::address;
 use bitcoin::util::privkey;
 use secp256k1;
-
-pub use self::payload::{Payload, PayloadBuilder};
-pub use self::transaction::{AnchoringTransactionBuilder, Transaction};
 
 #[macro_use]
 mod macros;

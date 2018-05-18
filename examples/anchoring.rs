@@ -12,9 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use self::schema::BtcAnchoringSchema;
-pub use self::transactions::Transactions;
+extern crate exonum;
+extern crate exonum_btc_anchoring as anchoring;
+extern crate exonum_configuration as configuration;
 
-pub mod data_layout;
-pub mod schema;
-pub mod transactions;
+use exonum::helpers;
+use exonum::helpers::fabric::NodeBuilder;
+
+fn main() {
+    exonum::crypto::init();
+    helpers::init_logger().unwrap();
+    let node = NodeBuilder::new()
+        .with_service(Box::new(configuration::ServiceFactory))
+        .with_service(Box::new(anchoring::ServiceFactory));
+    node.run();
+}

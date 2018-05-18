@@ -22,11 +22,11 @@ use btc_transaction_utils::InputSignatureRef;
 use secp256k1::{self, Secp256k1};
 
 use super::data_layout::TxInputId;
-use ANCHORING_SERVICE_ID;
+use BTC_ANCHORING_SERVICE_ID;
 
 transactions! {
     pub Transactions {
-        const SERVICE_ID = ANCHORING_SERVICE_ID;
+        const SERVICE_ID = BTC_ANCHORING_SERVICE_ID;
 
         /// Exonum message with the signature for the new anchoring transaction.
         struct Signature {
