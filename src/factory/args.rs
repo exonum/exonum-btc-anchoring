@@ -12,10 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::Service;
-use exonum::helpers::fabric::{self, keys, Argument, CommandExtension, CommandName, Context,
-                              ServiceFactory};
-use exonum::node::NodeConfig;
+use exonum::helpers::fabric::{Argument, Context};
 
 use failure;
 use serde::Serialize;
@@ -23,7 +20,6 @@ use serde::de::DeserializeOwned;
 use toml;
 
 use std::collections::BTreeMap;
-use std::io;
 use std::str::FromStr;
 
 pub trait TypedArgument {

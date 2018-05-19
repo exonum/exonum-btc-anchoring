@@ -42,7 +42,7 @@ extern crate serde_str;
 extern crate toml;
 
 pub use factory::BtcAnchoringFactory as ServiceFactory;
-pub use service::{BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME};
+pub use service::{BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME};
 
 pub mod blockchain;
 pub mod btc;

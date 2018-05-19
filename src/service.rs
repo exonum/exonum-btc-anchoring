@@ -19,9 +19,12 @@ use exonum::messages::RawMessage;
 use exonum::storage::{Fork, Snapshot};
 
 use blockchain::{BtcAnchoringSchema, Transactions};
+use btc::{Address, Privkey};
 use config::GlobalConfig;
 use rpc::BtcRelay;
 use serde_json;
+
+use std::collections::HashMap;
 
 /// Anchoring service id.
 pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;
@@ -30,6 +33,7 @@ pub const BTC_ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
 
 pub struct BtcAnchoringService {
     pub global_config: GlobalConfig,
+    pub private_keys: HashMap<Address, Privkey>,
     pub btc_relay: Option<Box<BtcRelay>>,
 }
 

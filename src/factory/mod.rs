@@ -13,25 +13,55 @@
 // limitations under the License.
 
 use exonum::blockchain::Service;
+use exonum::crypto::Hash;
 use exonum::helpers::fabric::{self, keys, Argument, CommandExtension, CommandName, Context,
                               ServiceFactory};
 use exonum::node::NodeConfig;
 
 use bitcoin::network::constants::Network;
 use failure;
-use serde::Serialize;
-use serde::de::DeserializeOwned;
 use toml;
+use {BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
 
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, HashMap};
 use std::io;
 use std::str::FromStr;
 
 use self::args::{NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
-use btc::gen_keypair;
-use rpc::BitcoinRpcConfig;
+use btc::{gen_keypair, Privkey, PublicKey};
+use config::{Config, GlobalConfig, LocalConfig};
+use rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
 
 mod args;
+
+trait Transpose {
+    type Result;
+    fn transpose(self) -> Self::Result;
+}
+
+impl<T, E> Transpose for Option<Result<T, E>> {
+    type Result = Result<Option<T>, E>;
+    fn transpose(self) -> Self::Result {
+        if let Some(a) = self {
+            match a {
+                Ok(o) => Ok(Some(o)),
+                Err(e) => Err(e),
+            }
+        } else {
+            Ok(None)
+        }
+    }
+}
+
+impl<T, E> Transpose for Result<Option<T>, E> {
+    type Result = Option<Result<T, E>>;
+    fn transpose(self) -> Self::Result {
+        match self {
+            Ok(o) => o.map(|o| Ok(o)),
+            Err(e) => Some(Err(e)),
+        }
+    }
+}
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
@@ -88,6 +118,14 @@ const BTC_ANCHORING_FEE: NamedArgumentRequired<u64> = NamedArgumentRequired {
     default: Some(100),
 };
 
+const BTC_ANCHORING_UTXO_CONFIRMATIONS: NamedArgumentRequired<u64> = NamedArgumentRequired {
+    name: "btc_anchoring_utxo_confirmations",
+    short_key: None,
+    long_key: "btc-anchoring-utxo-confirmations",
+    help: "The minimum number of confirmations for funding transactions.",
+    default: Some(2),
+};
+
 struct GenerateCommonConfig;
 
 impl CommandExtension for GenerateCommonConfig {
@@ -96,6 +134,7 @@ impl CommandExtension for GenerateCommonConfig {
             BTC_ANCHORING_NETWORK.to_argument(),
             BTC_ANCHORING_INTERVAL.to_argument(),
             BTC_ANCHORING_FEE.to_argument(),
+            BTC_ANCHORING_UTXO_CONFIRMATIONS.to_argument(),
         ]
     }
 
@@ -109,6 +148,7 @@ impl CommandExtension for GenerateCommonConfig {
                 BTC_ANCHORING_NETWORK.input_value_to_toml(&context)?,
                 BTC_ANCHORING_INTERVAL.input_value_to_toml(&context)?,
                 BTC_ANCHORING_FEE.input_value_to_toml(&context)?,
+                BTC_ANCHORING_UTXO_CONFIRMATIONS.input_value_to_toml(&context)?,
             ].into_iter(),
         );
 
@@ -119,7 +159,7 @@ impl CommandExtension for GenerateCommonConfig {
 
 struct GenerateNodeConfig;
 
-const BTC_ANCHORING_RPC_HOST: NamedArgumentOptional<String> = NamedArgumentOptional {
+const BTC_ANCHORING_RPC_HOST: NamedArgumentRequired<String> = NamedArgumentRequired {
     name: "btc_anchoring_rpc_host",
     short_key: None,
     long_key: "btc-anchoring-rpc-host",
@@ -153,50 +193,176 @@ impl CommandExtension for GenerateNodeConfig {
     }
 
     fn execute(&self, mut context: Context) -> Result<Context, failure::Error> {
-        let mut services_secret_configs: BTreeMap<String, toml::Value> = context
+        let mut services_secret_config: BTreeMap<String, toml::Value> = context
             .get(keys::SERVICES_SECRET_CONFIGS)
             .unwrap_or_default();
-        let mut services_public_configs: BTreeMap<String, toml::Value> = context
+        let mut services_public_config: BTreeMap<String, toml::Value> = context
             .get(keys::SERVICES_PUBLIC_CONFIGS)
             .unwrap_or_default();
-        let common_configs = context.get(keys::COMMON_CONFIG).unwrap_or_default();
+        let common_config = context.get(keys::COMMON_CONFIG).unwrap_or_default();
 
         // Inserts bitcoin keypair.
-        let network = BTC_ANCHORING_NETWORK.output_value(&common_configs.services_config)?;
+        let network = BTC_ANCHORING_NETWORK.output_value(&common_config.services_config)?;
         let keypair = gen_keypair(network.into());
 
-        services_public_configs.insert(
+        services_public_config.insert(
             "btc_anchoring_public_key".to_owned(),
             toml::Value::try_from(keypair.0)?,
         );
-        services_secret_configs.extend(
+        services_secret_config.extend(
             vec![
                 (
                     "btc_anchoring_public_key".to_owned(),
                     toml::Value::try_from(keypair.0)?,
                 ),
                 (
-                    "btc_anchoring_secret_key".to_owned(),
+                    "btc_anchoring_private_key".to_owned(),
                     toml::Value::try_from(keypair.1)?,
                 ),
             ].into_iter(),
         );
 
         // Inserts rpc host.
-        if let Some(host) = BTC_ANCHORING_RPC_HOST.input_value(&context)? {
-            let rpc_config = BitcoinRpcConfig {
-                host,
-                username: BTC_ANCHORING_RPC_USERNAME.input_value(&context)?,
-                password: BTC_ANCHORING_RPC_PASSWORD.input_value(&context)?,
-            };
-            services_secret_configs.insert(
-                "btc_anchoring_rpc_config".to_owned(),
-                toml::Value::try_from(rpc_config)?,
-            );
+        let host = BTC_ANCHORING_RPC_HOST.input_value(&context)?;
+        let rpc_config = BitcoinRpcConfig {
+            host,
+            username: BTC_ANCHORING_RPC_USERNAME.input_value(&context)?,
+            password: BTC_ANCHORING_RPC_PASSWORD.input_value(&context)?,
         };
+        services_secret_config.insert(
+            "btc_anchoring_rpc_config".to_owned(),
+            toml::Value::try_from(rpc_config)?,
+        );
         // Push changes to the context.
-        context.set(keys::SERVICES_SECRET_CONFIGS, services_secret_configs);
-        context.set(keys::SERVICES_PUBLIC_CONFIGS, services_public_configs);
+        context.set(keys::SERVICES_SECRET_CONFIGS, services_secret_config);
+        context.set(keys::SERVICES_PUBLIC_CONFIGS, services_public_config);
+        Ok(context)
+    }
+}
+
+struct Finalize;
+
+const BTC_ANCHORING_CREATE_FUNDING_TX: NamedArgumentOptional<u64> = NamedArgumentOptional {
+    name: "btc_anchoring_create_funding_tx",
+    short_key: None,
+    long_key: "btc-anchoring-create-funding-tx",
+    help: "Create initial funding tx with given amount in satoshis",
+    default: None,
+};
+
+const BTC_ANCHORING_FUNDING_TXID: NamedArgumentOptional<Hash> = NamedArgumentOptional {
+    name: "btc_anchoring_funding_txid",
+    short_key: None,
+    long_key: "btc-anchoring-funding-txid",
+    help: "Txid of the initial funding tx",
+    default: None,
+};
+
+impl CommandExtension for Finalize {
+    fn args(&self) -> Vec<Argument> {
+        vec![
+            BTC_ANCHORING_CREATE_FUNDING_TX.to_argument(),
+            BTC_ANCHORING_FUNDING_TXID.to_argument(),
+        ]
+    }
+
+    fn execute(&self, mut context: Context) -> Result<Context, failure::Error> {
+        let mut node_config: NodeConfig = context.get(keys::NODE_CONFIG)?;
+        let public_config_list = context.get(keys::PUBLIC_CONFIG_LIST)?;
+        let services_secret_config: BTreeMap<String, toml::Value> = context
+            .get(keys::SERVICES_SECRET_CONFIGS)
+            .unwrap_or_default();
+        let common_config = context.get(keys::COMMON_CONFIG)?;
+
+        // Common part.
+        let network = BTC_ANCHORING_NETWORK.output_value(&common_config.services_config)?;
+        let interval = BTC_ANCHORING_INTERVAL.output_value(&common_config.services_config)?;
+        let fee = BTC_ANCHORING_FEE.output_value(&common_config.services_config)?;
+        let confirmations =
+            BTC_ANCHORING_UTXO_CONFIRMATIONS.output_value(&common_config.services_config)?;
+
+        // Private part.
+        let private_key: Privkey = services_secret_config
+            .get("btc_anchoring_private_key")
+            .ok_or_else(|| format_err!("BTC private key not found"))?
+            .clone()
+            .try_into()?;
+        let rpc_config: BitcoinRpcConfig = services_secret_config
+            .get("btc_anchoring_rpc_config")
+            .ok_or_else(|| format_err!("Bitcoin RPC configuration not found"))?
+            .clone()
+            .try_into()?;
+
+        // Finalize part.
+        let funding_tx_amount = BTC_ANCHORING_CREATE_FUNDING_TX.input_value(&context)?;
+        let funding_txid = BTC_ANCHORING_FUNDING_TXID.input_value(&context)?;
+
+        // Gets anchoring public keys.
+        let public_keys = {
+            let mut public_keys = Vec::new();
+            for public_config in public_config_list {
+                let public_key: PublicKey = public_config
+                    .services_public_configs()
+                    .get("btc_anchoring_public_key")
+                    .ok_or_else(|| format_err!("BTC public key not found"))?
+                    .clone()
+                    .try_into()?;
+                public_keys.push(public_key);
+            }
+            public_keys
+        };
+
+        // Creates global config.
+        let mut global_config = GlobalConfig::new(network.into(), public_keys)?;
+        // Generates initial funding transaction.
+        let relay = BitcoinRpcClient::from(rpc_config.clone());
+        let addr = global_config.anchoring_address();
+        let funding_tx = if let Some(funding_txid) = funding_txid {
+            let info = relay.transaction_info(&funding_txid)?.ok_or_else(|| {
+                format_err!(
+                    "Unable to find transaction with the given id {}",
+                    funding_txid.to_string()
+                )
+            })?;
+            ensure!(
+                info.confirmations >= confirmations,
+                "Not enough confirmations to use funding transaction, actual {}, expected {}",
+                info.confirmations,
+                confirmations
+            );
+            info.content
+        } else {
+            let satoshis = funding_tx_amount
+                .ok_or_else(|| format_err!("Expected `btc_anchoring_create_funding_tx` value"))?;
+            let transaction = relay.send_to_address(&addr.0, satoshis)?;
+            println!("{}", transaction.id().to_string());
+            transaction
+        };
+
+        info!("BTC anchoring address is {}", addr);
+
+        global_config.funding_transaction = Some(funding_tx);
+        global_config.anchoring_interval = interval;
+        global_config.transaction_fee = fee;
+
+        // Creates local config.
+        let mut private_keys = HashMap::new();
+        private_keys.insert(addr, private_key);
+        let local_config = LocalConfig {
+            rpc: Some(rpc_config),
+            private_keys,
+        };
+
+        // Writes complete config to node_config
+        let config = Config {
+            local: local_config,
+            global: global_config,
+        };
+        node_config.services_configs.insert(
+            BTC_ANCHORING_SERVICE_NAME.to_owned(),
+            toml::Value::try_from(config)?,
+        );
+        context.set(keys::NODE_CONFIG, node_config);
         Ok(context)
     }
 }
@@ -210,20 +376,31 @@ impl ServiceFactory for BtcAnchoringFactory {
         Some(match command {
             v if v == fabric::GenerateCommonConfig::name() => Box::new(GenerateCommonConfig),
             v if v == fabric::GenerateNodeConfig::name() => Box::new(GenerateNodeConfig),
-            // v if v == fabric::Finalize::name() => Box::new(Finalize),
+            v if v == fabric::Finalize::name() => Box::new(Finalize),
             _ => return None,
         })
     }
 
     fn make_service(&mut self, context: &Context) -> Box<Service> {
-        unimplemented!();
-        // let node_config = context.get(keys::NODE_CONFIG).unwrap();
-        // let btc_oracle_config: BtcOracleConfig = node_config
-        //     .services_configs
-        //     .get(BTC_ORACLE_SERVICE_NAME)
-        //     .map(|x| x.clone().try_into().unwrap())
-        //     .unwrap_or_default();
+        let node_config = context.get(keys::NODE_CONFIG).unwrap();
+        let btc_anchoring_config: Config = node_config
+            .services_configs
+            .get(BTC_ANCHORING_SERVICE_NAME)
+            .expect("BTC anchoring config not found")
+            .clone()
+            .try_into()
+            .unwrap();
 
-        // Box::new(BtcOracle::new(btc_oracle_config))
+        let btc_relay = btc_anchoring_config
+            .local
+            .rpc
+            .map(BitcoinRpcClient::from)
+            .map(Box::<BtcRelay>::from);
+        let service = BtcAnchoringService {
+            global_config: btc_anchoring_config.global,
+            btc_relay,
+            private_keys: btc_anchoring_config.local.private_keys,
+        };
+        Box::new(service)
     }
 }
