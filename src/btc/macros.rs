@@ -65,6 +65,64 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
                 bytes.write_hex_upper(w)
             }
         }
+
+        impl<'a> ::exonum::encoding::Field<'a> for $name {
+            fn field_size() -> ::exonum::encoding::Offset {
+                8
+            }
+
+            unsafe fn read(
+                buffer: &'a [u8],
+                from: ::exonum::encoding::Offset,
+                to: ::exonum::encoding::Offset,
+            ) -> $name {
+                let data = <&[u8] as ::exonum::encoding::Field>::read(buffer, from, to);
+                <$name as ::exonum::storage::StorageValue>::from_bytes(data.into())
+            }
+
+            fn write(
+                &self,
+                buffer: &mut Vec<u8>,
+                from: ::exonum::encoding::Offset,
+                to: ::exonum::encoding::Offset,
+            ) {
+                use exonum::storage::StorageValue;
+                <&[u8] as ::exonum::encoding::Field>::write(
+                    &self.clone().into_bytes().as_slice(),
+                    buffer,
+                    from,
+                    to,
+                );
+            }
+
+            fn check(
+                buffer: &[u8],
+                from: ::exonum::encoding::CheckedOffset,
+                to: ::exonum::encoding::CheckedOffset,
+                latest_segment: ::exonum::encoding::CheckedOffset,
+            ) -> ::exonum::encoding::Result {
+                use exonum::encoding::Field;
+                let latest_segment = <Vec<u8> as Field>::check(buffer, from, to, latest_segment)?;
+                let buf: Vec<u8> = unsafe {
+                    ::exonum::encoding::Field::read(
+                        buffer,
+                        from.unchecked_offset(),
+                        to.unchecked_offset(),
+                    )
+                };
+                let inner =
+                    ::bitcoin::network::serialize::deserialize(buf.as_ref()).map_err(|_| {
+                        ::exonum::encoding::Error::Basic(
+                            format!("Unable to deserialize field of the {} type", stringify!($name))
+                                .into(),
+                        )
+                    })?;
+                let _tx = $name(inner);
+                Ok(latest_segment)
+            }
+        }
+        
+        implement_exonum_serializer! { $name }
     };
 }
 

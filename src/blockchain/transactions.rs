@@ -21,8 +21,10 @@ use exonum::storage::Fork;
 use btc_transaction_utils::InputSignatureRef;
 use secp256k1::{self, Secp256k1};
 
-use super::data_layout::TxInputId;
 use BTC_ANCHORING_SERVICE_ID;
+use btc;
+
+use super::data_layout::TxInputId;
 
 transactions! {
     pub Transactions {
@@ -34,8 +36,8 @@ transactions! {
             from: &PublicKey,
             /// Public key index in anchoring public keys list.
             validator: ValidatorId,
-            /// Transaction identifier.
-            txid: &Hash,
+            /// Signed transaction.
+            tx: btc::Transaction,
             /// Signed input.
             input: u32,
             /// Signature content.
@@ -44,10 +46,12 @@ transactions! {
     }
 }
 
+// TODO Implement error types.
+
 impl Signature {
     pub fn input_id(&self) -> TxInputId {
         TxInputId {
-            txid: *self.txid(),
+            txid: self.tx().id(),
             input: self.input(),
         }
     }
@@ -67,6 +71,16 @@ impl Transaction for Signature {
     }
 
     fn execute(&self, _fork: &mut Fork) -> ExecutionResult {
-        unimplemented!();
+        let context = Secp256k1::without_caps();
+
+        let input_signature = self.input_signature(&context).unwrap();
+        let tx: btc::Transaction = self.tx();
+        // Checks anchoring metadata.
+        {
+            let metadata = tx.anchoring_metadata().unwrap();
+        }
+        // TODO check anchoring payload.
+
+        Ok(())
     }
 }

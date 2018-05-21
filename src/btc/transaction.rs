@@ -247,6 +247,11 @@ mod tests {
     }
 
     #[test]
+    fn test_transaction_exonum_field() {
+        unimplemented!();
+    }
+
+    #[test]
     fn test_anchoring_transaction_builder_simple() {
         unimplemented!();
     }

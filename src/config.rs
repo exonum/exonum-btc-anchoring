@@ -31,7 +31,7 @@ pub fn byzantine_quorum(total: usize) -> usize {
 }
 
 /// Consensus parameters in the BTC anchoring.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GlobalConfig {
     /// Type of the used BTC network.
     #[serde(with = "NetworkRef")]
@@ -86,7 +86,7 @@ impl GlobalConfig {
 }
 
 /// Local part of anchoring service configuration stored on a local machine.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LocalConfig {
     /// Rpc configuration. Must exist if node is validator.
     /// Otherwise node can only check `lect` payload without any checks with `bitcoind`.
@@ -97,7 +97,7 @@ pub struct LocalConfig {
 }
 
 /// BTC anchoring configuration.
-#[derive(Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Config {
     /// Public part of the configuration stored in the blockchain.
     pub global: GlobalConfig,
