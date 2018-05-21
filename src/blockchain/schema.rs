@@ -12,12 +12,17 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::Schema;
+use exonum::blockchain::{Schema, StoredConfiguration};
 use exonum::crypto::{Hash, PublicKey};
 use exonum::storage::{Fork, ProofListIndex, ProofMapIndex, Snapshot};
 
-use super::data_layout::*;
+use serde_json;
+
 use btc::Transaction;
+use config::GlobalConfig;
+use {BTC_ANCHORING_SERVICE_NAME};
+
+use super::data_layout::*;
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {
@@ -78,6 +83,38 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         table_hashes.extend(transaction_signatures);
 
         table_hashes
+    }
+
+    /// Returns the actual anchoring configuration.
+    pub fn actual_configuration(&self) -> GlobalConfig {
+        let actual_configuration = Schema::new(&self.snapshot).actual_configuration();
+        Self::parse_config(actual_configuration).expect("Actual BTC anchoring configuration is absent")
+    }
+
+    /// Returns the nearest following configuration if it exists.
+    pub fn following_configuration(&self) -> Option<GlobalConfig> {
+        let following_configuration = Schema::new(&self.snapshot).following_configuration()?;
+        Self::parse_config(following_configuration)
+    }
+
+    pub fn available_funding_transaction(&self) -> Option<Transaction> {
+        let tx_candidate = self.actual_configuration().funding_transaction?;
+        let txid = tx_candidate.id();
+        if self.spent_funding_transactions().contains(&txid) {
+            None
+        } else {
+            Some(tx_candidate)
+        }
+    }
+
+    fn parse_config(
+        configuration: StoredConfiguration,
+    ) -> Option<GlobalConfig> {
+        configuration
+            .services
+            .get(BTC_ANCHORING_SERVICE_NAME)
+            .cloned()
+            .map(|value| serde_json::from_value(value).expect("Unable to parse configuration"))
     }
 }
 

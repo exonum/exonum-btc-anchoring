@@ -34,35 +34,6 @@ use rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
 
 mod args;
 
-trait Transpose {
-    type Result;
-    fn transpose(self) -> Self::Result;
-}
-
-impl<T, E> Transpose for Option<Result<T, E>> {
-    type Result = Result<Option<T>, E>;
-    fn transpose(self) -> Self::Result {
-        if let Some(a) = self {
-            match a {
-                Ok(o) => Ok(Some(o)),
-                Err(e) => Err(e),
-            }
-        } else {
-            Ok(None)
-        }
-    }
-}
-
-impl<T, E> Transpose for Result<Option<T>, E> {
-    type Result = Option<Result<T, E>>;
-    fn transpose(self) -> Self::Result {
-        match self {
-            Ok(o) => o.map(|o| Ok(o)),
-            Err(e) => Some(Err(e)),
-        }
-    }
-}
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 enum BtcNetwork {

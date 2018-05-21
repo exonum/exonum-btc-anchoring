@@ -14,6 +14,8 @@
 
 //! BTC anchoring configuration data types.
 
+use exonum::helpers::Height;
+
 use bitcoin::network::constants::Network;
 use btc_transaction_utils::multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError};
 use btc_transaction_utils::p2wsh;
@@ -71,6 +73,16 @@ impl GlobalConfig {
     pub fn anchoring_address(&self) -> Address {
         p2wsh::address(&self.redeem_script, self.network).into()
     }
+
+    /// Returns the latest height below the given height which must be anchored.
+    pub fn previous_anchoring_height(&self, current_height: Height) -> Height {
+        Height(current_height.0 - current_height.0 % self.anchoring_interval)
+    }
+
+    /// Returns the nearest height upper the given height which should be anchored.
+    pub fn following_anchoring_height(&self, current_height: Height) -> Height {
+        Height(self.previous_anchoring_height(current_height).0 + self.anchoring_interval)
+    }
 }
 
 /// Local part of anchoring service configuration stored on a local machine.
@@ -125,7 +137,8 @@ mod flatten_keypairs {
     {
         use serde::Serialize;
 
-        let keypairs = keys.iter()
+        let keypairs = keys
+            .iter()
             .map(|(address, private_key)| BitcoinKeypair {
                 address: address.clone(),
                 private_key: private_key.clone(),
@@ -150,6 +163,8 @@ mod flatten_keypairs {
 
 #[cfg(test)]
 mod tests {
+    use exonum::helpers::Height;
+
     use bitcoin::network::constants::Network;
     use btc_transaction_utils::test_data::secp_gen_keypair;
 
@@ -190,5 +205,26 @@ mod tests {
             }
         );
         assert!(local_config.private_keys.len() == 1);
+    }
+
+    #[test]
+    fn test_global_config_anchoring_height() {
+        let public_keys = (0..4)
+            .map(|_| secp_gen_keypair().0.into())
+            .collect::<Vec<_>>();
+
+        let mut config = GlobalConfig::new(Network::Bitcoin, public_keys).unwrap();
+        config.anchoring_interval = 1000;
+
+        assert_eq!(config.previous_anchoring_height(Height(0)), Height(0));
+        assert_eq!(config.previous_anchoring_height(Height(999)), Height(0));
+        assert_eq!(config.previous_anchoring_height(Height(1000)), Height(1000));
+        assert_eq!(config.previous_anchoring_height(Height(1001)), Height(1000));
+
+        assert_eq!(config.following_anchoring_height(Height(0)), Height(1000));
+        assert_eq!(config.following_anchoring_height(Height(999)), Height(1000));
+        assert_eq!(config.following_anchoring_height(Height(1000)), Height(2000));        
+        assert_eq!(config.following_anchoring_height(Height(1001)), Height(2000));        
+
     }
 }
