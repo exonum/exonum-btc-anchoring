@@ -14,17 +14,18 @@
 
 use exonum::blockchain::{Schema, StoredConfiguration};
 use exonum::crypto::Hash;
+use exonum::helpers::Height;
 use exonum::storage::{Fork, ProofListIndex, ProofMapIndex, Snapshot};
 
 use btc_transaction_utils::multisig::RedeemScript;
 use serde_json;
 
+use BTC_ANCHORING_SERVICE_NAME;
 use btc::Transaction;
 use config::GlobalConfig;
-use BTC_ANCHORING_SERVICE_NAME;
 
-use super::data_layout::*;
 use super::BtcAnchoringState;
+use super::data_layout::*;
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {
@@ -131,6 +132,16 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         self.transaction_signatures().get(input).unwrap_or_else(|| {
             InputSignatures::new(redeem_script.content().public_keys.len() as u16)
         })
+    }
+
+    pub fn latest_anchored_height(&self) -> Option<Height> {
+        let tx = self.anchoring_transactions_chain().last()?;
+        Some(
+            tx.anchoring_metadata()
+                .expect("Expected payload in the anchoring transaction")
+                .1
+                .block_height,
+        )
     }
 
     fn parse_config(configuration: StoredConfiguration) -> Option<GlobalConfig> {

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 pub use self::payload::{Payload, PayloadBuilder};
-pub use self::transaction::{AnchoringTransactionBuilder, Transaction};
+pub use self::transaction::{BtcAnchoringTransactionBuilder, Transaction};
 
 use bitcoin::network::constants::Network;
 use bitcoin::util::address;

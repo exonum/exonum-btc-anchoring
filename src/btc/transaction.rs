@@ -56,7 +56,7 @@ impl Transaction {
 }
 
 #[derive(Debug)]
-pub struct AnchoringTransactionBuilder {
+pub struct BtcAnchoringTransactionBuilder {
     script_pubkey: Script,
     prev_tx: Option<Transaction>,
     additional_funds: Vec<(usize, Transaction)>,
@@ -72,9 +72,9 @@ pub enum BuilderError {
     InsufficientFunds { total_fee: u64, balance: u64 },
 }
 
-impl AnchoringTransactionBuilder {
-    pub fn new(redeem_script: RedeemScript) -> AnchoringTransactionBuilder {
-        AnchoringTransactionBuilder {
+impl BtcAnchoringTransactionBuilder {
+    pub fn new(redeem_script: RedeemScript) -> BtcAnchoringTransactionBuilder {
+        BtcAnchoringTransactionBuilder {
             script_pubkey: redeem_script.as_ref().to_v0_p2wsh(),
             prev_tx: None,
             additional_funds: Vec::default(),
@@ -83,7 +83,7 @@ impl AnchoringTransactionBuilder {
         }
     }
 
-    pub fn prev_tx(&mut self, tx: Transaction) -> &mut Self {
+    pub fn prev_tx(mut self, tx: Transaction) -> Self {
         assert_eq!(
             tx.anchoring_metadata().unwrap().0,
             &self.script_pubkey,
@@ -94,22 +94,30 @@ impl AnchoringTransactionBuilder {
         self
     }
 
-    pub fn fee(&mut self, fee: u64) -> &mut Self {
-        self.fee = Some(fee);
-        self
-    }
-
-    pub fn payload(&mut self, block_height: Height, block_hash: Hash) -> &mut Self {
-        self.payload = Some((block_height, block_hash));
-        self
-    }
-
-    pub fn additional_funds(&mut self, tx: Transaction) -> &mut Self {
+    pub fn additional_funds(mut self, tx: Transaction) -> Self {
         let out = tx.find_out(&self.script_pubkey)
             .expect("Funding transaction doesn't contains outputs to the anchoring address.")
             .0;
 
         self.additional_funds.push((out, tx));
+        self
+    }
+
+    pub fn input(mut self, tx: Transaction) -> Self {
+        if tx.anchoring_metadata().is_some() {
+            self.prev_tx(tx)
+        } else {
+            self.additional_funds(tx)
+        }
+    }
+
+    pub fn fee(mut self, fee: u64) -> Self {
+        self.fee = Some(fee);
+        self
+    }
+
+    pub fn payload(mut self, block_height: Height, block_hash: Hash) -> Self {
+        self.payload = Some((block_height, block_hash));
         self
     }
 

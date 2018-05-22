@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::{Service, Transaction, TransactionSet};
+use exonum::blockchain::{Service, ServiceContext, Transaction, TransactionSet};
 use exonum::crypto::Hash;
 use exonum::encoding::Error as EncodingError;
 use exonum::messages::RawMessage;
@@ -21,6 +21,7 @@ use exonum::storage::{Fork, Snapshot};
 use blockchain::{BtcAnchoringSchema, Transactions};
 use btc::{Address, Privkey};
 use config::GlobalConfig;
+use handler::CommitHandler;
 use rpc::BtcRelay;
 use serde_json;
 
@@ -63,5 +64,12 @@ impl Service for BtcAnchoringService {
 
     fn initialize(&self, _fork: &mut Fork) -> serde_json::Value {
         json!(self.global_config)
+    }
+
+    fn handle_commit(&self, context: &ServiceContext) {
+        let handler = CommitHandler::new(context, &self.private_keys);
+        if let Err(e) = handler.handle() {
+            error!("An error in `handle_commit`: {}", e);
+        }
     }
 }

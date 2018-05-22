@@ -25,7 +25,7 @@ use secp256k1::{self, Secp256k1};
 use btc;
 use BTC_ANCHORING_SERVICE_ID;
 
-use super::data_layout::{TxInputId};
+use super::data_layout::TxInputId;
 use super::BtcAnchoringSchema;
 
 transactions! {
@@ -96,7 +96,7 @@ impl Transaction for Signature {
             .public_keys
             .get(self.validator().0 as usize)
             .cloned()
-            .expect("Implement Error code");
+            .expect("Implement Error code: public key of validator is absent");
 
         // Checks anchoring metadata.
         assert_eq!(anchoring_state.script_pubkey(), script_pubkey);
@@ -107,39 +107,64 @@ impl Transaction for Signature {
         let expected_inputs = anchoring_schema.expected_input_transactions();
         assert_eq!(tx.0.input.len(), expected_inputs.len());
 
+        debug!("validator {}", self.validator());
+        debug!(
+            "expected_inputs, {:?}",
+            expected_inputs
+                .iter()
+                .map(|x| x.id().to_string())
+                .collect::<Vec<_>>()
+        );
+
         let input_signer = InputSigner::new(redeem_script.clone());
         // Checks signature content
         let input_tx = expected_inputs
             .get(self.input() as usize)
-            .expect("Implement Error code");
-        input_signer
-            .verify_input(
-                TxInRef::new(tx.as_ref(), self.input() as usize),
-                input_tx.as_ref(),
-                &public_key,
-                self.content(),
-            )
-            .expect("Implement Error code");
+            .expect("Implement Error code: given input is absent");
+        // input_signer
+        //     .verify_input(
+        //         TxInRef::new(tx.as_ref(), self.input() as usize),
+        //         input_tx.as_ref(),
+        //         &public_key,
+        //         self.content(),
+        //     )
+        //     .expect("Implement Error code: input signature verification failed");
 
         // Adds signature to schema.
         let input_id = self.input_id();
         let mut input_signatures = anchoring_schema.input_signatures(&input_id, &redeem_script);
-        input_signatures.insert(self.validator(), self.content().to_vec());
         if input_signatures.len() != redeem_script_content.quorum {
+            debug!("put: {} {:?}", self.validator(), input_id);
+            input_signatures.insert(self.validator(), self.content().to_vec());
+            debug!("{:#?}", input_signatures);
             anchoring_schema
                 .transaction_signatures_mut()
                 .put(&input_id, input_signatures);
         }
+        let s = anchoring_schema
+            .transaction_signatures()
+            .get(&input_id)
+            .unwrap();
+        debug!("committed {:?}", s);
+
         // Tries to finalize transaction.
         let mut tx: btc::Transaction = tx;
         let context = Secp256k1::without_caps();
-        for (index, prev_tx) in expected_inputs.iter().enumerate() {
-            let input_id = TxInputId::new(prev_tx.id(), index as u32);
+        for (index, _) in expected_inputs.iter().enumerate() {
+            let input_id = TxInputId::new(self.tx().id(), index as u32);
+            debug!("get: {:?}", input_id);
             if let Some(input_signatures) = anchoring_schema.transaction_signatures().get(&input_id)
             {
+                debug!(
+                    "signatures len: {}, quorum: {}",
+                    input_signatures.len(),
+                    redeem_script_content.quorum
+                );
                 if input_signatures.len() != redeem_script_content.quorum {
                     return Ok(());
                 }
+
+                debug!("Spent input, tx: {}, input: {}", tx.id().to_string(), index);
 
                 input_signer.spend_input(
                     &mut tx.0.input[index],
@@ -148,15 +173,25 @@ impl Transaction for Signature {
                         .map(|bytes| InputSignature::from_bytes(&context, bytes).unwrap()),
                 );
             } else {
+                debug!("Input signatures not found");
                 return Ok(());
             }
         }
         // Adds finalized transaction to the tail of anchoring transactions.
-        anchoring_schema.anchoring_transactions_chain_mut().push(tx);
-        if let Some(unspent_funding_tx) = anchoring_schema.unspent_funding_transaction() {
-            anchoring_schema
-                .spent_funding_transactions_mut()
-                .put(&unspent_funding_tx.id(), unspent_funding_tx);
+        if anchoring_schema
+            .anchoring_transactions_chain()
+            .last()
+            .as_ref() != Some(&tx)
+        {
+            debug_assert_eq!(self.tx().id(), self.tx().id());
+
+            debug!("Finalized anchoring transaction: {}", tx.to_string());
+            anchoring_schema.anchoring_transactions_chain_mut().push(tx);
+            if let Some(unspent_funding_tx) = anchoring_schema.unspent_funding_transaction() {
+                anchoring_schema
+                    .spent_funding_transactions_mut()
+                    .put(&unspent_funding_tx.id(), unspent_funding_tx);
+            }
         }
 
         Ok(())

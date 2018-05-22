@@ -15,8 +15,13 @@
 pub use self::schema::BtcAnchoringSchema;
 pub use self::transactions::Transactions;
 
-use bitcoin::blockdata::script::Script;
+use exonum::helpers::Height;
 
+use bitcoin::blockdata::script::Script;
+use btc_transaction_utils::multisig::RedeemScript;
+use btc_transaction_utils::p2wsh;
+
+use btc::Address;
 use config::GlobalConfig;
 
 pub mod data_layout;
@@ -35,12 +40,24 @@ pub enum BtcAnchoringState {
 }
 
 impl BtcAnchoringState {
+    pub fn redeem_script(&self) -> &RedeemScript {
+        match self {
+            BtcAnchoringState::Regular {
+                actual_configuration,
+            } => &actual_configuration.redeem_script,
+            BtcAnchoringState::Transition {
+                following_configuration,
+                ..
+            } => &following_configuration.redeem_script,
+        }
+    }
+
     pub fn script_pubkey(&self) -> Script {
-        let redeem_script = match self {
-            BtcAnchoringState::Regular { actual_configuration } => &actual_configuration.redeem_script,
-            BtcAnchoringState::Transition { following_configuration, .. } => &following_configuration.redeem_script,
-        };
-        redeem_script.as_ref().to_v0_p2wsh()
+        self.redeem_script().as_ref().to_v0_p2wsh()
+    }
+
+    pub fn output_address(&self) -> Address {
+        p2wsh::address(self.redeem_script(), self.actual_configuration().network).into()
     }
 
     pub fn is_regular(&self) -> bool {
@@ -79,5 +96,19 @@ impl BtcAnchoringState {
                 ..
             } => Some(following_configuration),
         }
+    }
+
+    pub fn following_anchoring_height(&self, latest_anchored_height: Option<Height>) -> Height {
+        latest_anchored_height
+            .map(|height| match self {
+                BtcAnchoringState::Regular {
+                    ref actual_configuration,
+                } => actual_configuration.following_anchoring_height(height),
+                BtcAnchoringState::Transition {
+                    ref actual_configuration,
+                    ..
+                } => height,
+            })
+            .unwrap_or_else(|| Height::zero())
     }
 }
