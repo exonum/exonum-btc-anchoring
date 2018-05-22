@@ -137,8 +137,7 @@ mod flatten_keypairs {
     {
         use serde::Serialize;
 
-        let keypairs = keys
-            .iter()
+        let keypairs = keys.iter()
             .map(|(address, private_key)| BitcoinKeypair {
                 address: address.clone(),
                 private_key: private_key.clone(),
@@ -223,8 +222,13 @@ mod tests {
 
         assert_eq!(config.following_anchoring_height(Height(0)), Height(1000));
         assert_eq!(config.following_anchoring_height(Height(999)), Height(1000));
-        assert_eq!(config.following_anchoring_height(Height(1000)), Height(2000));        
-        assert_eq!(config.following_anchoring_height(Height(1001)), Height(2000));        
-
+        assert_eq!(
+            config.following_anchoring_height(Height(1000)),
+            Height(2000)
+        );
+        assert_eq!(
+            config.following_anchoring_height(Height(1001)),
+            Height(2000)
+        );
     }
 }

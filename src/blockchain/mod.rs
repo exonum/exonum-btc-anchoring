@@ -15,6 +15,8 @@
 pub use self::schema::BtcAnchoringSchema;
 pub use self::transactions::Transactions;
 
+use bitcoin::blockdata::script::Script;
+
 use config::GlobalConfig;
 
 pub mod data_layout;
@@ -33,6 +35,14 @@ pub enum BtcAnchoringState {
 }
 
 impl BtcAnchoringState {
+    pub fn script_pubkey(&self) -> Script {
+        let redeem_script = match self {
+            BtcAnchoringState::Regular { actual_configuration } => &actual_configuration.redeem_script,
+            BtcAnchoringState::Transition { following_configuration, .. } => &following_configuration.redeem_script,
+        };
+        redeem_script.as_ref().to_v0_p2wsh()
+    }
+
     pub fn is_regular(&self) -> bool {
         if let BtcAnchoringState::Regular { .. } = self {
             true

@@ -13,16 +13,18 @@
 // limitations under the License.
 
 use exonum::blockchain::{Schema, StoredConfiguration};
-use exonum::crypto::{Hash, PublicKey};
+use exonum::crypto::Hash;
 use exonum::storage::{Fork, ProofListIndex, ProofMapIndex, Snapshot};
 
+use btc_transaction_utils::multisig::RedeemScript;
 use serde_json;
 
 use btc::Transaction;
 use config::GlobalConfig;
-use {BTC_ANCHORING_SERVICE_NAME};
+use BTC_ANCHORING_SERVICE_NAME;
 
 use super::data_layout::*;
+use super::BtcAnchoringState;
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {
@@ -61,34 +63,24 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, &self.snapshot)
     }
 
-    pub fn transaction_signatures(
-        &self,
-        validator: &PublicKey,
-    ) -> ProofMapIndex<&T, TxInputId, InputSignatures> {
-        ProofMapIndex::new_in_family(TRANSACTION_SIGNATURES, validator, &self.snapshot)
+    pub fn transaction_signatures(&self) -> ProofMapIndex<&T, TxInputId, InputSignatures> {
+        ProofMapIndex::new(TRANSACTION_SIGNATURES, &self.snapshot)
     }
 
     /// Returns hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
-        let mut table_hashes = vec![
+        vec![
             self.anchoring_transactions_chain().merkle_root(),
             self.spent_funding_transactions().merkle_root(),
-        ];
-
-        let transaction_signatures = Schema::new(&self.snapshot)
-            .actual_configuration()
-            .validator_keys
-            .into_iter()
-            .map(|keys| self.transaction_signatures(&keys.service_key).merkle_root());
-        table_hashes.extend(transaction_signatures);
-
-        table_hashes
+            self.transaction_signatures().merkle_root(),
+        ]
     }
 
     /// Returns the actual anchoring configuration.
     pub fn actual_configuration(&self) -> GlobalConfig {
         let actual_configuration = Schema::new(&self.snapshot).actual_configuration();
-        Self::parse_config(actual_configuration).expect("Actual BTC anchoring configuration is absent")
+        Self::parse_config(actual_configuration)
+            .expect("Actual BTC anchoring configuration is absent")
     }
 
     /// Returns the nearest following configuration if it exists.
@@ -97,7 +89,21 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         Self::parse_config(following_configuration)
     }
 
-    pub fn available_funding_transaction(&self) -> Option<Transaction> {
+    pub fn actual_state(&self) -> BtcAnchoringState {
+        let actual_configuration = self.actual_configuration();
+        if let Some(following_configuration) = self.following_configuration() {
+            BtcAnchoringState::Transition {
+                actual_configuration,
+                following_configuration,
+            }
+        } else {
+            BtcAnchoringState::Regular {
+                actual_configuration,
+            }
+        }
+    }
+
+    pub fn unspent_funding_transaction(&self) -> Option<Transaction> {
         let tx_candidate = self.actual_configuration().funding_transaction?;
         let txid = tx_candidate.id();
         if self.spent_funding_transactions().contains(&txid) {
@@ -107,9 +113,27 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         }
     }
 
-    fn parse_config(
-        configuration: StoredConfiguration,
-    ) -> Option<GlobalConfig> {
+    pub fn expected_input_transactions(&self) -> Vec<Transaction> {
+        let unspent_anchoring_tx = self.anchoring_transactions_chain().last();
+        let unspent_funding_tx = self.unspent_funding_transaction();
+
+        [unspent_anchoring_tx, unspent_funding_tx]
+            .into_iter()
+            .filter_map(|x| x.clone())
+            .collect::<Vec<_>>()
+    }
+
+    pub fn input_signatures(
+        &self,
+        input: &TxInputId,
+        redeem_script: &RedeemScript,
+    ) -> InputSignatures {
+        self.transaction_signatures().get(input).unwrap_or_else(|| {
+            InputSignatures::new(redeem_script.content().public_keys.len() as u16)
+        })
+    }
+
+    fn parse_config(configuration: StoredConfiguration) -> Option<GlobalConfig> {
         configuration
             .services
             .get(BTC_ANCHORING_SERVICE_NAME)
@@ -131,8 +155,7 @@ impl<'a> BtcAnchoringSchema<&'a mut Fork> {
 
     pub fn transaction_signatures_mut(
         &mut self,
-        validator: &PublicKey,
     ) -> ProofMapIndex<&mut Fork, TxInputId, InputSignatures> {
-        ProofMapIndex::new_in_family(TRANSACTION_SIGNATURES, validator, &mut self.snapshot)
+        ProofMapIndex::new(TRANSACTION_SIGNATURES, &mut self.snapshot)
     }
 }

@@ -113,15 +113,17 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
                 let inner =
                     ::bitcoin::network::serialize::deserialize(buf.as_ref()).map_err(|_| {
                         ::exonum::encoding::Error::Basic(
-                            format!("Unable to deserialize field of the {} type", stringify!($name))
-                                .into(),
+                            format!(
+                                "Unable to deserialize field of the {} type",
+                                stringify!($name)
+                            ).into(),
                         )
                     })?;
                 let _tx = $name(inner);
                 Ok(latest_segment)
             }
         }
-        
+
         implement_exonum_serializer! { $name }
     };
 }
