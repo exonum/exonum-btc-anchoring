@@ -103,7 +103,7 @@ impl BtcAnchoringTransactionBuilder {
         self
     }
 
-    pub fn input(mut self, tx: Transaction) -> Self {
+    pub fn input(self, tx: Transaction) -> Self {
         if tx.anchoring_metadata().is_some() {
             self.prev_tx(tx)
         } else {

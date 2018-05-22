@@ -22,11 +22,11 @@ use btc_transaction_utils::p2wsh::InputSigner;
 use btc_transaction_utils::{InputSignature, InputSignatureRef, TxInRef};
 use secp256k1::{self, Secp256k1};
 
-use btc;
 use BTC_ANCHORING_SERVICE_ID;
+use btc;
 
-use super::data_layout::TxInputId;
 use super::BtcAnchoringSchema;
+use super::data_layout::TxInputId;
 
 transactions! {
     pub Transactions {
@@ -107,26 +107,19 @@ impl Transaction for Signature {
         let expected_inputs = anchoring_schema.expected_input_transactions();
         assert_eq!(tx.0.input.len(), expected_inputs.len());
 
-        debug!("validator {}", self.validator());
-        debug!(
-            "expected_inputs, {:?}",
-            expected_inputs
-                .iter()
-                .map(|x| x.id().to_string())
-                .collect::<Vec<_>>()
-        );
-
-        let input_signer = InputSigner::new(redeem_script.clone());
         // Checks signature content
         let input_tx = expected_inputs
             .get(self.input() as usize)
             .expect("Implement Error code: given input is absent");
+
+        let input_signer = InputSigner::new(redeem_script.clone());
+        // let context = Secp256k1::without_caps();
         // input_signer
         //     .verify_input(
         //         TxInRef::new(tx.as_ref(), self.input() as usize),
         //         input_tx.as_ref(),
         //         &public_key,
-        //         self.content(),
+        //         self.input_signature(&context).unwrap().content(),
         //     )
         //     .expect("Implement Error code: input signature verification failed");
 
@@ -134,48 +127,28 @@ impl Transaction for Signature {
         let input_id = self.input_id();
         let mut input_signatures = anchoring_schema.input_signatures(&input_id, &redeem_script);
         if input_signatures.len() != redeem_script_content.quorum {
-            debug!("put: {} {:?}", self.validator(), input_id);
             input_signatures.insert(self.validator(), self.content().to_vec());
-            debug!("{:#?}", input_signatures);
             anchoring_schema
                 .transaction_signatures_mut()
                 .put(&input_id, input_signatures);
         }
-        let s = anchoring_schema
-            .transaction_signatures()
-            .get(&input_id)
-            .unwrap();
-        debug!("committed {:?}", s);
-
         // Tries to finalize transaction.
         let mut tx: btc::Transaction = tx;
         let context = Secp256k1::without_caps();
         for (index, _) in expected_inputs.iter().enumerate() {
             let input_id = TxInputId::new(self.tx().id(), index as u32);
-            debug!("get: {:?}", input_id);
-            if let Some(input_signatures) = anchoring_schema.transaction_signatures().get(&input_id)
-            {
-                debug!(
-                    "signatures len: {}, quorum: {}",
-                    input_signatures.len(),
-                    redeem_script_content.quorum
-                );
-                if input_signatures.len() != redeem_script_content.quorum {
-                    return Ok(());
-                }
+            let input_signatures = anchoring_schema.input_signatures(&input_id, &redeem_script);
 
-                debug!("Spent input, tx: {}, input: {}", tx.id().to_string(), index);
-
-                input_signer.spend_input(
-                    &mut tx.0.input[index],
-                    input_signatures
-                        .into_iter()
-                        .map(|bytes| InputSignature::from_bytes(&context, bytes).unwrap()),
-                );
-            } else {
-                debug!("Input signatures not found");
+            if input_signatures.len() != redeem_script_content.quorum {
                 return Ok(());
             }
+
+            input_signer.spend_input(
+                &mut tx.0.input[index],
+                input_signatures
+                    .into_iter()
+                    .map(|bytes| InputSignature::from_bytes(&context, bytes).unwrap()),
+            );
         }
         // Adds finalized transaction to the tail of anchoring transactions.
         if anchoring_schema
@@ -185,7 +158,13 @@ impl Transaction for Signature {
         {
             debug_assert_eq!(self.tx().id(), self.tx().id());
 
-            debug!("Finalized anchoring transaction: {}", tx.to_string());
+            info!(
+                "ANCHORING payload: (block_height: {}, hash: {}), txid: {}",
+                payload.block_height,
+                payload.block_hash,
+                tx.id().to_string()
+            );
+            trace!("Anchoring txhex: {}", tx.to_string());
             anchoring_schema.anchoring_transactions_chain_mut().push(tx);
             if let Some(unspent_funding_tx) = anchoring_schema.unspent_funding_transaction() {
                 anchoring_schema

@@ -104,10 +104,7 @@ impl BtcAnchoringState {
                 BtcAnchoringState::Regular {
                     ref actual_configuration,
                 } => actual_configuration.following_anchoring_height(height),
-                BtcAnchoringState::Transition {
-                    ref actual_configuration,
-                    ..
-                } => height,
+                BtcAnchoringState::Transition { .. } => height,
             })
             .unwrap_or_else(|| Height::zero())
     }
