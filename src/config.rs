@@ -36,8 +36,8 @@ pub struct GlobalConfig {
     /// Type of the used BTC network.
     #[serde(with = "NetworkRef")]
     pub network: Network,
-    /// Redeem script for actual configuration.
-    pub redeem_script: RedeemScript,
+    /// Validators' Bitcoin public keys from which the current anchoring redeem script can be calculated.
+    pub public_keys: Vec<PublicKey>,
     /// Interval in blocks between anchored blocks.
     pub anchoring_interval: u64,
     /// Fee per byte in satoshi.
@@ -51,27 +51,30 @@ impl GlobalConfig {
         network: Network,
         keys: impl IntoIterator<Item = PublicKey>,
     ) -> Result<GlobalConfig, RedeemScriptError> {
-        // TODO implement blank constructor.
-        let mut builder = RedeemScriptBuilder::with_quorum(0);
-        // Collects keys and computes total count.
-        let total = keys.into_iter().fold(0, |total, public_key| {
-            builder.public_key(public_key.0);
-            total + 1
-        });
-        // Finalizes script.
-        let redeem_script = builder.quorum(byzantine_quorum(total)).to_script()?;
+        let public_keys = keys.into_iter().collect::<Vec<_>>();
+        if public_keys.is_empty() {
+            Err(RedeemScriptError::NotEnoughPublicKeys)?;
+        }
 
         Ok(GlobalConfig {
             network,
             anchoring_interval: 5_000,
             transaction_fee: 100,
-            redeem_script,
+            public_keys,
             funding_transaction: None,
         })
     }
 
     pub fn anchoring_address(&self) -> Address {
-        p2wsh::address(&self.redeem_script, self.network).into()
+        p2wsh::address(&self.redeem_script(), self.network).into()
+    }
+
+    pub fn redeem_script(&self) -> RedeemScript {
+        let quorum = byzantine_quorum(self.public_keys.len());
+        RedeemScriptBuilder::with_public_keys(self.public_keys.iter().map(|x| x.0.clone()))
+            .quorum(quorum)
+            .to_script()
+            .unwrap()
     }
 
     /// Returns the latest height below the given height which must be anchored.
@@ -137,7 +140,8 @@ mod flatten_keypairs {
     {
         use serde::Serialize;
 
-        let keypairs = keys.iter()
+        let keypairs = keys
+            .iter()
             .map(|(address, private_key)| BitcoinKeypair {
                 address: address.clone(),
                 private_key: private_key.clone(),
@@ -177,7 +181,7 @@ mod tests {
             .collect::<Vec<_>>();
 
         let config = GlobalConfig::new(Network::Bitcoin, public_keys).unwrap();
-        assert_eq!(config.redeem_script.content().quorum, 3);
+        assert_eq!(config.redeem_script().content().quorum, 3);
 
         let json = ::serde_json::to_value(&config).unwrap();
         let config2: GlobalConfig = ::serde_json::from_value(json).unwrap();

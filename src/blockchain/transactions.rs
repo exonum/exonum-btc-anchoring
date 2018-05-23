@@ -97,7 +97,7 @@ impl Transaction for Signature {
         }
 
         let anchoring_state = anchoring_schema.actual_state();
-        let redeem_script = anchoring_state.actual_configuration().redeem_script.clone();
+        let redeem_script = anchoring_state.actual_configuration().redeem_script();
         let redeem_script_content = redeem_script.content();
         let public_key = redeem_script_content
             .public_keys

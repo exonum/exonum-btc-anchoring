@@ -40,15 +40,15 @@ pub enum BtcAnchoringState {
 }
 
 impl BtcAnchoringState {
-    pub fn redeem_script(&self) -> &RedeemScript {
+    pub fn redeem_script(&self) -> RedeemScript {
         match self {
             BtcAnchoringState::Regular {
                 actual_configuration,
-            } => &actual_configuration.redeem_script,
+            } => actual_configuration.redeem_script(),
             BtcAnchoringState::Transition {
                 following_configuration,
                 ..
-            } => &following_configuration.redeem_script,
+            } => following_configuration.redeem_script(),
         }
     }
 
@@ -57,7 +57,7 @@ impl BtcAnchoringState {
     }
 
     pub fn output_address(&self) -> Address {
-        p2wsh::address(self.redeem_script(), self.actual_configuration().network).into()
+        p2wsh::address(&self.redeem_script(), self.actual_configuration().network).into()
     }
 
     pub fn is_regular(&self) -> bool {

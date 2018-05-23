@@ -73,7 +73,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
 
         // Creates anchoring proposal
         let config = self.anchoring_state.actual_configuration();
-        let redeem_script = config.redeem_script.clone();
+        let redeem_script = config.redeem_script();
         let mut builder = BtcAnchoringTransactionBuilder::new(redeem_script.clone())
             .fee(config.transaction_fee)
             .payload(
