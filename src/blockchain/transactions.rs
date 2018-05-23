@@ -82,12 +82,19 @@ impl Transaction for Signature {
 
         assert_eq!(
             Schema::new(fork.as_ref()).block_hash_by_height(payload.block_height),
-            Some(payload.block_hash)
+            Some(payload.block_hash),
+            "Implement Error code: wrong payload in the proposed anchoring transaction"
         );
 
-        // TODO verify anchoring height.
-
         let mut anchoring_schema = BtcAnchoringSchema::new(fork);
+        // We already have enough signatures to spend anchoring transaction.
+        if anchoring_schema
+            .anchoring_transactions_chain()
+            .last()
+            .map(|tx| tx.id()) == Some(tx.id())
+        {
+            return Ok(());
+        }
 
         let anchoring_state = anchoring_schema.actual_state();
         let redeem_script = anchoring_state.actual_configuration().redeem_script.clone();
@@ -98,30 +105,41 @@ impl Transaction for Signature {
             .cloned()
             .expect("Implement Error code: public key of validator is absent");
 
-        // Checks anchoring metadata.
-        assert_eq!(anchoring_state.script_pubkey(), script_pubkey);
-
-        // TODO support recovery mode.
+        // Checks output address.
+        assert_eq!(
+            anchoring_state.script_pubkey(),
+            script_pubkey,
+            "Implement Error code: wrong output address in the proposed anchoring transaction"
+        );
+        assert_eq!(
+            payload.block_height,
+            anchoring_state.following_anchoring_height(anchoring_schema.latest_anchored_height()),
+            "Implement Error code: wrong exonum block height in the proposed anchoring transaction"
+        );
 
         // Checks inputs
         let expected_inputs = anchoring_schema.expected_input_transactions();
-        assert_eq!(tx.0.input.len(), expected_inputs.len());
-
-        // Checks signature content
-        let input_tx = expected_inputs
-            .get(self.input() as usize)
-            .expect("Implement Error code: given input is absent");
+        assert_eq!(
+            tx.0.input.len(),
+            expected_inputs.len(),
+            "Implement Error code: unexpected inputs in the proposed anchoring transaction"
+        );
 
         let input_signer = InputSigner::new(redeem_script.clone());
-        // let context = Secp256k1::without_caps();
-        // input_signer
-        //     .verify_input(
-        //         TxInRef::new(tx.as_ref(), self.input() as usize),
-        //         input_tx.as_ref(),
-        //         &public_key,
-        //         self.input_signature(&context).unwrap().content(),
-        //     )
-        //     .expect("Implement Error code: input signature verification failed");
+        let context = Secp256k1::without_caps();
+        // Checks signature content
+        let input_signature = self.input_signature(&context).unwrap();
+        let input_tx = expected_inputs
+            .get(self.input() as usize)
+            .expect("Implement Error code: input with the given index doesn't exist");
+        input_signer
+            .verify_input(
+                TxInRef::new(tx.as_ref(), self.input() as usize),
+                input_tx.as_ref(),
+                &public_key,
+                input_signature.content(),
+            )
+            .expect("Implement Error code: input signature verification failed");
 
         // Adds signature to schema.
         let input_id = self.input_id();
@@ -134,8 +152,7 @@ impl Transaction for Signature {
         }
         // Tries to finalize transaction.
         let mut tx: btc::Transaction = tx;
-        let context = Secp256k1::without_caps();
-        for (index, _) in expected_inputs.iter().enumerate() {
+        for index in 0..expected_inputs.len() {
             let input_id = TxInputId::new(self.tx().id(), index as u32);
             let input_signatures = anchoring_schema.input_signatures(&input_id, &redeem_script);
 
@@ -151,26 +168,20 @@ impl Transaction for Signature {
             );
         }
         // Adds finalized transaction to the tail of anchoring transactions.
-        if anchoring_schema
-            .anchoring_transactions_chain()
-            .last()
-            .as_ref() != Some(&tx)
-        {
-            debug_assert_eq!(self.tx().id(), self.tx().id());
+        info!(
+            "ANCHORING ====== txid: {}, height: {}, hash: {}, balance: {}",
+            tx.id().to_string(),
+            payload.block_height,
+            payload.block_hash,
+            tx.0.output[0].value,
+        );
+        trace!("Anchoring txhex: {}", tx.to_string());
 
-            info!(
-                "ANCHORING payload: (block_height: {}, hash: {}), txid: {}",
-                payload.block_height,
-                payload.block_hash,
-                tx.id().to_string()
-            );
-            trace!("Anchoring txhex: {}", tx.to_string());
-            anchoring_schema.anchoring_transactions_chain_mut().push(tx);
-            if let Some(unspent_funding_tx) = anchoring_schema.unspent_funding_transaction() {
-                anchoring_schema
-                    .spent_funding_transactions_mut()
-                    .put(&unspent_funding_tx.id(), unspent_funding_tx);
-            }
+        anchoring_schema.anchoring_transactions_chain_mut().push(tx);
+        if let Some(unspent_funding_tx) = anchoring_schema.unspent_funding_transaction() {
+            anchoring_schema
+                .spent_funding_transactions_mut()
+                .put(&unspent_funding_tx.id(), unspent_funding_tx);
         }
 
         Ok(())

@@ -61,7 +61,6 @@ impl<'a> CommitHandler<'a> {
         validator_id: ValidatorId,
         privkey: &Privkey,
     ) -> Result<(), failure::Error> {
-        // TODO Don't send input signatures if them already exists.
         let anchoring_schema = BtcAnchoringSchema::new(self.context.snapshot());
         let latest_anchored_height = anchoring_schema.latest_anchored_height();
         let anchoring_height = self.anchoring_state
