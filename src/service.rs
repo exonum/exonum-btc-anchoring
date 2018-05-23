@@ -18,14 +18,16 @@ use exonum::encoding::Error as EncodingError;
 use exonum::messages::RawMessage;
 use exonum::storage::{Fork, Snapshot};
 
-use blockchain::{BtcAnchoringSchema, Transactions};
-use btc::{Address, Privkey};
-use config::GlobalConfig;
-use handler::CommitHandler;
-use rpc::BtcRelay;
 use serde_json;
 
 use std::collections::HashMap;
+
+use ResultEx;
+use blockchain::{BtcAnchoringSchema, Transactions};
+use btc::{Address, Privkey};
+use config::GlobalConfig;
+use handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask};
+use rpc::BtcRelay;
 
 // TODO support recovery mode if after transition transaction with following output address doesn't exist.
 
@@ -35,14 +37,28 @@ pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;
 pub const BTC_ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
 
 pub struct BtcAnchoringService {
-    pub global_config: GlobalConfig,
-    pub private_keys: HashMap<Address, Privkey>,
-    pub btc_relay: Option<Box<BtcRelay>>,
+    global_config: GlobalConfig,
+    private_keys: HashMap<Address, Privkey>,
+    btc_relay: Option<Box<BtcRelay>>,
 }
 
 impl ::std::fmt::Debug for BtcAnchoringService {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         f.debug_struct("BtcAnchoringService").finish()
+    }
+}
+
+impl BtcAnchoringService {
+    pub fn new(
+        global_config: GlobalConfig,
+        private_keys: HashMap<Address, Privkey>,
+        btc_relay: Option<Box<BtcRelay>>,
+    ) -> BtcAnchoringService {
+        BtcAnchoringService {
+            global_config,
+            private_keys,
+            btc_relay,
+        }
     }
 }
 
@@ -69,9 +85,12 @@ impl Service for BtcAnchoringService {
     }
 
     fn handle_commit(&self, context: &ServiceContext) {
-        let handler = CommitHandler::new(context, &self.private_keys);
-        if let Err(e) = handler.handle() {
-            error!("An error in `handle_commit`: {}", e);
+        let task = UpdateAnchoringChainTask::new(context, &self.private_keys);
+        task.run().log_error();
+
+        if let Some(ref relay) = self.btc_relay.as_ref() {
+            let task = SyncWithBtcRelayTask::new(context, relay.as_ref());
+            task.run().log_error();
         }
     }
 }

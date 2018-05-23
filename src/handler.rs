@@ -25,26 +25,27 @@ use blockchain::data_layout::TxInputId;
 use blockchain::transactions::Signature;
 use blockchain::{BtcAnchoringSchema, BtcAnchoringState};
 use btc::{Address, BtcAnchoringTransactionBuilder, Privkey};
+use rpc::BtcRelay;
 
-pub struct CommitHandler<'a> {
+pub struct UpdateAnchoringChainTask<'a> {
     context: &'a ServiceContext,
     anchoring_state: BtcAnchoringState,
     private_keys: &'a HashMap<Address, Privkey>,
 }
 
-impl<'a> CommitHandler<'a> {
+impl<'a> UpdateAnchoringChainTask<'a> {
     pub fn new(
         context: &'a ServiceContext,
         private_keys: &'a HashMap<Address, Privkey>,
-    ) -> CommitHandler<'a> {
-        CommitHandler {
+    ) -> UpdateAnchoringChainTask<'a> {
+        UpdateAnchoringChainTask {
             context,
             anchoring_state: BtcAnchoringSchema::new(context.snapshot()).actual_state(),
             private_keys,
         }
     }
 
-    pub fn handle(self) -> Result<(), failure::Error> {
+    pub fn run(self) -> Result<(), failure::Error> {
         if let Some(validator_id) = self.context.validator_id() {
             let address = self.anchoring_state.output_address();
             let privkey = self.private_keys
@@ -134,5 +135,47 @@ impl<'a> CommitHandler<'a> {
 
     fn handle_as_auditor(self) -> Result<(), failure::Error> {
         unimplemented!();
+    }
+}
+
+#[derive(Debug)]
+pub struct SyncWithBtcRelayTask<'a> {
+    context: &'a ServiceContext,
+    relay: &'a BtcRelay,
+}
+
+impl<'a> SyncWithBtcRelayTask<'a> {
+    pub fn new(context: &'a ServiceContext, relay: &'a BtcRelay) -> SyncWithBtcRelayTask<'a> {
+        SyncWithBtcRelayTask { context, relay }
+    }
+
+    pub fn run(self) -> Result<(), failure::Error> {
+        if let Some(index) = self.find_index_of_first_uncommitted_transaction()? {
+            let anchoring_schema = BtcAnchoringSchema::new(self.context.snapshot());
+            let anchoring_txs = anchoring_schema.anchoring_transactions_chain();
+            for tx in anchoring_txs.iter_from(index) {
+                trace!("Send anchoring transaction to btc relay: {}", tx.id());
+                self.relay.send_transaction(&tx)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn find_index_of_first_uncommitted_transaction(&self) -> Result<Option<u64>, failure::Error> {
+        let anchoring_schema = BtcAnchoringSchema::new(self.context.snapshot());
+        let anchoring_txs = anchoring_schema.anchoring_transactions_chain();
+
+        let anchoring_txs_len = anchoring_txs.len();
+        let tx_indices = (0..anchoring_txs_len).rev();
+        for index in tx_indices {
+            let tx = anchoring_txs.get(index).unwrap();
+            let info = self.relay.transaction_info(&tx.prev_tx_id())?;
+            if info.is_some() {
+                return Ok(Some(index))
+            }
+        }
+
+        Ok(None)
     }
 }

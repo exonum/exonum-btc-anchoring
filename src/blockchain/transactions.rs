@@ -169,7 +169,7 @@ impl Transaction for Signature {
         }
         // Adds finalized transaction to the tail of anchoring transactions.
         info!(
-            "ANCHORING ====== txid: {}, height: {}, hash: {}, balance: {}",
+            "ANCHORING ====== txid: {} height: {} hash: {} balance: {}",
             tx.id().to_string(),
             payload.block_height,
             payload.block_hash,

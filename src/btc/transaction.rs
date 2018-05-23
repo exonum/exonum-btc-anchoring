@@ -35,6 +35,13 @@ impl Transaction {
         Hash::new(bytes)
     }
 
+    pub fn prev_tx_id(&self) -> Hash {
+        let mut bytes = [0u8; 32];
+        bytes.copy_from_slice(&self.0.input[0].prev_hash[..]);
+        bytes.reverse();
+        Hash::new(bytes)        
+    }
+
     pub fn find_out(&self, script_pubkey: &Script) -> Option<(usize, &TxOut)> {
         self.0
             .output

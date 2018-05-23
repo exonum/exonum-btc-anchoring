@@ -31,7 +31,7 @@ pub struct TransactionInfo {
 }
 
 /// Information provider about the Bitcoin network.
-pub trait BtcRelay: Send + Sync {
+pub trait BtcRelay: Send + Sync + ::std::fmt::Debug {
     /// Sends funds to the given address.
     fn send_to_address(&self, addr: &Address, satoshis: u64)
         -> Result<Transaction, failure::Error>;
@@ -39,10 +39,12 @@ pub trait BtcRelay: Send + Sync {
     fn transaction_info(&self, id: &Hash) -> Result<Option<TransactionInfo>, failure::Error>;
     /// Sends raw transaction to the bitcoin network.
     fn send_transaction(&self, transaction: &Transaction) -> Result<Hash, failure::Error>;
+    /// Observes the changes on given address.
+    fn watch_address(&self, addr: &Address, rescan: bool) -> Result<(), failure::Error>;
 }
 
 /// `Bitcoind` rpc configuration.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct BitcoinRpcConfig {
     /// Rpc url.
     pub host: String,
@@ -120,5 +122,11 @@ impl BtcRelay for BitcoinRpcClient {
         let txid = transaction.id();
         self.0.sendrawtransaction(&transaction.to_string())?;
         Ok(txid)
+    }
+
+    fn watch_address(&self, addr: &Address, rescan: bool) -> Result<(), failure::Error> {
+        self.0
+            .importaddress(&addr.to_string(), "multisig", false, rescan)
+            .map_err(From::from)
     }
 }

@@ -52,3 +52,22 @@ pub mod rpc;
 pub mod service;
 
 mod handler;
+
+pub(crate) trait ResultEx {
+    fn log_error(self);
+    fn log_warn(self);
+}
+
+impl<T: ::std::fmt::Display> ResultEx for Result<(), T> {
+    fn log_error(self) {
+        if let Err(e) = self {
+            error!("{}", e);
+        }
+    }
+
+    fn log_warn(self) {
+        if let Err(e) = self {
+            warn!("{}", e);
+        }
+    }
+}

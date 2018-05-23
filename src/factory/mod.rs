@@ -367,11 +367,11 @@ impl ServiceFactory for BtcAnchoringFactory {
             .rpc
             .map(BitcoinRpcClient::from)
             .map(Box::<BtcRelay>::from);
-        let service = BtcAnchoringService {
-            global_config: btc_anchoring_config.global,
+        let service = BtcAnchoringService::new(
+            btc_anchoring_config.global,
+            btc_anchoring_config.local.private_keys,
             btc_relay,
-            private_keys: btc_anchoring_config.local.private_keys,
-        };
+        );
         Box::new(service)
     }
 }
