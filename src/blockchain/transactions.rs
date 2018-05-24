@@ -110,7 +110,7 @@ impl Transaction for Signature {
         let input_signer = InputSigner::new(redeem_script.clone());
         let context = Secp256k1::without_caps();
         // Checks signature content
-        let input_signature = self.input_signature(&context).unwrap();
+        let input_signature_ref = self.input_signature(&context).unwrap();
         let input_tx = expected_inputs
             .get(self.input() as usize)
             .expect("Implement Error code: input with the given index doesn't exist");
@@ -119,7 +119,7 @@ impl Transaction for Signature {
                 TxInRef::new(tx.as_ref(), self.input() as usize),
                 input_tx.as_ref(),
                 &public_key,
-                input_signature.content(),
+                input_signature_ref,
             )
             .expect("Implement Error code: input signature verification failed");
 

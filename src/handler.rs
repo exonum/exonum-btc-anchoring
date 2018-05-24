@@ -106,7 +106,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                     TxInRef::new(proposal.as_ref(), index),
                     proposal_inputs[index].as_ref(),
                     &pubkey,
-                    signature.content(),
+                    &signature,
                 )
                 .unwrap();
 

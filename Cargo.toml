@@ -19,7 +19,7 @@ exonum = "0.7.0"
 exonum_bitcoinrpc = "0.5.1"
 
 bitcoin = "0.13.0"
-btc-transaction-utils = "0.1.0"
+btc-transaction-utils = "0.2.0"
 byteorder = "1.0.0"
 clap = "2.22.1"
 derive_more = "0.10.0"
