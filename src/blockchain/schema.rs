@@ -159,16 +159,6 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         }
     }
 
-    pub fn expected_input_transactions(&self) -> Vec<Transaction> {
-        let unspent_anchoring_tx = self.anchoring_transactions_chain().last();
-        let unspent_funding_tx = self.unspent_funding_transaction();
-
-        [unspent_anchoring_tx, unspent_funding_tx]
-            .into_iter()
-            .filter_map(|x| x.clone())
-            .collect::<Vec<_>>()
-    }
-
     pub fn latest_anchored_height(&self) -> Option<Height> {
         let tx = self.anchoring_transactions_chain().last()?;
         Some(

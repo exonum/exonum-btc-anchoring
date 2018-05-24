@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::{ExecutionResult, Schema, Transaction};
+use exonum::blockchain::{ExecutionResult, Transaction};
 use exonum::crypto::PublicKey;
 use exonum::helpers::ValidatorId;
 use exonum::messages::Message;
@@ -73,19 +73,7 @@ impl Transaction for Signature {
     }
 
     fn execute(&self, fork: &mut Fork) -> ExecutionResult {
-        let tx: btc::Transaction = self.tx();
-        // Checks anchoring metadata.
-        let (script_pubkey, payload) = {
-            let metadata = tx.anchoring_metadata().unwrap();
-            (metadata.0.clone(), metadata.1)
-        };
-
-        assert_eq!(
-            Schema::new(fork.as_ref()).block_hash_by_height(payload.block_height),
-            Some(payload.block_hash),
-            "Implement Error code: wrong payload in the proposed anchoring transaction"
-        );
-
+        let tx = self.tx();
         let mut anchoring_schema = BtcAnchoringSchema::new(fork);
         // We already have enough signatures to spend anchoring transaction.
         if anchoring_schema
@@ -97,6 +85,20 @@ impl Transaction for Signature {
         }
 
         let anchoring_state = anchoring_schema.actual_state();
+        let (expected_transaction, expected_inputs) = anchoring_schema
+            .proposed_anchoring_transaction(&anchoring_state)
+            .expect(
+                "Implement Error code: received signature for the incorrect anchoring transaction",
+            )
+            .expect("Implement Error code: same as above");
+        assert_eq!(
+            expected_transaction.id(),
+            tx.id(),
+            "Implement Error code: expected transaction: {:?}, got: {:?}",
+            expected_transaction,
+            tx
+        );
+
         let redeem_script = anchoring_state.actual_configuration().redeem_script();
         let redeem_script_content = redeem_script.content();
         let public_key = redeem_script_content
@@ -104,26 +106,6 @@ impl Transaction for Signature {
             .get(self.validator().0 as usize)
             .cloned()
             .expect("Implement Error code: public key of validator is absent");
-
-        // Checks output address.
-        assert_eq!(
-            anchoring_state.script_pubkey(),
-            script_pubkey,
-            "Implement Error code: wrong output address in the proposed anchoring transaction"
-        );
-        assert_eq!(
-            payload.block_height,
-            anchoring_state.following_anchoring_height(anchoring_schema.latest_anchored_height()),
-            "Implement Error code: wrong exonum block height in the proposed anchoring transaction"
-        );
-
-        // Checks inputs
-        let expected_inputs = anchoring_schema.expected_input_transactions();
-        assert_eq!(
-            tx.0.input.len(),
-            expected_inputs.len(),
-            "Implement Error code: unexpected inputs in the proposed anchoring transaction"
-        );
 
         let input_signer = InputSigner::new(redeem_script.clone());
         let context = Secp256k1::without_caps();
@@ -168,6 +150,7 @@ impl Transaction for Signature {
             );
         }
         // Adds finalized transaction to the tail of anchoring transactions.
+        let payload = tx.anchoring_metadata().unwrap().1;
         info!(
             "ANCHORING ====== txid: {} height: {} hash: {} balance: {}",
             tx.id().to_string(),

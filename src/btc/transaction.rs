@@ -112,14 +112,6 @@ impl BtcAnchoringTransactionBuilder {
         self
     }
 
-    pub fn input(self, tx: Transaction) -> Self {
-        if tx.anchoring_metadata().is_some() {
-            self.prev_tx(tx)
-        } else {
-            self.additional_funds(tx)
-        }
-    }
-
     pub fn fee(mut self, fee: u64) -> Self {
         self.fee = Some(fee);
         self

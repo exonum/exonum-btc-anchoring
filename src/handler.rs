@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::{Schema, ServiceContext};
+use exonum::blockchain::{ServiceContext};
 use exonum::helpers::ValidatorId;
 
 use btc_transaction_utils::TxInRef;
@@ -24,7 +24,7 @@ use std::collections::HashMap;
 use blockchain::data_layout::TxInputId;
 use blockchain::transactions::Signature;
 use blockchain::{BtcAnchoringSchema, BtcAnchoringState};
-use btc::{Address, BtcAnchoringTransactionBuilder, Privkey};
+use btc::{Address, Privkey};
 use rpc::BtcRelay;
 
 pub struct UpdateAnchoringChainTask<'a> {
@@ -165,7 +165,8 @@ impl<'a> SyncWithBtcRelayTask<'a> {
             let tx = anchoring_txs.get(index).unwrap();
             let info = self.relay.transaction_info(&tx.prev_tx_id())?;
             if info.is_some() {
-                return Ok(Some(index));
+                let info = self.relay.transaction_info(&tx.id())?;
+                return Ok(info.map(|_| index));
             }
         }
 
