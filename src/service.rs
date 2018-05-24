@@ -88,6 +88,7 @@ impl Service for BtcAnchoringService {
         let task = UpdateAnchoringChainTask::new(context, &self.private_keys);
         task.run().log_error();
 
+        // TODO make this task async via tokio core or something else.
         if let Some(ref relay) = self.btc_relay.as_ref() {
             let task = SyncWithBtcRelayTask::new(context, relay.as_ref());
             task.run().log_error();

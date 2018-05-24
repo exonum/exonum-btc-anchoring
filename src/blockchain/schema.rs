@@ -130,6 +130,8 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
                 && tx.0.output[0].script_pubkey == actual_state.script_pubkey()
             {
                 return None;
+            } else {
+                // TODO support transaction chain recovery.
             }
             builder = builder.prev_tx(tx);
         }

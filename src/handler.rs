@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::{ServiceContext};
+use exonum::blockchain::ServiceContext;
 use exonum::helpers::ValidatorId;
 
 use btc_transaction_utils::TxInRef;
 use btc_transaction_utils::p2wsh;
 use failure;
 
+use std::cmp;
 use std::collections::HashMap;
 
 use blockchain::data_layout::TxInputId;
@@ -143,12 +144,19 @@ impl<'a> SyncWithBtcRelayTask<'a> {
     }
 
     pub fn run(self) -> Result<(), failure::Error> {
-        if let Some(index) = self.find_index_of_first_uncommitted_transaction()? {
-            let anchoring_schema = BtcAnchoringSchema::new(self.context.snapshot());
-            let anchoring_txs = anchoring_schema.anchoring_transactions_chain();
-            for tx in anchoring_txs.iter_from(index) {
-                trace!("Send anchoring transaction to btc relay: {}", tx.id());
-                self.relay.send_transaction(&tx)?;
+        let anchoring_schema = BtcAnchoringSchema::new(self.context.snapshot());
+        let sync_interval = cmp::max(
+            1,
+            anchoring_schema.actual_configuration().anchoring_interval / 2,
+        );
+
+        if self.context.height().0 % sync_interval == 0 {
+            if let Some(index) = self.find_index_of_first_uncommitted_transaction()? {
+                let anchoring_txs = anchoring_schema.anchoring_transactions_chain();
+                for tx in anchoring_txs.iter_from(index) {
+                    trace!("Send anchoring transaction to btc relay: {}", tx.id());
+                    self.relay.send_transaction(&tx)?;
+                }
             }
         }
 
