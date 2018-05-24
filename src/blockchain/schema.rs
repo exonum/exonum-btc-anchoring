@@ -21,7 +21,7 @@ use btc_transaction_utils::multisig::RedeemScript;
 use serde_json;
 
 use BTC_ANCHORING_SERVICE_NAME;
-use btc::Transaction;
+use btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 use config::GlobalConfig;
 
 use super::BtcAnchoringState;
@@ -90,6 +90,16 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         Self::parse_config(following_configuration)
     }
 
+    pub fn input_signatures(
+        &self,
+        input: &TxInputId,
+        redeem_script: &RedeemScript,
+    ) -> InputSignatures {
+        self.transaction_signatures().get(input).unwrap_or_else(|| {
+            InputSignatures::new(redeem_script.content().public_keys.len() as u16)
+        })
+    }
+
     pub fn actual_state(&self) -> BtcAnchoringState {
         let actual_configuration = self.actual_configuration();
         if let Some(following_configuration) = self.following_configuration() {
@@ -102,6 +112,41 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
                 actual_configuration,
             }
         }
+    }
+
+    pub fn proposed_anchoring_transaction(
+        &self,
+        actual_state: &BtcAnchoringState,
+    ) -> Option<Result<(Transaction, Vec<Transaction>), BuilderError>> {
+        let config = actual_state.actual_configuration();
+        let unspent_anchoring_transaction = self.anchoring_transactions_chain().last();
+        let unspent_funding_transaction = self.unspent_funding_transaction();
+
+        let mut builder = BtcAnchoringTransactionBuilder::new(config.redeem_script());
+        // First anchoring transaction doesn't have previous.
+        if let Some(tx) = unspent_anchoring_transaction {
+            // Checks that latest anchoring transaction isn't a transition.
+            if actual_state.is_transition()
+                && tx.0.output[0].script_pubkey == actual_state.script_pubkey()
+            {
+                return None;
+            }
+            builder = builder.prev_tx(tx);
+        }
+        if let Some(tx) = unspent_funding_transaction {
+            builder = builder.additional_funds(tx);
+        }
+        // Adds corresponding payload.
+        let latest_anchored_height = self.latest_anchored_height();
+        let anchoring_height = actual_state.following_anchoring_height(latest_anchored_height);
+        let anchoring_block_hash = Schema::new(&self.snapshot)
+            .block_hash_by_height(anchoring_height)
+            .unwrap();
+        builder = builder
+            .payload(anchoring_height, anchoring_block_hash)
+            .fee(config.transaction_fee);
+        // Creates anchoring proposal
+        Some(builder.create())
     }
 
     pub fn unspent_funding_transaction(&self) -> Option<Transaction> {
@@ -122,16 +167,6 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
             .into_iter()
             .filter_map(|x| x.clone())
             .collect::<Vec<_>>()
-    }
-
-    pub fn input_signatures(
-        &self,
-        input: &TxInputId,
-        redeem_script: &RedeemScript,
-    ) -> InputSignatures {
-        self.transaction_signatures().get(input).unwrap_or_else(|| {
-            InputSignatures::new(redeem_script.content().public_keys.len() as u16)
-        })
     }
 
     pub fn latest_anchored_height(&self) -> Option<Height> {

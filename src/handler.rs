@@ -72,27 +72,20 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         }
 
         // Creates anchoring proposal
+        let (proposal, proposal_inputs) = if let Some(proposal) =
+            anchoring_schema.proposed_anchoring_transaction(&self.anchoring_state)
+        {
+            proposal?
+        } else {
+            return Ok(());
+        };
+
         let config = self.anchoring_state.actual_configuration();
         let redeem_script = config.redeem_script();
-        let mut builder = BtcAnchoringTransactionBuilder::new(redeem_script.clone())
-            .fee(config.transaction_fee)
-            .payload(
-                anchoring_height,
-                Schema::new(self.context.snapshot())
-                    .block_hash_by_height(anchoring_height)
-                    .unwrap(),
-            );
-
-        let expected_inputs = anchoring_schema.expected_input_transactions();
-        for input in &expected_inputs {
-            builder = builder.input(input.clone());
-        }
-        let proposal = builder.create()?;
-
         // Creates Signature transactions.
         let pubkey = redeem_script.content().public_keys[validator_id.0 as usize];
         let mut signer = p2wsh::InputSigner::new(redeem_script);
-        for index in 0..expected_inputs.len() {
+        for index in 0..proposal_inputs.len() {
             let input_id = TxInputId::new(proposal.id(), index as u32);
             if anchoring_schema
                 .transaction_signatures()
@@ -103,14 +96,14 @@ impl<'a> UpdateAnchoringChainTask<'a> {
 
             let signature = signer.sign_input(
                 TxInRef::new(proposal.as_ref(), index),
-                expected_inputs[index].as_ref(),
+                proposal_inputs[index].as_ref(),
                 privkey.0.secret_key(),
             )?;
 
             signer
                 .verify_input(
                     TxInRef::new(proposal.as_ref(), index),
-                    expected_inputs[index].as_ref(),
+                    proposal_inputs[index].as_ref(),
                     &pubkey,
                     signature.content(),
                 )
@@ -172,7 +165,7 @@ impl<'a> SyncWithBtcRelayTask<'a> {
             let tx = anchoring_txs.get(index).unwrap();
             let info = self.relay.transaction_info(&tx.prev_tx_id())?;
             if info.is_some() {
-                return Ok(Some(index))
+                return Ok(Some(index));
             }
         }
 

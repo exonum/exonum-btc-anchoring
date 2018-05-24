@@ -39,7 +39,7 @@ impl Transaction {
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(&self.0.input[0].prev_hash[..]);
         bytes.reverse();
-        Hash::new(bytes)        
+        Hash::new(bytes)
     }
 
     pub fn find_out(&self, script_pubkey: &Script) -> Option<(usize, &TxOut)> {
@@ -77,6 +77,8 @@ pub enum BuilderError {
                      total fee is {}, total balance is {}",
               _0, _1)]
     InsufficientFunds { total_fee: u64, balance: u64 },
+    #[display(fmt = "At least one input should be provided.")]
+    NoInputs,
 }
 
 impl BtcAnchoringTransactionBuilder {
@@ -128,27 +130,30 @@ impl BtcAnchoringTransactionBuilder {
         self
     }
 
-    pub fn create(mut self) -> Result<Transaction, BuilderError> {
-        // Collects inputs.
-        let (input, balance) = {
+    pub fn create(mut self) -> Result<(Transaction, Vec<Transaction>), BuilderError> {
+        // Creates transaction inputs.
+        let (input, input_transactions, balance) = {
+            let mut input = Vec::new();
+            let mut input_transactions = Vec::new();
             let mut balance = 0;
-            let input = self.prev_tx
+
+            let tx_iter = self.prev_tx
                 .into_iter()
                 .map(|tx| (0, tx))
-                .chain(self.additional_funds.into_iter())
-                .map(|(out_index, tx)| {
-                    let out = &tx.0.output[out_index];
-                    balance += out.value;
-                    TxIn {
-                        prev_hash: tx.0.txid(),
-                        prev_index: out_index as u32,
-                        script_sig: Script::default(),
-                        sequence: 0xFFFFFFFF,
-                        witness: Vec::default(),
-                    }
-                })
-                .collect::<Vec<_>>();
-            (input, balance)
+                .chain(self.additional_funds.into_iter());
+            for (out_index, tx) in tx_iter {
+                let txin = TxIn {
+                    prev_hash: tx.0.txid(),
+                    prev_index: out_index as u32,
+                    script_sig: Script::default(),
+                    sequence: 0xFFFFFFFF,
+                    witness: Vec::default(),
+                };
+                balance += tx.0.output[out_index].value;
+                input.push(txin);
+                input_transactions.push(tx);
+            }
+            (input, input_transactions, balance)
         };
         // Computes payload script.
         let (block_height, block_hash) = self.payload.take().expect("Payload isn't set.");
@@ -183,7 +188,7 @@ impl BtcAnchoringTransactionBuilder {
         }
         // Sets the corresponding fee.
         transaction.0.output[0].value -= total_fee;
-        Ok(transaction)
+        Ok((transaction, input_transactions))
     }
 }
 
