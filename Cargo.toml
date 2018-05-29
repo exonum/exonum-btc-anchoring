@@ -44,6 +44,7 @@ exonum-testkit = "0.7.0"
 exonum-configuration = "0.7.0"
 libc = "0.2.21"
 pretty_assertions = "0.5.1"
+proptest = "0.7.0"
 
 [features]
 default = []
