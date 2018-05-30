@@ -21,7 +21,7 @@ use bitcoin::blockdata::transaction::{TxIn, TxOut};
 use bitcoin::network::serialize::{deserialize, serialize, serialize_hex, BitcoinHash};
 use bitcoin::util::privkey::Privkey;
 use bitcoinrpc;
-use btc_transaction_utils::{p2wsh, TxInRef};
+use btc_transaction_utils::{p2wsh, InputSignature, InputSignatureRef, TxInRef};
 use secp256k1::key::{PublicKey, SecretKey};
 
 use exonum::crypto::{hash, Hash};
@@ -384,13 +384,10 @@ pub fn verify_tx_input(
     signature: &[u8],
 ) -> bool {
     let signer = p2wsh::InputSigner::new(subscript.clone());
-    signer
-        .verify_input(
-            TxInRef::new(tx, input),
-            prev_tx,
-            pub_key,
-            signature.split_last().unwrap().1,
-        )
+    InputSignatureRef::from_bytes(signer.secp256k1_context(), signature)
+        .and_then(|signature| {
+            signer.verify_input(TxInRef::new(tx, input), prev_tx, pub_key, signature)
+        })
         .is_ok()
 }
 
@@ -401,7 +398,10 @@ fn finalize_anchoring_transaction(
 ) -> AnchoringTx {
     let signer = p2wsh::InputSigner::new(redeem_script.clone());
     for (out, signatures) in signatures {
-        anchoring_tx.0.input[out as usize].witness = signer.witness_data(signatures);
+        let signatures = signatures
+            .into_iter()
+            .map(|bytes| InputSignature::from_bytes(signer.secp256k1_context(), bytes).unwrap());
+        signer.spend_input(&mut anchoring_tx.0.input[out as usize], signatures);
     }
     anchoring_tx
 }
