@@ -148,7 +148,7 @@ impl ValidateProof for AnchoredBlockHeaderProof {
         ensure!(proof_entry.0 == &table_location, "Invalid table location");
         // Validates value.
         let values = self.to_block_header
-            .validate(*proof_entry.1, self.height.0)
+            .validate(*proof_entry.1, self.latest_authorized_block.block.height().0)
             .map_err(|e| format_err!("An error occurred {:?}", e))?;
         ensure!(values.len() == 1, "Invalid values count");
         Ok((values[0].0, *values[0].1))
