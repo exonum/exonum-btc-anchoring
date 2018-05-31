@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   Hence, update of the existing blockchain to the new anchoring version is not possible.
   For use of a new anchoring format a new blockchain has to be launched.
 
+### New features
+
+- Introduced a new API method `/v1/block_header_proof/:height` that provides cryptographic
+  proofs for Exonum blocks including those anchored to Bitcoin blockchain.
+  The proof is an apparent evidence of availability of a certain Exonum block
+  in the blockchain. (#124)
+
+
 ### Internal improvements
 
 - Updated to the [Rust-bitcoin 0.13](https://github.com/rust-bitcoin/rust-bitcoin/releases/tag/0.13)
