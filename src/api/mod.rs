@@ -12,26 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Anchoring rest api implementation.
+//! Anchoring rest API implementation.
 
-use router::Router;
 use iron::prelude::*;
+use router::Router;
 
-use exonum::blockchain::Blockchain;
-use exonum::crypto::Hash;
 use exonum::api::{Api, ApiError};
+use exonum::blockchain::{BlockProof, Blockchain, Schema as CoreSchema};
+use exonum::crypto::Hash;
+use exonum::helpers::Height;
+use exonum::storage::{ListProof, MapProof};
 
-use details::btc;
-use details::btc::TxId;
-use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
-use blockchain::schema::AnchoringSchema;
 use blockchain::dto::LectContent;
+use blockchain::schema::AnchoringSchema;
+use details::btc;
+use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
+use details::btc::TxId;
+use ANCHORING_SERVICE_ID;
 
 pub use details::btc::payload::Payload;
 
 mod error;
 
-/// Public api implementation.
+/// Public API implementation.
 #[derive(Debug, Clone)]
 pub struct PublicApi {
     /// Exonum blockchain instance.
@@ -54,6 +57,17 @@ pub struct LectInfo {
     pub hash: Hash,
     /// Information about anchoring transaction.
     pub content: AnchoringInfo,
+}
+
+/// A proof of existence for an anchored or a non-anchored Exonum block at the given height.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct AnchoredBlockHeaderProof {
+    /// Latest authorized block in the blockchain.
+    pub latest_authorized_block: BlockProof,
+    /// Proof for the whole database table.
+    pub to_table: MapProof<Hash, Hash>,
+    /// Proof for the specific header in this table.
+    pub to_block_header: ListProof<Hash>,
 }
 
 impl From<BitcoinTx> for AnchoringInfo {
@@ -146,6 +160,32 @@ impl PublicApi {
         }
         Ok(None)
     }
+
+    /// A method that provides cryptographic proofs for Exonum blocks including those anchored to
+    /// Bitcoin blockchain. The proof is an apparent evidence of availability of a certain Exonum
+    /// block in the blockchain.
+    ///
+    /// `GET /{api_prefix}/v1/block_header_proof/:height`
+    pub fn anchored_block_header_proof(&self, height: u64) -> AnchoredBlockHeaderProof {
+        let view = self.blockchain.snapshot();
+        let core_schema = CoreSchema::new(&view);
+        let anchoring_schema = AnchoringSchema::new(&view);
+
+        let max_height = core_schema.block_hashes_by_height().len() - 1;
+
+        let latest_authorized_block = core_schema
+            .block_and_precommits(Height(max_height))
+            .unwrap();
+        let to_table: MapProof<Hash, Hash> =
+            core_schema.get_proof_to_service_table(ANCHORING_SERVICE_ID, 0);
+        let to_block_header = anchoring_schema.anchored_blocks().get_proof(height);
+
+        AnchoredBlockHeaderProof {
+            latest_authorized_block,
+            to_table,
+            to_block_header,
+        }
+    }
 }
 
 impl Api for PublicApi {
@@ -182,6 +222,13 @@ impl Api for PublicApi {
             api.ok_response(&json!(lect))
         };
 
+        let api = self.clone();
+        let anchored_block_header_proof = move |req: &mut Request| -> IronResult<Response> {
+            let height = api.url_fragment(req, "height")?;
+            let proof = api.anchored_block_header_proof(height);
+            api.ok_response(&json!(proof))
+        };
+
         router.get("/v1/address/actual", actual_address, "actual_address");
         router.get(
             "/v1/address/following",
@@ -195,5 +242,10 @@ impl Api for PublicApi {
             "current_lect_of_validator",
         );
         router.get("/v1/nearest_lect/:height", nearest_lect, "nearest_lect");
+        router.get(
+            "/v1/block_header_proof/:height",
+            anchored_block_header_proof,
+            "anchored_block_header_proof",
+        );
     }
 }

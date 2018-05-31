@@ -23,17 +23,17 @@ use bitcoin::network::constants::Network;
 use failure;
 use toml::Value;
 
+use exonum::blockchain::Service;
+use exonum::encoding::serialize::FromHex;
 use exonum::helpers::fabric::{keys, Argument, CommandExtension, CommandName, Context,
                               ServiceFactory};
-use exonum::blockchain::Service;
 use exonum::node::NodeConfig;
-use exonum::encoding::serialize::FromHex;
 
-use service::AnchoringService;
+use super::{gen_btc_keypair, AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig};
 use details::btc::{self, PrivateKey, PublicKey};
 use details::rpc::{BitcoinRelay, RpcClient};
 use observer::AnchoringObserverConfig;
-use super::{gen_btc_keypair, AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig};
+use service::AnchoringService;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 /// Anchoring configuration that should be saved into the file
@@ -113,12 +113,10 @@ impl CommandExtension for GenerateNodeConfig {
             .get(keys::SERVICES_PUBLIC_CONFIGS)
             .unwrap_or_default();
         services_public_configs.extend(
-            vec![
-                (
-                    "anchoring_pub_key".to_owned(),
-                    Value::try_from(p.to_string()).unwrap(),
-                ),
-            ].into_iter(),
+            vec![(
+                "anchoring_pub_key".to_owned(),
+                Value::try_from(p.to_string()).unwrap(),
+            )].into_iter(),
         );
 
         let rpc_config = AnchoringRpcConfig {

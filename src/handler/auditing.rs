@@ -14,13 +14,13 @@
 
 use exonum::blockchain::ServiceContext;
 
-use error::Error as ServiceError;
-use details::btc::transactions::{AnchoringTx, FundingTx};
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
+use details::btc::transactions::{AnchoringTx, FundingTx};
+use error::Error as ServiceError;
 
-use super::{AnchoringHandler, LectKind};
 use super::error::Error as HandlerError;
+use super::{AnchoringHandler, LectKind};
 
 #[doc(hidden)]
 impl AnchoringHandler {

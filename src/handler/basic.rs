@@ -16,18 +16,18 @@ use std::collections::HashSet;
 use std::sync::mpsc;
 
 use exonum::blockchain::ServiceContext;
-use exonum::storage::Snapshot;
 use exonum::helpers::{Height, ValidatorId};
+use exonum::storage::Snapshot;
 
-use error::Error as ServiceError;
-use handler::error::Error as HandlerError;
-use details::rpc::BitcoinRelay;
+use blockchain::consensus_storage::AnchoringConfig;
+use blockchain::dto::MsgAnchoringUpdateLatest;
+use blockchain::schema::AnchoringSchema;
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, TxKind};
+use details::rpc::BitcoinRelay;
+use error::Error as ServiceError;
+use handler::error::Error as HandlerError;
 use local_storage::AnchoringNodeConfig;
-use blockchain::consensus_storage::AnchoringConfig;
-use blockchain::schema::AnchoringSchema;
-use blockchain::dto::MsgAnchoringUpdateLatest;
 
 use super::{AnchoringHandler, AnchoringState, LectKind, MultisigAddress};
 

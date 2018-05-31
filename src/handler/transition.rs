@@ -14,10 +14,10 @@
 
 use exonum::blockchain::ServiceContext;
 
-use error::Error as ServiceError;
-use details::btc::transactions::BitcoinTx;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
+use details::btc::transactions::BitcoinTx;
+use error::Error as ServiceError;
 
 use super::{AnchoringHandler, LectKind, MultisigAddress};
 

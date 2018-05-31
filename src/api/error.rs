@@ -15,7 +15,6 @@
 use std::error;
 use std::fmt;
 
-use exonum::storage::Error as StorageError;
 use exonum::api::ApiError;
 
 #[derive(Debug)]
@@ -43,7 +42,7 @@ impl Into<ApiError> for Error {
     fn into(self) -> ApiError {
         match self {
             Error::UnknownValidatorId(id) => {
-                ApiError::Storage(StorageError::new(format!("Unknown validator id={}", id)))
+                ApiError::BadRequest(format!("Unknown validator id={}", id))
             }
         }
     }

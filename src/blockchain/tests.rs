@@ -13,17 +13,17 @@
 // limitations under the License.
 
 use exonum::crypto::{hash, PublicKey, Signature};
-use exonum::storage::StorageValue;
-use exonum::helpers::ValidatorId;
 use exonum::encoding::serialize::FromHex;
+use exonum::helpers::ValidatorId;
+use exonum::storage::StorageValue;
 
 use bitcoin::blockdata::transaction::SigHashType;
 use bitcoin::network::serialize::BitcoinHash;
 use serde_json;
 
+use blockchain::dto::{LectContent, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx};
-use blockchain::dto::{LectContent, MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use details::tests::{dummy_anchoring_txs, gen_anchoring_keys, make_signatures};
 
 #[test]

@@ -31,7 +31,7 @@ txindex=1
 # Use [host]:port notation for IPv6.
 # This option can be specified multiple times (default: bind to all interfaces)
 #rpcbind=<addr>
-# You must specify rpcuser and rpcpassword to secure the JSON-RPC api
+# You must specify rpcuser and rpcpassword to secure the JSON-RPC API
 #rpcuser=<username>
 #rpcpassword=YourSuperGreatPasswordNumber_DO_NOT_USE_THIS_OR_YOU_WILL_GET_ROBBED_385593
 ```
@@ -134,7 +134,7 @@ For this:
   directory using given `bitcoind` by rpc.
 
   Also in the generated configuration files you may specify public and private
-  api addresses according to this [document][exonum:node_api].
+  API addresses according to this [document][exonum:node_api].
 
   ***Warning!** `Bitcoind` node should have some bitcoin amount greater
   than `<initial_funds>`, since the initial funding transaction will be
@@ -226,7 +226,7 @@ See this [article][exonum:anchoring_transferring] for details.*
 * Make sure that config update procedure is not delayed. That is, do not delay
   the voting procedure for the new configuration.
 * Look at the new address of the anchoring by the anchoring public
-  [api][exonum:anchoring_public_api].
+  [API][exonum:anchoring_public_api].
 
 ***Note!** If transferring transaction has been lost you need to establish a
 new anchoring chain by a new funding transaction.*

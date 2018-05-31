@@ -34,17 +34,17 @@ extern crate serde_json;
 #[macro_use]
 pub mod testkit_extras;
 
-use exonum::helpers::{Height, ValidatorId};
 use exonum::blockchain::Transaction;
 use exonum::encoding::serialize::FromHex;
+use exonum::helpers::{Height, ValidatorId};
 use exonum_testkit::TestNetworkConfiguration;
 
-use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};
-use exonum_btc_anchoring::handler::error::Error as HandlerError;
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
 use exonum_btc_anchoring::details::btc::transactions::BitcoinTx;
-use testkit_extras::AnchoringTestKit;
+use exonum_btc_anchoring::handler::error::Error as HandlerError;
+use exonum_btc_anchoring::{AnchoringConfig, ANCHORING_SERVICE_NAME};
 use testkit_extras::helpers::*;
+use testkit_extras::AnchoringTestKit;
 
 /// Generates a configuration that excludes `testkit node` from consensus.
 /// Then it continues to work as auditor.
@@ -203,13 +203,11 @@ fn test_auditing_lect_lost_funding_tx() {
         .collect::<Vec<_>>();
     force_commit_lects(&mut testkit, lects);
 
-    requests.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&lect_tx.id(), 0],
-            error: RpcError::NoInformation("Unable to find tx".to_string())
-        },
-    ]);
+    requests.expect(vec![request! {
+        method: "getrawtransaction",
+        params: [&lect_tx.id(), 0],
+        error: RpcError::NoInformation("Unable to find tx".to_string())
+    }]);
     testkit.create_block();
 }
 
@@ -267,13 +265,11 @@ fn test_auditing_lect_lost_current_lect() {
     testkit.create_blocks_until(height);
 
     let lect_tx = testkit.latest_anchored_tx();
-    requests.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [&lect_tx.id(), 0],
-            error: RpcError::NoInformation("Unable to find tx".to_string())
-        },
-    ]);
+    requests.expect(vec![request! {
+        method: "getrawtransaction",
+        params: [&lect_tx.id(), 0],
+        error: RpcError::NoInformation("Unable to find tx".to_string())
+    }]);
     testkit.create_block();
 
     assert_eq!(

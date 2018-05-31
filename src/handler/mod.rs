@@ -16,20 +16,20 @@
 
 mod anchoring;
 mod auditing;
-mod transition;
 mod basic;
 pub mod error;
+mod transition;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::mpsc;
 
-use details::rpc::BitcoinRelay;
-use details::btc;
-use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx};
-use local_storage::AnchoringNodeConfig;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::MsgAnchoringSignature;
+use details::btc;
+use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx};
+use details::rpc::BitcoinRelay;
+use local_storage::AnchoringNodeConfig;
 
 /// Internal anchoring service handler. Can be used to manage the service.
 #[derive(Debug)]

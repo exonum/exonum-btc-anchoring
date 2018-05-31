@@ -14,16 +14,16 @@
 
 use std::mem;
 
-use libc::c_void;
-use byteorder::{ByteOrder, LittleEndian};
 use bitcoin::blockdata::transaction::SigHashType;
-use btc_transaction_utils::{TxInRef, multisig::RedeemScript, p2wsh};
+use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
+use byteorder::{ByteOrder, LittleEndian};
+use libc::c_void;
 use secp256k1::ffi;
+use secp256k1::key;
+use secp256k1::key::SecretKey;
+use secp256k1::Error;
 use secp256k1::{ContextFlag, Secp256k1};
 use secp256k1::{Message, Signature};
-use secp256k1::key::SecretKey;
-use secp256k1::key;
-use secp256k1::Error;
 
 use exonum_btc_anchoring::details::btc::transactions::RawBitcoinTx;
 

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::fmt;
 use std::collections::HashMap;
+use std::fmt;
 use std::ops::Deref;
 
 use bitcoin::blockdata::script::Script;
@@ -21,7 +21,7 @@ use bitcoin::blockdata::transaction::{TxIn, TxOut};
 use bitcoin::network::serialize::{deserialize, serialize, serialize_hex, BitcoinHash};
 use bitcoin::util::privkey::Privkey;
 use bitcoinrpc;
-use btc_transaction_utils::{TxInRef, p2wsh};
+use btc_transaction_utils::{p2wsh, TxInRef};
 use secp256k1::key::{PublicKey, SecretKey};
 
 use exonum::crypto::{hash, Hash};
@@ -30,8 +30,8 @@ use exonum::helpers::Height;
 use exonum::storage::StorageValue;
 
 use details::btc;
-use details::btc::{HexValueEx, RedeemScript, TxId};
 use details::btc::payload::{Payload, PayloadBuilder};
+use details::btc::{HexValueEx, RedeemScript, TxId};
 use details::error::Error as InternalError;
 use details::rpc::{Error as RpcError, RpcClient};
 

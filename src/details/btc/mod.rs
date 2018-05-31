@@ -14,26 +14,26 @@
 
 //! Module contains some wrappers over types from `Bitcoin` crate.
 
-mod types;
+pub mod payload;
 mod private_key;
 mod public_key;
-pub mod payload;
 pub mod transactions;
+mod types;
 
 use rand;
 use rand::Rng;
 
-use secp256k1::Secp256k1;
 use secp256k1::key;
+use secp256k1::Secp256k1;
 
 use exonum::encoding::serialize::FromHexError;
 
 #[doc(hidden)]
 /// For test purpose only
 pub use self::types::{Address, PrivateKey, PublicKey, RawTransaction, Signature, TxId};
+pub use bitcoin::network::constants::Network;
 #[doc(hidden)]
 pub use btc_transaction_utils::multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError};
-pub use bitcoin::network::constants::Network;
 
 #[doc(hidden)]
 /// For test purpose only

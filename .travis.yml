@@ -28,7 +28,7 @@ sudo: required
 
 env:
   global:
-  - CLIPPY_VERS=0.0.186
+  - CLIPPY_VERS=0.0.206
   - RUSTFMT_VERS=0.9.0
   - DEADLINKS_VERS=0.3.0
   - OUTDATED_VERS=0.7.0
@@ -59,6 +59,7 @@ jobs:
   include:
   # Formatting & other lints that do not require compilation
   - env: FEATURE=lints
+    rust: 1.26.1 # Use fresh rustfmt 
     install:
     - rustup component add rustfmt-preview
     - rustfmt -V
@@ -75,7 +76,7 @@ jobs:
 
   # Clippy linting
   - env: FEATURE=clippy
-    rust: nightly-2018-02-12
+    rust: nightly-2018-05-30
     install:
     - cargo clippy --version | grep $CLIPPY_VERS || cargo install clippy --force --vers $CLIPPY_VERS
     script:

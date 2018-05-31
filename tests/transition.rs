@@ -34,8 +34,8 @@ extern crate serde_json;
 #[macro_use]
 pub mod testkit_extras;
 
-use rand::{SeedableRng, StdRng};
 use bitcoin::network::constants::Network;
+use rand::{SeedableRng, StdRng};
 
 use exonum::blockchain::Transaction;
 use exonum::crypto::{gen_keypair_from_seed, CryptoHash, Seed};
@@ -43,13 +43,13 @@ use exonum::encoding::serialize::FromHex;
 use exonum::helpers::{Height, ValidatorId};
 use exonum_testkit::{TestNetworkConfiguration, TestNode};
 
-use exonum_btc_anchoring::{AnchoringConfig, AnchoringNodeConfig, ANCHORING_SERVICE_NAME};
 use exonum_btc_anchoring::blockchain::AnchoringSchema;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{FundingTx, TransactionBuilder};
 use exonum_btc_anchoring::observer::AnchoringChainObserver;
-use testkit_extras::{AnchoringTestKit, TestClient};
+use exonum_btc_anchoring::{AnchoringConfig, AnchoringNodeConfig, ANCHORING_SERVICE_NAME};
 use testkit_extras::helpers::*;
+use testkit_extras::{AnchoringTestKit, TestClient};
 
 fn gen_following_cfg(
     testkit: &mut AnchoringTestKit,
@@ -1583,12 +1583,10 @@ fn test_transit_after_exclude_from_validator() {
     testkit.create_block_with_transactions(txs);
     // Apply following cfg
     testkit.create_blocks_until(cfg_change_height.previous().previous());
-    requests.expect(vec![
-        request! {
-            method: "importaddress",
-            params: [&following_addr, "multisig", false, false]
-        },
-    ]);
+    requests.expect(vec![request! {
+        method: "importaddress",
+        params: [&following_addr, "multisig", false, false]
+    }]);
     testkit.create_block();
     {
         let nodes = testkit.nodes_mut();

@@ -14,16 +14,16 @@
 
 //! Anchoring transactions' chain observer.
 
-use std::time::Duration;
 use std::thread::sleep;
+use std::time::Duration;
 
 use exonum::blockchain::{Blockchain, Schema};
 use exonum::storage::Fork;
 
-use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
-use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
-use blockchain::schema::AnchoringSchema;
 use blockchain::consensus_storage::AnchoringConfig;
+use blockchain::schema::AnchoringSchema;
+use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
+use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
 use error::Error as ServiceError;
 
 /// Type alias for milliseconds.
@@ -36,7 +36,7 @@ pub type Height = u64;
 pub struct AnchoringObserverConfig {
     /// An interval of anchoring chain checks.
     pub check_interval: Milliseconds,
-    /// If this option enabled observer thread will launch with in the public api handler.
+    /// If this option enabled observer thread will launch with in the public API handler.
     pub enabled: bool,
 }
 

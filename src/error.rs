@@ -14,9 +14,9 @@
 
 use std::io;
 
+use bitcoinrpc::Error as RpcError;
 pub use details::error::Error as InternalError;
 pub use handler::error::Error as HandlerError;
-use bitcoinrpc::Error as RpcError;
 
 /// Anchoring btc service Error type.
 #[derive(Debug, Fail, Display)]

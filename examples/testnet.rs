@@ -16,14 +16,14 @@ extern crate exonum;
 extern crate exonum_btc_anchoring;
 extern crate tempdir;
 
-use std::thread;
 use std::env;
+use std::thread;
 
 use tempdir::TempDir;
 
+use exonum::helpers::{generate_testnet_config, init_logger};
 use exonum::node::Node;
 use exonum::storage::{DbOptions, RocksDB};
-use exonum::helpers::{generate_testnet_config, init_logger};
 
 use exonum_btc_anchoring::{gen_anchoring_testnet_config, AnchoringRpcConfig, AnchoringService,
                            BitcoinNetwork, RpcClient};
@@ -78,7 +78,7 @@ fn main() {
             let node_thread = thread::spawn(move || {
                 // Run it in separate thread
                 let node = Node::new(db, vec![Box::new(service)], node_cfg);
-                node.run_handler().expect("Unable to run node");
+                node.run().expect("Unable to run node");
             });
             node_threads.push(node_thread);
         }

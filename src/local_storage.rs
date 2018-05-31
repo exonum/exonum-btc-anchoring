@@ -14,11 +14,11 @@
 
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 
-use std::default::Default;
 use std::collections::BTreeMap;
+use std::default::Default;
 
-use details::rpc::AnchoringRpcConfig;
 use details::btc;
+use details::rpc::AnchoringRpcConfig;
 use observer::AnchoringObserverConfig;
 
 /// Private part of anchoring service configuration stored on a local machine.
