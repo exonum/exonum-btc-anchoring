@@ -122,7 +122,12 @@ impl ValidateProof for AnchoredBlockHeaderProof {
             let validator_keys = actual_config
                 .validator_keys
                 .get(validator_id)
-                .ok_or_else(|| format_err!("Unable to find validator with the given id: {}", validator_id))?;
+                .ok_or_else(|| {
+                    format_err!(
+                        "Unable to find validator with the given id: {}",
+                        validator_id
+                    )
+                })?;
             ensure!(
                 precommit.verify_signature(&validator_keys.consensus_key),
                 "Precommit verification failed"
@@ -148,7 +153,10 @@ impl ValidateProof for AnchoredBlockHeaderProof {
         ensure!(proof_entry.0 == &table_location, "Invalid table location");
         // Validates value.
         let values = self.to_block_header
-            .validate(*proof_entry.1, self.latest_authorized_block.block.height().0)
+            .validate(
+                *proof_entry.1,
+                self.latest_authorized_block.block.height().0,
+            )
             .map_err(|e| format_err!("An error occurred {:?}", e))?;
         ensure!(values.len() == 1, "Invalid values count");
         Ok((values[0].0, *values[0].1))
