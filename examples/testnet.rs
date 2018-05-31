@@ -78,7 +78,7 @@ fn main() {
             let node_thread = thread::spawn(move || {
                 // Run it in separate thread
                 let node = Node::new(db, vec![Box::new(service)], node_cfg);
-                node.run_handler().expect("Unable to run node");
+                node.run().expect("Unable to run node");
             });
             node_threads.push(node_thread);
         }
