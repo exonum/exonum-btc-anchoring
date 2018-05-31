@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use secp256k1::key;
 use secp256k1::Error;
 use secp256k1::Secp256k1;
-use secp256k1::key;
 
 use exonum::storage::StorageKey;
 

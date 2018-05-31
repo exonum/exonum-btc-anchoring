@@ -86,17 +86,15 @@ impl AnchoringTestKit {
             node.check_lect_frequency = CHECK_LECT_FREQUENCY;
         }
 
-        client.requests().expect(vec![
-            request! {
-                method: "importaddress",
-                params: [
-                    "tb1qn5mmecjkj4us6uhr5tc453k96hrzcwr3l9d8fkc7fg8zwur50y4qfdclp7",
-                    "multisig",
-                    false,
-                    false
-                ]
-            },
-        ]);
+        client.requests().expect(vec![request! {
+            method: "importaddress",
+            params: [
+                "tb1qn5mmecjkj4us6uhr5tc453k96hrzcwr3l9d8fkc7fg8zwur50y4qfdclp7",
+                "multisig",
+                false,
+                false
+            ]
+        }]);
         let requests = client.requests();
         let service =
             AnchoringService::new_with_client(Box::new(client), common.clone(), nodes[0].clone());

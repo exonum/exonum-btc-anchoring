@@ -38,8 +38,8 @@ use blockchain::schema::AnchoringSchema;
 use details::btc;
 use details::rpc::{BitcoinRelay, RpcClient};
 use error::Error as ServiceError;
-use handler::AnchoringHandler;
 use handler::error::Error as HandlerError;
+use handler::AnchoringHandler;
 use local_storage::AnchoringNodeConfig;
 use observer::AnchoringChainObserver;
 

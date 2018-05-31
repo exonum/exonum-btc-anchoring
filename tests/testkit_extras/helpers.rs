@@ -459,9 +459,10 @@ pub fn anchor_first_block_without_other_signatures(testkit: &mut AnchoringTestKi
     testkit.create_block();
 
     assert!(testkit.is_tx_in_pool(&signatures[0].hash()));
-    requests.expect(vec![
-        confirmations_request(&testkit.current_funding_tx(), 50),
-    ]);
+    requests.expect(vec![confirmations_request(
+        &testkit.current_funding_tx(),
+        50,
+    )]);
     testkit.create_block_with_transactions(signatures.drain(0..1));
 }
 

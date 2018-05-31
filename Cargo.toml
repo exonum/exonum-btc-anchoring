@@ -15,7 +15,7 @@ description = "An Exonum service that provides anchoring to Bitcoin blockchain."
 travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 
 [dependencies]
-exonum = { git = "https://github.com/exonum/exonum.git", rev = "7aa8fac54a47f31894a86119b25dfdc6a33f28ec" }
+exonum = { git = "https://github.com/exonum/exonum.git", rev = "36162654fcf46365f9cfc2ae612128f0c9b70976" }
 exonum_bitcoinrpc = "0.5.1"
 
 bitcoin="0.13.0"
@@ -41,8 +41,8 @@ git = "https://github.com/exonum/btc-transaction-utils.git"
 rev = "99e0a6dcc05e00540d24c6cd867bff4ab87a9c9d"
 
 [dev-dependencies]
-exonum-configuration = { git = "https://github.com/exonum/exonum.git", rev = "7aa8fac54a47f31894a86119b25dfdc6a33f28ec" }
-exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "7aa8fac54a47f31894a86119b25dfdc6a33f28ec" }
+exonum-configuration = { git = "https://github.com/exonum/exonum.git", rev = "36162654fcf46365f9cfc2ae612128f0c9b70976" }
+exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "36162654fcf46365f9cfc2ae612128f0c9b70976" }
 libc = "0.2.21"
 pretty_assertions = "0.5.1"
 

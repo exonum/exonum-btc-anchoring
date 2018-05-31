@@ -23,11 +23,11 @@ pub use bitcoin::util::address::Address as RawAddress;
 use bitcoin::util::hash::Sha256dHash;
 pub use bitcoin::util::privkey::Privkey as RawPrivkey;
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh};
-use secp256k1::Secp256k1;
 pub use secp256k1::key::PublicKey as RawPublicKey;
+use secp256k1::Secp256k1;
 
-use exonum::encoding::Field;
 use exonum::encoding::serialize::{encode_hex, FromHex, FromHexError, ToHex};
+use exonum::encoding::Field;
 use exonum::storage::StorageKey;
 
 use super::HexValueEx;
@@ -56,8 +56,6 @@ implement_serde_hex! {TxId}
 implement_serde_string! {Address}
 implement_serde_string! {PrivateKey}
 
-// FIXME: Issue in the exonum macro.
-#[cfg_attr(feature = "cargo-clippy", allow(transmute_ptr_to_ptr))]
 implement_pod_as_ref_field! { TxId }
 
 const TXID_SIZE: usize = 32;

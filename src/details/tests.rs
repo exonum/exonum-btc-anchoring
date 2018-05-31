@@ -22,8 +22,8 @@ use bitcoin::network::constants::Network;
 use serde_json;
 
 use exonum::crypto::Hash;
-use exonum::encoding::Field;
 use exonum::encoding::serialize::FromHex;
+use exonum::encoding::Field;
 use exonum::helpers::Height;
 use exonum::storage::StorageValue;
 

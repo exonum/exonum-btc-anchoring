@@ -113,12 +113,10 @@ impl CommandExtension for GenerateNodeConfig {
             .get(keys::SERVICES_PUBLIC_CONFIGS)
             .unwrap_or_default();
         services_public_configs.extend(
-            vec![
-                (
-                    "anchoring_pub_key".to_owned(),
-                    Value::try_from(p.to_string()).unwrap(),
-                ),
-            ].into_iter(),
+            vec![(
+                "anchoring_pub_key".to_owned(),
+                Value::try_from(p.to_string()).unwrap(),
+            )].into_iter(),
         );
 
         let rpc_config = AnchoringRpcConfig {

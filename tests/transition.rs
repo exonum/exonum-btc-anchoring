@@ -1583,12 +1583,10 @@ fn test_transit_after_exclude_from_validator() {
     testkit.create_block_with_transactions(txs);
     // Apply following cfg
     testkit.create_blocks_until(cfg_change_height.previous().previous());
-    requests.expect(vec![
-        request! {
-            method: "importaddress",
-            params: [&following_addr, "multisig", false, false]
-        },
-    ]);
+    requests.expect(vec![request! {
+        method: "importaddress",
+        params: [&following_addr, "multisig", false, false]
+    }]);
     testkit.create_block();
     {
         let nodes = testkit.nodes_mut();

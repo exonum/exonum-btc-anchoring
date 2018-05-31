@@ -23,12 +23,12 @@ use exonum::crypto::Hash;
 use exonum::helpers::Height;
 use exonum::storage::{ListProof, MapProof};
 
-use ANCHORING_SERVICE_ID;
 use blockchain::dto::LectContent;
 use blockchain::schema::AnchoringSchema;
 use details::btc;
-use details::btc::TxId;
 use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
+use details::btc::TxId;
+use ANCHORING_SERVICE_ID;
 
 pub use details::btc::payload::Payload;
 

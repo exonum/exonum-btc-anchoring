@@ -46,8 +46,8 @@ use exonum::helpers::{Height, ValidatorId};
 use exonum_btc_anchoring::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
 use exonum_btc_anchoring::details::btc::transactions::{verify_tx_input, AnchoringTx, FundingTx,
                                                        TransactionBuilder};
-use testkit_extras::AnchoringTestKit;
 use testkit_extras::helpers::*;
+use testkit_extras::AnchoringTestKit;
 
 // We anchor first block
 // problems: None
@@ -801,9 +801,10 @@ fn test_anchoring_signature_input_from_different_validator() {
 
     let signs_before = dump_signatures(&testkit, &tx.id());
     // Commit `msg_signature_different` into blockchain
-    requests.expect(vec![
-        confirmations_request(&testkit.current_funding_tx(), 50),
-    ]);
+    requests.expect(vec![confirmations_request(
+        &testkit.current_funding_tx(),
+        50,
+    )]);
     testkit.create_block_with_transactions(txvec![msg_signature_wrong.clone()]);
     // Ensure that service ignores it
     let signs_after = dump_signatures(&testkit, &tx.id());

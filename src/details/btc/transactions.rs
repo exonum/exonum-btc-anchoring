@@ -21,7 +21,7 @@ use bitcoin::blockdata::transaction::{TxIn, TxOut};
 use bitcoin::network::serialize::{deserialize, serialize, serialize_hex, BitcoinHash};
 use bitcoin::util::privkey::Privkey;
 use bitcoinrpc;
-use btc_transaction_utils::{TxInRef, p2wsh};
+use btc_transaction_utils::{p2wsh, TxInRef};
 use secp256k1::key::{PublicKey, SecretKey};
 
 use exonum::crypto::{hash, Hash};

@@ -23,8 +23,8 @@ mod types;
 use rand;
 use rand::Rng;
 
-use secp256k1::Secp256k1;
 use secp256k1::key;
+use secp256k1::Secp256k1;
 
 use exonum::encoding::serialize::FromHexError;
 

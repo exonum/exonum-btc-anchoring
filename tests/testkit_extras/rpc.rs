@@ -259,13 +259,11 @@ impl Drop for TestClient {
 #[test]
 fn test_rpc_getnewaddress() {
     let client = TestClient::default();
-    client.requests().expect(vec![
-        request! {
-            method: "getnewaddress",
-            params: ["maintain"],
-            response: "mmoXxKhAwnhtFiAMvxJ82CKCBia751mzfY"
-        },
-    ]);
+    client.requests().expect(vec![request! {
+        method: "getnewaddress",
+        params: ["maintain"],
+        response: "mmoXxKhAwnhtFiAMvxJ82CKCBia751mzfY"
+    }]);
     let addr = client.getnewaddress("maintain").unwrap();
     assert_eq!(addr, "mmoXxKhAwnhtFiAMvxJ82CKCBia751mzfY");
 }
@@ -281,13 +279,11 @@ fn test_rpc_expected_request() {
 #[should_panic(expected = "assertion failed")]
 fn test_rpc_wrong_request() {
     let client = TestClient::default();
-    client.requests().expect(vec![
-        request! {
-            method: "getnewaddress",
-            params: ["maintain"],
-            response: "mmoXxKhAwnhtFiAMvxJ82CKCBia751mzfY"
-        },
-    ]);
+    client.requests().expect(vec![request! {
+        method: "getnewaddress",
+        params: ["maintain"],
+        response: "mmoXxKhAwnhtFiAMvxJ82CKCBia751mzfY"
+    }]);
     client.getnewaddress("userid").unwrap();
 }
 
@@ -308,38 +304,34 @@ fn test_rpc_unexpected_request() {
         },
     ]);
     client.getnewaddress("userid").unwrap();
-    client.requests().expect(vec![
-        request! {
-            method: "getnewaddress",
-            params: ["maintain"],
-            response: "mmoXxKhAwnhtFiAMvxJ82CKCBia751mzfY"
-        },
-    ]);
+    client.requests().expect(vec![request! {
+        method: "getnewaddress",
+        params: ["maintain"],
+        response: "mmoXxKhAwnhtFiAMvxJ82CKCBia751mzfY"
+    }]);
 }
 
 #[test]
 fn test_rpc_validateaddress() {
     let client = TestClient::default();
-    client.requests().expect(vec![
-        request! {
-            method: "validateaddress",
-            params: ["n2cCRtaXxRAbmWYhH9sZUBBwqZc8mMV8tb"],
-            response: {
-                "account": "node_0",
-                "address": "n2cCRtaXxRAbmWYhH9sZUBBwqZc8mMV8tb",
-                "hdkeypath": "m/0'/0'/1023'",
-                "hdmasterkeyid": "e2aabb596d105e11c1838c0b6bede91e1f2a95ee",
-                "iscompressed": true,
-                "ismine": true,
-                "isscript": false,
-                "isvalid": true,
-                "iswatchonly": false,
-                "pubkey": "0394a06ac465776c110cb43d530663d7e7df5684013075988917f02f\
-                            f007edd364",
-                "scriptPubKey": "76a914e7588549f0c4149e7949cd7ea933cfcdde45f8c888ac"
-            }
-        },
-    ]);
+    client.requests().expect(vec![request! {
+        method: "validateaddress",
+        params: ["n2cCRtaXxRAbmWYhH9sZUBBwqZc8mMV8tb"],
+        response: {
+            "account": "node_0",
+            "address": "n2cCRtaXxRAbmWYhH9sZUBBwqZc8mMV8tb",
+            "hdkeypath": "m/0'/0'/1023'",
+            "hdmasterkeyid": "e2aabb596d105e11c1838c0b6bede91e1f2a95ee",
+            "iscompressed": true,
+            "ismine": true,
+            "isscript": false,
+            "isvalid": true,
+            "iswatchonly": false,
+            "pubkey": "0394a06ac465776c110cb43d530663d7e7df5684013075988917f02f\
+                        f007edd364",
+            "scriptPubKey": "76a914e7588549f0c4149e7949cd7ea933cfcdde45f8c888ac"
+        }
+    }]);
     client
         .validateaddress("n2cCRtaXxRAbmWYhH9sZUBBwqZc8mMV8tb")
         .unwrap();
