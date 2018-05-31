@@ -56,6 +56,8 @@ implement_serde_hex! {TxId}
 implement_serde_string! {Address}
 implement_serde_string! {PrivateKey}
 
+// FIXME: Issue in the exonum macro.
+#[cfg_attr(feature = "cargo-clippy", allow(transmute_ptr_to_ptr))]
 implement_pod_as_ref_field! { TxId }
 
 const TXID_SIZE: usize = 32;

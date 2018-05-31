@@ -65,6 +65,10 @@ macro_rules! implement_str_conversion {
             }
         }
 
+        // FIXME: Known issue in clippy lints.
+        // https://rust-lang-nursery.github.io/rust-clippy/master/index.html#write_literal
+        #[cfg_attr(feature = "cargo-clippy", allow(write_literal))]
+
         impl fmt::Debug for $to {
             fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
                 write!(f, "\"{}({})\"", stringify!($to), self.to_string())
