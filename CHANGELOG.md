@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## 0.8 - 2018-06-01
+
 ### Breaking changes
 
 - The anchoring service has been switched to using p2wsh address format. (#123)
@@ -24,7 +26,6 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   proofs for Exonum blocks including those anchored to Bitcoin blockchain.
   The proof is an apparent evidence of availability of a certain Exonum block
   in the blockchain. (#124)
-
 
 ### Internal improvements
 
