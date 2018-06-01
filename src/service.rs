@@ -112,9 +112,20 @@ impl Service for AnchoringService {
         serde_json::to_value(cfg).unwrap()
     }
 
-    fn handle_commit(&self, state: &ServiceContext) {
+    fn before_commit(&self, fork: &mut Fork) {
+        // Writes a hash of the latest block to the proof list index.
+        let block_header_hash = CoreSchema::new(&fork)
+            .block_hashes_by_height()
+            .last()
+            .expect("An attempt to invoke execute during the genesis block initialization.");
+        AnchoringSchema::new(fork)
+            .anchored_blocks_mut()
+            .push(block_header_hash)
+    }
+
+    fn after_commit(&self, state: &ServiceContext) {
         let mut handler = self.handler.lock().unwrap();
-        match handler.handle_commit(state) {
+        match handler.after_commit(state) {
             Err(ServiceError::Handler(e @ HandlerError::IncorrectLect { .. })) => {
                 panic!("A critical error occurred: {}", e)
             }
@@ -132,17 +143,6 @@ impl Service for AnchoringService {
             }
             Ok(()) => (),
         }
-    }
-
-    fn execute(&self, fork: &mut Fork) {
-        // Writes a hash of the latest block to the proof list index.
-        let block_header_hash = CoreSchema::new(&fork)
-            .block_hashes_by_height()
-            .last()
-            .expect("An attempt to invoke execute during the genesis block initialization.");
-        AnchoringSchema::new(fork)
-            .anchored_blocks_mut()
-            .push(block_header_hash)
     }
 
     /// Public API implementation.

@@ -742,7 +742,7 @@ fn test_anchoring_signature_input_with_different_correct_signature() {
             &redeem_script,
             &testkit.current_funding_tx(),
             pub_key,
-            different_signature.as_ref(),
+            &different_signature,
         ));
 
         assert_ne!(different_signature, signature_msgs[1].signature());

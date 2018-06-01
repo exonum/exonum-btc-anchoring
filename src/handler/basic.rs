@@ -275,7 +275,7 @@ impl AnchoringHandler {
     }
 
     #[doc(hidden)]
-    pub fn handle_commit(&mut self, state: &ServiceContext) -> Result<(), ServiceError> {
+    pub fn after_commit(&mut self, state: &ServiceContext) -> Result<(), ServiceError> {
         match self.current_state(state)? {
             AnchoringState::Anchoring { cfg } => self.handle_anchoring_state(&cfg, state),
             AnchoringState::Transition { from, to } => {
