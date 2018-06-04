@@ -310,6 +310,37 @@ mod tests {
     }
 
     #[test]
+    #[should_panic(expected = "segwit flag 10 not understood")]
+    fn test_transaction_exonum_field_invalid_segwit_flag() {
+        let hex_tx = "6600000000101b651818fe3855d0d5d74de1cf72b56503c16f808519440e842b6a\
+                      dc2dd570c4930100000000feffffff02deaa7b0000000000160014923904449829\
+                      cd865cdfb72abdba0806ce9e48911027000000000000220020e9bb049fdff8f8d3\
+                      b33b7335978b1dbb268833a32a69906f9e500e4103151bef02483045022100ddc7\
+                      eb1193529a8d0e48cf24f536d5fbb5de3b67d2f56c98190ea8585d58a156022075\
+                      e33981f1a7d78ce2915402d4b9b38b8d5311e0aef2e3ccf9284d2ce602968d0121\
+                      021d0478acd223fb9b2ad7485f06f12914a1b7effc78390a08c50bfe53b3b24815\
+                      062c1400";
+
+        let tx_raw = Vec::<u8>::from_hex(hex_tx).unwrap();
+        let _ = <Transaction as StorageValue>::from_bytes(Cow::Borrowed(&tx_raw));
+    }
+
+    #[test]
+    #[should_panic(expected = "failed to fill whole buffer")]
+    fn test_transaction_exonum_field_invalid_length() {
+        let hex_tx = "66000000000101b651818fe3855d0d5d74de1cf72b56503c16f808519440e842b6\
+                      dc2dd570c4930100000000feffffff02deaa7b0000000000160014923904449829\
+                      cd865cdfb72abdba0806ce9e48911027000000000000220020e9bb049fdff8f8d3\
+                      b33b7335978b1dbb268833a32a69906f9e500e4103151bef02483045022100ddc7\
+                      eb1193529a8d0e48cf24f536d5fbb5de3b67d2f56c98190ea8585d58a156022075\
+                      021d0478acd223fb9b2ad7485f06f12914a1b7effc78390a08c50bfe53b3b24815\
+                      062c1400";
+
+        let tx_raw = Vec::<u8>::from_hex(hex_tx).unwrap();
+        let _ = <Transaction as StorageValue>::from_bytes(Cow::Borrowed(&tx_raw));
+    }
+
+    #[test]
     fn test_anchoring_transaction_builder_simple() {
         let funding_tx: Transaction = Transaction::from_hex(
             "02000000000101b651818fe3855d0d5d74de1cf72b56503c16f808519440e842b6\
