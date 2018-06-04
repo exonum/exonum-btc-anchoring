@@ -426,7 +426,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "Output address in a previous anchoring transaction is not suitable.")]
     fn test_anchoring_transaction_builder_incorrect_prev_tx() {
         let funding_tx: Transaction = Transaction::from_hex(
             "02000000000101b651818fe3855d0d5d74de1cf72b56503c16f808519440e842b6\
@@ -472,7 +472,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
+    #[should_panic(expected = "doesn't contains outputs to the anchoring address.")]
     fn test_anchoring_transaction_builder_incorrect_funds() {
         let funding_tx: Transaction = Transaction::from_hex(
             "020000000001015315c18b6a6893ec08d4a7175da494d5d856a8efc983ba2e8eed06c2211041f500000000\
