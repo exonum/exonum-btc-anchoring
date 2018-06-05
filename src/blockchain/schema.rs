@@ -20,12 +20,12 @@ use exonum::storage::{Fork, ProofListIndex, ProofMapIndex, Snapshot};
 use btc_transaction_utils::multisig::RedeemScript;
 use serde_json;
 
-use BTC_ANCHORING_SERVICE_NAME;
 use btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 use config::GlobalConfig;
+use BTC_ANCHORING_SERVICE_NAME;
 
-use super::BtcAnchoringState;
 use super::data_layout::*;
+use super::BtcAnchoringState;
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {
@@ -131,6 +131,7 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
             if actual_state.is_transition()
                 && tx.0.output[0].script_pubkey == actual_state.script_pubkey()
             {
+                trace!("Anchoring paused at transition state");
                 return None;
             } else {
                 // TODO support transaction chain recovery.
@@ -144,18 +145,23 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
             }
             builder = builder.prev_tx(tx);
         }
+
         if let Some(tx) = unspent_funding_transaction {
             builder = builder.additional_funds(tx);
         }
+
         // Adds corresponding payload.
         let latest_anchored_height = self.latest_anchored_height();
         let anchoring_height = actual_state.following_anchoring_height(latest_anchored_height);
+
         let anchoring_block_hash = Schema::new(&self.snapshot)
             .block_hash_by_height(anchoring_height)
             .unwrap();
+
         builder = builder
             .payload(anchoring_height, anchoring_block_hash)
             .fee(config.transaction_fee);
+
         // Creates anchoring proposal
         Some(builder.create())
     }

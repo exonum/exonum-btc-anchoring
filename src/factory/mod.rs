@@ -288,7 +288,9 @@ impl CommandExtension for Finalize {
         let mut global_config = GlobalConfig::new(network.into(), public_keys)?;
         // Generates initial funding transaction.
         let relay = BitcoinRpcClient::from(rpc_config.clone());
+
         let addr = global_config.anchoring_address();
+
         let funding_tx = if let Some(funding_txid) = funding_txid {
             let info = relay.transaction_info(&funding_txid)?.ok_or_else(|| {
                 format_err!(
@@ -320,6 +322,7 @@ impl CommandExtension for Finalize {
         // Creates local config.
         let mut private_keys = HashMap::new();
         private_keys.insert(addr, private_key);
+
         let local_config = LocalConfig {
             rpc: Some(rpc_config),
             private_keys,

@@ -15,8 +15,8 @@
 use exonum::blockchain::ServiceContext;
 use exonum::helpers::ValidatorId;
 
-use btc_transaction_utils::TxInRef;
 use btc_transaction_utils::p2wsh;
+use btc_transaction_utils::TxInRef;
 use failure;
 
 use std::cmp;
@@ -49,9 +49,11 @@ impl<'a> UpdateAnchoringChainTask<'a> {
     pub fn run(self) -> Result<(), failure::Error> {
         if let Some(validator_id) = self.context.validator_id() {
             let address = self.anchoring_state.output_address();
+
             let privkey = self.private_keys
                 .get(&address)
                 .ok_or_else(|| format_err!("Private key for the address {} is absent.", address))?;
+
             self.handle_as_validator(validator_id, &privkey)
         } else {
             self.handle_as_auditor()
@@ -137,6 +139,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
     fn handle_as_auditor(self) -> Result<(), failure::Error> {
         unimplemented!();
     }
+
 }
 
 #[derive(Debug)]

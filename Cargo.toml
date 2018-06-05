@@ -17,6 +17,7 @@ travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 [dependencies]
 exonum = "0.7.0"
 exonum_bitcoinrpc = "0.5.1"
+exonum-testkit = "0.7.0"
 
 bitcoin = "0.13.1"
 btc-transaction-utils = "0.2.0"

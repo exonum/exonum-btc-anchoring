@@ -24,12 +24,12 @@ use std::sync::{Arc, RwLock};
 
 use std::collections::HashMap;
 
-use ResultEx;
 use blockchain::{BtcAnchoringSchema, Transactions};
 use btc::{Address, Privkey};
 use config::GlobalConfig;
 use handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask};
 use rpc::BtcRelay;
+use ResultEx;
 
 // TODO support recovery mode if after transition transaction with following output address doesn't exist.
 
@@ -62,6 +62,10 @@ impl BtcAnchoringService {
             btc_relay,
         }
     }
+
+    // pub fn add_private_key(&mut self, address: &Address, private_key: Privkey) {
+    //     self.private_keys.insert(address.clone(), private_key);
+    // }
 }
 
 impl Service for BtcAnchoringService {

@@ -20,6 +20,7 @@ use bitcoin::util::address;
 use bitcoin::util::privkey;
 use rand::{self, Rng};
 use secp256k1;
+use std::ops::Deref;
 
 #[macro_use]
 mod macros;
@@ -117,6 +118,14 @@ impl ::std::hash::Hash for Address {
     fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
         // TODO: Add `Hash` to the underlying crates.
         self.to_string().hash(state)
+    }
+}
+
+impl Deref for Address {
+    type Target = address::Address;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
     }
 }
 

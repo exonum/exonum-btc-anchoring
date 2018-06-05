@@ -149,17 +149,17 @@ impl Transaction for Signature {
                     .map(|bytes| InputSignature::from_bytes(&context, bytes).unwrap()),
             );
         }
-        // Adds finalized transaction to the tail of anchoring transactions.
+
         let payload = tx.anchoring_metadata().unwrap().1;
-        info!(
-            "ANCHORING ====== txid: {} height: {} hash: {} balance: {}",
-            tx.id().to_string(),
-            payload.block_height,
-            payload.block_hash,
-            tx.0.output[0].value,
-        );
+        
+        info!("====== ANCHORING ======");
+        info!("txid: {}", tx.id().to_string(),);
+        info!("height: {}", payload.block_height,);
+        info!("hash: {}", payload.block_hash,);
+        info!("balance: {}", tx.0.output[0].value,);
         trace!("Anchoring txhex: {}", tx.to_string());
 
+        // Adds finalized transaction to the tail of anchoring transactions.
         anchoring_schema.anchoring_transactions_chain_mut().push(tx);
         if let Some(unspent_funding_tx) = anchoring_schema.unspent_funding_transaction() {
             anchoring_schema

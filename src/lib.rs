@@ -45,6 +45,8 @@ extern crate serde;
 extern crate serde_str;
 extern crate toml;
 
+extern crate exonum_testkit;
+
 pub use factory::BtcAnchoringFactory as ServiceFactory;
 pub use service::{BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME};
 
@@ -54,6 +56,8 @@ pub mod config;
 pub mod factory;
 pub mod rpc;
 pub mod service;
+
+pub mod test_data;
 
 mod handler;
 
