@@ -15,8 +15,8 @@
 use exonum::blockchain::ServiceContext;
 use exonum::helpers::ValidatorId;
 
-use btc_transaction_utils::TxInRef;
 use btc_transaction_utils::p2wsh;
+use btc_transaction_utils::TxInRef;
 use failure;
 
 use std::cmp;
@@ -86,7 +86,8 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         // Creates Signature transactions.
         let pubkey = redeem_script.content().public_keys[validator_id.0 as usize];
         let mut signer = p2wsh::InputSigner::new(redeem_script);
-        for index in 0..proposal_inputs.len() {
+
+        for (index, proposal_input) in proposal_inputs.iter().enumerate() {
             let input_id = TxInputId::new(proposal.id(), index as u32);
             if anchoring_schema
                 .transaction_signatures()
@@ -104,7 +105,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
             signer
                 .verify_input(
                     TxInRef::new(proposal.as_ref(), index),
-                    proposal_inputs[index].as_ref(),
+                    proposal_input.as_ref(),
                     &pubkey,
                     &signature,
                 )
@@ -124,7 +125,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                 .send(Box::new(signature_tx))?;
         }
 
-        return Ok(());
+        Ok(())
     }
 
     fn handle_as_auditor(self) -> Result<(), failure::Error> {

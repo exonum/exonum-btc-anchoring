@@ -20,12 +20,12 @@ use exonum::storage::{Fork, ProofListIndex, ProofMapIndex, Snapshot};
 use btc_transaction_utils::multisig::RedeemScript;
 use serde_json;
 
-use BTC_ANCHORING_SERVICE_NAME;
 use btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 use config::GlobalConfig;
+use BTC_ANCHORING_SERVICE_NAME;
 
-use super::BtcAnchoringState;
 use super::data_layout::*;
+use super::BtcAnchoringState;
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {
@@ -80,14 +80,14 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
     /// Returns the actual anchoring configuration.
     pub fn actual_configuration(&self) -> GlobalConfig {
         let actual_configuration = Schema::new(&self.snapshot).actual_configuration();
-        Self::parse_config(actual_configuration)
+        Self::parse_config(&actual_configuration)
             .expect("Actual BTC anchoring configuration is absent")
     }
 
     /// Returns the nearest following configuration if it exists.
     pub fn following_configuration(&self) -> Option<GlobalConfig> {
         let following_configuration = Schema::new(&self.snapshot).following_configuration()?;
-        Self::parse_config(following_configuration)
+        Self::parse_config(&following_configuration)
     }
 
     pub fn input_signatures(
@@ -122,7 +122,7 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         let unspent_anchoring_transaction = self.anchoring_transactions_chain().last();
         let unspent_funding_transaction = self.unspent_funding_transaction();
 
-        let mut builder = BtcAnchoringTransactionBuilder::new(config.redeem_script());
+        let mut builder = BtcAnchoringTransactionBuilder::new(&config.redeem_script());
         // First anchoring transaction doesn't have previous.
         if let Some(tx) = unspent_anchoring_transaction {
             // Checks that latest anchoring transaction isn't a transition.
@@ -171,7 +171,7 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         )
     }
 
-    fn parse_config(configuration: StoredConfiguration) -> Option<GlobalConfig> {
+    fn parse_config(configuration: &StoredConfiguration) -> Option<GlobalConfig> {
         configuration
             .services
             .get(BTC_ANCHORING_SERVICE_NAME)

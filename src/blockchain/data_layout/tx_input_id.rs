@@ -41,7 +41,7 @@ impl StorageKey for TxInputId {
 
         let txid = {
             let mut txid = [0u8; 32];
-            reader.read(&mut txid).unwrap();
+            let _ = reader.read(&mut txid).unwrap();
             Hash::new(txid)
         };
         let input = reader.read_u32::<LittleEndian>().unwrap();
@@ -50,7 +50,7 @@ impl StorageKey for TxInputId {
 
     fn write(&self, out: &mut [u8]) {
         let mut writer = Cursor::new(out);
-        writer.write(self.txid.as_ref()).unwrap();
+        let _ = writer.write(self.txid.as_ref()).unwrap();
         writer.write_u32::<LittleEndian>(self.input).unwrap();
     }
 }

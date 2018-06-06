@@ -71,7 +71,7 @@ impl GlobalConfig {
 
     pub fn redeem_script(&self) -> RedeemScript {
         let quorum = byzantine_quorum(self.public_keys.len());
-        RedeemScriptBuilder::with_public_keys(self.public_keys.iter().map(|x| x.0.clone()))
+        RedeemScriptBuilder::with_public_keys(self.public_keys.iter().map(|x| x.0))
             .quorum(quorum)
             .to_script()
             .unwrap()

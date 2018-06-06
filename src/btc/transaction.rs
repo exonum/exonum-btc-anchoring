@@ -82,7 +82,7 @@ pub enum BuilderError {
 }
 
 impl BtcAnchoringTransactionBuilder {
-    pub fn new(redeem_script: RedeemScript) -> BtcAnchoringTransactionBuilder {
+    pub fn new(redeem_script: &RedeemScript) -> BtcAnchoringTransactionBuilder {
         BtcAnchoringTransactionBuilder {
             script_pubkey: redeem_script.as_ref().to_v0_p2wsh(),
             prev_tx: None,
@@ -365,7 +365,7 @@ mod tests {
             .to_script()
             .unwrap();
 
-        let (tx, inputs) = BtcAnchoringTransactionBuilder::new(redeem_script)
+        let (tx, inputs) = BtcAnchoringTransactionBuilder::new(&redeem_script)
             .additional_funds(funding_tx.clone())
             .fee(1)
             .payload(Height::zero(), funding_tx.hash())   // useless payload
@@ -433,7 +433,7 @@ mod tests {
             .to_script()
             .unwrap();
 
-        let (tx, inputs) = BtcAnchoringTransactionBuilder::new(redeem_script)
+        let (tx, inputs) = BtcAnchoringTransactionBuilder::new(&redeem_script)
             .additional_funds(funding_tx0.clone())
             .additional_funds(funding_tx1.clone())
             .additional_funds(funding_tx2.clone())
@@ -497,7 +497,7 @@ mod tests {
             .to_script()
             .unwrap();
 
-        let _ = BtcAnchoringTransactionBuilder::new(redeem_script)
+        let _ = BtcAnchoringTransactionBuilder::new(&redeem_script)
             .prev_tx(prev_tx)
             .additional_funds(funding_tx);
     }
@@ -526,6 +526,6 @@ mod tests {
             .to_script()
             .unwrap();
 
-        let _ = BtcAnchoringTransactionBuilder::new(redeem_script).additional_funds(funding_tx);
+        let _ = BtcAnchoringTransactionBuilder::new(&redeem_script).additional_funds(funding_tx);
     }
 }

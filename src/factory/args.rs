@@ -15,8 +15,8 @@
 use exonum::helpers::fabric::{Argument, Context};
 
 use failure;
-use serde::Serialize;
 use serde::de::DeserializeOwned;
+use serde::Serialize;
 use toml;
 
 use std::collections::BTreeMap;
@@ -86,7 +86,7 @@ where
         context
             .arg::<Self::ParsedType>(self.name)
             .ok()
-            .or(self.default.clone())
+            .or_else(|| self.default.clone())
             .ok_or_else(|| format_err!("Expected proper `{}` in arguments", self.long_key))
     }
 
@@ -143,7 +143,7 @@ where
         Ok(context
             .arg::<Self::ParsedType>(self.name)
             .ok()
-            .or(self.default.clone()))
+            .or_else(|| self.default.clone()))
     }
 
     fn output_value(
