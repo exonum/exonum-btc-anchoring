@@ -9,7 +9,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## 0.8.1 - 2018-06-06
 
-- Changed `btc::Network` (de)serializing into/from string
+### Internal improvements
+
+- Changed `btc::Network` (de)serializing into/from string (#128)
+
+- Updated to the [Rust-bitcoin 0.13.1](https://github.com/rust-bitcoin/rust-bitcoin/releases/tag/0.13)
+  release (#128).
 
 ## 0.8 - 2018-06-01
 
