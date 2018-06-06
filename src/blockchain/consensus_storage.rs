@@ -142,15 +142,10 @@ fn btc_network_from_str<'de, D>(deserializer: D) -> Result<btc::Network, D::Erro
 where
     D: Deserializer<'de>,
 {
+    const VARIANTS: &[&str] = &["bitcoin", "testnet", "regtest"];
     let s: String = Deserialize::deserialize(deserializer)?;
-
-    const VARIANTS: &[&str] = &["bitcoin", "testnet"];
-    match s.as_str() {
-        "bitcoin" => Ok(btc::Network::Bitcoin),
-        "testnet" => Ok(btc::Network::Testnet),
-        "regtest" => Ok(btc::Network::Regtest),
-        other => Err(::serde::de::Error::unknown_variant(other, VARIANTS)),
-    }
+    s.parse::<btc::Network>()
+        .map_err(|_| ::serde::de::Error::unknown_variant(&s, VARIANTS))
 }
 
 impl StorageValue for AnchoringConfig {
