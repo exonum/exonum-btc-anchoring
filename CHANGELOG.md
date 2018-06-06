@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+ - Changed `btc::Network` serializing into string 
+
 ## 0.8 - 2018-06-01
 
 ### Breaking changes
