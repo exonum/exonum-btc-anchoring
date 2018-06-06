@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## 0.8.1 - 2018-06-06
+- Version of `bitcoin` crate has been changed to exact value due to lack of semver
+  compliance.
+
 ## 0.8 - 2018-06-01
 
 ### Breaking changes
