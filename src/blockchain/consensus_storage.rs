@@ -138,6 +138,7 @@ where
     match *network {
         btc::Network::Bitcoin => ser.serialize_str("bitcoin"),
         btc::Network::Testnet => ser.serialize_str("testnet"),
+        btc::Network::Regtest => ser.serialize_str("regtest"),
     }
 }
 
