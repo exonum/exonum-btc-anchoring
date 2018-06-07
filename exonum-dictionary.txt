@@ -57,6 +57,7 @@ getnewaddress
 getrawtransaction
 GFBRKYE
 gitter
+Hasher
 hdkeypath
 hdmasterkeyid
 healthcheck
@@ -129,6 +130,7 @@ prevotes
 println
 privkey
 Privkey
+proptest
 pubkey
 pubkeyhash
 pubkeys
