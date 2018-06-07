@@ -7,13 +7,19 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
-- Changed `btc::Network` (de)serializing into/from string
+## 0.8.1 - 2018-06-06
+
+### Internal improvements
+
+- Changed `btc::Network` (de)serializing into/from string (#128).
+
+- Updated to the `Rust-bitcoin 0.13.1` release (#128).
 
 ## 0.8 - 2018-06-01
 
 ### Breaking changes
 
-- The anchoring service has been switched to using p2wsh address format. (#123)
+- The anchoring service has been switched to using p2wsh address format (#123).
   It now uses segwit addresses....
   This change increases the limit on the number of validators and anchoring security
   as well as reduces fees for applying thereof.
@@ -27,7 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - Introduced a new API method `/v1/block_header_proof/:height` that provides cryptographic
   proofs for Exonum blocks including those anchored to Bitcoin blockchain.
   The proof is an apparent evidence of availability of a certain Exonum block
-  in the blockchain. (#124)
+  in the blockchain (#124).
 
 ### Internal improvements
 
@@ -36,7 +42,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
-- Fixed bug with the `nearest_lect` endpoint that sometimes didn't return actual data [ECR-1387]. (#125)
+- Fixed bug with the `nearest_lect` endpoint that sometimes didn't return actual data [ECR-1387] (#125).
 
 ## 0.7 - 2018-04-11
 
@@ -57,18 +63,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
-- Fix txid for transactions with the witness data [ECR-986]. (#119)
+- Fix txid for transactions with the witness data [ECR-986] (#119).
   Txid for transactions should be always computed without witness data.
 
 ### Internal improvements
 
-- Implement `Display` for the wrapped bitcoin types. (#119)
+- Implement `Display` for the wrapped bitcoin types (#119).
 
 ## 0.6 - 2018-03-06
 
 ### Breaking changes
 
-- The `network` parameter became named. (#114)
+- The `network` parameter became named (#114).
   Now, to generate template config, run the following command:
 
   ```shell
@@ -79,9 +85,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Internal improvements
 
 - Error types now use `failure` instead of `derive-error`,
-  which makes error messages more human-readable. (#115)
+  which makes error messages more human-readable (#115).
 
-- Implemented error codes for incorrect anchoring messages. (#117)
+- Implemented error codes for incorrect anchoring messages (#117).
 
 - Updated to the [Exonum 0.6.0](https://github.com/exonum/exonum/releases/tag/v0.6)
   release (#117).
@@ -117,22 +123,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
-- Do not emit panic if lect does not found in bitcoin blockchain. (#88)
+- Do not emit panic if lect does not found in bitcoin blockchain (#88).
 
 ## 0.2 - 2017-09-14
 
 ### Added
 
-- Add `anchoring-observer-check-interval` to clap fabric (#85)
+- Add `anchoring-observer-check-interval` to clap fabric (#85).
 
 ### Changed
 
-- Run rpc tests only if the `rpc_tests` feature enabled. (#84)
-- Update anchoring chain observer configuration layout. (#85)
+- Run rpc tests only if the `rpc_tests` feature enabled (#84).
+- Update anchoring chain observer configuration layout (#85).
 
 ### Fixed
 
-- Fix typo in documentation (#83)
+- Fix typo in documentation (#83).
 
 ## 0.1 - 2017-07-17
 
