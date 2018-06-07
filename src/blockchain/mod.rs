@@ -106,6 +106,6 @@ impl BtcAnchoringState {
                 } => actual_configuration.following_anchoring_height(height),
                 BtcAnchoringState::Transition { .. } => height,
             })
-            .unwrap_or_else(|| Height::zero())
+            .unwrap_or_else(Height::zero)
     }
 }

@@ -31,6 +31,10 @@ extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 
+#[cfg(test)]
+#[macro_use]
+extern crate proptest;
+
 extern crate bitcoin;
 extern crate btc_transaction_utils;
 extern crate byteorder;

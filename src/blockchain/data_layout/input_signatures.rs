@@ -17,12 +17,15 @@ use exonum::helpers::ValidatorId;
 use exonum::storage::StorageValue;
 
 use std::borrow::Cow;
+use std::iter::{FilterMap, IntoIterator};
+use std::vec::IntoIter;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct InputSignatures {
     content: Vec<Option<Vec<u8>>>,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(len_without_is_empty))]
 impl InputSignatures {
     pub fn new(validators_count: u16) -> InputSignatures {
         let content = vec![None; validators_count as usize];
@@ -37,8 +40,14 @@ impl InputSignatures {
     pub fn len(&self) -> usize {
         self.content.iter().filter(|x| x.is_some()).count()
     }
+}
 
-    pub fn into_iter(self) -> impl Iterator<Item = Vec<u8>> {
+type OpSig = Option<Vec<u8>>;
+impl IntoIterator for InputSignatures {
+    type Item = Vec<u8>;
+    type IntoIter = FilterMap<IntoIter<OpSig>, fn(_: OpSig) -> OpSig>;
+
+    fn into_iter(self) -> Self::IntoIter {
         self.content.into_iter().filter_map(|x| x)
     }
 }

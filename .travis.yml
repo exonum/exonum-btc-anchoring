@@ -28,7 +28,7 @@ sudo: required
 
 env:
   global:
-  - CLIPPY_VERS=0.0.186
+  - CLIPPY_VERS=0.0.206
   - RUSTFMT_VERS=0.9.0
   - DEADLINKS_VERS=0.3.0
   - OUTDATED_VERS=0.7.0
@@ -75,7 +75,7 @@ jobs:
 
   # Clippy linting
   - env: FEATURE=clippy
-    rust: nightly-2018-02-12
+    rust: nightly-2018-06-02
     install:
     - cargo clippy --version | grep $CLIPPY_VERS || cargo install clippy --force --vers $CLIPPY_VERS
     script:
