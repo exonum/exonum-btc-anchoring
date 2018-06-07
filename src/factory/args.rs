@@ -15,8 +15,8 @@
 use exonum::helpers::fabric::{Argument, Context};
 
 use failure;
-use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde::de::DeserializeOwned;
 use toml;
 
 use std::collections::BTreeMap;

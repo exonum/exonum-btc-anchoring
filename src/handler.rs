@@ -15,8 +15,8 @@
 use exonum::blockchain::ServiceContext;
 use exonum::helpers::ValidatorId;
 
-use btc_transaction_utils::p2wsh;
 use btc_transaction_utils::TxInRef;
+use btc_transaction_utils::p2wsh;
 use failure;
 
 use std::cmp;

@@ -20,7 +20,6 @@ use std::borrow::Cow;
 use std::iter::{FilterMap, IntoIterator};
 use std::vec::IntoIter;
 
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct InputSignatures {
     content: Vec<Option<Vec<u8>>>,
