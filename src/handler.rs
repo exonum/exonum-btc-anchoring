@@ -175,10 +175,11 @@ impl<'a> SyncWithBtcRelayTask<'a> {
             let info = self.relay.transaction_info(&tx.prev_tx_id())?;
             if info.is_some() {
                 let info = self.relay.transaction_info(&tx.id())?;
-                return Ok(info.map(|_| index));
+                if info.is_none() {
+                    return Ok(Some(index));
+                }
             }
         }
-
         Ok(None)
     }
 }
