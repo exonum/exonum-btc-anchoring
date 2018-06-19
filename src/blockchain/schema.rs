@@ -133,6 +133,13 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
             } else {
                 // TODO support transaction chain recovery.
             }
+
+            if actual_state.is_transition()
+                && tx.0.output[0].script_pubkey != actual_state.script_pubkey()
+            {
+                trace!("transition to another address");
+                builder = builder.out_script(actual_state.script_pubkey());
+            }
             builder = builder.prev_tx(tx);
         }
         if let Some(tx) = unspent_funding_transaction {
