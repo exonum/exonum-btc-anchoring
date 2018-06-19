@@ -103,14 +103,16 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
     pub fn actual_state(&self) -> BtcAnchoringState {
         let actual_configuration = self.actual_configuration();
         if let Some(following_configuration) = self.following_configuration() {
-            BtcAnchoringState::Transition {
-                actual_configuration,
-                following_configuration,
+            if actual_configuration.redeem_script() != following_configuration.redeem_script() {
+                return BtcAnchoringState::Transition {
+                    actual_configuration,
+                    following_configuration,
+                };
             }
-        } else {
-            BtcAnchoringState::Regular {
-                actual_configuration,
-            }
+        }
+
+        BtcAnchoringState::Regular {
+            actual_configuration,
         }
     }
 
