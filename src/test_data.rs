@@ -33,40 +33,6 @@ use {blockchain::BtcAnchoringState,
      rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
      BtcAnchoringService};
 
-/*
-// Fake relay
-#[derive(Debug)]
-struct FakeBitcoinRpcClient;
-
-impl From<FakeBitcoinRpcClient> for Box<BtcRelay> {
-    fn from(client: FakeBitcoinRpcClient) -> Self {
-        Box::new(client) as Box<BtcRelay>
-    }
-}
-
-impl BtcRelay for FakeBitcoinRpcClient {
-    fn send_to_address(
-        &self,
-        addr: &Address,
-        satoshis: u64,
-    ) -> Result<btc::Transaction, failure::Error> {
-        btc::Transaction::from_hex("").map_err(From::from)
-    }
-
-    fn transaction_info(&self, id: &Hash) -> Result<Option<BtcTransactionInfo>, failure::Error> {
-        Ok(None)
-    }
-
-    fn send_transaction(&self, transaction: &btc::Transaction) -> Result<Hash, failure::Error> {
-        let txid = transaction.id();
-        Ok(txid)
-    }
-
-    fn watch_address(&self, addr: &Address, rescan: bool) -> Result<(), failure::Error> {
-        Ok(())
-    }
-}
- */
 
 pub fn gen_anchoring_config_with_rng<R>(
     config: &BitcoinRpcConfig,
