@@ -164,12 +164,12 @@ fn address_changed() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_blocks_until(Height(20));
 
-    let txchanged = anchoring_testkit.last_anchoring_tx().unwrap();
-    let txchanged_meta = txchanged.anchoring_metadata().unwrap();
+    let tx_changed = anchoring_testkit.last_anchoring_tx().unwrap();
+    let tx_changed_meta = tx_changed.anchoring_metadata().unwrap();
 
-    assert!(tx_transition != txchanged);
+    assert!(tx_transition != tx_changed);
     // script_pubkey should *not* be the same
-    assert!(tx0_meta.0 != txchanged_meta.0);
+    assert!(tx0_meta.0 != tx_changed_meta.0);
 }
 
 #[cfg(feature = "rpc_tests")]
@@ -244,16 +244,16 @@ fn address_changed_and_new_funding_tx() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_blocks_until(Height(20));
 
-    let txchanged = anchoring_testkit.last_anchoring_tx().unwrap();
-    let txchanged_meta = txchanged.anchoring_metadata().unwrap();
-    let output_changed = txchanged.0.output.iter().map(|x| x.value).max().unwrap();
+    let tx_changed = anchoring_testkit.last_anchoring_tx().unwrap();
+    let tx_changed_meta = tx_changed.anchoring_metadata().unwrap();
+    let output_changed = tx_changed.0.output.iter().map(|x| x.value).max().unwrap();
 
-    assert!(tx_transition != txchanged);
-    assert!(txchanged.0.input.len() == 2);
-    assert!(txchanged.0.input.len() == 2);
+    assert!(tx_transition != tx_changed);
+    assert!(tx_changed.0.input.len() == 2);
+    assert!(tx_changed.0.input.len() == 2);
 
     // script_pubkey should *not* be the same
-    assert!(tx0_meta.0 != txchanged_meta.0);
+    assert!(tx0_meta.0 != tx_changed_meta.0);
 
     assert!(output_changed > output_val0);
     assert!(output_changed > initial_sum);
