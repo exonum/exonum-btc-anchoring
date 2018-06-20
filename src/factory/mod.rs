@@ -32,6 +32,7 @@ use btc::{gen_keypair, Privkey, PublicKey};
 use config::{Config, GlobalConfig, LocalConfig};
 use rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
 
+use std::sync::{Arc, RwLock};
 mod args;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -369,7 +370,7 @@ impl ServiceFactory for BtcAnchoringFactory {
             .map(Box::<BtcRelay>::from);
         let service = BtcAnchoringService::new(
             btc_anchoring_config.global,
-            btc_anchoring_config.local.private_keys,
+            Arc::new(RwLock::new(btc_anchoring_config.local.private_keys)),
             btc_relay,
         );
         Box::new(service)
