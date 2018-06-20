@@ -66,7 +66,7 @@ where
         network,
         public_keys,
         funding_transaction: None,
-        anchoring_interval: anchoring_interval,
+        anchoring_interval,
         ..Default::default()
     };
 
@@ -136,13 +136,13 @@ impl AnchoringTestKit {
 
         let rpc_config = BitcoinRpcConfig {
             host: env::var("ANCHORING_RELAY_HOST")
-                .unwrap_or(String::from("http://127.0.0.1:18332")),
+                .unwrap_or_else(|_| String::from("http://127.0.0.1:18332")),
             username: env::var("ANCHORING_USER")
                 .ok()
-                .or(Some(String::from("testnet"))),
+                .or_else(|| Some(String::from("testnet"))),
             password: env::var("ANCHORING_PASSWORD")
                 .ok()
-                .or(Some(String::from("testnet"))),
+                .or_else(|| Some(String::from("testnet"))),
         };
 
         let relay = Box::<BtcRelay>::from(BitcoinRpcClient::from(rpc_config.clone()));
@@ -194,8 +194,8 @@ impl AnchoringTestKit {
                 let mut pks = self.local_pks.write().unwrap();
                 pks.insert(new_addr.clone(), pk.clone());
 
-                for local_cfg in self.local_configs.iter_mut() {
-                    let pk = local_cfg.private_keys.get(&old_addr).unwrap().clone();
+                for local_cfg in &mut self.local_configs.iter_mut() {
+                    let pk = local_cfg.private_keys[&old_addr].clone();
                     local_cfg.private_keys.insert(new_addr.clone(), pk);
                 }
             }
@@ -203,10 +203,7 @@ impl AnchoringTestKit {
     }
 
     fn get_local_cfg(&self, node: &TestNode) -> LocalConfig {
-        self.local_configs
-            .get(node.validator_id().unwrap().0 as usize)
-            .unwrap()
-            .clone()
+        self.local_configs[node.validator_id().unwrap().0 as usize].clone()
     }
 
     pub fn anchoring_us(&self) -> (TestNode, LocalConfig) {
@@ -276,10 +273,7 @@ impl AnchoringTestKit {
                 let (proposal, proposal_inputs) = p.unwrap();
 
                 let address = anchoring_state.output_address();
-                let privkey = self.local_configs[validator_id.0 as usize]
-                    .private_keys
-                    .get(&address)
-                    .unwrap();
+                let privkey = &self.local_configs[validator_id.0 as usize].private_keys[&address];
 
                 let pubkey = redeem_script.content().public_keys[validator_id.0 as usize];
 
