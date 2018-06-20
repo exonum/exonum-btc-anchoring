@@ -193,24 +193,11 @@ impl AnchoringTestKit {
                 trace!("setting new pkey for addr {:?} ", new_addr);
                 let mut pks = self.local_pks.write().unwrap();
                 pks.insert(new_addr.clone(), pk.clone());
-                /*
-                for (idx, local_cfg) in self.local_confgis.iter_mut().enumerate() {
-                    local_cfg
-                        .private_keys
-                        .insert(address, priv_keys[idx].clone());
-                }
-                 */
 
-                let new_cfgs = self.local_configs
-                    .iter()
-                    .map(|local_cfg| {
-                        let mut new_cfg = local_cfg.clone();
-                        let pk = local_cfg.private_keys.get(&old_addr).unwrap();
-                        new_cfg.private_keys.insert(new_addr.clone(), pk.clone());
-                        new_cfg
-                    })
-                    .collect::<Vec<_>>();
-                self.local_configs = new_cfgs;
+                for local_cfg in self.local_configs.iter_mut() {
+                    let pk = local_cfg.private_keys.get(&old_addr).unwrap().clone();
+                    local_cfg.private_keys.insert(new_addr.clone(), pk);
+                }
             }
         }
     }
