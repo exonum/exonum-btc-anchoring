@@ -62,10 +62,6 @@ impl BtcAnchoringService {
             btc_relay,
         }
     }
-
-    // pub fn add_private_key(&mut self, address: &Address, private_key: Privkey) {
-    //     self.private_keys.insert(address.clone(), private_key);
-    // }
 }
 
 impl Service for BtcAnchoringService {
