@@ -33,7 +33,6 @@ use {blockchain::BtcAnchoringState,
      rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
      BtcAnchoringService};
 
-
 pub fn gen_anchoring_config_with_rng<R>(
     config: &BitcoinRpcConfig,
     network: Network,

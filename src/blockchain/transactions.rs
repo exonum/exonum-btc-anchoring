@@ -22,11 +22,11 @@ use btc_transaction_utils::p2wsh::InputSigner;
 use btc_transaction_utils::{InputSignature, InputSignatureRef, TxInRef};
 use secp256k1::{self, Secp256k1};
 
-use BTC_ANCHORING_SERVICE_ID;
 use btc;
+use BTC_ANCHORING_SERVICE_ID;
 
-use super::BtcAnchoringSchema;
 use super::data_layout::TxInputId;
+use super::BtcAnchoringSchema;
 
 transactions! {
     pub Transactions {
@@ -151,7 +151,7 @@ impl Transaction for Signature {
         }
 
         let payload = tx.anchoring_metadata().unwrap().1;
-        
+
         info!("====== ANCHORING ======");
         info!("txid: {}", tx.id().to_string(),);
         info!("height: {}", payload.block_height,);

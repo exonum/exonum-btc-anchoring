@@ -139,7 +139,6 @@ impl<'a> UpdateAnchoringChainTask<'a> {
     fn handle_as_auditor(self) -> Result<(), failure::Error> {
         unimplemented!();
     }
-
 }
 
 #[derive(Debug)]
