@@ -65,7 +65,7 @@ impl Transaction {
 #[derive(Debug)]
 pub struct BtcAnchoringTransactionBuilder {
     script_pubkey: Script,
-    out_script_pubkey: Option<Script>,
+    output: Option<Script>,
     prev_tx: Option<Transaction>,
     additional_funds: Vec<(usize, Transaction)>,
     fee: Option<u64>,
@@ -89,7 +89,7 @@ impl BtcAnchoringTransactionBuilder {
     pub fn new(redeem_script: &RedeemScript) -> BtcAnchoringTransactionBuilder {
         BtcAnchoringTransactionBuilder {
             script_pubkey: redeem_script.as_ref().to_v0_p2wsh(),
-            out_script_pubkey: None,
+            output: None,
             prev_tx: None,
             additional_funds: Vec::default(),
             fee: None,
@@ -97,8 +97,8 @@ impl BtcAnchoringTransactionBuilder {
         }
     }
 
-    pub fn out_script(mut self, script: Script) -> Self {
-        self.out_script_pubkey = Some(script);
+    pub fn output(mut self, script: Script) -> Self {
+        self.output = Some(script);
         self
     }
 
@@ -164,7 +164,7 @@ impl BtcAnchoringTransactionBuilder {
             .block_height(block_height)
             .into_script();
         // Creates unsigned transaction.
-        let out_script_pubkey = match self.out_script_pubkey {
+        let output = match self.output {
             Some(script) => script,
             _ => self.script_pubkey,
         };
@@ -176,7 +176,7 @@ impl BtcAnchoringTransactionBuilder {
             output: vec![
                 TxOut {
                     value: balance,
-                    script_pubkey: out_script_pubkey,
+                    script_pubkey: output,
                 },
                 TxOut {
                     value: 0,

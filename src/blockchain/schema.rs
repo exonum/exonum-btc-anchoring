@@ -141,7 +141,7 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
                 && tx.0.output[0].script_pubkey != actual_state.script_pubkey()
             {
                 trace!("transition to another address");
-                builder = builder.out_script(actual_state.script_pubkey());
+                builder = builder.output(actual_state.script_pubkey());
             }
             builder = builder.prev_tx(tx);
         }
