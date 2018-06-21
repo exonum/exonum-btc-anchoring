@@ -86,7 +86,7 @@ impl Service for BtcAnchoringService {
         json!(self.global_config)
     }
 
-    fn handle_commit(&self, context: &ServiceContext) {
+    fn after_commit(&self, context: &ServiceContext) {
         let keys = &self.private_keys.read().unwrap();
         let task = UpdateAnchoringChainTask::new(context, keys);
         task.run().log_error();
