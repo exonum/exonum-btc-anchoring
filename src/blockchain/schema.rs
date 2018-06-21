@@ -133,8 +133,6 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
             {
                 trace!("Anchoring paused at transition state");
                 return None;
-            } else {
-                // TODO support transaction chain recovery.
             }
 
             if actual_state.is_transition()
@@ -146,7 +144,11 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
 
             builder = match builder.prev_tx(tx) {
                 Ok(builder) => builder,
-                Err(e) => return Some(Err(e)),
+                Err(e) => {
+                    if unspent_funding_transaction.is_some() {
+                        error!("Anchoring is broken. Will try to recover")
+                    }
+                    return Some(Err(e))},
             }
         }
 

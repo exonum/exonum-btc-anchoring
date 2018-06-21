@@ -307,4 +307,82 @@ mod rpc_tests {
         // it should fail
         let _ = anchoring_testkit.create_signature_tx_for_validators(1);
     }
+
+    #[test]
+    #[ignore]
+    fn broken_anchoring_recovery() {
+        let validators_num = 5;
+        // single tx fee is ~ 15000
+        let initial_sum = 20000;
+        let mut anchoring_testkit =
+            AnchoringTestKit::new_with_testnet(validators_num, initial_sum, 4);
+        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        anchoring_testkit.create_block_with_transactions(signatures);
+        anchoring_testkit.create_blocks_until(Height(4));
+
+        let tx0 = anchoring_testkit.last_anchoring_tx();
+        assert!(tx0.is_some());
+
+        // removing one of validators
+        let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
+        let mut validators = configuration_change_proposal.validators().to_vec();
+
+        let _ = validators.pop().unwrap();
+        configuration_change_proposal.set_validators(validators);
+
+        let config: GlobalConfig =
+            configuration_change_proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
+
+        let mut keys = config.public_keys.clone();
+        let _ = keys.pop().unwrap();
+
+        let service_configuration = GlobalConfig {
+            public_keys: keys,
+            ..config
+        };
+
+        configuration_change_proposal
+            .set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
+
+        configuration_change_proposal.set_actual_from(Height(16));
+        anchoring_testkit.commit_configuration_change(configuration_change_proposal);
+        anchoring_testkit.create_blocks_until(Height(7));
+
+        anchoring_testkit.renew_address();
+        anchoring_testkit.create_blocks_until(Height(20));
+
+        let tx1 = anchoring_testkit.last_anchoring_tx();
+        //no new transactions
+        assert!(tx0 == tx1);
+    }
+
+    #[test]
+    #[ignore]
+    fn wrong_singature_tx() {
+        let validators_num = 4;
+        let mut anchoring_testkit = AnchoringTestKit::new_with_testnet(validators_num, 70000, 4);
+
+        assert!(anchoring_testkit.last_anchoring_tx().is_none());
+
+        let mut signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let leftover_signature = signatures.pop().unwrap();
+
+        anchoring_testkit.create_block_with_transactions(signatures);
+        anchoring_testkit.create_blocks_until(Height(4));
+
+        let tx0 = anchoring_testkit.last_anchoring_tx();
+        assert!(tx0.is_some());
+        let tx0 = tx0.unwrap();
+        let tx0_meta = tx0.anchoring_metadata().unwrap();
+        assert!(tx0_meta.1.block_height == Height(0));
+
+        let signatures = anchoring_testkit.create_signature_tx_for_validators(2);
+        anchoring_testkit.create_block_with_transactions(signatures);
+        anchoring_testkit.create_blocks_until(Height(8));
+
+        // very slow node
+        anchoring_testkit.create_block_with_transactions(vec![leftover_signature]);
+        anchoring_testkit.create_blocks_until(Height(12));
+    }
+
 }
