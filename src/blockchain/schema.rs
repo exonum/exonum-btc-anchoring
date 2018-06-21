@@ -143,7 +143,11 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
                 trace!("transition to another address");
                 builder = builder.output(actual_state.script_pubkey());
             }
-            builder = builder.prev_tx(tx);
+
+            builder = match builder.prev_tx(tx) {
+                Ok(builder) => builder,
+                Err(e) => return Some(Err(e)),
+            }
         }
 
         if let Some(tx) = unspent_funding_transaction {

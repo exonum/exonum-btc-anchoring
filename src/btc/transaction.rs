@@ -83,6 +83,8 @@ pub enum BuilderError {
     InsufficientFunds { total_fee: u64, balance: u64 },
     #[display(fmt = "At least one input should be provided.")]
     NoInputs,
+    #[display(fmt = "Output address in a previous anchoring transaction is not suitable.")]
+    UnsuitableOutput,
 }
 
 impl BtcAnchoringTransactionBuilder {
@@ -102,15 +104,13 @@ impl BtcAnchoringTransactionBuilder {
         self
     }
 
-    pub fn prev_tx(mut self, tx: Transaction) -> Self {
-        assert_eq!(
-            tx.anchoring_metadata().unwrap().0,
-            &self.script_pubkey,
-            "Output address in a previous anchoring transaction is not suitable."
-        );
-
-        self.prev_tx = Some(tx);
-        self
+    pub fn prev_tx(mut self, tx: Transaction) -> Result<Self, BuilderError> {
+        if tx.anchoring_metadata().unwrap().0 != &self.script_pubkey {
+            Err(BuilderError::UnsuitableOutput)
+        } else {
+            self.prev_tx = Some(tx);
+            Ok(self)
+        }
     }
 
     pub fn additional_funds(mut self, tx: Transaction) -> Self {
@@ -472,7 +472,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "Output address in a previous anchoring transaction is not suitable.")]
+    #[should_panic(expected = "UnsuitableOutput")]
     fn test_anchoring_transaction_builder_incorrect_prev_tx() {
         let funding_tx: Transaction = Transaction::from_hex(
             "02000000000101b651818fe3855d0d5d74de1cf72b56503c16f808519440e842b6\
@@ -514,6 +514,7 @@ mod tests {
 
         let _ = BtcAnchoringTransactionBuilder::new(&redeem_script)
             .prev_tx(prev_tx)
+            .unwrap()
             .additional_funds(funding_tx);
     }
 
