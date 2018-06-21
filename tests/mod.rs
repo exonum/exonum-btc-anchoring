@@ -256,4 +256,55 @@ mod rpc_tests {
         assert!(output_changed > output_val0);
         assert!(output_changed > initial_sum);
     }
+
+    #[test]
+    #[should_panic(expected = "UnsuitableOutput")]
+    fn insufficient_funds_during_address_change() {
+        let validators_num = 5;
+        // single tx fee is ~ 15000
+        let initial_sum = 20000;
+        let mut anchoring_testkit =
+            AnchoringTestKit::new_with_testnet(validators_num, initial_sum, 4);
+        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        anchoring_testkit.create_block_with_transactions(signatures);
+        anchoring_testkit.create_blocks_until(Height(4));
+
+        let tx0 = anchoring_testkit.last_anchoring_tx();
+        assert!(tx0.is_some());
+        // removing one of validators
+        let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
+        let mut validators = configuration_change_proposal.validators().to_vec();
+
+        let _ = validators.pop().unwrap();
+        configuration_change_proposal.set_validators(validators);
+
+        let config: GlobalConfig =
+            configuration_change_proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
+
+        let mut keys = config.public_keys.clone();
+        let _ = keys.pop().unwrap();
+
+        let service_configuration = GlobalConfig {
+            public_keys: keys,
+            ..config
+        };
+
+        configuration_change_proposal
+            .set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
+
+        configuration_change_proposal.set_actual_from(Height(16));
+        anchoring_testkit.commit_configuration_change(configuration_change_proposal);
+        anchoring_testkit.create_blocks_until(Height(7));
+
+        anchoring_testkit.renew_address();
+        anchoring_testkit.create_blocks_until(Height(20));
+
+        let tx1 = anchoring_testkit.last_anchoring_tx();
+
+        //no new transactions
+        assert!(tx0 == tx1);
+
+        // it should fail
+        let _ = anchoring_testkit.create_signature_tx_for_validators(1);
+    }
 }
