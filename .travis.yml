@@ -11,7 +11,7 @@ addons:
 rust:
   # Feel free to bump this version if you need features of newer Rust.
   # Sync with badge in README.md
-  - 1.26.0
+  - 1.26.2
 
 matrix:
   allow_failures:
@@ -29,7 +29,6 @@ sudo: required
 env:
   global:
   - CLIPPY_VERS=0.0.206
-  - RUSTFMT_VERS=0.9.0
   - DEADLINKS_VERS=0.3.0
   - OUTDATED_VERS=0.7.0
   - SODIUM_VERS=1.0.16
