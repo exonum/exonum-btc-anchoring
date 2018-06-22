@@ -20,12 +20,12 @@ use exonum::storage::{Fork, ProofListIndex, ProofMapIndex, Snapshot};
 use btc_transaction_utils::multisig::RedeemScript;
 use serde_json;
 
-use BTC_ANCHORING_SERVICE_NAME;
 use btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 use config::GlobalConfig;
+use BTC_ANCHORING_SERVICE_NAME;
 
-use super::BtcAnchoringState;
 use super::data_layout::*;
+use super::BtcAnchoringState;
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {

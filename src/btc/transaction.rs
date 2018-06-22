@@ -168,7 +168,7 @@ impl BtcAnchoringTransactionBuilder {
             Some(script) => script,
             _ => self.script_pubkey,
         };
-        
+
         // Creates unsigned transaction.
         let mut transaction = Transaction::from(transaction::Transaction {
             version: 2,
