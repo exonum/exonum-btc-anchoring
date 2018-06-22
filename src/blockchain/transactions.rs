@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::{ExecutionResult, Transaction};
-use exonum::crypto::PublicKey;
+use exonum::blockchain::{ExecutionError, ExecutionResult, Transaction};
+use exonum::crypto::{Hash, PublicKey};
 use exonum::helpers::ValidatorId;
 use exonum::messages::Message;
 use exonum::storage::Fork;
@@ -48,7 +48,67 @@ transactions! {
     }
 }
 
-// TODO Implement error types.
+#[derive(Debug, Fail)]
+pub enum SignatureError {
+    #[fail(
+        display = "Received signature for the incorrect anchoring transaction. Expected: {:?}. Received: {:?}.",
+        expected_id,
+        received_id
+    )]
+    UnexpectedSignature {
+        expected_id: Hash,
+        received_id: Hash,
+    },
+    #[fail(
+        display = "Received signature for anchoring transaction while in transition state. Received: {:?}.",
+        _0
+    )]
+    UnexpectedSignatureInTransitionState { received_id: Hash },
+    #[fail(display = "Public key of validator {:?} is missing.", _0)]
+    MissingPublicKey { validator_id: ValidatorId },
+    #[fail(display = "Input with index {} doesn't exist.", _0)]
+    NoSuchInput { idx: usize },
+    #[fail(display = "Signature verification failed.")]
+    VerificationFailed,
+    #[fail(display = "{}", _0)]
+    TxBuilderError(String),
+    #[fail(display = "Unknown error")]
+    UnknownError,
+}
+
+#[derive(Debug)]
+pub enum ErrorKind {
+    UnexpectedSignature = 1,
+    UnexpectedSignatureInTransitionState = 2,
+    MissingPublicKey = 3,
+    NoSuchInput = 4,
+    VerificationFailed = 5,
+    TxBuilderError = 6,
+    UnknownError = 255,
+}
+
+impl SignatureError {
+    fn code(&self) -> ErrorKind {
+        match self {
+            SignatureError::UnexpectedSignature { .. } => ErrorKind::UnexpectedSignature,
+            SignatureError::UnexpectedSignatureInTransitionState { .. } => {
+                ErrorKind::UnexpectedSignatureInTransitionState
+            }
+            SignatureError::MissingPublicKey { .. } => ErrorKind::MissingPublicKey,
+            SignatureError::NoSuchInput { .. } => ErrorKind::NoSuchInput,
+            SignatureError::VerificationFailed => ErrorKind::VerificationFailed,
+            SignatureError::TxBuilderError(..) => ErrorKind::TxBuilderError,
+            _ => ErrorKind::UnknownError,
+        }
+    }
+}
+
+impl From<SignatureError> for ExecutionError {
+    fn from(value: SignatureError) -> ExecutionError {
+        let description = format!("{}", value);
+        ExecutionError::with_description(value.code() as u8, description)
+    }
+}
 
 impl Signature {
     pub fn input_id(&self) -> TxInputId {
@@ -85,43 +145,63 @@ impl Transaction for Signature {
         }
 
         let anchoring_state = anchoring_schema.actual_state();
-        let (expected_transaction, expected_inputs) = anchoring_schema
-            .proposed_anchoring_transaction(&anchoring_state)
-            .expect(
-                "Implement Error code: received signature for the incorrect anchoring transaction",
-            )
-            .expect("Implement Error code: same as above");
-        assert_eq!(
-            expected_transaction.id(),
-            tx.id(),
-            "Implement Error code: expected transaction: {:?}, got: {:?}",
-            expected_transaction,
-            tx
-        );
+        let (expected_transaction, expected_inputs) = if let Some(proposal) =
+            anchoring_schema.proposed_anchoring_transaction(&anchoring_state)
+        {
+            match proposal {
+                Ok(proposal) => proposal,
+                Err(error) => {
+                    return Err(SignatureError::TxBuilderError(format!("{}", error)).into());
+                }
+            }
+        } else {
+            return Err(SignatureError::UnexpectedSignatureInTransitionState {
+                received_id: tx.id(),
+            }.into());
+        };
+
+        if expected_transaction.id() != tx.id() {
+            return Err(SignatureError::UnexpectedSignature {
+                expected_id: expected_transaction.id(),
+                received_id: tx.id(),
+            }.into());
+        }
 
         let redeem_script = anchoring_state.actual_configuration().redeem_script();
         let redeem_script_content = redeem_script.content();
-        let public_key = redeem_script_content
+        let public_key = match redeem_script_content
             .public_keys
             .get(self.validator().0 as usize)
-            .cloned()
-            .expect("Implement Error code: public key of validator is absent");
+        {
+            Some(pk) => pk.clone(),
+            _ => {
+                return Err(SignatureError::MissingPublicKey {
+                    validator_id: self.validator(),
+                }.into());
+            }
+        };
 
         let input_signer = InputSigner::new(redeem_script.clone());
         let context = Secp256k1::without_caps();
+
         // Checks signature content
         let input_signature_ref = self.input_signature(&context).unwrap();
-        let input_tx = expected_inputs
-            .get(self.input() as usize)
-            .expect("Implement Error code: input with the given index doesn't exist");
-        input_signer
-            .verify_input(
-                TxInRef::new(tx.as_ref(), self.input() as usize),
-                input_tx.as_ref(),
-                &public_key,
-                input_signature_ref,
-            )
-            .expect("Implement Error code: input signature verification failed");
+        let input_idx = self.input() as usize;
+        let input_tx = match expected_inputs.get(input_idx) {
+            Some(input_tx) => input_tx,
+            _ => return Err(SignatureError::NoSuchInput { idx: input_idx }.into()),
+        };
+
+        let verification_result = input_signer.verify_input(
+            TxInRef::new(tx.as_ref(), self.input() as usize),
+            input_tx.as_ref(),
+            &public_key,
+            input_signature_ref,
+        );
+
+        if verification_result.is_err() {
+            return Err(SignatureError::VerificationFailed.into());
+        }
 
         // Adds signature to schema.
         let input_id = self.input_id();
