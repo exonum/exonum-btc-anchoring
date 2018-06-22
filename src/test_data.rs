@@ -108,8 +108,8 @@ pub fn gen_anchoring_config(
 #[derive(Debug)]
 pub struct AnchoringTestKit {
     test_kit: TestKit,
-    pub local_pks: Arc<RwLock<HashMap<btc::Address, btc::Privkey>>>,
-    pub local_configs: Vec<LocalConfig>,
+    pub local_private_keys: Arc<RwLock<HashMap<btc::Address, btc::Privkey>>>,
+    pub node_configs: Vec<LocalConfig>,
 }
 
 impl Deref for AnchoringTestKit {
@@ -156,9 +156,10 @@ impl AnchoringTestKit {
 
         let local = locals[0].clone();
 
-        let pks = Arc::new(RwLock::new(local.private_keys));
+        let private_keys = Arc::new(RwLock::new(local.private_keys));
 
-        let service = BtcAnchoringService::new(global.clone(), Arc::clone(&pks), Some(relay));
+        let service =
+            BtcAnchoringService::new(global.clone(), Arc::clone(&private_keys), Some(relay));
 
         let testkit = TestKitBuilder::validator()
             .with_service(service)
@@ -168,8 +169,8 @@ impl AnchoringTestKit {
 
         Self {
             test_kit: testkit,
-            local_pks: pks,
-            local_configs: locals,
+            local_private_keys: private_keys,
+            node_configs: locals,
         }
     }
 
@@ -185,16 +186,16 @@ impl AnchoringTestKit {
             let new_addr = following_configuration.anchoring_address();
 
             let pk = {
-                let pks = self.local_pks.read().unwrap();
-                pks.get(&old_addr).unwrap().clone()
+                let private_keys = self.local_private_keys.read().unwrap();
+                private_keys.get(&old_addr).unwrap().clone()
             };
 
             if old_addr != new_addr {
                 trace!("setting new pkey for addr {:?} ", new_addr);
-                let mut pks = self.local_pks.write().unwrap();
-                pks.insert(new_addr.clone(), pk.clone());
+                let mut private_keys = self.local_private_keys.write().unwrap();
+                private_keys.insert(new_addr.clone(), pk.clone());
 
-                for local_cfg in &mut self.local_configs.iter_mut() {
+                for local_cfg in &mut self.node_configs.iter_mut() {
                     let pk = local_cfg.private_keys[&old_addr].clone();
                     local_cfg.private_keys.insert(new_addr.clone(), pk);
                 }
@@ -203,7 +204,7 @@ impl AnchoringTestKit {
     }
 
     fn get_local_cfg(&self, node: &TestNode) -> LocalConfig {
-        self.local_configs[node.validator_id().unwrap().0 as usize].clone()
+        self.node_configs[node.validator_id().unwrap().0 as usize].clone()
     }
 
     pub fn anchoring_us(&self) -> (TestNode, LocalConfig) {
@@ -273,7 +274,7 @@ impl AnchoringTestKit {
                 let (proposal, proposal_inputs) = p.unwrap();
 
                 let address = anchoring_state.output_address();
-                let privkey = &self.local_configs[validator_id.0 as usize].private_keys[&address];
+                let privkey = &self.node_configs[validator_id.0 as usize].private_keys[&address];
 
                 let pubkey = redeem_script.content().public_keys[validator_id.0 as usize];
 

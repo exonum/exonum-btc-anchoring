@@ -67,6 +67,7 @@ pub struct BtcAnchoringTransactionBuilder {
     script_pubkey: Script,
     transit_to: Option<Script>,
     prev_tx: Option<Transaction>,
+    recovery_tx: Option<Hash>,
     additional_funds: Vec<(usize, Transaction)>,
     fee: Option<u64>,
     payload: Option<(Height, Hash)>,
@@ -93,6 +94,7 @@ impl BtcAnchoringTransactionBuilder {
             script_pubkey: redeem_script.as_ref().to_v0_p2wsh(),
             transit_to: None,
             prev_tx: None,
+            recovery_tx: None,
             additional_funds: Vec::default(),
             fee: None,
             payload: None,
@@ -104,13 +106,17 @@ impl BtcAnchoringTransactionBuilder {
         self
     }
 
-    pub fn prev_tx(mut self, tx: Transaction) -> Result<Self, BuilderError> {
+    pub fn prev_tx(&mut self, tx: Transaction) -> Result<(), BuilderError> {
         if tx.anchoring_metadata().unwrap().0 != &self.script_pubkey {
             Err(BuilderError::UnsuitableOutput)
         } else {
             self.prev_tx = Some(tx);
-            Ok(self)
+            Ok(())
         }
+    }
+
+    pub fn recover(&mut self, last_tx: Hash) {
+        self.recovery_tx = Some(last_tx);
     }
 
     pub fn additional_funds(mut self, tx: Transaction) -> Self {
@@ -162,6 +168,7 @@ impl BtcAnchoringTransactionBuilder {
         let payload_script = PayloadBuilder::new()
             .block_hash(block_hash)
             .block_height(block_height)
+            .prev_tx_chain(self.recovery_tx)
             .into_script();
         let output = match self.transit_to {
             Some(script) => script,
@@ -511,11 +518,9 @@ mod tests {
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)
             .to_script()
             .unwrap();
-
-        let _ = BtcAnchoringTransactionBuilder::new(&redeem_script)
-            .prev_tx(prev_tx)
-            .unwrap()
-            .additional_funds(funding_tx);
+        let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
+        let _ = builder.prev_tx(prev_tx).unwrap();
+        builder.additional_funds(funding_tx);
     }
 
     #[test]

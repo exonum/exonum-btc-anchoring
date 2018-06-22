@@ -11,8 +11,8 @@ mod rpc_tests {
     use exonum::blockchain::TransactionErrorType;
     use exonum::crypto::Hash;
     use exonum::helpers::Height;
-    use exonum_btc_anchoring::{blockchain::transactions::ErrorKind, config::GlobalConfig,
-                               rpc::BtcRelay, test_data::AnchoringTestKit,
+    use exonum_btc_anchoring::{blockchain::transactions::ErrorKind, btc::payload::Payload,
+                               config::GlobalConfig, rpc::BtcRelay, test_data::AnchoringTestKit,
                                BTC_ANCHORING_SERVICE_NAME};
 
     fn check_tx_error(tk: &AnchoringTestKit, tx_hash: Hash, e: ErrorKind) {
@@ -81,7 +81,7 @@ mod rpc_tests {
         let output_val0 = tx0.0.output.iter().map(|x| x.value).max().unwrap();
         assert!(output_val0 < initial_sum);
 
-        //creating new funding tx"
+        //creating new funding tx
         let rpc_client = anchoring_testkit.rpc_client();
         let address = anchoring_testkit.anchoring_address();
 
@@ -415,7 +415,6 @@ mod rpc_tests {
     }
 
     #[test]
-    #[ignore]
     fn broken_anchoring_recovery() {
         let validators_num = 5;
         // single tx fee is ~ 15000
@@ -459,7 +458,39 @@ mod rpc_tests {
 
         let tx1 = anchoring_testkit.last_anchoring_tx();
         //no new transactions
+
         assert!(tx0 == tx1);
+        //creating new funding tx
+        let rpc_client = anchoring_testkit.rpc_client();
+        let address = anchoring_testkit.anchoring_address();
+
+        let new_funding_tx = rpc_client
+            .send_to_address(&address, initial_sum * 3)
+            .unwrap();
+        let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
+        let service_configuration = GlobalConfig {
+            funding_transaction: Some(new_funding_tx),
+            ..configuration_change_proposal.service_config(BTC_ANCHORING_SERVICE_NAME)
+        };
+
+        configuration_change_proposal
+            .set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
+        configuration_change_proposal.set_actual_from(Height(24));
+
+        anchoring_testkit.commit_configuration_change(configuration_change_proposal);
+        anchoring_testkit.create_blocks_until(Height(26));
+
+        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        anchoring_testkit.create_block_with_transactions(signatures);
+        anchoring_testkit.create_blocks_until(Height(28));
+
+        let tx1 = anchoring_testkit.last_anchoring_tx().unwrap();
+
+        assert!(tx1.anchoring_payload().unwrap().prev_tx_chain.is_some());
+        assert_eq!(
+            tx1.anchoring_payload().unwrap().prev_tx_chain.unwrap(),
+            tx0.unwrap().id()
+        );
     }
 
 }
