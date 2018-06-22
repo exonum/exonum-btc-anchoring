@@ -37,6 +37,11 @@ impl InputSignatures {
         self.content[index] = Some(signature);
     }
 
+    pub fn contains(&self, id: ValidatorId) -> bool {
+        let index = id.0 as usize;
+        self.content[index].is_some()
+    }
+
     pub fn len(&self) -> usize {
         self.content.iter().filter(|x| x.is_some()).count()
     }

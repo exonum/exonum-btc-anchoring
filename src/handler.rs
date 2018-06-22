@@ -15,8 +15,8 @@
 use exonum::blockchain::ServiceContext;
 use exonum::helpers::ValidatorId;
 
-use btc_transaction_utils::TxInRef;
 use btc_transaction_utils::p2wsh;
+use btc_transaction_utils::TxInRef;
 use failure;
 
 use std::cmp;
@@ -89,11 +89,17 @@ impl<'a> UpdateAnchoringChainTask<'a> {
 
         for (index, proposal_input) in proposal_inputs.iter().enumerate() {
             let input_id = TxInputId::new(proposal.id(), index as u32);
-            if anchoring_schema
-                .transaction_signatures()
-                .contains(&input_id)
+
+            if let Some(input_signatures) = anchoring_schema.transaction_signatures().get(&input_id)
             {
-                continue;
+                if input_signatures.contains(validator_id) {
+                    trace!(
+                        " {:?} is already signed by validator {}",
+                        input_id,
+                        validator_id
+                    );
+                    continue;
+                }
             }
 
             let signature = signer.sign_input(
@@ -175,10 +181,11 @@ impl<'a> SyncWithBtcRelayTask<'a> {
             let info = self.relay.transaction_info(&tx.prev_tx_id())?;
             if info.is_some() {
                 let info = self.relay.transaction_info(&tx.id())?;
-                return Ok(info.map(|_| index));
+                if info.is_none() {
+                    return Ok(Some(index));
+                }
             }
         }
-
         Ok(None)
     }
 }

@@ -20,12 +20,12 @@ use exonum::storage::{Fork, ProofListIndex, ProofMapIndex, Snapshot};
 use btc_transaction_utils::multisig::RedeemScript;
 use serde_json;
 
-use BTC_ANCHORING_SERVICE_NAME;
 use btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 use config::GlobalConfig;
+use BTC_ANCHORING_SERVICE_NAME;
 
-use super::BtcAnchoringState;
 use super::data_layout::*;
+use super::BtcAnchoringState;
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {
@@ -103,14 +103,16 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
     pub fn actual_state(&self) -> BtcAnchoringState {
         let actual_configuration = self.actual_configuration();
         if let Some(following_configuration) = self.following_configuration() {
-            BtcAnchoringState::Transition {
-                actual_configuration,
-                following_configuration,
+            if actual_configuration.redeem_script() != following_configuration.redeem_script() {
+                return BtcAnchoringState::Transition {
+                    actual_configuration,
+                    following_configuration,
+                };
             }
-        } else {
-            BtcAnchoringState::Regular {
-                actual_configuration,
-            }
+        }
+
+        BtcAnchoringState::Regular {
+            actual_configuration,
         }
     }
 
@@ -126,13 +128,17 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         // First anchoring transaction doesn't have previous.
         if let Some(tx) = unspent_anchoring_transaction {
             // Checks that latest anchoring transaction isn't a transition.
-            if actual_state.is_transition()
-                && tx.0.output[0].script_pubkey == actual_state.script_pubkey()
-            {
-                return None;
-            } else {
-                // TODO support transaction chain recovery.
+            if actual_state.is_transition() {
+                let address_changed = tx.0.output[0].script_pubkey == actual_state.script_pubkey();
+                if address_changed {
+                    // awaiting for new configuration to become actual.
+                    return None;
+                } else {
+                    trace!("transition to another address");
+                    builder = builder.transit_to(actual_state.script_pubkey());
+                }
             }
+            // TODO support transaction chain recovery.
             builder = builder.prev_tx(tx);
         }
         if let Some(tx) = unspent_funding_transaction {

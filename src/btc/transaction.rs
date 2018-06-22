@@ -65,6 +65,7 @@ impl Transaction {
 #[derive(Debug)]
 pub struct BtcAnchoringTransactionBuilder {
     script_pubkey: Script,
+    transit_to: Option<Script>,
     prev_tx: Option<Transaction>,
     additional_funds: Vec<(usize, Transaction)>,
     fee: Option<u64>,
@@ -73,9 +74,12 @@ pub struct BtcAnchoringTransactionBuilder {
 
 #[derive(Debug, Copy, Clone, PartialEq, Display, Fail)]
 pub enum BuilderError {
-    #[display(fmt = "Insufficient funds to construct a new anchoring transaction,\
-                     total fee is {}, total balance is {}",
-              _0, _1)]
+    #[display(
+        fmt = "Insufficient funds to construct a new anchoring transaction,\
+               total fee is {}, total balance is {}",
+        _0,
+        _1
+    )]
     InsufficientFunds { total_fee: u64, balance: u64 },
     #[display(fmt = "At least one input should be provided.")]
     NoInputs,
@@ -85,11 +89,17 @@ impl BtcAnchoringTransactionBuilder {
     pub fn new(redeem_script: &RedeemScript) -> BtcAnchoringTransactionBuilder {
         BtcAnchoringTransactionBuilder {
             script_pubkey: redeem_script.as_ref().to_v0_p2wsh(),
+            transit_to: None,
             prev_tx: None,
             additional_funds: Vec::default(),
             fee: None,
             payload: None,
         }
+    }
+
+    pub fn transit_to(mut self, script: Script) -> Self {
+        self.transit_to = Some(script);
+        self
     }
 
     pub fn prev_tx(mut self, tx: Transaction) -> Self {
@@ -153,6 +163,12 @@ impl BtcAnchoringTransactionBuilder {
             .block_hash(block_hash)
             .block_height(block_height)
             .into_script();
+
+        let output = match self.transit_to {
+            Some(script) => script,
+            _ => self.script_pubkey,
+        };
+
         // Creates unsigned transaction.
         let mut transaction = Transaction::from(transaction::Transaction {
             version: 2,
@@ -161,7 +177,7 @@ impl BtcAnchoringTransactionBuilder {
             output: vec![
                 TxOut {
                     value: balance,
-                    script_pubkey: self.script_pubkey,
+                    script_pubkey: output,
                 },
                 TxOut {
                     value: 0,

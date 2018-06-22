@@ -22,12 +22,12 @@ use serde_json;
 
 use std::collections::HashMap;
 
-use ResultEx;
 use blockchain::{BtcAnchoringSchema, Transactions};
 use btc::{Address, Privkey};
 use config::GlobalConfig;
 use handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask};
 use rpc::BtcRelay;
+use ResultEx;
 
 // TODO support recovery mode if after transition transaction with following output address doesn't exist.
 
@@ -84,7 +84,7 @@ impl Service for BtcAnchoringService {
         json!(self.global_config)
     }
 
-    fn handle_commit(&self, context: &ServiceContext) {
+    fn after_commit(&self, context: &ServiceContext) {
         let task = UpdateAnchoringChainTask::new(context, &self.private_keys);
         task.run().log_error();
 
