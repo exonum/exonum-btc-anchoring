@@ -11,8 +11,8 @@ mod rpc_tests {
     use exonum::blockchain::TransactionErrorType;
     use exonum::crypto::Hash;
     use exonum::helpers::Height;
-    use exonum_btc_anchoring::{blockchain::transactions::ErrorKind, btc::payload::Payload,
-                               config::GlobalConfig, rpc::BtcRelay, test_data::AnchoringTestKit,
+    use exonum_btc_anchoring::{blockchain::transactions::ErrorKind, config::GlobalConfig,
+                               rpc::BtcRelay, test_data::AnchoringTestKit,
                                BTC_ANCHORING_SERVICE_NAME};
 
     fn check_tx_error(tk: &AnchoringTestKit, tx_hash: Hash, e: ErrorKind) {
@@ -491,6 +491,12 @@ mod rpc_tests {
             tx1.anchoring_payload().unwrap().prev_tx_chain.unwrap(),
             tx0.unwrap().id()
         );
+
+        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        anchoring_testkit.create_block_with_transactions(signatures);
+        anchoring_testkit.create_blocks_until(Height(32));
+        let tx2 = anchoring_testkit.last_anchoring_tx().unwrap();
+        println!("---- {:#?}", tx2.anchoring_payload().unwrap());
     }
 
 }
