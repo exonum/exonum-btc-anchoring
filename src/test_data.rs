@@ -52,7 +52,7 @@ where
     let client = BitcoinRpcClient::from(config.clone());
 
     for _ in 0..count {
-        let (pub_key, priv_key) = btc::gen_keypair_with_rng(Network::Regtest, rng);
+        let (pub_key, priv_key) = btc::gen_keypair_with_rng(network, rng);
         public_keys.push(pub_key);
         local_cfgs.push(LocalConfig {
             rpc: Some(config.clone()),
