@@ -128,20 +128,17 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         // First anchoring transaction doesn't have previous.
         if let Some(tx) = unspent_anchoring_transaction {
             // Checks that latest anchoring transaction isn't a transition.
-            if actual_state.is_transition()
-                && tx.0.output[0].script_pubkey == actual_state.script_pubkey()
-            {
-                return None;
-            } else {
-                // TODO support transaction chain recovery.
+            if actual_state.is_transition() {
+                let address_changed = tx.0.output[0].script_pubkey == actual_state.script_pubkey();
+                if address_changed {
+                    // awaiting for new configuration to become actual.
+                    return None;
+                } else {
+                    trace!("transition to another address");
+                    builder = builder.transit_to(actual_state.script_pubkey());
+                }
             }
-
-            if actual_state.is_transition()
-                && tx.0.output[0].script_pubkey != actual_state.script_pubkey()
-            {
-                trace!("transition to another address");
-                builder = builder.transit_to(actual_state.script_pubkey());
-            }
+            // TODO support transaction chain recovery.
             builder = builder.prev_tx(tx);
         }
         if let Some(tx) = unspent_funding_transaction {
