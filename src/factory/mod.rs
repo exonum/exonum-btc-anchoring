@@ -14,8 +14,9 @@
 
 use exonum::blockchain::Service;
 use exonum::crypto::Hash;
-use exonum::helpers::fabric::{self, keys, Argument, CommandExtension, CommandName, Context,
-                              ServiceFactory};
+use exonum::helpers::fabric::{
+    self, keys, Argument, CommandExtension, CommandName, Context, ServiceFactory,
+};
 use exonum::node::NodeConfig;
 
 use bitcoin::network::constants::Network;

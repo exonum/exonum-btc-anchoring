@@ -11,9 +11,10 @@ mod rpc_tests {
     use exonum::blockchain::TransactionErrorType;
     use exonum::crypto::Hash;
     use exonum::helpers::Height;
-    use exonum_btc_anchoring::{blockchain::transactions::ErrorKind, config::GlobalConfig,
-                               rpc::BtcRelay, test_data::AnchoringTestKit,
-                               BTC_ANCHORING_SERVICE_NAME};
+    use exonum_btc_anchoring::{
+        blockchain::transactions::ErrorKind, config::GlobalConfig, rpc::BtcRelay,
+        test_data::AnchoringTestKit, BTC_ANCHORING_SERVICE_NAME,
+    };
 
     fn check_tx_error(tk: &AnchoringTestKit, tx_hash: Hash, e: ErrorKind) {
         let explorer = tk.explorer();
@@ -417,6 +418,7 @@ mod rpc_tests {
     #[test]
     fn broken_anchoring_recovery() {
         let validators_num = 5;
+
         // single tx fee is ~ 15000
         let initial_sum = 20000;
         let mut anchoring_testkit =
@@ -425,8 +427,8 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
-        let tx0 = anchoring_testkit.last_anchoring_tx();
-        assert!(tx0.is_some());
+        let latest_successful_tx = anchoring_testkit.last_anchoring_tx();
+        assert!(latest_successful_tx.is_some());
 
         // removing one of validators
         let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
@@ -456,10 +458,12 @@ mod rpc_tests {
         anchoring_testkit.renew_address();
         anchoring_testkit.create_blocks_until(Height(20));
 
-        let tx1 = anchoring_testkit.last_anchoring_tx();
+        let same_tx = anchoring_testkit.last_anchoring_tx();
         //no new transactions
 
-        assert!(tx0 == tx1);
+        assert!(latest_successful_tx == same_tx);
+        let latest_successful_tx = latest_successful_tx.unwrap();
+
         //creating new funding tx
         let rpc_client = anchoring_testkit.rpc_client();
         let address = anchoring_testkit.anchoring_address();
@@ -467,6 +471,7 @@ mod rpc_tests {
         let new_funding_tx = rpc_client
             .send_to_address(&address, initial_sum * 3)
             .unwrap();
+
         let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
         let service_configuration = GlobalConfig {
             funding_transaction: Some(new_funding_tx),
@@ -484,19 +489,49 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(28));
 
-        let tx1 = anchoring_testkit.last_anchoring_tx().unwrap();
+        let recovery_tx = anchoring_testkit.last_anchoring_tx().unwrap();
 
-        assert!(tx1.anchoring_payload().unwrap().prev_tx_chain.is_some());
+        // check if it's recovery tx
+        assert!(
+            recovery_tx
+                .anchoring_payload()
+                .unwrap()
+                .prev_tx_chain
+                .is_some()
+        );
         assert_eq!(
-            tx1.anchoring_payload().unwrap().prev_tx_chain.unwrap(),
-            tx0.unwrap().id()
+            recovery_tx
+                .anchoring_payload()
+                .unwrap()
+                .prev_tx_chain
+                .unwrap(),
+            latest_successful_tx.id()
+        );
+
+        assert!(
+            recovery_tx.anchoring_payload().unwrap().block_height
+                > latest_successful_tx
+                    .anchoring_payload()
+                    .unwrap()
+                    .block_height
         );
 
         let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(32));
-        let tx2 = anchoring_testkit.last_anchoring_tx().unwrap();
-        println!("---- {:#?}", tx2.anchoring_payload().unwrap());
+
+        let after_recovery_tx = anchoring_testkit.last_anchoring_tx().unwrap();
+        assert!(
+            after_recovery_tx
+                .anchoring_payload()
+                .unwrap()
+                .prev_tx_chain
+                .is_none()
+        );
+        assert!(
+            after_recovery_tx.anchoring_payload().unwrap().block_height
+                > recovery_tx.anchoring_payload().unwrap().block_height
+        );
     }
 
 }
