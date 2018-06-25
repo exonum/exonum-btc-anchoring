@@ -50,7 +50,7 @@ pub struct GlobalConfig {
 impl Default for GlobalConfig {
     fn default() -> Self {
         Self {
-            network: Network::Regtest,
+            network: Network::Testnet,
             public_keys: vec![],
             anchoring_interval: 5_000,
             transaction_fee: 100,
