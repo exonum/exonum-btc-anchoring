@@ -41,6 +41,9 @@ pub trait BtcRelay: Send + Sync + ::std::fmt::Debug {
     fn send_transaction(&self, transaction: &Transaction) -> Result<Hash, failure::Error>;
     /// Observes the changes on given address.
     fn watch_address(&self, addr: &Address, rescan: bool) -> Result<(), failure::Error>;
+
+    /// Returns an actual relay configuration.
+    fn config(&self) -> BitcoinRpcConfig;
 }
 
 /// `Bitcoind` rpc configuration.
@@ -128,5 +131,13 @@ impl BtcRelay for BitcoinRpcClient {
         self.0
             .importaddress(&addr.to_string(), "multisig", false, rescan)
             .map_err(From::from)
+    }
+
+    fn config(&self) -> BitcoinRpcConfig {
+        BitcoinRpcConfig {
+            host: self.0.url().to_string(),
+            username: self.0.username().clone(),
+            password: self.0.password().clone(),
+        }
     }
 }

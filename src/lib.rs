@@ -64,7 +64,7 @@ pub mod factory;
 pub mod rpc;
 pub mod service;
 
-pub mod test_data;
+pub mod test_helpers;
 
 mod handler;
 

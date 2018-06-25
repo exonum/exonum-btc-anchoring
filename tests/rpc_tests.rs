@@ -14,8 +14,12 @@
 
 extern crate bitcoin;
 extern crate exonum;
+
+extern crate exonum_bitcoinrpc as bitcoin_rpc;
+
 extern crate exonum_btc_anchoring;
 extern crate exonum_testkit;
+
 extern crate serde_json;
 
 #[cfg(feature = "rpc_tests")]
@@ -25,13 +29,13 @@ extern crate matches;
 extern crate btc_transaction_utils;
 
 #[cfg(feature = "rpc_tests")]
-mod rpc_tests {
+mod tests {
     use exonum::blockchain::{Transaction, TransactionErrorType};
     use exonum::explorer::BlockWithTransactions;
     use exonum::helpers::Height;
     use exonum_btc_anchoring::{
         blockchain::errors::ErrorCode, btc::BuilderError, config::GlobalConfig, rpc::BtcRelay,
-        test_data::AnchoringTestKit, BTC_ANCHORING_SERVICE_NAME,
+        test_helpers::testkit::AnchoringTestKit, BTC_ANCHORING_SERVICE_NAME,
     };
 
     fn assert_tx_error(block: BlockWithTransactions<Box<Transaction>>, e: ErrorCode) {
@@ -468,5 +472,4 @@ mod rpc_tests {
                 > recovery_tx.anchoring_payload().unwrap().block_height
         );
     }
-
 }

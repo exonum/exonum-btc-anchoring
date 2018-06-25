@@ -15,38 +15,33 @@
 use bitcoin::network::constants::Network;
 use blockchain::transactions::Signature;
 use blockchain::BtcAnchoringSchema;
-use std::env;
-use std::ops::{Deref, DerefMut};
-
 use btc;
+use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
+use config::{GlobalConfig, LocalConfig};
 use exonum::blockchain::Transaction;
 use exonum_testkit::{TestKit, TestKitBuilder, TestNetworkConfiguration, TestNode};
-
-use std::sync::{Arc, RwLock};
-
-use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
-
-use config::{GlobalConfig, LocalConfig};
-use rand::thread_rng;
+use rand::{thread_rng, Rng, SeedableRng, StdRng};
 use std::collections::HashMap;
+use std::env;
+use std::ops::{Deref, DerefMut};
+use std::sync::{Arc, RwLock};
 use {
     blockchain::BtcAnchoringState, rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
     BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME,
 };
 
-pub fn gen_anchoring_config(
-    config: &BitcoinRpcConfig,
+use test_helpers::rpc as fake_rpc;
+pub fn gen_anchoring_config<R: Rng>(
+    rpc: &BtcRelay,
     network: Network,
     count: u16,
     total_funds: u64,
     anchoring_interval: u64,
+    rng: &mut R,
 ) -> (GlobalConfig, Vec<LocalConfig>) {
-    let mut rng = thread_rng();
     let count = count as usize;
-
-    let client = BitcoinRpcClient::from(config.clone());
     let (public_keys, private_keys): (Vec<_>, Vec<_>) = (0..count)
-        .map(|_| btc::gen_keypair_with_rng(network, &mut rng))
+        .map(|_| btc::gen_keypair_with_rng(network, rng))
         .unzip();
 
     let mut global = GlobalConfig {
@@ -58,17 +53,16 @@ pub fn gen_anchoring_config(
     };
 
     let address = global.anchoring_address();
-
     let local_cfgs = private_keys
         .iter()
         .map(|sk| LocalConfig {
-            rpc: Some(config.clone()),
+            rpc: Some(rpc.config()),
             private_keys: hashmap!{ address.clone() => sk.clone() },
         })
         .collect();
 
-    client.watch_address(&address, false).unwrap();
-    let tx = client.send_to_address(&address, total_funds).unwrap();
+    rpc.watch_address(&address, false).unwrap();
+    let tx = rpc.send_to_address(&address, total_funds).unwrap();
 
     global.funding_transaction = Some(tx);
     (global, local_cfgs)
@@ -80,6 +74,7 @@ pub struct AnchoringTestKit {
     test_kit: TestKit,
     pub local_private_keys: Arc<RwLock<HashMap<btc::Address, btc::Privkey>>>,
     pub node_configs: Vec<LocalConfig>,
+    requests: Option<fake_rpc::TestRequests>,
 }
 
 impl Deref for AnchoringTestKit {
@@ -97,12 +92,49 @@ impl DerefMut for AnchoringTestKit {
 }
 
 impl AnchoringTestKit {
+    pub fn new<R: Rng>(
+        rpc: Box<BtcRelay>,
+        validators_num: u16,
+        total_funds: u64,
+        anchoring_interval: u64,
+        mut rng: R,
+        requests: Option<fake_rpc::TestRequests>,
+    ) -> Self {
+        let network = Network::Testnet;
+        let (global, locals) = gen_anchoring_config(
+            &*rpc,
+            network,
+            validators_num,
+            total_funds,
+            anchoring_interval,
+            &mut rng,
+        );
+
+        let local = locals[0].clone();
+        let private_keys = Arc::new(RwLock::new(local.private_keys));
+        let service =
+            BtcAnchoringService::new(global.clone(), Arc::clone(&private_keys), Some(rpc));
+
+        let testkit = TestKitBuilder::validator()
+            .with_service(service)
+            .with_validators(validators_num)
+            .with_logger()
+            .create();
+
+        Self {
+            test_kit: testkit,
+            local_private_keys: private_keys,
+            node_configs: locals,
+            requests,
+        }
+    }
+
     pub fn new_with_testnet(
         validators_num: u16,
         total_funds: u64,
         anchoring_interval: u64,
     ) -> Self {
-        let network = Network::Testnet;
+        let rng = thread_rng();
 
         let rpc_config = BitcoinRpcConfig {
             host: env::var("ANCHORING_RELAY_HOST")
@@ -115,33 +147,59 @@ impl AnchoringTestKit {
                 .or_else(|| Some(String::from("testnet"))),
         };
 
-        let relay = Box::<BtcRelay>::from(BitcoinRpcClient::from(rpc_config.clone()));
-        let (global, locals) = gen_anchoring_config(
-            &rpc_config,
-            network,
+        let client = BitcoinRpcClient::from(rpc_config);
+        Self::new(
+            Box::from(client),
             validators_num,
             total_funds,
             anchoring_interval,
-        );
+            rng,
+            None,
+        )
+    }
 
-        let local = locals[0].clone();
+    pub fn new_with_fake_rpc(
+        validators_num: u16,
+        total_funds: u64,
+        anchoring_interval: u64,
+    ) -> Self {
+        let seed: &[_] = &[1, 2, 3, 9];
+        let rng: StdRng = SeedableRng::from_seed(seed);
+        let fake_client = fake_rpc::FakeBitcoinRpcClient::new();
+        let requests = fake_client.requests.clone();
 
-        let private_keys = Arc::new(RwLock::new(local.private_keys));
+        requests.expect(vec![
+            request! {
+                method: "sendtoaddress",
+                params: ["tb1q8270svuaqety59gegtp4ujjeam39s83csz7whp9ryn3zxlcee66setkyq0", "0.00007"],
+                response: "69ef1d6847712089783bf861342568625e1e4a499993f27e10d9bb5f259d0894"
+            },
+            request! {
+                method: "getrawtransaction",
+                params: [
+                    "69ef1d6847712089783bf861342568625e1e4a499993f27e10d9bb5f259d0894",
+                    0
+                ],
+                response: "02000000000101140b3f5da041f173d938b8fe778d39cb2ef801f75f\
+                           2946e490e34d6bb47bb9ce0000000000feffffff0230025400000000\
+                           00160014169fa44a9159f281122bb7f3d43d88d56dfa937e70110100\
+                           000000002200203abcf8339d06564a151942c35e4a59eee2581e3880\
+                           bceb84a324e2237f19ceb502483045022100e91d46b565f26641b353\
+                           591d0c403a05ada5735875fb0f055538bf9df4986165022044b53367\
+                           72de8c5f6cbf83bcc7099e31d7dce22ba1f3d1badc2fdd7f8013a122\
+                           01210254053f15b44b825bc5dabfe88f8b94cd217372f3f297d2696a\
+                           32835b43497397358d1400"
+            },
+        ]);
 
-        let service =
-            BtcAnchoringService::new(global.clone(), Arc::clone(&private_keys), Some(relay));
-
-        let testkit = TestKitBuilder::validator()
-            .with_service(service)
-            .with_validators(validators_num)
-            .with_logger()
-            .create();
-
-        Self {
-            test_kit: testkit,
-            local_private_keys: private_keys,
-            node_configs: locals,
-        }
+        Self::new(
+            Box::from(fake_client),
+            validators_num,
+            total_funds,
+            anchoring_interval,
+            rng,
+            Some(requests.clone()),
+        )
     }
 
     pub fn renew_address(&mut self) {
@@ -288,5 +346,9 @@ impl AnchoringTestKit {
         };
         proposal.set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
         proposal
+    }
+
+    pub fn requests(&mut self) -> fake_rpc::TestRequests {
+        self.requests.clone().unwrap().clone()
     }
 }
