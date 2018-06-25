@@ -173,7 +173,7 @@ impl Transaction for Signature {
             .public_keys
             .get(self.validator().0 as usize)
         {
-            Some(pk) => pk.clone(),
+            Some(pk) => pk,
             _ => {
                 return Err(SignatureError::MissingPublicKey {
                     validator_id: self.validator(),

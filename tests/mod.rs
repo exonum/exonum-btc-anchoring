@@ -382,7 +382,7 @@ mod rpc_tests {
     }
 
     #[test]
-    fn wrong_singature_tx() {
+    fn wrong_signature_tx() {
         let validators_num = 4;
         let mut anchoring_testkit = AnchoringTestKit::new_with_testnet(validators_num, 70000, 4);
 
