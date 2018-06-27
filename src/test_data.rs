@@ -20,7 +20,6 @@ use std::ops::{Deref, DerefMut};
 
 use btc;
 use exonum::blockchain::Transaction;
-use exonum::helpers::Height;
 use exonum_testkit::{TestKit, TestKitBuilder, TestNetworkConfiguration, TestNode};
 
 use std::sync::{Arc, RwLock};
