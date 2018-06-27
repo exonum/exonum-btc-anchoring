@@ -11,10 +11,9 @@ mod rpc_tests {
     use exonum::blockchain::TransactionErrorType;
     use exonum::crypto::Hash;
     use exonum::helpers::Height;
-    use exonum_btc_anchoring::{
-        blockchain::transactions::ErrorKind, config::GlobalConfig, rpc::BtcRelay,
-        test_data::AnchoringTestKit, BTC_ANCHORING_SERVICE_NAME,
-    };
+    use exonum_btc_anchoring::{blockchain::transactions::ErrorKind, config::GlobalConfig,
+                               rpc::BtcRelay, test_data::AnchoringTestKit,
+                               BTC_ANCHORING_SERVICE_NAME};
 
     fn check_tx_error(tk: &AnchoringTestKit, tx_hash: Hash, e: ErrorKind) {
         let explorer = tk.explorer();
@@ -74,12 +73,10 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
-        let tx0 = anchoring_testkit.last_anchoring_tx();
-        assert!(tx0.is_some());
-        let tx0 = tx0.unwrap();
-        assert!(tx0.0.input.len() == 1);
+        let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
+        let output_val0 = tx0.unspent_value().unwrap();
 
-        let output_val0 = tx0.0.output.iter().map(|x| x.value).max().unwrap();
+        assert!(tx0.0.input.len() == 1);
         assert!(output_val0 < initial_sum);
 
         //creating new funding tx
@@ -103,12 +100,12 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
 
         let tx1 = anchoring_testkit.last_anchoring_tx().unwrap();
+        let output_val1 = tx1.unspent_value().unwrap();
         let tx1_meta = tx1.anchoring_metadata().unwrap();
         assert!(tx1_meta.1.block_height == Height(4));
 
         assert!(tx1.0.input.len() == 2);
 
-        let output_val1 = tx1.0.output.iter().map(|x| x.value).max().unwrap();
         assert!(output_val1 > output_val0);
         assert!(output_val1 > initial_sum);
     }
@@ -200,7 +197,7 @@ mod rpc_tests {
         assert!(tx0.is_some());
         let tx0 = tx0.unwrap();
         let tx0_meta = tx0.anchoring_metadata().unwrap();
-        let output_val0 = tx0.0.output.iter().map(|x| x.value).max().unwrap();
+        let output_val0 = tx0.unspent_value().unwrap();
 
         // removing one of validators
         let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
@@ -260,7 +257,7 @@ mod rpc_tests {
 
         let tx_changed = anchoring_testkit.last_anchoring_tx().unwrap();
         let tx_changed_meta = tx_changed.anchoring_metadata().unwrap();
-        let output_changed = tx_changed.0.output.iter().map(|x| x.value).max().unwrap();
+        let output_changed = tx_changed.unspent_value().unwrap();
 
         assert!(tx_transition != tx_changed);
         assert!(tx_changed.0.input.len() == 2);

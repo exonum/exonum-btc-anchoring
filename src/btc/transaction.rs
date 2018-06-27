@@ -60,6 +60,10 @@ impl Transaction {
         let script_pubkey = self.0.output.get(0).map(|out| &out.script_pubkey)?;
         Some((script_pubkey, payload))
     }
+
+    pub fn unspent_value(&self) -> Option<u64> {
+        self.0.output.get(0).map(|out| out.value)
+    }
 }
 
 #[derive(Debug)]
