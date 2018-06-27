@@ -59,11 +59,8 @@ pub enum SignatureError {
         expected_id: Hash,
         received_id: Hash,
     },
-    #[fail(
-        display = "Received signature for anchoring transaction while in transition state. Received: {:?}.",
-        _0
-    )]
-    InTransition { received_id: Hash },
+    #[fail(display = "Received signature for anchoring transaction while in transition state.")]
+    InTransition,
     #[fail(display = "Public key of validator {:?} is missing.", _0)]
     MissingPublicKey { validator_id: ValidatorId },
     #[fail(display = "Input with index {} doesn't exist.", _0)]
@@ -91,7 +88,7 @@ impl SignatureError {
     fn code(&self) -> ErrorCode {
         match self {
             SignatureError::Unexpected { .. } => ErrorCode::Unexpected,
-            SignatureError::InTransition { .. } => ErrorCode::InTransition,
+            SignatureError::InTransition => ErrorCode::InTransition,
             SignatureError::MissingPublicKey { .. } => ErrorCode::MissingPublicKey,
             SignatureError::NoSuchInput { .. } => ErrorCode::NoSuchInput,
             SignatureError::VerificationFailed => ErrorCode::VerificationFailed,
@@ -153,9 +150,7 @@ impl Transaction for Signature {
                 }
             }
         } else {
-            return Err(SignatureError::InTransition {
-                received_id: tx.id(),
-            }.into());
+            return Err(SignatureError::InTransition.into());
         };
 
         if expected_transaction.id() != tx.id() {
