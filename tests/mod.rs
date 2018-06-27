@@ -11,11 +11,11 @@ mod rpc_tests {
     use exonum::blockchain::TransactionErrorType;
     use exonum::crypto::Hash;
     use exonum::helpers::Height;
-    use exonum_btc_anchoring::{blockchain::transactions::ErrorKind, config::GlobalConfig,
+    use exonum_btc_anchoring::{blockchain::transactions::ErrorCode, config::GlobalConfig,
                                rpc::BtcRelay, test_data::AnchoringTestKit,
                                BTC_ANCHORING_SERVICE_NAME};
 
-    fn check_tx_error(tk: &AnchoringTestKit, tx_hash: Hash, e: ErrorKind) {
+    fn check_tx_error(tk: &AnchoringTestKit, tx_hash: Hash, e: ErrorCode) {
         let explorer = tk.explorer();
         let tx_info = explorer.transaction(&tx_hash).unwrap();
         let tx_status = tx_info.as_committed().unwrap().status();
@@ -299,7 +299,7 @@ mod rpc_tests {
         check_tx_error(
             &anchoring_testkit,
             leftover_hash,
-            ErrorKind::UnexpectedSignatureInTransitionState,
+            ErrorCode::UnexpectedSignatureInTransitionState,
         );
     }
 
@@ -333,7 +333,7 @@ mod rpc_tests {
         check_tx_error(
             &anchoring_testkit,
             leftover_hash,
-            ErrorKind::UnexpectedSignature,
+            ErrorCode::UnexpectedSignature,
         );
     }
 

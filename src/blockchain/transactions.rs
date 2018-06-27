@@ -77,7 +77,7 @@ pub enum SignatureError {
 }
 
 #[derive(Debug)]
-pub enum ErrorKind {
+pub enum ErrorCode {
     UnexpectedSignature = 1,
     UnexpectedSignatureInTransitionState = 2,
     MissingPublicKey = 3,
@@ -88,17 +88,17 @@ pub enum ErrorKind {
 }
 
 impl SignatureError {
-    fn code(&self) -> ErrorKind {
+    fn code(&self) -> ErrorCode {
         match self {
-            SignatureError::UnexpectedSignature { .. } => ErrorKind::UnexpectedSignature,
+            SignatureError::UnexpectedSignature { .. } => ErrorCode::UnexpectedSignature,
             SignatureError::UnexpectedSignatureInTransitionState { .. } => {
-                ErrorKind::UnexpectedSignatureInTransitionState
+                ErrorCode::UnexpectedSignatureInTransitionState
             }
-            SignatureError::MissingPublicKey { .. } => ErrorKind::MissingPublicKey,
-            SignatureError::NoSuchInput { .. } => ErrorKind::NoSuchInput,
-            SignatureError::VerificationFailed => ErrorKind::VerificationFailed,
-            SignatureError::TxBuilderError(..) => ErrorKind::TxBuilderError,
-            _ => ErrorKind::UnknownError,
+            SignatureError::MissingPublicKey { .. } => ErrorCode::MissingPublicKey,
+            SignatureError::NoSuchInput { .. } => ErrorCode::NoSuchInput,
+            SignatureError::VerificationFailed => ErrorCode::VerificationFailed,
+            SignatureError::TxBuilderError(..) => ErrorCode::TxBuilderError,
+            _ => ErrorCode::UnknownError,
         }
     }
 }
