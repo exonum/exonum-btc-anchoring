@@ -4,28 +4,26 @@ extern crate exonum_btc_anchoring;
 extern crate exonum_testkit;
 extern crate serde_json;
 
+#[macro_use]
+extern crate matches;
 extern crate btc_transaction_utils;
 
 #[cfg(feature = "rpc_tests")]
 mod rpc_tests {
-    use exonum::blockchain::TransactionErrorType;
+    use exonum::blockchain::{Transaction, TransactionErrorType};
     use exonum::crypto::Hash;
+    use exonum::explorer::BlockWithTransactions;
     use exonum::helpers::Height;
     use exonum_btc_anchoring::{blockchain::transactions::ErrorCode, config::GlobalConfig,
                                rpc::BtcRelay, test_data::AnchoringTestKit,
                                BTC_ANCHORING_SERVICE_NAME};
 
-    fn check_tx_error(tk: &AnchoringTestKit, tx_hash: Hash, e: ErrorCode) {
-        let explorer = tk.explorer();
-        let tx_info = explorer.transaction(&tx_hash).unwrap();
-        let tx_status = tx_info.as_committed().unwrap().status();
-
-        assert!(tx_status.is_err());
-
-        match tx_status.err().unwrap().error_type() {
-            TransactionErrorType::Code(x) => assert_eq!(x, e as u8),
-            _ => panic!("should be error code"),
-        }
+    fn assert_tx_error(block: BlockWithTransactions<Box<Transaction>>, e: ErrorCode) {
+        let error_code = e as u8;
+        assert_matches!(
+            block[0].status().unwrap_err().error_type(),
+            TransactionErrorType::Code(error_code)
+        );
     }
 
     #[test]
@@ -293,14 +291,8 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(12));
 
-        let leftover_hash = leftover_signature.hash();
-        anchoring_testkit.create_block_with_transactions(vec![leftover_signature]);
-
-        check_tx_error(
-            &anchoring_testkit,
-            leftover_hash,
-            ErrorCode::UnexpectedSignatureInTransitionState,
-        );
+        let block = anchoring_testkit.create_block_with_transactions(vec![leftover_signature]);
+        assert_tx_error(block, ErrorCode::InTransition);
     }
 
     #[test]
@@ -327,14 +319,8 @@ mod rpc_tests {
         anchoring_testkit.create_blocks_until(Height(8));
 
         // very slow node
-        let leftover_hash = leftover_signature.hash();
-        anchoring_testkit.create_block_with_transactions(vec![leftover_signature]);
-
-        check_tx_error(
-            &anchoring_testkit,
-            leftover_hash,
-            ErrorCode::UnexpectedSignature,
-        );
+        let block = anchoring_testkit.create_block_with_transactions(vec![leftover_signature]);
+        assert_tx_error(block, ErrorCode::Unexpected);
     }
 
     #[test]

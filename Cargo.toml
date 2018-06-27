@@ -45,6 +45,7 @@ exonum-configuration = "0.8.0"
 libc = "0.2.21"
 pretty_assertions = "0.5.1"
 proptest = "0.7.0"
+matches = "0.1.6"
 
 [features]
 default = []

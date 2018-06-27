@@ -55,7 +55,7 @@ pub enum SignatureError {
         expected_id,
         received_id
     )]
-    UnexpectedSignature {
+    Unexpected {
         expected_id: Hash,
         received_id: Hash,
     },
@@ -63,7 +63,7 @@ pub enum SignatureError {
         display = "Received signature for anchoring transaction while in transition state. Received: {:?}.",
         _0
     )]
-    UnexpectedSignatureInTransitionState { received_id: Hash },
+    InTransition { received_id: Hash },
     #[fail(display = "Public key of validator {:?} is missing.", _0)]
     MissingPublicKey { validator_id: ValidatorId },
     #[fail(display = "Input with index {} doesn't exist.", _0)]
@@ -78,8 +78,8 @@ pub enum SignatureError {
 
 #[derive(Debug)]
 pub enum ErrorCode {
-    UnexpectedSignature = 1,
-    UnexpectedSignatureInTransitionState = 2,
+    Unexpected = 1,
+    InTransition = 2,
     MissingPublicKey = 3,
     NoSuchInput = 4,
     VerificationFailed = 5,
@@ -90,10 +90,8 @@ pub enum ErrorCode {
 impl SignatureError {
     fn code(&self) -> ErrorCode {
         match self {
-            SignatureError::UnexpectedSignature { .. } => ErrorCode::UnexpectedSignature,
-            SignatureError::UnexpectedSignatureInTransitionState { .. } => {
-                ErrorCode::UnexpectedSignatureInTransitionState
-            }
+            SignatureError::Unexpected { .. } => ErrorCode::Unexpected,
+            SignatureError::InTransition { .. } => ErrorCode::InTransition,
             SignatureError::MissingPublicKey { .. } => ErrorCode::MissingPublicKey,
             SignatureError::NoSuchInput { .. } => ErrorCode::NoSuchInput,
             SignatureError::VerificationFailed => ErrorCode::VerificationFailed,
@@ -155,13 +153,13 @@ impl Transaction for Signature {
                 }
             }
         } else {
-            return Err(SignatureError::UnexpectedSignatureInTransitionState {
+            return Err(SignatureError::InTransition {
                 received_id: tx.id(),
             }.into());
         };
 
         if expected_transaction.id() != tx.id() {
-            return Err(SignatureError::UnexpectedSignature {
+            return Err(SignatureError::Unexpected {
                 expected_id: expected_transaction.id(),
                 received_id: tx.id(),
             }.into());
