@@ -105,9 +105,8 @@ impl BtcAnchoringTransactionBuilder {
         }
     }
 
-    pub fn transit_to(mut self, script: Script) -> Self {
+    pub fn transit_to(&mut self, script: Script) {
         self.transit_to = Some(script);
-        self
     }
 
     pub fn prev_tx(&mut self, tx: Transaction) -> Result<(), BuilderError> {
@@ -123,23 +122,20 @@ impl BtcAnchoringTransactionBuilder {
         self.recovery_tx = Some(last_tx);
     }
 
-    pub fn additional_funds(mut self, tx: Transaction) -> Self {
+    pub fn additional_funds(&mut self, tx: Transaction) {
         let out = tx.find_out(&self.script_pubkey)
             .expect("Funding transaction doesn't contains outputs to the anchoring address.")
             .0;
 
         self.additional_funds.push((out, tx));
-        self
     }
 
-    pub fn fee(mut self, fee: u64) -> Self {
+    pub fn fee(&mut self, fee: u64) {
         self.fee = Some(fee);
-        self
     }
 
-    pub fn payload(mut self, block_height: Height, block_hash: Hash) -> Self {
+    pub fn payload(&mut self, block_height: Height, block_hash: Hash) {
         self.payload = Some((block_height, block_hash));
-        self
     }
 
     pub fn create(mut self) -> Result<(Transaction, Vec<Transaction>), BuilderError> {
@@ -391,12 +387,11 @@ mod tests {
             .to_script()
             .unwrap();
 
-        let (tx, inputs) = BtcAnchoringTransactionBuilder::new(&redeem_script)
-            .additional_funds(funding_tx.clone())
-            .fee(1)
-            .payload(Height::zero(), funding_tx.hash())   // useless payload
-            .create()
-            .unwrap();
+        let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
+        builder.additional_funds(funding_tx.clone());
+        builder.fee(1);
+        builder.payload(Height::zero(), funding_tx.hash());
+        let (tx, inputs) = builder.create().unwrap();
 
         assert_eq!(funding_tx, inputs[0]);
         assert_eq!(tx.0.version, 2);
@@ -459,14 +454,13 @@ mod tests {
             .to_script()
             .unwrap();
 
-        let (tx, inputs) = BtcAnchoringTransactionBuilder::new(&redeem_script)
-            .additional_funds(funding_tx0.clone())
-            .additional_funds(funding_tx1.clone())
-            .additional_funds(funding_tx2.clone())
-            .fee(1)
-            .payload(Height::zero(), funding_tx0.hash())   // useless payload
-            .create()
-            .unwrap();
+        let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
+        builder.additional_funds(funding_tx0.clone());
+        builder.additional_funds(funding_tx1.clone());
+        builder.additional_funds(funding_tx2.clone());
+        builder.fee(1);
+        builder.payload(Height::zero(), funding_tx0.hash());
+        let (tx, inputs) = builder.create().unwrap();
 
         assert_eq!(inputs.len(), 3);
         let inputs = tx.0.input;
@@ -551,6 +545,7 @@ mod tests {
             .to_script()
             .unwrap();
 
-        let _ = BtcAnchoringTransactionBuilder::new(&redeem_script).additional_funds(funding_tx);
+        let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
+        builder.additional_funds(funding_tx);
     }
 }

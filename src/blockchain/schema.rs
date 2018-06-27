@@ -137,7 +137,7 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
                     return None;
                 } else {
                     trace!("Transition to another address.");
-                    builder = builder.transit_to(actual_state.script_pubkey());
+                    builder.transit_to(actual_state.script_pubkey());
                 }
             }
 
@@ -151,7 +151,7 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         }
 
         if let Some(tx) = unspent_funding_transaction {
-            builder = builder.additional_funds(tx);
+            builder.additional_funds(tx);
         }
 
         // Adds corresponding payload.
@@ -162,9 +162,8 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
             .block_hash_by_height(anchoring_height)
             .unwrap();
 
-        builder = builder
-            .payload(anchoring_height, anchoring_block_hash)
-            .fee(config.transaction_fee);
+        builder.payload(anchoring_height, anchoring_block_hash);
+        builder.fee(config.transaction_fee);
 
         // Creates anchoring proposal
         Some(builder.create())
