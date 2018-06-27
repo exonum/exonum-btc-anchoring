@@ -68,7 +68,7 @@ pub enum SignatureError {
     #[fail(display = "Signature verification failed.")]
     VerificationFailed,
     #[fail(display = "{}", _0)]
-    TxBuilderError(String),
+    TxBuilderError(btc::BuilderError),
     #[fail(display = "Unknown error")]
     UnknownError,
 }
@@ -140,18 +140,11 @@ impl Transaction for Signature {
         }
 
         let anchoring_state = anchoring_schema.actual_state();
-        let (expected_transaction, expected_inputs) = if let Some(proposal) =
-            anchoring_schema.proposed_anchoring_transaction(&anchoring_state)
-        {
-            match proposal {
-                Ok(proposal) => proposal,
-                Err(error) => {
-                    return Err(SignatureError::TxBuilderError(format!("{}", error)).into());
-                }
-            }
-        } else {
-            return Err(SignatureError::InTransition.into());
-        };
+
+        let (expected_transaction, expected_inputs) = anchoring_schema
+            .proposed_anchoring_transaction(&anchoring_state)
+            .ok_or(SignatureError::InTransition)?
+            .map_err(|e| SignatureError::TxBuilderError(e))?;
 
         if expected_transaction.id() != tx.id() {
             return Err(SignatureError::Unexpected {
