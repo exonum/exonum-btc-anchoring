@@ -261,7 +261,6 @@ mod rpc_tests {
 
         assert!(tx_transition != tx_changed);
         assert!(tx_changed.0.input.len() == 2);
-        assert!(tx_changed.0.input.len() == 2);
 
         // script_pubkey should *not* be the same
         assert!(tx0_meta.0 != tx_changed_meta.0);
