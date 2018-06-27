@@ -82,18 +82,17 @@ mod rpc_tests {
         //creating new funding tx
         let rpc_client = anchoring_testkit.rpc_client();
         let address = anchoring_testkit.anchoring_address();
-
         let new_funding_tx = rpc_client.send_to_address(&address, initial_sum).unwrap();
-        let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
+
+        let mut proposal = anchoring_testkit.configuration_change_proposal();
         let service_configuration = GlobalConfig {
             funding_transaction: Some(new_funding_tx),
-            ..configuration_change_proposal.service_config(BTC_ANCHORING_SERVICE_NAME)
+            ..proposal.service_config(BTC_ANCHORING_SERVICE_NAME)
         };
 
-        configuration_change_proposal
-            .set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
-        configuration_change_proposal.set_actual_from(Height(6));
-        anchoring_testkit.commit_configuration_change(configuration_change_proposal);
+        proposal.set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
+        proposal.set_actual_from(Height(6));
+        anchoring_testkit.commit_configuration_change(proposal);
         anchoring_testkit.create_blocks_until(Height(6));
 
         let signatures = anchoring_testkit.create_signature_tx_for_validators(2);
@@ -128,29 +127,12 @@ mod rpc_tests {
         anchoring_testkit.create_blocks_until(Height(6));
 
         // removing one of validators
-        let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
-        let mut validators = configuration_change_proposal.validators().to_vec();
-
-        let _ = validators.pop().unwrap();
-        configuration_change_proposal.set_validators(validators);
-
-        let config: GlobalConfig =
-            configuration_change_proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
-
-        let mut keys = config.public_keys.clone();
-        let _ = keys.pop().unwrap();
-
-        let service_configuration = GlobalConfig {
-            public_keys: keys,
-            ..config
-        };
-        configuration_change_proposal
-            .set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
-        configuration_change_proposal.set_actual_from(Height(16));
-        anchoring_testkit.commit_configuration_change(configuration_change_proposal);
+        let mut proposal = anchoring_testkit.drop_validator_proposal();
+        proposal.set_actual_from(Height(16));
+        anchoring_testkit.commit_configuration_change(proposal);
         anchoring_testkit.create_blocks_until(Height(7));
-
         anchoring_testkit.renew_address();
+
         let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(10));
@@ -193,44 +175,26 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
-        let tx0 = anchoring_testkit.last_anchoring_tx();
-        assert!(tx0.is_some());
-        let tx0 = tx0.unwrap();
+        let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
         let tx0_meta = tx0.anchoring_metadata().unwrap();
         let output_val0 = tx0.unspent_value().unwrap();
 
         // removing one of validators
-        let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
-        let mut validators = configuration_change_proposal.validators().to_vec();
-
-        let _ = validators.pop().unwrap();
-        configuration_change_proposal.set_validators(validators);
-
-        let config: GlobalConfig =
-            configuration_change_proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
-
-        let mut keys = config.public_keys.clone();
-        let _ = keys.pop().unwrap();
-
-        let mut service_configuration = GlobalConfig {
-            public_keys: keys,
-            ..config
-        };
-
+        let mut proposal = anchoring_testkit.drop_validator_proposal();
+        let mut service_config: GlobalConfig = proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
         // additional funding
         let rpc_client = anchoring_testkit.rpc_client();
-        let new_address = service_configuration.anchoring_address();
+
+        let new_address = service_config.anchoring_address();
 
         let new_funding_tx = rpc_client
             .send_to_address(&new_address, initial_sum)
             .unwrap();
 
-        service_configuration.funding_transaction = Some(new_funding_tx);
-
-        configuration_change_proposal
-            .set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
-        configuration_change_proposal.set_actual_from(Height(16));
-        anchoring_testkit.commit_configuration_change(configuration_change_proposal);
+        service_config.funding_transaction = Some(new_funding_tx);
+        proposal.set_service_config(BTC_ANCHORING_SERVICE_NAME, service_config);
+        proposal.set_actual_from(Height(16));
+        anchoring_testkit.commit_configuration_change(proposal);
 
         anchoring_testkit.create_blocks_until(Height(7));
 
@@ -282,30 +246,11 @@ mod rpc_tests {
         anchoring_testkit.create_blocks_until(Height(4));
 
         let tx0 = anchoring_testkit.last_anchoring_tx();
-        assert!(tx0.is_some());
+
         // removing one of validators
-        let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
-        let mut validators = configuration_change_proposal.validators().to_vec();
-
-        let _ = validators.pop().unwrap();
-        configuration_change_proposal.set_validators(validators);
-
-        let config: GlobalConfig =
-            configuration_change_proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
-
-        let mut keys = config.public_keys.clone();
-        let _ = keys.pop().unwrap();
-
-        let service_configuration = GlobalConfig {
-            public_keys: keys,
-            ..config
-        };
-
-        configuration_change_proposal
-            .set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
-
-        configuration_change_proposal.set_actual_from(Height(16));
-        anchoring_testkit.commit_configuration_change(configuration_change_proposal);
+        let mut proposal = anchoring_testkit.drop_validator_proposal();
+        proposal.set_actual_from(Height(16));
+        anchoring_testkit.commit_configuration_change(proposal);
         anchoring_testkit.create_blocks_until(Height(7));
 
         anchoring_testkit.renew_address();
@@ -337,29 +282,10 @@ mod rpc_tests {
         assert!(tx0.is_some());
 
         // removing one of validators
-        let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
-        let mut validators = configuration_change_proposal.validators().to_vec();
+        let mut proposal = anchoring_testkit.drop_validator_proposal();
+        proposal.set_actual_from(Height(16));
 
-        let _ = validators.pop().unwrap();
-        configuration_change_proposal.set_validators(validators);
-
-        let config: GlobalConfig =
-            configuration_change_proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
-
-        let mut keys = config.public_keys.clone();
-        let _ = keys.pop().unwrap();
-
-        let service_configuration = GlobalConfig {
-            public_keys: keys,
-            ..config
-        };
-
-        configuration_change_proposal
-            .set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
-
-        configuration_change_proposal.set_actual_from(Height(16));
-
-        anchoring_testkit.commit_configuration_change(configuration_change_proposal);
+        anchoring_testkit.commit_configuration_change(proposal);
         anchoring_testkit.create_blocks_until(Height(7));
         anchoring_testkit.renew_address();
 
@@ -427,31 +353,14 @@ mod rpc_tests {
         assert!(latest_successful_tx.is_some());
 
         // removing one of validators
-        let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
-        let mut validators = configuration_change_proposal.validators().to_vec();
+        let mut proposal = anchoring_testkit.drop_validator_proposal();
 
-        let _ = validators.pop().unwrap();
-        configuration_change_proposal.set_validators(validators);
+        proposal.set_actual_from(Height(16));
+        anchoring_testkit.commit_configuration_change(proposal);
 
-        let config: GlobalConfig =
-            configuration_change_proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
-
-        let mut keys = config.public_keys.clone();
-        let _ = keys.pop().unwrap();
-
-        let service_configuration = GlobalConfig {
-            public_keys: keys,
-            ..config
-        };
-
-        configuration_change_proposal
-            .set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
-
-        configuration_change_proposal.set_actual_from(Height(16));
-        anchoring_testkit.commit_configuration_change(configuration_change_proposal);
         anchoring_testkit.create_blocks_until(Height(7));
-
         anchoring_testkit.renew_address();
+
         anchoring_testkit.create_blocks_until(Height(20));
 
         let same_tx = anchoring_testkit.last_anchoring_tx();
@@ -468,17 +377,16 @@ mod rpc_tests {
             .send_to_address(&address, initial_sum * 3)
             .unwrap();
 
-        let mut configuration_change_proposal = anchoring_testkit.configuration_change_proposal();
+        let mut proposal = anchoring_testkit.configuration_change_proposal();
         let service_configuration = GlobalConfig {
             funding_transaction: Some(new_funding_tx),
-            ..configuration_change_proposal.service_config(BTC_ANCHORING_SERVICE_NAME)
+            ..proposal.service_config(BTC_ANCHORING_SERVICE_NAME)
         };
 
-        configuration_change_proposal
-            .set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
-        configuration_change_proposal.set_actual_from(Height(24));
+        proposal.set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
+        proposal.set_actual_from(Height(24));
 
-        anchoring_testkit.commit_configuration_change(configuration_change_proposal);
+        anchoring_testkit.commit_configuration_change(proposal);
         anchoring_testkit.create_blocks_until(Height(26));
 
         let signatures = anchoring_testkit.create_signature_tx_for_validators(3);

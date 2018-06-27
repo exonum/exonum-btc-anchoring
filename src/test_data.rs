@@ -20,7 +20,8 @@ use std::ops::{Deref, DerefMut};
 
 use btc;
 use exonum::blockchain::Transaction;
-use exonum_testkit::{TestKit, TestKitBuilder, TestNode};
+use exonum::helpers::Height;
+use exonum_testkit::{TestKit, TestKitBuilder, TestNetworkConfiguration, TestNode};
 
 use std::sync::{Arc, RwLock};
 
@@ -29,10 +30,10 @@ use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use config::{GlobalConfig, LocalConfig};
 use rand::{thread_rng, Rng};
 use std::collections::HashMap;
-use {
-    blockchain::BtcAnchoringState, rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
-    BtcAnchoringService,
-};
+use {blockchain::BtcAnchoringState,
+     rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
+     BtcAnchoringService,
+     BTC_ANCHORING_SERVICE_NAME};
 
 pub fn gen_anchoring_config_with_rng<R>(
     config: &BitcoinRpcConfig,
@@ -310,5 +311,26 @@ impl AnchoringTestKit {
             }
         }
         signatures
+    }
+
+    pub fn drop_validator_proposal(&mut self) -> TestNetworkConfiguration {
+        let mut proposal = self.configuration_change_proposal();
+        let mut validators = proposal.validators().to_vec();
+
+        validators.pop();
+        proposal.set_validators(validators);
+
+        let config: GlobalConfig = proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
+
+        let mut keys = config.public_keys.clone();
+
+        keys.pop();
+
+        let service_configuration = GlobalConfig {
+            public_keys: keys,
+            ..config
+        };
+        proposal.set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
+        proposal
     }
 }
