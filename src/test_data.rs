@@ -145,12 +145,12 @@ impl AnchoringTestKit {
     }
 
     pub fn renew_address(&mut self) {
-        let anchoring_schema = BtcAnchoringSchema::new(self.snapshot());
+        let schema = BtcAnchoringSchema::new(self.snapshot());
 
         if let BtcAnchoringState::Transition {
             actual_configuration,
             following_configuration,
-        } = anchoring_schema.actual_state()
+        } = schema.actual_state()
         {
             let old_addr = actual_configuration.anchoring_address();
             let new_addr = following_configuration.anchoring_address();
@@ -193,19 +193,16 @@ impl AnchoringTestKit {
 
     pub fn redeem_script(&self) -> RedeemScript {
         let fork = self.blockchain().fork();
-        let anchoring_schema = BtcAnchoringSchema::new(fork);
+        let schema = BtcAnchoringSchema::new(fork);
 
-        anchoring_schema
-            .actual_state()
-            .actual_configuration()
-            .redeem_script()
+        schema.actual_state().actual_configuration().redeem_script()
     }
 
     pub fn anchoring_address(&self) -> btc::Address {
         let fork = self.blockchain().fork();
-        let anchoring_schema = BtcAnchoringSchema::new(fork);
+        let schema = BtcAnchoringSchema::new(fork);
 
-        anchoring_schema
+        schema
             .actual_state()
             .actual_configuration()
             .anchoring_address()
@@ -217,8 +214,8 @@ impl AnchoringTestKit {
     }
 
     pub fn last_anchoring_tx(&self) -> Option<btc::Transaction> {
-        let anchoring_schema = BtcAnchoringSchema::new(self.snapshot());
-        anchoring_schema.anchoring_transactions_chain().last()
+        let schema = BtcAnchoringSchema::new(self.snapshot());
+        schema.anchoring_transactions_chain().last()
     }
 
     pub fn create_signature_tx_for_validators(
@@ -240,10 +237,10 @@ impl AnchoringTestKit {
             let validator_id = validator.validator_id().unwrap();
             let (public_key, private_key) = validator.service_keypair();
 
-            let anchoring_schema = BtcAnchoringSchema::new(self.snapshot());
-            let anchoring_state = anchoring_schema.actual_state();
+            let schema = BtcAnchoringSchema::new(self.snapshot());
+            let anchoring_state = schema.actual_state();
 
-            if let Some(p) = anchoring_schema.proposed_anchoring_transaction(&anchoring_state) {
+            if let Some(p) = schema.proposed_anchoring_transaction(&anchoring_state) {
                 let (proposal, proposal_inputs) = p?;
 
                 let address = anchoring_state.output_address();
@@ -257,15 +254,6 @@ impl AnchoringTestKit {
                             TxInRef::new(proposal.as_ref(), index),
                             proposal_input.as_ref(),
                             privkey.0.secret_key(),
-                        )
-                        .unwrap();
-
-                    signer
-                        .verify_input(
-                            TxInRef::new(proposal.as_ref(), index),
-                            proposal_input.as_ref(),
-                            &pubkey,
-                            &signature,
                         )
                         .unwrap();
 
