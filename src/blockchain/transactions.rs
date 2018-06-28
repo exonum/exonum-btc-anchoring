@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::{ExecutionError, ExecutionResult, Transaction};
+use exonum::blockchain::{ExecutionResult, Transaction};
 use exonum::crypto::PublicKey;
 use exonum::helpers::ValidatorId;
 use exonum::messages::Message;
@@ -86,7 +86,7 @@ impl Transaction for Signature {
         let (expected_transaction, expected_inputs) = schema
             .actual_proposed_anchoring_transaction()
             .ok_or(SignatureError::InTransition)?
-            .map_err(|e| SignatureError::TxBuilderError(e))?;
+            .map_err(SignatureError::TxBuilderError)?;
 
         if expected_transaction.id() != tx.id() {
             return Err(SignatureError::Unexpected {

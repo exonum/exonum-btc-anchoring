@@ -245,8 +245,6 @@ impl AnchoringTestKit {
                 let address = schema.actual_state().output_address();
                 let privkey = &self.node_configs[validator_id.0 as usize].private_keys[&address];
 
-                let pubkey = redeem_script.content().public_keys[validator_id.0 as usize];
-
                 for (index, proposal_input) in proposal_inputs.iter().enumerate() {
                     let signature = signer
                         .sign_input(
