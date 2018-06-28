@@ -252,7 +252,10 @@ impl AnchoringTestKit {
         anchoring_schema.anchoring_transactions_chain().last()
     }
 
-    pub fn create_signature_tx_for_validators(&self, validators_num: u16) -> Vec<Box<Transaction>> {
+    pub fn create_signature_tx_for_validators(
+        &self,
+        validators_num: u16,
+    ) -> Result<Vec<Box<Transaction>>, btc::BuilderError> {
         let validators = self.network()
             .validators()
             .iter()
@@ -272,7 +275,7 @@ impl AnchoringTestKit {
             let anchoring_state = anchoring_schema.actual_state();
 
             if let Some(p) = anchoring_schema.proposed_anchoring_transaction(&anchoring_state) {
-                let (proposal, proposal_inputs) = p.unwrap();
+                let (proposal, proposal_inputs) = p?;
 
                 let address = anchoring_state.output_address();
                 let privkey = &self.node_configs[validator_id.0 as usize].private_keys[&address];
@@ -309,7 +312,7 @@ impl AnchoringTestKit {
                 }
             }
         }
-        signatures
+        Ok(signatures)
     }
 
     pub fn drop_validator_proposal(&mut self) -> TestNetworkConfiguration {

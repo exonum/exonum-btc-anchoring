@@ -151,7 +151,9 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         }
 
         if let Some(tx) = unspent_funding_transaction {
-            builder.additional_funds(tx);
+            if let Err(e) = builder.additional_funds(tx) {
+                return Some(Err(e));
+            }
         }
 
         // Adds corresponding payload.

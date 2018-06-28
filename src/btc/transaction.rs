@@ -90,6 +90,8 @@ pub enum BuilderError {
     NoInputs,
     #[display(fmt = "Output address in a previous anchoring transaction is not suitable.")]
     UnsuitableOutput,
+    #[display(fmt = "Funding transaction doesn't contains outputs to the anchoring address.")]
+    UnsutableFundingTx,
 }
 
 impl BtcAnchoringTransactionBuilder {
@@ -122,12 +124,12 @@ impl BtcAnchoringTransactionBuilder {
         self.recovery_tx = Some(last_tx);
     }
 
-    pub fn additional_funds(&mut self, tx: Transaction) {
+    pub fn additional_funds(&mut self, tx: Transaction) -> Result<(), BuilderError> {
         let out = tx.find_out(&self.script_pubkey)
-            .expect("Funding transaction doesn't contains outputs to the anchoring address.")
+            .ok_or_else(|| BuilderError::UnsutableFundingTx)?
             .0;
-
         self.additional_funds.push((out, tx));
+        Ok(())
     }
 
     pub fn fee(&mut self, fee: u64) {
@@ -209,7 +211,7 @@ impl BtcAnchoringTransactionBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::{BtcAnchoringTransactionBuilder, Transaction};
+    use super::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
     use bitcoin::blockdata::opcodes::All;
     use bitcoin::blockdata::script::{Builder, Script};
     use bitcoin::blockdata::transaction::{self, TxIn, TxOut};
@@ -388,7 +390,7 @@ mod tests {
             .unwrap();
 
         let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
-        builder.additional_funds(funding_tx.clone());
+        builder.additional_funds(funding_tx.clone()).unwrap();
         builder.fee(1);
         builder.payload(Height::zero(), funding_tx.hash());
         let (tx, inputs) = builder.create().unwrap();
@@ -455,9 +457,9 @@ mod tests {
             .unwrap();
 
         let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
-        builder.additional_funds(funding_tx0.clone());
-        builder.additional_funds(funding_tx1.clone());
-        builder.additional_funds(funding_tx2.clone());
+        builder.additional_funds(funding_tx0.clone()).unwrap();
+        builder.additional_funds(funding_tx1.clone()).unwrap();
+        builder.additional_funds(funding_tx2.clone()).unwrap();
         builder.fee(1);
         builder.payload(Height::zero(), funding_tx0.hash());
         let (tx, inputs) = builder.create().unwrap();
@@ -477,7 +479,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "UnsuitableOutput")]
     fn test_anchoring_transaction_builder_incorrect_prev_tx() {
         let funding_tx: Transaction = Transaction::from_hex(
             "02000000000101b651818fe3855d0d5d74de1cf72b56503c16f808519440e842b6\
@@ -518,11 +519,13 @@ mod tests {
             .unwrap();
         let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
         let _ = builder.prev_tx(prev_tx).unwrap();
-        builder.additional_funds(funding_tx);
+        assert_matches!(
+            builder.additional_funds(funding_tx).unwrap_err(),
+            BuilderError::UnsuitableOutput
+        );
     }
 
     #[test]
-    #[should_panic(expected = "doesn't contains outputs to the anchoring address.")]
     fn test_anchoring_transaction_builder_incorrect_funds() {
         let funding_tx: Transaction = Transaction::from_hex(
             "020000000001015315c18b6a6893ec08d4a7175da494d5d856a8efc983ba2e8eed06c2211041f500000000\
@@ -546,6 +549,9 @@ mod tests {
             .unwrap();
 
         let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
-        builder.additional_funds(funding_tx);
+        assert_matches!(
+            builder.additional_funds(funding_tx).unwrap_err(),
+            BuilderError::UnsutableFundingTx
+        );
     }
 }

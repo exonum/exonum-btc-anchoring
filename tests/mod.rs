@@ -4,8 +4,10 @@ extern crate exonum_btc_anchoring;
 extern crate exonum_testkit;
 extern crate serde_json;
 
+#[cfg(feature = "rpc_tests")]
 #[macro_use]
 extern crate matches;
+
 extern crate btc_transaction_utils;
 
 #[cfg(feature = "rpc_tests")]
@@ -14,8 +16,8 @@ mod rpc_tests {
     use exonum::crypto::Hash;
     use exonum::explorer::BlockWithTransactions;
     use exonum::helpers::Height;
-    use exonum_btc_anchoring::{blockchain::transactions::ErrorCode, config::GlobalConfig,
-                               rpc::BtcRelay, test_data::AnchoringTestKit,
+    use exonum_btc_anchoring::{blockchain::transactions::ErrorCode, btc::BuilderError,
+                               config::GlobalConfig, rpc::BtcRelay, test_data::AnchoringTestKit,
                                BTC_ANCHORING_SERVICE_NAME};
 
     fn assert_tx_error(block: BlockWithTransactions<Box<Transaction>>, e: ErrorCode) {
@@ -33,7 +35,9 @@ mod rpc_tests {
 
         assert!(anchoring_testkit.last_anchoring_tx().is_none());
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(2);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(2)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
@@ -43,7 +47,9 @@ mod rpc_tests {
         let tx0_meta = tx0.anchoring_metadata().unwrap();
         assert!(tx0_meta.1.block_height == Height(0));
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(2);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(2)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(8));
 
@@ -67,7 +73,9 @@ mod rpc_tests {
         let mut anchoring_testkit =
             AnchoringTestKit::new_with_testnet(validators_num, initial_sum, 4);
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(2);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(2)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
@@ -93,7 +101,9 @@ mod rpc_tests {
         anchoring_testkit.commit_configuration_change(proposal);
         anchoring_testkit.create_blocks_until(Height(6));
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(2);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(2)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
 
         let tx1 = anchoring_testkit.last_anchoring_tx().unwrap();
@@ -111,7 +121,9 @@ mod rpc_tests {
     fn address_changed() {
         let validators_num = 5;
         let mut anchoring_testkit = AnchoringTestKit::new_with_testnet(validators_num, 150000, 4);
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
@@ -120,7 +132,9 @@ mod rpc_tests {
         let tx0 = tx0.unwrap();
         let tx0_meta = tx0.anchoring_metadata().unwrap();
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(4);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(4)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(6));
 
@@ -131,17 +145,23 @@ mod rpc_tests {
         anchoring_testkit.create_blocks_until(Height(7));
         anchoring_testkit.renew_address();
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(10));
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(12));
 
         let tx_transition = anchoring_testkit.last_anchoring_tx().unwrap();
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(16));
 
@@ -150,7 +170,9 @@ mod rpc_tests {
         assert!(tx_transition == tx_same);
 
         anchoring_testkit.create_blocks_until(Height(17));
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
 
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(20));
@@ -169,7 +191,9 @@ mod rpc_tests {
         let initial_sum = 150000;
         let mut anchoring_testkit =
             AnchoringTestKit::new_with_testnet(validators_num, initial_sum, 4);
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
@@ -198,7 +222,9 @@ mod rpc_tests {
 
         anchoring_testkit.renew_address();
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(10));
 
@@ -207,12 +233,16 @@ mod rpc_tests {
         //new funding transaction should not be consumed during creation of transition tx
         assert!(tx_transition.0.input.len() == 1);
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(16));
 
         anchoring_testkit.create_blocks_until(Height(17));
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
 
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(20));
@@ -232,14 +262,15 @@ mod rpc_tests {
     }
 
     #[test]
-    #[should_panic(expected = "UnsuitableOutput")]
     fn insufficient_funds_during_address_change() {
         let validators_num = 5;
         // single tx fee is ~ 15000
         let initial_sum = 20000;
         let mut anchoring_testkit =
             AnchoringTestKit::new_with_testnet(validators_num, initial_sum, 4);
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
@@ -258,9 +289,13 @@ mod rpc_tests {
 
         //no new transactions
         assert!(tx0 == tx1);
-
-        // it should fail
-        let _ = anchoring_testkit.create_signature_tx_for_validators(1);
+        
+        assert_matches!(
+            anchoring_testkit
+                .create_signature_tx_for_validators(1)
+                .unwrap_err(),
+            BuilderError::UnsuitableOutput
+        );
     }
 
     #[test]
@@ -270,7 +305,9 @@ mod rpc_tests {
         let mut anchoring_testkit =
             AnchoringTestKit::new_with_testnet(validators_num, initial_sum, 4);
 
-        let mut signatures = anchoring_testkit.create_signature_tx_for_validators(4);
+        let mut signatures = anchoring_testkit
+            .create_signature_tx_for_validators(4)
+            .unwrap();
         let leftover_signature = signatures.remove(0);
 
         anchoring_testkit.create_block_with_transactions(signatures);
@@ -287,7 +324,9 @@ mod rpc_tests {
         anchoring_testkit.create_blocks_until(Height(7));
         anchoring_testkit.renew_address();
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(12));
 
@@ -302,7 +341,9 @@ mod rpc_tests {
 
         assert!(anchoring_testkit.last_anchoring_tx().is_none());
 
-        let mut signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let mut signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         let leftover_signature = signatures.pop().unwrap();
 
         anchoring_testkit.create_block_with_transactions(signatures);
@@ -314,7 +355,9 @@ mod rpc_tests {
         let tx0_meta = tx0.anchoring_metadata().unwrap();
         assert!(tx0_meta.1.block_height == Height(0));
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(2);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(2)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(8));
 
@@ -331,7 +374,9 @@ mod rpc_tests {
         let initial_sum = 20000;
         let mut anchoring_testkit =
             AnchoringTestKit::new_with_testnet(validators_num, initial_sum, 4);
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
@@ -375,7 +420,9 @@ mod rpc_tests {
         anchoring_testkit.commit_configuration_change(proposal);
         anchoring_testkit.create_blocks_until(Height(26));
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(28));
 
@@ -406,7 +453,9 @@ mod rpc_tests {
                     .block_height
         );
 
-        let signatures = anchoring_testkit.create_signature_tx_for_validators(3);
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(3)
+            .unwrap();
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(32));
 
