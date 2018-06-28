@@ -171,6 +171,13 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         Some(builder.create())
     }
 
+    pub fn actual_proposed_anchoring_transaction(
+        &self,
+    ) -> Option<Result<(Transaction, Vec<Transaction>), BuilderError>> {
+        let actual_state = self.actual_state();
+        self.proposed_anchoring_transaction(&actual_state)
+    }
+
     pub fn unspent_funding_transaction(&self) -> Option<Transaction> {
         let tx_candidate = self.actual_configuration().funding_transaction?;
         let txid = tx_candidate.id();

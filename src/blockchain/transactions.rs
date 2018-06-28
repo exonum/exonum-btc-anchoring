@@ -139,10 +139,8 @@ impl Transaction for Signature {
             return Ok(());
         }
 
-        let anchoring_state = anchoring_schema.actual_state();
-
         let (expected_transaction, expected_inputs) = anchoring_schema
-            .proposed_anchoring_transaction(&anchoring_state)
+            .actual_proposed_anchoring_transaction()
             .ok_or(SignatureError::InTransition)?
             .map_err(|e| SignatureError::TxBuilderError(e))?;
 
@@ -153,7 +151,10 @@ impl Transaction for Signature {
             }.into());
         }
 
-        let redeem_script = anchoring_state.actual_configuration().redeem_script();
+        let redeem_script = anchoring_schema
+            .actual_state()
+            .actual_configuration()
+            .redeem_script();
         let redeem_script_content = redeem_script.content();
         let public_key = match redeem_script_content
             .public_keys

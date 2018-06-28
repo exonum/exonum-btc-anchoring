@@ -238,12 +238,11 @@ impl AnchoringTestKit {
             let (public_key, private_key) = validator.service_keypair();
 
             let schema = BtcAnchoringSchema::new(self.snapshot());
-            let anchoring_state = schema.actual_state();
 
-            if let Some(p) = schema.proposed_anchoring_transaction(&anchoring_state) {
+            if let Some(p) = schema.actual_proposed_anchoring_transaction() {
                 let (proposal, proposal_inputs) = p?;
 
-                let address = anchoring_state.output_address();
+                let address = anchoring_schema.actual_state().output_address();
                 let privkey = &self.node_configs[validator_id.0 as usize].private_keys[&address];
 
                 let pubkey = redeem_script.content().public_keys[validator_id.0 as usize];
