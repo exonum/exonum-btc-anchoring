@@ -27,41 +27,27 @@ use std::sync::{Arc, RwLock};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 
 use config::{GlobalConfig, LocalConfig};
-use rand::{thread_rng, Rng};
+use rand::thread_rng;
 use std::collections::HashMap;
 use {blockchain::BtcAnchoringState,
      rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
      BtcAnchoringService,
      BTC_ANCHORING_SERVICE_NAME};
 
-pub fn gen_anchoring_config_with_rng<R>(
+pub fn gen_anchoring_config(
     config: &BitcoinRpcConfig,
     network: Network,
     count: u16,
     total_funds: u64,
     anchoring_interval: u64,
-    rng: &mut R,
-) -> (GlobalConfig, Vec<LocalConfig>)
-where
-    R: Rng,
-{
+) -> (GlobalConfig, Vec<LocalConfig>) {
+    let mut rng = thread_rng();
     let count = count as usize;
-    let mut public_keys = Vec::new();
-    let mut local_cfgs = Vec::new();
-    let mut priv_keys = Vec::new();
 
     let client = BitcoinRpcClient::from(config.clone());
-
-    for _ in 0..count {
-        let (pub_key, priv_key) = btc::gen_keypair_with_rng(network, rng);
-        public_keys.push(pub_key);
-        local_cfgs.push(LocalConfig {
-            rpc: Some(config.clone()),
-            private_keys: HashMap::new(),
-        });
-
-        priv_keys.push(priv_key.clone());
-    }
+    let (public_keys, private_keys): (Vec<_>, Vec<_>) = (0..count)
+        .map(|_| btc::gen_keypair_with_rng(network, &mut rng))
+        .unzip();
 
     let mut global = GlobalConfig {
         network,
@@ -72,37 +58,20 @@ where
     };
 
     let address = global.anchoring_address();
+
+    let local_cfgs = private_keys
+        .iter()
+        .map(|sk| LocalConfig {
+            rpc: Some(config.clone()),
+            private_keys: hashmap!{ address.clone() => sk.clone() },
+        })
+        .collect();
+
     client.watch_address(&address, false).unwrap();
-    let tx = client.send_to_address(&address, total_funds);
-    let tx = tx.unwrap();
+    let tx = client.send_to_address(&address, total_funds).unwrap();
 
     global.funding_transaction = Some(tx);
-
-    for (idx, local_cfg) in local_cfgs.iter_mut().enumerate() {
-        local_cfg
-            .private_keys
-            .insert(address.clone(), priv_keys[idx].clone());
-    }
-
     (global, local_cfgs)
-}
-
-pub fn gen_anchoring_config(
-    config: &BitcoinRpcConfig,
-    network: Network,
-    count: u16,
-    total_funds: u64,
-    anchoring_interval: u64,
-) -> (GlobalConfig, Vec<LocalConfig>) {
-    let mut rng = thread_rng();
-    gen_anchoring_config_with_rng(
-        config,
-        network,
-        count,
-        total_funds,
-        anchoring_interval,
-        &mut rng,
-    )
 }
 
 // Notorious test kit wrapper

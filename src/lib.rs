@@ -39,6 +39,9 @@ extern crate proptest;
 #[macro_use]
 extern crate matches;
 
+#[macro_use]
+extern crate maplit;
+
 extern crate bitcoin;
 extern crate btc_transaction_utils;
 extern crate byteorder;
