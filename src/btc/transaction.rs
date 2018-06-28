@@ -518,9 +518,11 @@ mod tests {
             .to_script()
             .unwrap();
         let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
-        let _ = builder.prev_tx(prev_tx).unwrap();
+
+        builder.additional_funds(funding_tx).unwrap();
+
         assert_matches!(
-            builder.additional_funds(funding_tx).unwrap_err(),
+            builder.prev_tx(prev_tx).unwrap_err(),
             BuilderError::UnsuitableOutput
         );
     }
