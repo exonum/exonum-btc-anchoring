@@ -129,9 +129,9 @@ impl Transaction for Signature {
 
     fn execute(&self, fork: &mut Fork) -> ExecutionResult {
         let tx = self.tx();
-        let mut anchoring_schema = BtcAnchoringSchema::new(fork);
+        let mut schema = BtcAnchoringSchema::new(fork);
         // We already have enough signatures to spend anchoring transaction.
-        if anchoring_schema
+        if schema
             .anchoring_transactions_chain()
             .last()
             .map(|tx| tx.id()) == Some(tx.id())
@@ -139,7 +139,7 @@ impl Transaction for Signature {
             return Ok(());
         }
 
-        let (expected_transaction, expected_inputs) = anchoring_schema
+        let (expected_transaction, expected_inputs) = schema
             .actual_proposed_anchoring_transaction()
             .ok_or(SignatureError::InTransition)?
             .map_err(|e| SignatureError::TxBuilderError(e))?;
@@ -151,10 +151,7 @@ impl Transaction for Signature {
             }.into());
         }
 
-        let redeem_script = anchoring_schema
-            .actual_state()
-            .actual_configuration()
-            .redeem_script();
+        let redeem_script = schema.actual_state().actual_configuration().redeem_script();
         let redeem_script_content = redeem_script.content();
         let public_key = match redeem_script_content
             .public_keys
@@ -192,10 +189,10 @@ impl Transaction for Signature {
 
         // Adds signature to schema.
         let input_id = self.input_id();
-        let mut input_signatures = anchoring_schema.input_signatures(&input_id, &redeem_script);
+        let mut input_signatures = schema.input_signatures(&input_id, &redeem_script);
         if input_signatures.len() != redeem_script_content.quorum {
             input_signatures.insert(self.validator(), self.content().to_vec());
-            anchoring_schema
+            schema
                 .transaction_signatures_mut()
                 .put(&input_id, input_signatures);
         }
@@ -203,7 +200,7 @@ impl Transaction for Signature {
         let mut tx: btc::Transaction = tx;
         for index in 0..expected_inputs.len() {
             let input_id = TxInputId::new(self.tx().id(), index as u32);
-            let input_signatures = anchoring_schema.input_signatures(&input_id, &redeem_script);
+            let input_signatures = schema.input_signatures(&input_id, &redeem_script);
 
             if input_signatures.len() != redeem_script_content.quorum {
                 return Ok(());
@@ -227,9 +224,9 @@ impl Transaction for Signature {
         trace!("Anchoring txhex: {}", tx.to_string());
 
         // Adds finalized transaction to the tail of anchoring transactions.
-        anchoring_schema.anchoring_transactions_chain_mut().push(tx);
-        if let Some(unspent_funding_tx) = anchoring_schema.unspent_funding_transaction() {
-            anchoring_schema
+        schema.anchoring_transactions_chain_mut().push(tx);
+        if let Some(unspent_funding_tx) = schema.unspent_funding_transaction() {
+            schema
                 .spent_funding_transactions_mut()
                 .put(&unspent_funding_tx.id(), unspent_funding_tx);
         }

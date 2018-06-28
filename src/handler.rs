@@ -65,8 +65,8 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         validator_id: ValidatorId,
         privkey: &Privkey,
     ) -> Result<(), failure::Error> {
-        let anchoring_schema = BtcAnchoringSchema::new(self.context.snapshot());
-        let latest_anchored_height = anchoring_schema.latest_anchored_height();
+        let schema = BtcAnchoringSchema::new(self.context.snapshot());
+        let latest_anchored_height = schema.latest_anchored_height();
         let anchoring_height = self.anchoring_state
             .following_anchoring_height(latest_anchored_height);
 
@@ -76,7 +76,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
 
         // Creates anchoring proposal
         let (proposal, proposal_inputs) = if let Some(proposal) =
-            anchoring_schema.proposed_anchoring_transaction(&self.anchoring_state)
+            schema.proposed_anchoring_transaction(&self.anchoring_state)
         {
             proposal?
         } else {
@@ -92,7 +92,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         for (index, proposal_input) in proposal_inputs.iter().enumerate() {
             let input_id = TxInputId::new(proposal.id(), index as u32);
 
-            if let Some(input_signatures) = anchoring_schema.transaction_signatures().get(&input_id)
+            if let Some(input_signatures) = schema.transaction_signatures().get(&input_id)
             {
                 if input_signatures.contains(validator_id) {
                     trace!(
@@ -153,15 +153,15 @@ impl<'a> SyncWithBtcRelayTask<'a> {
     }
 
     pub fn run(self) -> Result<(), failure::Error> {
-        let anchoring_schema = BtcAnchoringSchema::new(self.context.snapshot());
+        let schema = BtcAnchoringSchema::new(self.context.snapshot());
         let sync_interval = cmp::max(
             1,
-            anchoring_schema.actual_configuration().anchoring_interval / 2,
+            schema.actual_configuration().anchoring_interval / 2,
         );
 
         if self.context.height().0 % sync_interval == 0 {
             if let Some(index) = self.find_index_of_first_uncommitted_transaction()? {
-                let anchoring_txs = anchoring_schema.anchoring_transactions_chain();
+                let anchoring_txs = schema.anchoring_transactions_chain();
                 for tx in anchoring_txs.iter_from(index) {
                     trace!("Send anchoring transaction to btc relay: {}", tx.id());
                     self.relay.send_transaction(&tx)?;
@@ -173,8 +173,8 @@ impl<'a> SyncWithBtcRelayTask<'a> {
     }
 
     fn find_index_of_first_uncommitted_transaction(&self) -> Result<Option<u64>, failure::Error> {
-        let anchoring_schema = BtcAnchoringSchema::new(self.context.snapshot());
-        let anchoring_txs = anchoring_schema.anchoring_transactions_chain();
+        let schema = BtcAnchoringSchema::new(self.context.snapshot());
+        let anchoring_txs = schema.anchoring_transactions_chain();
 
         let anchoring_txs_len = anchoring_txs.len();
         let tx_indices = (0..anchoring_txs_len).rev();
