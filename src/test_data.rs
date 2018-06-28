@@ -29,10 +29,10 @@ use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use config::{GlobalConfig, LocalConfig};
 use rand::thread_rng;
 use std::collections::HashMap;
-use {blockchain::BtcAnchoringState,
-     rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
-     BtcAnchoringService,
-     BTC_ANCHORING_SERVICE_NAME};
+use {
+    blockchain::BtcAnchoringState, rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
+    BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME,
+};
 
 pub fn gen_anchoring_config(
     config: &BitcoinRpcConfig,

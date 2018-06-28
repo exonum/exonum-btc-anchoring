@@ -75,13 +75,12 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         }
 
         // Creates anchoring proposal
-        let (proposal, proposal_inputs) = if let Some(proposal) =
-            schema.proposed_anchoring_transaction(&self.anchoring_state)
-        {
-            proposal?
-        } else {
-            return Ok(());
-        };
+        let (proposal, proposal_inputs) =
+            if let Some(proposal) = schema.proposed_anchoring_transaction(&self.anchoring_state) {
+                proposal?
+            } else {
+                return Ok(());
+            };
 
         let config = self.anchoring_state.actual_configuration();
         let redeem_script = config.redeem_script();
@@ -92,8 +91,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         for (index, proposal_input) in proposal_inputs.iter().enumerate() {
             let input_id = TxInputId::new(proposal.id(), index as u32);
 
-            if let Some(input_signatures) = schema.transaction_signatures().get(&input_id)
-            {
+            if let Some(input_signatures) = schema.transaction_signatures().get(&input_id) {
                 if input_signatures.contains(validator_id) {
                     trace!(
                         " {:?} is already signed by validator {}",
@@ -154,10 +152,7 @@ impl<'a> SyncWithBtcRelayTask<'a> {
 
     pub fn run(self) -> Result<(), failure::Error> {
         let schema = BtcAnchoringSchema::new(self.context.snapshot());
-        let sync_interval = cmp::max(
-            1,
-            schema.actual_configuration().anchoring_interval / 2,
-        );
+        let sync_interval = cmp::max(1, schema.actual_configuration().anchoring_interval / 2);
 
         if self.context.height().0 % sync_interval == 0 {
             if let Some(index) = self.find_index_of_first_uncommitted_transaction()? {

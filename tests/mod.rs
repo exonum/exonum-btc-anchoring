@@ -16,9 +16,10 @@ mod rpc_tests {
     use exonum::crypto::Hash;
     use exonum::explorer::BlockWithTransactions;
     use exonum::helpers::Height;
-    use exonum_btc_anchoring::{blockchain::transactions::ErrorCode, btc::BuilderError,
-                               config::GlobalConfig, rpc::BtcRelay, test_data::AnchoringTestKit,
-                               BTC_ANCHORING_SERVICE_NAME};
+    use exonum_btc_anchoring::{
+        blockchain::transactions::ErrorCode, btc::BuilderError, config::GlobalConfig,
+        rpc::BtcRelay, test_data::AnchoringTestKit, BTC_ANCHORING_SERVICE_NAME,
+    };
 
     fn assert_tx_error(block: BlockWithTransactions<Box<Transaction>>, e: ErrorCode) {
         let error_code = e as u8;
@@ -289,7 +290,7 @@ mod rpc_tests {
 
         //no new transactions
         assert!(tx0 == tx1);
-        
+
         assert_matches!(
             anchoring_testkit
                 .create_signature_tx_for_validators(1)
