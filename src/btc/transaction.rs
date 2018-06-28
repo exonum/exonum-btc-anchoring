@@ -91,7 +91,7 @@ pub enum BuilderError {
     #[display(fmt = "Output address in a previous anchoring transaction is not suitable.")]
     UnsuitableOutput,
     #[display(fmt = "Funding transaction doesn't contains outputs to the anchoring address.")]
-    UnsutableFundingTx,
+    UnsuitableFundingTx,
 }
 
 impl BtcAnchoringTransactionBuilder {
@@ -126,7 +126,7 @@ impl BtcAnchoringTransactionBuilder {
 
     pub fn additional_funds(&mut self, tx: Transaction) -> Result<(), BuilderError> {
         let out = tx.find_out(&self.script_pubkey)
-            .ok_or_else(|| BuilderError::UnsutableFundingTx)?
+            .ok_or_else(|| BuilderError::UnsuitableFundingTx)?
             .0;
         self.additional_funds.push((out, tx));
         Ok(())
@@ -553,7 +553,7 @@ mod tests {
         let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
         assert_matches!(
             builder.additional_funds(funding_tx).unwrap_err(),
-            BuilderError::UnsutableFundingTx
+            BuilderError::UnsuitableFundingTx
         );
     }
 }
