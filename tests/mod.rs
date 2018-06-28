@@ -55,9 +55,7 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
-        let tx0 = anchoring_testkit.last_anchoring_tx();
-        assert!(tx0.is_some());
-        let tx0 = tx0.unwrap();
+        let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
         let tx0_meta = tx0.anchoring_metadata().unwrap();
         assert!(tx0_meta.1.block_height == Height(0));
 
@@ -67,10 +65,7 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(8));
 
-        let tx1 = anchoring_testkit.last_anchoring_tx();
-        assert!(tx1.is_some());
-
-        let tx1 = tx1.unwrap();
+        let tx1 = anchoring_testkit.last_anchoring_tx().unwrap();
         let tx1_meta = tx1.anchoring_metadata().unwrap();
 
         assert!(tx0.id() == tx1.prev_tx_id());
@@ -141,9 +136,7 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
-        let tx0 = anchoring_testkit.last_anchoring_tx();
-        assert!(tx0.is_some());
-        let tx0 = tx0.unwrap();
+        let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
         let tx0_meta = tx0.anchoring_metadata().unwrap();
 
         let signatures = anchoring_testkit
@@ -327,8 +320,8 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
-        let tx0 = anchoring_testkit.last_anchoring_tx();
-        assert!(tx0.is_some());
+        // to be sure if anchoring is started
+        assert!(anchoring_testkit.last_anchoring_tx().is_some());
 
         // removing one of validators
         let mut proposal = anchoring_testkit.drop_validator_proposal();
@@ -363,9 +356,7 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
-        let tx0 = anchoring_testkit.last_anchoring_tx();
-        assert!(tx0.is_some());
-        let tx0 = tx0.unwrap();
+        let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
         let tx0_meta = tx0.anchoring_metadata().unwrap();
         assert!(tx0_meta.1.block_height == Height(0));
 
@@ -394,8 +385,7 @@ mod rpc_tests {
         anchoring_testkit.create_block_with_transactions(signatures);
         anchoring_testkit.create_blocks_until(Height(4));
 
-        let latest_successful_tx = anchoring_testkit.last_anchoring_tx();
-        assert!(latest_successful_tx.is_some());
+        let latest_successful_tx = anchoring_testkit.last_anchoring_tx().unwrap();
 
         // removing one of validators
         let mut proposal = anchoring_testkit.drop_validator_proposal();
@@ -408,11 +398,10 @@ mod rpc_tests {
 
         anchoring_testkit.create_blocks_until(Height(20));
 
-        let same_tx = anchoring_testkit.last_anchoring_tx();
+        let same_tx = anchoring_testkit.last_anchoring_tx().unwrap();
         //no new transactions
 
         assert!(latest_successful_tx == same_tx);
-        let latest_successful_tx = latest_successful_tx.unwrap();
 
         //creating new funding tx
         let rpc_client = anchoring_testkit.rpc_client();
@@ -443,13 +432,6 @@ mod rpc_tests {
         let recovery_tx = anchoring_testkit.last_anchoring_tx().unwrap();
 
         // check if it's recovery tx
-        assert!(
-            recovery_tx
-                .anchoring_payload()
-                .unwrap()
-                .prev_tx_chain
-                .is_some()
-        );
         assert_eq!(
             recovery_tx
                 .anchoring_payload()
