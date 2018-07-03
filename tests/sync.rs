@@ -294,7 +294,7 @@ fn several_unsynced() {
         .create_signature_tx_for_validators(3)
         .unwrap();
 
-    // should walk to first uncommited
+    // should walk to first uncommitted
     requests.expect(vec![
         request! {
             method: "getrawtransaction",

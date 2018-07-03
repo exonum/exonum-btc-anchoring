@@ -72,6 +72,7 @@ iswatchonly
 JJBZ
 Jjqe
 keepalive
+keyhash
 keypair
 keypairs
 lects
@@ -120,6 +121,7 @@ PASSWD
 passwd
 peekable
 permissioned
+pkey
 postcondition
 postpropose
 postvote
@@ -209,10 +211,12 @@ txindex
 txinfo
 txout
 txvec
+txinwitness
 tymethod
 unboxed
 unreceived
 unsync
+unsynced
 untagged
 userid
 usize
