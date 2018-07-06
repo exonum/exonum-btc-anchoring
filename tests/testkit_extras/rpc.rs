@@ -27,7 +27,9 @@ use exonum::encoding::serialize::FromHex;
 
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{BitcoinTx, FundingTx, TxKind};
-use exonum_btc_anchoring::details::rpc::{AnchoringRpcConfig, BitcoinRelay, TxInfo, SATOSHI_DIVISOR};
+use exonum_btc_anchoring::details::rpc::{
+    AnchoringRpcConfig, BitcoinRelay, TxInfo, SATOSHI_DIVISOR,
+};
 
 #[derive(Debug)]
 pub struct TestRequest {

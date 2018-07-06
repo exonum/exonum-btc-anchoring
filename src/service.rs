@@ -24,8 +24,9 @@ use serde_json;
 use serde_json::value::Value;
 
 use exonum::api::Api;
-use exonum::blockchain::{ApiContext, Blockchain, Schema as CoreSchema, Service, ServiceContext,
-                         Transaction};
+use exonum::blockchain::{
+    ApiContext, Blockchain, Schema as CoreSchema, Service, ServiceContext, Transaction,
+};
 use exonum::crypto::Hash;
 use exonum::encoding::Error as StreamStructError;
 use exonum::messages::RawTransaction;

@@ -44,8 +44,9 @@ use exonum::encoding::serialize::FromHex;
 use exonum::helpers::{Height, ValidatorId};
 
 use exonum_btc_anchoring::blockchain::dto::{MsgAnchoringSignature, MsgAnchoringUpdateLatest};
-use exonum_btc_anchoring::details::btc::transactions::{verify_tx_input, AnchoringTx, FundingTx,
-                                                       TransactionBuilder};
+use exonum_btc_anchoring::details::btc::transactions::{
+    verify_tx_input, AnchoringTx, FundingTx, TransactionBuilder,
+};
 use testkit_extras::helpers::*;
 use testkit_extras::AnchoringTestKit;
 

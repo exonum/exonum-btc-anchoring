@@ -237,7 +237,9 @@ impl AnchoringHandler {
                         AnchoringState::Anchoring { cfg: actual }
                     } else {
                         AnchoringState::Recovering {
-                            prev_cfg: anchoring_schema.previous_anchoring_config().unwrap(),
+                            prev_cfg: anchoring_schema.previous_anchoring_config().unwrap_or_else(
+                                || panic!("Previous configuration is absent in recovering state"),
+                            ),
                             actual_cfg: actual,
                         }
                     }
@@ -247,7 +249,9 @@ impl AnchoringHandler {
                     // Ensure that we did not miss transition lect
                     if actual_lect_script_pubkey != actual_addr.script_pubkey() {
                         let state = AnchoringState::Recovering {
-                            prev_cfg: anchoring_schema.previous_anchoring_config().unwrap(),
+                            prev_cfg: anchoring_schema.previous_anchoring_config().unwrap_or_else(
+                                || panic!("Previous configuration is absent in recovering state"),
+                            ),
                             actual_cfg: actual,
                         };
                         return Ok(state);
