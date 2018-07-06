@@ -31,7 +31,7 @@ use exonum::helpers::fabric::{
 use exonum::node::NodeConfig;
 
 use super::{gen_btc_keypair, AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig};
-use details::btc::{self, PrivateKey, PublicKey, transactions::FundingTx};
+use details::btc::{self, transactions::FundingTx, PrivateKey, PublicKey};
 use details::rpc::{BitcoinRelay, RpcClient};
 use observer::AnchoringObserverConfig;
 use service::AnchoringService;
@@ -365,10 +365,14 @@ impl CommandExtension for Finalize {
         } else {
             let txid = funding_txid.expect("Funding txid not found");
             let txid = btc::TxId::from_str(&txid).expect("Unable to parse funding txid");
-            let tx: FundingTx = client.get_transaction(txid).unwrap().expect(
-                "Funding tx with the \
-                 given id not found",
-            ).into();
+            let tx: FundingTx = client
+                .get_transaction(txid)
+                .unwrap()
+                .expect(
+                    "Funding tx with the \
+                     given id not found",
+                )
+                .into();
             if tx.find_out(&address).is_none() {
                 panic!("Given funding transaction doesn't contains anchoring address");
             }

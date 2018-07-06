@@ -131,6 +131,8 @@ impl AnchoringConfig {
     }
 }
 
+// Passing by reference is `serde` requirement.
+#[cfg_attr(feature = "cargo-clippy", allow(trivially_copy_pass_by_ref))]
 fn btc_network_to_str<S>(network: &btc::Network, ser: S) -> Result<S::Ok, S::Error>
 where
     S: ::serde::Serializer,
