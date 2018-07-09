@@ -25,12 +25,13 @@ use toml::Value;
 
 use exonum::blockchain::Service;
 use exonum::encoding::serialize::FromHex;
-use exonum::helpers::fabric::{keys, Argument, CommandExtension, CommandName, Context,
-                              ServiceFactory};
+use exonum::helpers::fabric::{
+    keys, Argument, CommandExtension, CommandName, Context, ServiceFactory,
+};
 use exonum::node::NodeConfig;
 
 use super::{gen_btc_keypair, AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig};
-use details::btc::{self, PrivateKey, PublicKey};
+use details::btc::{self, transactions::FundingTx, PrivateKey, PublicKey};
 use details::rpc::{BitcoinRelay, RpcClient};
 use observer::AnchoringObserverConfig;
 use service::AnchoringService;
@@ -355,6 +356,7 @@ impl CommandExtension for Finalize {
             network,
         );
 
+        println!("Anchoring address is {}", address);
         let mut genesis_cfg = if let Some(total_funds) = create_funding_tx_with_amount {
             client.watch_address(&address, false).unwrap();
             let tx = client.send_to_address(&address, total_funds).unwrap();
@@ -363,11 +365,18 @@ impl CommandExtension for Finalize {
         } else {
             let txid = funding_txid.expect("Funding txid not found");
             let txid = btc::TxId::from_str(&txid).expect("Unable to parse funding txid");
-            let tx = client.get_transaction(txid).unwrap().expect(
-                "Funding tx with the \
-                 given id not found",
-            );
-            AnchoringConfig::new_with_funding_tx(network, pub_keys, tx.into())
+            let tx: FundingTx = client
+                .get_transaction(txid)
+                .unwrap()
+                .expect(
+                    "Funding tx with the \
+                     given id not found",
+                )
+                .into();
+            if tx.find_out(&address).is_none() {
+                panic!("Given funding transaction doesn't contains anchoring address");
+            }
+            AnchoringConfig::new_with_funding_tx(network, pub_keys, tx)
         };
 
         anchoring_config

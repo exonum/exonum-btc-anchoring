@@ -78,7 +78,7 @@ impl AnchoringHandler {
         let priv_key = self.node
             .private_keys
             .get(&addr_str)
-            .expect(&format!("Expected private key for address={}", addr_str))
+            .unwrap_or_else(|| panic!("Expected private key for address={}", addr_str))
             .clone();
         MultisigAddress {
             common,
@@ -237,7 +237,10 @@ impl AnchoringHandler {
                         AnchoringState::Anchoring { cfg: actual }
                     } else {
                         AnchoringState::Recovering {
-                            prev_cfg: anchoring_schema.previous_anchoring_config().unwrap(),
+                            prev_cfg: anchoring_schema
+                                .previous_anchoring_config()
+                                .expect("Previous configuration is absent in recovering state"),
+
                             actual_cfg: actual,
                         }
                     }
@@ -247,7 +250,9 @@ impl AnchoringHandler {
                     // Ensure that we did not miss transition lect
                     if actual_lect_script_pubkey != actual_addr.script_pubkey() {
                         let state = AnchoringState::Recovering {
-                            prev_cfg: anchoring_schema.previous_anchoring_config().unwrap(),
+                            prev_cfg: anchoring_schema
+                                .previous_anchoring_config()
+                                .expect("Previous configuration is absent in recovering state"),
                             actual_cfg: actual,
                         };
                         return Ok(state);

@@ -207,16 +207,18 @@ where
                 let prev_lect = anchoring_schema
                     .lects(key)
                     .get(prev_lect_idx)
-                    .expect(&format!(
-                        "Lect with \
-                         index {} is \
-                         absent in \
-                         lects table \
-                         for validator \
-                         {}",
-                        prev_lect_idx,
-                        key.to_string()
-                    ));
+                    .unwrap_or_else(|| {
+                        panic!(
+                            "Lect with \
+                             index {} is \
+                             absent in \
+                             lects table \
+                             for validator \
+                             {}",
+                            prev_lect_idx,
+                            key.to_string()
+                        )
+                    });
                 assert_eq!(
                     prev_txid,
                     prev_lect.tx().id(),

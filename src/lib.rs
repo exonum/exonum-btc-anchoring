@@ -108,8 +108,10 @@ pub use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
 pub use error::Error;
 pub use handler::AnchoringHandler;
 pub use local_storage::AnchoringNodeConfig;
-pub use service::{gen_anchoring_testnet_config, gen_anchoring_testnet_config_with_rng,
-                  AnchoringService, ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
+pub use service::{
+    gen_anchoring_testnet_config, gen_anchoring_testnet_config_with_rng, AnchoringService,
+    ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME,
+};
 
 #[doc(hidden)]
 pub fn majority_count(cnt: u8) -> u8 {

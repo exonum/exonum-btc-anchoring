@@ -28,8 +28,9 @@ use exonum::helpers::Height;
 use exonum::storage::StorageValue;
 
 use details::btc;
-use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx, RawBitcoinTx,
-                                 TransactionBuilder, TxKind};
+use details::btc::transactions::{
+    AnchoringTx, BitcoinTx, FundingTx, RawBitcoinTx, TransactionBuilder, TxKind,
+};
 
 pub fn redeem_script_testnet<'a, I: IntoIterator<Item = &'a btc::PublicKey>>(
     keys: I,

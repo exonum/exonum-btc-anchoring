@@ -27,12 +27,15 @@ use exonum_testkit::{TestKit, TestKitBuilder};
 pub use self::rpc::{TestClient, TestRequest, TestRequests};
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringSignature;
 use exonum_btc_anchoring::details::btc;
-use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, FundingTx, RawBitcoinTx,
-                                                       TransactionBuilder};
+use exonum_btc_anchoring::details::btc::transactions::{
+    AnchoringTx, FundingTx, RawBitcoinTx, TransactionBuilder,
+};
 use exonum_btc_anchoring::error::HandlerError;
 use exonum_btc_anchoring::handler::{collect_signatures, AnchoringHandler};
-use exonum_btc_anchoring::{gen_anchoring_testnet_config_with_rng, AnchoringConfig,
-                           AnchoringNodeConfig, AnchoringService, ANCHORING_SERVICE_NAME};
+use exonum_btc_anchoring::{
+    gen_anchoring_testnet_config_with_rng, AnchoringConfig, AnchoringNodeConfig, AnchoringService,
+    ANCHORING_SERVICE_NAME,
+};
 
 #[macro_use]
 mod macros;

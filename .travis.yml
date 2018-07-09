@@ -11,7 +11,7 @@ addons:
 rust:
   # Feel free to bump this version if you need features of newer Rust.
   # Sync with badge in README.md
-  - 1.25.0
+  - 1.27.0
 
 matrix:
   allow_failures:
@@ -28,7 +28,7 @@ sudo: required
 
 env:
   global:
-  - CLIPPY_VERS=0.0.206
+  - CLIPPY_VERS=0.0.209
   - RUSTFMT_VERS=0.9.0
   - DEADLINKS_VERS=0.3.0
   - OUTDATED_VERS=0.7.0
@@ -59,7 +59,7 @@ jobs:
   include:
   # Formatting & other lints that do not require compilation
   - env: FEATURE=lints
-    rust: 1.26.1 # Use fresh rustfmt 
+    rust: 1.27.0 # Use fresh rustfmt 
     install:
     - rustup component add rustfmt-preview
     - rustfmt -V
@@ -76,7 +76,7 @@ jobs:
 
   # Clippy linting
   - env: FEATURE=clippy
-    rust: nightly-2018-05-30
+    rust: nightly-2018-06-20
     install:
     - cargo clippy --version | grep $CLIPPY_VERS || cargo install clippy --force --vers $CLIPPY_VERS
     script:
