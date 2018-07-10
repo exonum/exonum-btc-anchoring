@@ -19,7 +19,7 @@ use std::default::Default;
 
 use details::btc;
 use details::rpc::AnchoringRpcConfig;
-use observer::AnchoringObserverConfig;
+use handler::observer::AnchoringObserverConfig;
 
 /// Private part of anchoring service configuration stored on a local machine.
 #[derive(Deserialize, Serialize, Clone, Debug, PartialEq)]

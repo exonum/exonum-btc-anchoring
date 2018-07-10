@@ -12,38 +12,29 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Anchoring transactions' chain observer.
-
-use std::thread::sleep;
-use std::time::Duration;
-
-use exonum::blockchain::{Blockchain, Schema};
-use exonum::storage::Fork;
+use exonum::{
+    blockchain::{Schema}, helpers::Height, storage::Fork,
+};
 
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
-use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
+use details::rpc::{BitcoinRelay};
 use error::Error as ServiceError;
-
-/// Type alias for milliseconds.
-pub type Milliseconds = u64;
-/// Type alias for block height.
-pub type Height = u64;
 
 /// Anchoring observer configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct AnchoringObserverConfig {
-    /// An interval of anchoring chain checks.
-    pub check_interval: Milliseconds,
-    /// If this option enabled observer thread will launch with in the public API handler.
+    /// An interval of anchoring chain checks (in blocks).
+    pub check_interval: Height,
+    /// If this option enabled observer will launch.
     pub enabled: bool,
 }
 
 impl Default for AnchoringObserverConfig {
     fn default() -> AnchoringObserverConfig {
         AnchoringObserverConfig {
-            check_interval: 10_000,
+            check_interval: Height(1_000),
             enabled: false,
         }
     }
@@ -52,96 +43,40 @@ impl Default for AnchoringObserverConfig {
 /// Anchoring chain observer. Periodically checks the state of the anchor chain and keeps
 /// the verified transactions in database.
 #[derive(Debug)]
-pub struct AnchoringChainObserver {
-    blockchain: Blockchain,
-    client: Box<BitcoinRelay>,
-    check_interval: Milliseconds,
+pub struct AnchoringChainObserver<'a, 'b> {
+    fork: &'a mut Fork,
+    client: &'b dyn BitcoinRelay,
 }
 
-impl AnchoringChainObserver {
-    /// Constructs observer for the given `blockchain`.
-    pub fn new(
-        blockchain: Blockchain,
-        rpc: AnchoringRpcConfig,
-        observer: &AnchoringObserverConfig,
-    ) -> AnchoringChainObserver {
-        AnchoringChainObserver {
-            blockchain,
-            client: Box::new(RpcClient::from(rpc)),
-            check_interval: observer.check_interval,
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn new_with_client(
-        blockchain: Blockchain,
-        client: Box<BitcoinRelay>,
-        check_interval: Milliseconds,
-    ) -> AnchoringChainObserver {
-        AnchoringChainObserver {
-            blockchain,
-            client,
-            check_interval,
-        }
-    }
-
-    /// Runs observer in infinity loop.
-    pub fn run(&mut self) -> Result<(), ServiceError> {
-        info!(
-            "Launching anchoring chain observer with polling interval {} ms",
-            self.check_interval
-        );
-        let duration = Duration::from_millis(self.check_interval);
-        loop {
-            if let Err(e) = self.check_anchoring_chain() {
-                error!(
-                    "An error during `check_anchoring_chain` occurred, msg={:?}",
-                    e
-                );
-            }
-            sleep(duration);
-        }
+impl<'a, 'b> AnchoringChainObserver<'a, 'b> {
+    pub fn new(fork: &'a mut Fork, client: &'b dyn BitcoinRelay) -> Self {
+        AnchoringChainObserver { fork, client }
     }
 
     /// Tries to get `lect` for the current anchoring configuration and retrospectively adds
     /// all previously unknown anchoring transactions.
-    pub fn check_anchoring_chain(&mut self) -> Result<(), ServiceError> {
-        let mut fork = self.blockchain.fork();
-        if !self.is_blockchain_inited(&fork) {
+    pub fn check_anchoring_chain(self) -> Result<(), ServiceError> {
+        if !self.is_blockchain_inited() {
             return Ok(());
         }
 
-        let cfg = AnchoringSchema::new(&fork).actual_anchoring_config();
-        if let Some(lect) = self.find_lect(&fork, &cfg)? {
-            if !self.lect_payload_is_correct(&fork, &lect) {
+        let cfg = AnchoringSchema::new(&self.fork).actual_anchoring_config();
+        if let Some(lect) = self.find_lect(&cfg)? {
+            if !self.lect_payload_is_correct(&lect) {
                 error!("Received lect with incorrect payload, content={:#?}", lect);
                 return Ok(());
             }
-
-            self.update_anchoring_chain(&mut fork, &cfg, lect)?;
-            let patch = fork.into_patch();
-            self.blockchain.merge(patch).unwrap(); // FIXME remove unwrap.
+            self.update_anchoring_chain(&cfg, lect)?;
         }
         Ok(())
     }
 
-    #[doc(hidden)]
-    pub fn client(&self) -> &BitcoinRelay {
-        self.client.as_ref()
-    }
-
-    #[doc(hidden)]
-    pub fn blockchain(&self) -> &Blockchain {
-        &self.blockchain
-    }
-
     fn update_anchoring_chain(
-        &self,
-        fork: &mut Fork,
+        self,
         actual_cfg: &AnchoringConfig,
         mut lect: AnchoringTx,
     ) -> Result<(), ServiceError> {
-        let mut anchoring_schema = AnchoringSchema::new(fork);
+        let mut anchoring_schema = AnchoringSchema::new(self.fork);
 
         loop {
             let payload = lect.payload();
@@ -185,7 +120,6 @@ impl AnchoringChainObserver {
 
     fn find_lect(
         &self,
-        fork: &Fork,
         actual_cfg: &AnchoringConfig,
     ) -> Result<Option<AnchoringTx>, ServiceError> {
         let actual_addr = actual_cfg.redeem_script().1;
@@ -194,7 +128,7 @@ impl AnchoringChainObserver {
 
         let unspent_txs: Vec<_> = self.client.unspent_transactions(&actual_addr)?;
         for tx in unspent_txs {
-            if self.transaction_is_lect(fork, actual_cfg, &tx.body)? {
+            if self.transaction_is_lect(actual_cfg, &tx.body)? {
                 if let TxKind::Anchoring(lect) = TxKind::from(tx.body) {
                     return Ok(Some(lect));
                 }
@@ -205,12 +139,11 @@ impl AnchoringChainObserver {
 
     fn transaction_is_lect(
         &self,
-        fork: &Fork,
         actual_cfg: &AnchoringConfig,
         tx: &BitcoinTx,
     ) -> Result<bool, ServiceError> {
         let txid = tx.id();
-        let anchoring_schema = AnchoringSchema::new(fork);
+        let anchoring_schema = AnchoringSchema::new(&self.fork);
 
         let mut lect_count = 0;
         for key in &actual_cfg.anchoring_keys {
@@ -221,15 +154,15 @@ impl AnchoringChainObserver {
         Ok(lect_count >= actual_cfg.majority_count())
     }
 
-    fn lect_payload_is_correct(&self, fork: &Fork, lect: &AnchoringTx) -> bool {
-        let core_schema = Schema::new(fork);
+    fn lect_payload_is_correct(&self, lect: &AnchoringTx) -> bool {
+        let schema = Schema::new(&self.fork);
         let payload = lect.payload();
-        let block_hash = core_schema.block_hash_by_height(payload.block_height);
+        let block_hash = schema.block_hash_by_height(payload.block_height);
         block_hash == Some(payload.block_hash)
     }
 
-    fn is_blockchain_inited(&self, fork: &Fork) -> bool {
-        let schema = Schema::new(fork);
+    fn is_blockchain_inited(&self) -> bool {
+        let schema = Schema::new(&self.fork);
         let len = schema.block_hashes_by_height().len();
         len > 0
     }

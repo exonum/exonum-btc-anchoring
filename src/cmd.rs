@@ -33,7 +33,7 @@ use exonum::node::NodeConfig;
 use super::{gen_btc_keypair, AnchoringConfig, AnchoringNodeConfig, AnchoringRpcConfig};
 use details::btc::{self, transactions::FundingTx, PrivateKey, PublicKey};
 use details::rpc::{BitcoinRelay, RpcClient};
-use observer::AnchoringObserverConfig;
+use handler::observer::AnchoringObserverConfig;
 use service::AnchoringService;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -78,7 +78,7 @@ impl CommandExtension for GenerateNodeConfig {
                 "ANCHORING_OBSERVER_CHECK_INTERVAL",
                 false,
                 "This option enables anchoring chain observer with the given check interval \
-                 (in milliseconds).",
+                 (in blocks).",
                 None,
                 "anchoring-observer-check-interval",
                 false,

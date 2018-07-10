@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::ops::Drop;
 use std::sync::{Arc, Mutex};
-use std::thread;
 
 use iron::prelude::IronResult;
 use iron::{Handler, Request, Response};
@@ -39,10 +37,8 @@ use blockchain::schema::AnchoringSchema;
 use details::btc;
 use details::rpc::{BitcoinRelay, RpcClient};
 use error::Error as ServiceError;
-use handler::error::Error as HandlerError;
-use handler::AnchoringHandler;
+use handler::{error::Error as HandlerError, observer::AnchoringChainObserver, AnchoringHandler};
 use local_storage::AnchoringNodeConfig;
-use observer::AnchoringChainObserver;
 
 /// Anchoring service id.
 pub const ANCHORING_SERVICE_ID: u16 = 3;
@@ -53,6 +49,7 @@ pub const ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
 #[derive(Debug)]
 pub struct AnchoringService {
     genesis: AnchoringConfig,
+    local: AnchoringNodeConfig,
     handler: Arc<Mutex<AnchoringHandler>>,
 }
 
@@ -62,7 +59,8 @@ impl AnchoringService {
         let client = local.rpc.clone().map(RpcClient::from).map(Into::into);
         AnchoringService {
             genesis: consensus,
-            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local))),
+            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local.clone()))),
+            local,
         }
     }
 
@@ -70,11 +68,15 @@ impl AnchoringService {
     pub fn new_with_client(
         client: Box<BitcoinRelay>,
         genesis: AnchoringConfig,
-        local_cfg: AnchoringNodeConfig,
+        local: AnchoringNodeConfig,
     ) -> AnchoringService {
         AnchoringService {
             genesis,
-            handler: Arc::new(Mutex::new(AnchoringHandler::new(Some(client), local_cfg))),
+            handler: Arc::new(Mutex::new(AnchoringHandler::new(
+                Some(client),
+                local.clone(),
+            ))),
+            local,
         }
     }
 
@@ -119,9 +121,27 @@ impl Service for AnchoringService {
             .block_hashes_by_height()
             .last()
             .expect("An attempt to invoke execute during the genesis block initialization.");
-        AnchoringSchema::new(fork)
-            .anchored_blocks_mut()
-            .push(block_header_hash)
+
+        let fork = {
+            let mut schema = AnchoringSchema::new(fork);
+            schema.anchored_blocks_mut().push(block_header_hash);
+            schema.into_inner()
+        };
+
+        if self.local.observer.enabled {
+            let height = CoreSchema::new(&fork).height();
+            if height.0 % self.local.observer.check_interval.0 == 0 {
+                let handler = self.handler.lock().unwrap();
+                let client = handler.client();
+                let observer = AnchoringChainObserver::new(fork, client);
+                if let Err(e) = observer.check_anchoring_chain() {
+                    error!(
+                        "An error during `check_anchoring_chain` occurred, msg={:?}",
+                        e
+                    );
+                }
+            }
+        }
     }
 
     fn after_commit(&self, state: &ServiceContext) {
@@ -149,8 +169,7 @@ impl Service for AnchoringService {
     /// Public API implementation.
     /// See [`PublicApi`](api/struct.PublicApi.html) for details.
     fn public_api_handler(&self, context: &ApiContext) -> Option<Box<Handler>> {
-        let handler = self.handler.lock().unwrap();
-        let router = PublicApiHandler::new(context.blockchain(), &handler.node);
+        let router = PublicApiHandler::new(context.blockchain());
         Some(Box::new(router))
     }
 }
@@ -219,45 +238,23 @@ pub fn gen_anchoring_testnet_config(
 /// Helper class that combines `Router` for public api with the observer thread.
 struct PublicApiHandler {
     router: Router,
-    observer: Option<thread::JoinHandle<()>>,
 }
 
 impl PublicApiHandler {
     /// Creates public api handler instance for the given `blockchain`
     /// and anchoring node `config`.
-    pub fn new(blockchain: &Blockchain, config: &AnchoringNodeConfig) -> PublicApiHandler {
+    pub fn new(blockchain: &Blockchain) -> PublicApiHandler {
         let mut router = Router::new();
         let api = PublicApi {
             blockchain: blockchain.clone(),
         };
         api.wire(&mut router);
-
-        let observer = if config.observer.enabled {
-            let rpc_cfg = config.rpc.clone().expect("Rpc config is not set");
-            let mut observer =
-                AnchoringChainObserver::new(blockchain.clone(), rpc_cfg, &config.observer);
-
-            Some(thread::spawn(move || {
-                observer.run().unwrap();
-            }))
-        } else {
-            None
-        };
-
-        PublicApiHandler { router, observer }
+        PublicApiHandler { router }
     }
 }
 
 impl Handler for PublicApiHandler {
     fn handle(&self, request: &mut Request) -> IronResult<Response> {
         self.router.handle(request)
-    }
-}
-
-impl Drop for PublicApiHandler {
-    fn drop(&mut self) {
-        if let Some(observer_thread) = self.observer.take() {
-            observer_thread.join().unwrap()
-        }
     }
 }

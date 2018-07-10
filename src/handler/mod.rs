@@ -18,6 +18,7 @@ mod anchoring;
 mod auditing;
 mod basic;
 pub mod error;
+pub mod observer;
 mod transition;
 
 use std::collections::HashMap;

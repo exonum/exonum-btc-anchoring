@@ -97,7 +97,6 @@ pub mod error;
 pub mod handler;
 #[doc(hidden)]
 pub mod local_storage;
-pub mod observer;
 #[doc(hidden)]
 pub mod service;
 
