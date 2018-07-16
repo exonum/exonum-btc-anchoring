@@ -31,6 +31,7 @@ use details::btc;
 use details::btc::transactions::{AnchoringTx, BitcoinTx, FundingTx};
 use details::rpc::BitcoinRelay;
 use local_storage::AnchoringNodeConfig;
+pub use self::observer::AnchoringChainObserver;
 
 /// Internal anchoring service handler. Can be used to manage the service.
 #[derive(Debug)]

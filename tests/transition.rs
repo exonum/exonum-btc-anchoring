@@ -46,7 +46,7 @@ use exonum_testkit::{TestNetworkConfiguration, TestNode};
 use exonum_btc_anchoring::blockchain::AnchoringSchema;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{FundingTx, TransactionBuilder};
-use exonum_btc_anchoring::observer::AnchoringChainObserver;
+use exonum_btc_anchoring::handler::AnchoringChainObserver;
 use exonum_btc_anchoring::{AnchoringConfig, AnchoringNodeConfig, ANCHORING_SERVICE_NAME};
 use testkit_extras::helpers::*;
 use testkit_extras::{AnchoringTestKit, TestClient};
@@ -1805,35 +1805,33 @@ fn test_transit_changed_self_key_observer() {
     let anchoring_addr = testkit.current_addr();
     let client = TestClient::default();
     let requests = client.requests();
-    let mut observer = AnchoringChainObserver::new_with_client(
-        testkit.blockchain_mut().clone(),
-        Box::new(client),
-        0,
-    );
+    let mut fork = testkit.blockchain_mut().fork();
+    {
+        let observer = AnchoringChainObserver::new(&mut fork, &client);
 
-    requests.expect(vec![
-        request! {
-            method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr]],
-            response: [
-                listunspent_entry(&third_anchored_tx, &anchoring_addr, 10)
-            ]
-        },
-        get_transaction_request(&third_anchored_tx),
-        confirmations_request(&third_anchored_tx, 100),
-        get_transaction_request(&transition_tx),
-        confirmations_request(&transition_tx, 150),
-        get_transaction_request(&first_anchored_tx),
-        confirmations_request(&first_anchored_tx, 200),
-        get_transaction_request(&testkit.current_funding_tx()),
-    ]);
-
-    observer.check_anchoring_chain().unwrap();
+        requests.expect(vec![
+            request! {
+                method: "listunspent",
+                params: [0, 9_999_999, [&anchoring_addr]],
+                response: [
+                    listunspent_entry(&third_anchored_tx, &anchoring_addr, 10)
+                ]
+            },
+            get_transaction_request(&third_anchored_tx),
+            confirmations_request(&third_anchored_tx, 100),
+            get_transaction_request(&transition_tx),
+            confirmations_request(&transition_tx, 150),
+            get_transaction_request(&first_anchored_tx),
+            confirmations_request(&first_anchored_tx, 200),
+            get_transaction_request(&testkit.current_funding_tx()),
+        ]);
+        observer.check_anchoring_chain().unwrap();
+    }
+    testkit.blockchain_mut().merge(fork.into_patch()).unwrap();
 
     // Checks that all anchoring transaction unsuccessfully committed to
     // `anchoring_tx_chain` table.
-    let blockchain = observer.blockchain().clone();
-    let snapshot = blockchain.snapshot();
+    let snapshot = testkit.snapshot();
     let anchoring_schema = AnchoringSchema::new(&snapshot);
     let tx_chain_index = anchoring_schema.anchoring_tx_chain();
 

@@ -46,7 +46,7 @@ use exonum_btc_anchoring::api::{AnchoredBlockHeaderProof, AnchoringInfo, LectInf
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, BitcoinTx};
-use exonum_btc_anchoring::observer::AnchoringChainObserver;
+use exonum_btc_anchoring::handler::AnchoringChainObserver;
 use exonum_btc_anchoring::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
 use testkit_extras::helpers::*;
 use testkit_extras::{AnchoringTestKit, TestClient};
@@ -295,26 +295,26 @@ fn test_api_anchoring_observer_normal() {
 
     let client = TestClient::default();
     let requests = client.requests();
-    let mut observer = AnchoringChainObserver::new_with_client(
-        testkit.blockchain_mut().clone(),
-        Box::new(client),
-        0,
-    );
-    requests.expect(vec![
-        request! {
-            method: "listunspent",
-            params: [0, 9_999_999, [&anchoring_addr]],
-            response: [
-                listunspent_entry(&second_anchored_tx, &anchoring_addr, 10)
-            ]
-        },
-        get_transaction_request(&second_anchored_tx),
-        confirmations_request(&second_anchored_tx, 100),
-        get_transaction_request(&first_anchored_tx),
-        confirmations_request(&first_anchored_tx, 200),
-        get_transaction_request(&testkit.current_funding_tx()),
-    ]);
-    observer.check_anchoring_chain().unwrap();
+    let mut fork = testkit.blockchain_mut().fork();
+    {
+        let observer = AnchoringChainObserver::new(&mut fork, &client);
+        requests.expect(vec![
+            request! {
+                method: "listunspent",
+                params: [0, 9_999_999, [&anchoring_addr]],
+                response: [
+                    listunspent_entry(&second_anchored_tx, &anchoring_addr, 10)
+                ]
+            },
+            get_transaction_request(&second_anchored_tx),
+            confirmations_request(&second_anchored_tx, 100),
+            get_transaction_request(&first_anchored_tx),
+            confirmations_request(&first_anchored_tx, 200),
+            get_transaction_request(&testkit.current_funding_tx()),
+        ]);
+        observer.check_anchoring_chain().unwrap();
+    };
+    testkit.blockchain_mut().merge(fork.into_patch()).unwrap();
 
     let api = testkit.api();
 
