@@ -26,7 +26,7 @@ use toml::Value;
 use exonum::blockchain::Service;
 use exonum::encoding::serialize::FromHex;
 use exonum::helpers::fabric::{
-    keys, Argument, CommandExtension, CommandName, Context, ServiceFactory,
+    keys, Argument, Command, CommandExtension, CommandName, Context, ServiceFactory,
 };
 use exonum::node::NodeConfig;
 
@@ -35,6 +35,7 @@ use details::btc::{self, transactions::FundingTx, PrivateKey, PublicKey};
 use details::rpc::{BitcoinRelay, RpcClient};
 use handler::observer::AnchoringObserverConfig;
 use service::AnchoringService;
+use ANCHORING_SERVICE_NAME;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
 /// Anchoring configuration that should be saved into the file
@@ -404,16 +405,21 @@ impl CommandExtension for Finalize {
 pub struct AnchoringServiceFactory;
 
 impl ServiceFactory for AnchoringServiceFactory {
-    #[allow(unused_variables)]
+    fn service_name(&self) -> &str {
+        ANCHORING_SERVICE_NAME
+    }
+
+    // #[allow(unused_variables)]
     fn command(&mut self, command: CommandName) -> Option<Box<CommandExtension>> {
         use exonum::helpers::fabric;
         Some(match command {
-            v if v == fabric::GenerateNodeConfig::name() => Box::new(GenerateNodeConfig),
-            v if v == fabric::GenerateCommonConfig::name() => Box::new(GenerateCommonConfig),
-            v if v == fabric::Finalize::name() => Box::new(Finalize),
+            v if v == fabric::GenerateNodeConfig.name() => Box::new(GenerateNodeConfig),
+            v if v == fabric::GenerateCommonConfig.name() => Box::new(GenerateCommonConfig),
+            v if v == fabric::Finalize.name() => Box::new(Finalize),
             _ => return None,
         })
     }
+
     fn make_service(&mut self, run_context: &Context) -> Box<Service> {
         let anchoring_config: AnchoringServiceConfig =
             run_context.get(keys::NODE_CONFIG).unwrap().services_configs["anchoring_service"]

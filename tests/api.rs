@@ -42,7 +42,9 @@ use exonum::helpers::{Height, ValidatorId};
 use exonum::messages::Message;
 use exonum_testkit::{ApiKind, TestKitApi};
 
-use exonum_btc_anchoring::api::{AnchoredBlockHeaderProof, AnchoringInfo, LectInfo};
+use exonum_btc_anchoring::api::{
+    AnchoredBlockHeaderProof, AnchoringInfo, HeightQuery, LectInfo, ValidatorQuery,
+};
 use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
 use exonum_btc_anchoring::details::btc;
 use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, BitcoinTx};
@@ -54,7 +56,7 @@ use testkit_extras::{AnchoringTestKit, TestClient};
 trait AnchoringApi {
     fn actual_lect(&self) -> Option<AnchoringInfo>;
 
-    fn current_lect_of_validator(&self, id: usize) -> LectInfo;
+    fn current_lect_of_validator(&self, id: u32) -> LectInfo;
 
     fn actual_address(&self) -> btc::Address;
 
@@ -67,42 +69,42 @@ trait AnchoringApi {
 
 impl AnchoringApi for TestKitApi {
     fn actual_lect(&self) -> Option<AnchoringInfo> {
-        self.get(ApiKind::Service(ANCHORING_SERVICE_NAME), "/v1/actual_lect/")
+        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
+            .get("v1/actual_lect")
+            .unwrap()
     }
 
-    fn current_lect_of_validator(&self, id: usize) -> LectInfo {
-        self.get(
-            ApiKind::Service(ANCHORING_SERVICE_NAME),
-            &format!("/v1/actual_lect/{}", id),
-        )
+    fn current_lect_of_validator(&self, validator_id: u32) -> LectInfo {
+        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
+            .query(&ValidatorQuery { validator_id })
+            .get("v1/actual_lect/validator")
+            .unwrap()
     }
 
     fn actual_address(&self) -> btc::Address {
-        self.get(
-            ApiKind::Service(ANCHORING_SERVICE_NAME),
-            "/v1/address/actual",
-        )
+        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
+            .get("v1/address/actual")
+            .unwrap()
     }
 
     fn following_address(&self) -> Option<btc::Address> {
-        self.get(
-            ApiKind::Service(ANCHORING_SERVICE_NAME),
-            "/v1/address/following",
-        )
+        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
+            .get("v1/address/following")
+            .unwrap()
     }
 
     fn nearest_lect(&self, height: u64) -> Option<AnchoringTx> {
-        self.get(
-            ApiKind::Service(ANCHORING_SERVICE_NAME),
-            &format!("/v1/nearest_lect/{}", height),
-        )
+        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
+            .query(&HeightQuery { height })
+            .get("v1/nearest_lect")
+            .unwrap()
     }
 
     fn anchored_block_header_proof(&self, height: u64) -> AnchoredBlockHeaderProof {
-        self.get(
-            ApiKind::Service(ANCHORING_SERVICE_NAME),
-            &format!("/v1/block_header_proof/{}", height),
-        )
+        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
+            .query(&HeightQuery { height })
+            .get("v1/block_header_proof")
+            .unwrap()
     }
 }
 
@@ -184,7 +186,7 @@ fn test_api_public_common() {
             hash: Message::hash(lect),
             content: AnchoringInfo::from(lect.tx()),
         };
-        assert_eq!(api.current_lect_of_validator(id), lect_info);
+        assert_eq!(api.current_lect_of_validator(id as u32), lect_info);
     }
 }
 

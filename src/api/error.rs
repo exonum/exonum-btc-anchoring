@@ -15,7 +15,7 @@
 use std::error;
 use std::fmt;
 
-use exonum::api::ApiError;
+use exonum::api;
 
 #[derive(Debug)]
 pub enum Error {
@@ -38,11 +38,11 @@ impl error::Error for Error {
     }
 }
 
-impl Into<ApiError> for Error {
-    fn into(self) -> ApiError {
+impl Into<api::Error> for Error {
+    fn into(self) -> api::Error {
         match self {
             Error::UnknownValidatorId(id) => {
-                ApiError::BadRequest(format!("Unknown validator id={}", id))
+                api::Error::BadRequest(format!("Unknown validator id={}", id))
             }
         }
     }
