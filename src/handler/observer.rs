@@ -12,14 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::{
-    blockchain::{Schema}, helpers::Height, storage::Fork,
-};
+use exonum::{blockchain::Schema, helpers::Height, storage::Fork};
 
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::schema::AnchoringSchema;
 use details::btc::transactions::{AnchoringTx, BitcoinTx, TxKind};
-use details::rpc::{BitcoinRelay};
+use details::rpc::BitcoinRelay;
 use error::Error as ServiceError;
 
 /// Anchoring observer configuration.
@@ -118,10 +116,7 @@ impl<'a, 'b> AnchoringChainObserver<'a, 'b> {
         }
     }
 
-    fn find_lect(
-        &self,
-        actual_cfg: &AnchoringConfig,
-    ) -> Result<Option<AnchoringTx>, ServiceError> {
+    fn find_lect(&self, actual_cfg: &AnchoringConfig) -> Result<Option<AnchoringTx>, ServiceError> {
         let actual_addr = actual_cfg.redeem_script().1;
 
         trace!("Tries to find lect for the addr: {}", actual_addr);

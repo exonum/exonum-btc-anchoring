@@ -63,6 +63,7 @@ extern crate byteorder;
 #[macro_use]
 extern crate display_derive;
 extern crate exonum_bitcoinrpc as bitcoinrpc;
+#[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
