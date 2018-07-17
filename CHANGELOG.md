@@ -10,7 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Breaking changes
 
 - The anchoring chain observer logic has been moved to the `before_commit` stage. (#131)
-  Thus now `anchoring-observer-check-interval` measured in blocks instead of milliseconds.
+  Thus now `anchoring-observer-check-interval` is measured in blocks instead of milliseconds.
 
 ### Internal improvements
 
