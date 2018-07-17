@@ -63,6 +63,7 @@ extern crate byteorder;
 #[macro_use]
 extern crate display_derive;
 extern crate exonum_bitcoinrpc as bitcoinrpc;
+#[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
@@ -97,7 +98,6 @@ pub mod error;
 pub mod handler;
 #[doc(hidden)]
 pub mod local_storage;
-pub mod observer;
 #[doc(hidden)]
 pub mod service;
 

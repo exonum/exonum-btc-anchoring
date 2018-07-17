@@ -18,12 +18,14 @@ mod anchoring;
 mod auditing;
 mod basic;
 pub mod error;
+pub mod observer;
 mod transition;
 
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::sync::mpsc;
 
+pub use self::observer::AnchoringChainObserver;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto::MsgAnchoringSignature;
 use details::btc;

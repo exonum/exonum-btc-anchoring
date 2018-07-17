@@ -342,7 +342,7 @@ impl<'a> AnchoringSchema<&'a mut Fork> {
 
 impl<T> AnchoringSchema<T> {
     /// Converts schema back into snapshot.
-    pub fn into_snapshot(self) -> T {
+    pub fn into_inner(self) -> T {
         self.view
     }
 }
