@@ -74,9 +74,9 @@ impl AnchoringApi for TestKitApi {
             .unwrap()
     }
 
-    fn current_lect_of_validator(&self, validator_id: u32) -> LectInfo {
+    fn current_lect_of_validator(&self, id: u32) -> LectInfo {
         self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
-            .query(&ValidatorQuery { validator_id })
+            .query(&ValidatorQuery { id })
             .get("v1/actual_lect/validator")
             .unwrap()
     }

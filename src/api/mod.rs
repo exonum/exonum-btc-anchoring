@@ -39,7 +39,7 @@ pub struct PublicApi;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct ValidatorQuery {
     /// Validator identifier.
-    pub validator_id: u32,
+    pub id: u32,
 }
 
 /// API query parameters.
@@ -116,7 +116,7 @@ impl PublicApi {
 
     /// Returns current lect for validator with given `id`.
     ///
-    /// `GET /{api_prefix}/v1/actual_lect?validator_id={id}`
+    /// `GET /{api_prefix}/v1/actual_lect/validator?id={id}`
     pub fn current_lect_of_validator(
         state: &ServiceApiState,
         query: ValidatorQuery,
@@ -125,12 +125,12 @@ impl PublicApi {
         let schema = AnchoringSchema::new(snapshot);
 
         let actual_cfg = schema.actual_anchoring_config();
-        if let Some(key) = actual_cfg.anchoring_keys.get(query.validator_id as usize) {
+        if let Some(key) = actual_cfg.anchoring_keys.get(query.id as usize) {
             if let Some(lect) = schema.lects(key).last() {
                 return Ok(LectInfo::from(lect));
             }
         }
-        Err(error::Error::UnknownValidatorId(query.validator_id).into())
+        Err(error::Error::UnknownValidatorId(query.id).into())
     }
 
     /// Returns actual anchoring address.

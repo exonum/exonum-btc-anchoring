@@ -16,6 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - The anchoring API has been ported to the new `actix-web` backend. (#132)
   Some of API endpoints have been changed, you can see updated API description in
   the [documentation](https://exonum.com/doc/advanced/bitcoin-anchoring/#available-api).
+  Thus now `anchoring-observer-check-interval` is measured in blocks instead of milliseconds.
 
 ### Internal improvements
 

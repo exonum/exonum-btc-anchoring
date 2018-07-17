@@ -25,8 +25,9 @@ use toml::Value;
 
 use exonum::blockchain::Service;
 use exonum::encoding::serialize::FromHex;
-use exonum::helpers::fabric::{
-    keys, Argument, Command, CommandExtension, CommandName, Context, ServiceFactory,
+use exonum::helpers::{
+    fabric::{keys, Argument, Command, CommandExtension, CommandName, Context, ServiceFactory},
+    Height,
 };
 use exonum::node::NodeConfig;
 
@@ -129,6 +130,11 @@ impl CommandExtension for GenerateNodeConfig {
         let observer_config = {
             let mut observer_config = AnchoringObserverConfig::default();
             if let Some(interval) = observer_check_interval {
+                ensure!(
+                    interval > Height::zero(),
+                    "`anchoring-observer-check-interval` should be greater than zero."
+                );
+
                 observer_config.enabled = true;
                 observer_config.check_interval = interval;
             }
