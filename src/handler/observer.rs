@@ -27,7 +27,7 @@ use error::Error as ServiceError;
 pub struct AnchoringObserverConfig {
     /// An interval of anchoring chain checks (in blocks).
     pub check_interval: Height,
-    /// If this option enabled observer will launch.
+    /// This option decides whether to enable observer or not.
     pub enabled: bool,
 }
 

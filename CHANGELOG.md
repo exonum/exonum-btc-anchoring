@@ -10,8 +10,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Breaking changes
 
 - The anchoring chain observer logic has been moved to the `before_commit` stage. (#131)
-  Thus additional thread in the public api handler has been no longer used.
-  And now `anchoring-observer-check-interval` measured in blocks instead of milliseconds.
+  Thus now `anchoring-observer-check-interval` measured in blocks instead of milliseconds.
 
 ### Internal improvements
 
