@@ -11,13 +11,12 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - The anchoring chain observer logic has been moved to the `before_commit` stage. (#131)
   Thus additional thread in the public api handler has been no longer used.
-  And now `anchoring-observer-check-interval` measured in blocks instead of milliseconds.
+  Thus now `anchoring-observer-check-interval` is measured in blocks instead of milliseconds.
 
 - The anchoring API has been ported to the new `actix-web` backend. (#132)
   Some of API endpoints have been changed, you can see updated API description in
   the [documentation](https://exonum.com/doc/advanced/bitcoin-anchoring/#available-api).
-  Thus now `anchoring-observer-check-interval` is measured in blocks instead of milliseconds.
-
+  
 ### Internal improvements
 
 - Added check that funding transaction in `anchoring-funding-txid` contains

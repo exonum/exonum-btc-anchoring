@@ -415,7 +415,6 @@ impl ServiceFactory for AnchoringServiceFactory {
         ANCHORING_SERVICE_NAME
     }
 
-    // #[allow(unused_variables)]
     fn command(&mut self, command: CommandName) -> Option<Box<CommandExtension>> {
         use exonum::helpers::fabric;
         Some(match command {
