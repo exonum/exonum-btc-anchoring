@@ -73,15 +73,12 @@ extern crate secp256k1;
 extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-#[macro_use]
 extern crate serde_json;
 extern crate toml;
 
 #[macro_use]
 extern crate exonum;
-extern crate iron;
 extern crate rand;
-extern crate router;
 
 #[cfg(test)]
 #[macro_use]

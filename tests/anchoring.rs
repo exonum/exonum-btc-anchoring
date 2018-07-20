@@ -122,7 +122,6 @@ fn test_anchoring_second_block_normal() {
 // result: success
 #[test]
 fn test_anchoring_second_block_additional_funds() {
-    let _ = ::exonum::helpers::init_logger();
     let mut testkit = AnchoringTestKit::default();
     let requests = testkit.requests();
     let anchoring_addr = testkit.current_addr();

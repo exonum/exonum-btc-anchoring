@@ -1,3 +1,4 @@
+actix
 addrs
 amqvim
 ARQF
@@ -115,8 +116,8 @@ oneshot
 OP_CHECKSIG
 OP_EQUALVERIFY
 openssl
-passwd
 PASSWD
+passwd
 peekable
 permissioned
 postcondition
@@ -127,16 +128,16 @@ precommits
 prevote
 prevotes
 println
-privkey
 Privkey
+privkey
 pubkey
 pubkeyhash
 pubkeys
 PUSHBYTES
 readonly
 reddit
-Regtest
 regtest
+Regtest
 reimplemented
 repr
 reqwest

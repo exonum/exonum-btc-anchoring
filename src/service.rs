@@ -14,23 +14,18 @@
 
 use std::sync::{Arc, Mutex};
 
-use iron::prelude::IronResult;
-use iron::{Handler, Request, Response};
 use rand::{thread_rng, Rng};
-use router::Router;
 use serde_json;
 use serde_json::value::Value;
 
-use exonum::api::Api;
-use exonum::blockchain::{
-    ApiContext, Blockchain, Schema as CoreSchema, Service, ServiceContext, Transaction,
-};
+use exonum::api::ServiceApiBuilder;
+use exonum::blockchain::{Schema as CoreSchema, Service, ServiceContext, Transaction};
 use exonum::crypto::Hash;
 use exonum::encoding::Error as StreamStructError;
 use exonum::messages::RawTransaction;
 use exonum::storage::{Fork, Snapshot};
 
-use api::PublicApi;
+use api;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto;
 use blockchain::schema::AnchoringSchema;
@@ -166,11 +161,8 @@ impl Service for AnchoringService {
         }
     }
 
-    /// Public API implementation.
-    /// See [`PublicApi`](api/struct.PublicApi.html) for details.
-    fn public_api_handler(&self, context: &ApiContext) -> Option<Box<Handler>> {
-        let router = PublicApiHandler::new(context.blockchain());
-        Some(Box::new(router))
+    fn wire_api(&self, builder: &mut ServiceApiBuilder) {
+        api::wire(builder);
     }
 }
 
@@ -233,28 +225,4 @@ pub fn gen_anchoring_testnet_config(
 ) -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
     let mut rng = thread_rng();
     gen_anchoring_testnet_config_with_rng(client, network, count, total_funds, &mut rng)
-}
-
-/// Helper class that combines `Router` for public api with the observer thread.
-struct PublicApiHandler {
-    router: Router,
-}
-
-impl PublicApiHandler {
-    /// Creates public api handler instance for the given `blockchain`
-    /// and anchoring node `config`.
-    pub fn new(blockchain: &Blockchain) -> PublicApiHandler {
-        let mut router = Router::new();
-        let api = PublicApi {
-            blockchain: blockchain.clone(),
-        };
-        api.wire(&mut router);
-        PublicApiHandler { router }
-    }
-}
-
-impl Handler for PublicApiHandler {
-    fn handle(&self, request: &mut Request) -> IronResult<Response> {
-        self.router.handle(request)
-    }
 }

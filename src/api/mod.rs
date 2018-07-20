@@ -14,11 +14,8 @@
 
 //! Anchoring rest API implementation.
 
-use iron::prelude::*;
-use router::Router;
-
-use exonum::api::{Api, ApiError};
-use exonum::blockchain::{BlockProof, Blockchain, Schema as CoreSchema};
+use exonum::api::{self, ServiceApiBuilder, ServiceApiState};
+use exonum::blockchain::{BlockProof, Schema as CoreSchema};
 use exonum::crypto::Hash;
 use exonum::helpers::Height;
 use exonum::storage::{ListProof, MapProof};
@@ -36,9 +33,20 @@ mod error;
 
 /// Public API implementation.
 #[derive(Debug, Clone)]
-pub struct PublicApi {
-    /// Exonum blockchain instance.
-    pub blockchain: Blockchain,
+pub struct PublicApi;
+
+/// API query parameters.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct ValidatorQuery {
+    /// Validator identifier.
+    pub id: u32,
+}
+
+/// API query parameters.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct HeightQuery {
+    /// Exonum block height.
+    pub height: u64,
 }
 
 /// Public information about the anchoring transaction in bitcoin.
@@ -98,9 +106,9 @@ impl From<LectContent> for LectInfo {
 impl PublicApi {
     /// Returns information about the lect agreed by +2/3 validators if there is one.
     ///
-    /// `GET /{api_prefix}/v1/actual_lect/`
-    pub fn actual_lect(&self) -> Result<Option<AnchoringInfo>, ApiError> {
-        let snapshot = self.blockchain.snapshot();
+    /// `GET /{api_prefix}/v1/actual_lect`
+    pub fn actual_lect(state: &ServiceApiState, _query: ()) -> api::Result<Option<AnchoringInfo>> {
+        let snapshot = state.snapshot();
         let schema = AnchoringSchema::new(snapshot);
         let actual_cfg = &schema.actual_anchoring_config();
         Ok(schema.collect_lects(actual_cfg).map(AnchoringInfo::from))
@@ -108,25 +116,28 @@ impl PublicApi {
 
     /// Returns current lect for validator with given `id`.
     ///
-    /// `GET /{api_prefix}/v1/actual_lect/:id`
-    pub fn current_lect_of_validator(&self, id: u32) -> Result<LectInfo, ApiError> {
-        let snapshot = self.blockchain.snapshot();
+    /// `GET /{api_prefix}/v1/actual_lect/validator?id={id}`
+    pub fn current_lect_of_validator(
+        state: &ServiceApiState,
+        query: ValidatorQuery,
+    ) -> api::Result<LectInfo> {
+        let snapshot = state.snapshot();
         let schema = AnchoringSchema::new(snapshot);
 
         let actual_cfg = schema.actual_anchoring_config();
-        if let Some(key) = actual_cfg.anchoring_keys.get(id as usize) {
+        if let Some(key) = actual_cfg.anchoring_keys.get(query.id as usize) {
             if let Some(lect) = schema.lects(key).last() {
                 return Ok(LectInfo::from(lect));
             }
         }
-        Err(error::Error::UnknownValidatorId(id).into())
+        Err(error::Error::UnknownValidatorId(query.id).into())
     }
 
     /// Returns actual anchoring address.
     ///
     /// `GET /{api_prefix}/v1/address/actual`
-    pub fn actual_address(&self) -> Result<btc::Address, ApiError> {
-        let snapshot = self.blockchain.snapshot();
+    pub fn actual_address(state: &ServiceApiState, _query: ()) -> api::Result<btc::Address> {
+        let snapshot = state.snapshot();
         let schema = AnchoringSchema::new(snapshot);
         Ok(schema.actual_anchoring_config().redeem_script().1)
     }
@@ -134,8 +145,11 @@ impl PublicApi {
     /// Returns the following anchoring address if the node is in a transition state.
     ///
     /// `GET /{api_prefix}/v1/address/following`
-    pub fn following_address(&self) -> Result<Option<btc::Address>, ApiError> {
-        let snapshot = self.blockchain.snapshot();
+    pub fn following_address(
+        state: &ServiceApiState,
+        _query: (),
+    ) -> api::Result<Option<btc::Address>> {
+        let snapshot = state.snapshot();
         let schema = AnchoringSchema::new(snapshot);
         let following_addr = schema
             .following_anchoring_config()
@@ -146,15 +160,18 @@ impl PublicApi {
     /// Returns hex of the anchoring transaction for the nearest block with a height greater
     /// or equal than the given.
     ///
-    /// `GET /{api_prefix}/v1/nearest_lect/:height`
-    pub fn nearest_lect(&self, height: u64) -> Result<Option<AnchoringTx>, ApiError> {
-        let snapshot = self.blockchain.snapshot();
+    /// `GET /{api_prefix}/v1/nearest_lect?height={height}`
+    pub fn nearest_lect(
+        state: &ServiceApiState,
+        query: HeightQuery,
+    ) -> api::Result<Option<AnchoringTx>> {
+        let snapshot = state.snapshot();
         let anchoring_schema = AnchoringSchema::new(&snapshot);
         let tx_chain = anchoring_schema.anchoring_tx_chain();
 
         // TODO use binary find.
         for (tx_height, tx) in &tx_chain {
-            if tx_height >= height {
+            if tx_height >= query.height {
                 return Ok(Some(tx));
             }
         }
@@ -165,9 +182,12 @@ impl PublicApi {
     /// Bitcoin blockchain. The proof is an apparent evidence of availability of a certain Exonum
     /// block in the blockchain.
     ///
-    /// `GET /{api_prefix}/v1/block_header_proof/:height`
-    pub fn anchored_block_header_proof(&self, height: u64) -> AnchoredBlockHeaderProof {
-        let view = self.blockchain.snapshot();
+    /// `GET /{api_prefix}/v1/block_header_proof?height={height}`
+    pub fn anchored_block_header_proof(
+        state: &ServiceApiState,
+        query: HeightQuery,
+    ) -> api::Result<AnchoredBlockHeaderProof> {
+        let view = state.snapshot();
         let core_schema = CoreSchema::new(&view);
         let anchoring_schema = AnchoringSchema::new(&view);
 
@@ -178,74 +198,29 @@ impl PublicApi {
             .unwrap();
         let to_table: MapProof<Hash, Hash> =
             core_schema.get_proof_to_service_table(ANCHORING_SERVICE_ID, 0);
-        let to_block_header = anchoring_schema.anchored_blocks().get_proof(height);
+        let to_block_header = anchoring_schema.anchored_blocks().get_proof(query.height);
 
-        AnchoredBlockHeaderProof {
+        Ok(AnchoredBlockHeaderProof {
             latest_authorized_block,
             to_table,
             to_block_header,
-        }
+        })
     }
 }
 
-impl Api for PublicApi {
-    fn wire(&self, router: &mut Router) {
-        let api = self.clone();
-        let actual_lect = move |_: &mut Request| -> IronResult<Response> {
-            let lect = api.actual_lect()?;
-            api.ok_response(&json!(lect))
-        };
-
-        let api = self.clone();
-        let current_lect_of_validator = move |req: &mut Request| -> IronResult<Response> {
-            let id = api.url_fragment(req, "id")?;
-            let info = api.current_lect_of_validator(id)?;
-            api.ok_response(&json!(info))
-        };
-
-        let api = self.clone();
-        let actual_address = move |_: &mut Request| -> IronResult<Response> {
-            let addr = api.actual_address()?.to_string();
-            api.ok_response(&json!(addr))
-        };
-
-        let api = self.clone();
-        let following_address = move |_: &mut Request| -> IronResult<Response> {
-            let addr = api.following_address()?.map(|addr| addr.to_string());
-            api.ok_response(&json!(addr))
-        };
-
-        let api = self.clone();
-        let nearest_lect = move |req: &mut Request| -> IronResult<Response> {
-            let height = api.url_fragment(req, "height")?;
-            let lect = api.nearest_lect(height)?;
-            api.ok_response(&json!(lect))
-        };
-
-        let api = self.clone();
-        let anchored_block_header_proof = move |req: &mut Request| -> IronResult<Response> {
-            let height = api.url_fragment(req, "height")?;
-            let proof = api.anchored_block_header_proof(height);
-            api.ok_response(&json!(proof))
-        };
-
-        router.get("/v1/address/actual", actual_address, "actual_address");
-        router.get(
-            "/v1/address/following",
-            following_address,
-            "following_address",
+pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
+    builder
+        .public_scope()
+        .endpoint("v1/actual_lect", PublicApi::actual_lect)
+        .endpoint(
+            "v1/actual_lect/validator",
+            PublicApi::current_lect_of_validator,
+        )
+        .endpoint("v1/address/actual", PublicApi::actual_address)
+        .endpoint("v1/address/following", PublicApi::following_address)
+        .endpoint("v1/nearest_lect", PublicApi::nearest_lect)
+        .endpoint(
+            "v1/block_header_proof",
+            PublicApi::anchored_block_header_proof,
         );
-        router.get("/v1/actual_lect/", actual_lect, "actual_lect");
-        router.get(
-            "/v1/actual_lect/:id",
-            current_lect_of_validator,
-            "current_lect_of_validator",
-        );
-        router.get("/v1/nearest_lect/:height", nearest_lect, "nearest_lect");
-        router.get(
-            "/v1/block_header_proof/:height",
-            anchored_block_header_proof,
-            "anchored_block_header_proof",
-        );
-    }
 }
