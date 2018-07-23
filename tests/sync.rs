@@ -116,7 +116,7 @@ fn normal_operation() {
         .unwrap()
         .unwrap();
 
-    let anchoring_tx_id = proposed.id().to_string();
+    let anchoring_tx_id = proposed.id().to_hex();
     anchoring_testkit.create_block_with_transactions(signatures);
 
     // error white trying fetch info for anchoring  tx first time
@@ -205,7 +205,7 @@ fn several_unsynced() {
         .unwrap()
         .unwrap();
 
-    let tx_id_0 = proposed_0.id().to_string();
+    let tx_id_0 = proposed_0.id().to_hex();
     anchoring_testkit.create_block_with_transactions(signatures);
 
     // error white trying fetch info for anchoring  tx first time
@@ -250,7 +250,7 @@ fn several_unsynced() {
         .unwrap()
         .unwrap();
 
-    let tx_id_1 = proposed_1.id().to_string();
+    let tx_id_1 = proposed_1.id().to_hex();
 
     requests.expect(vec![
         request! {

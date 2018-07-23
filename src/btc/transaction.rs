@@ -253,8 +253,7 @@ mod tests {
              f72563a0750831ab4fb762e01cfe368ddd412042be6b78af5ee5a9bd38d0ed093a81300",
         ).unwrap();
         let txid_hex = "6ed431718c73787ad92e6bcbd6ac7c8151e08dffeeebb6d9e5af2d25b6837d98";
-
-        assert_eq!(tx.id().to_string(), txid_hex);
+        assert_eq!(tx.id().to_hex(), txid_hex);
     }
 
     #[test]
@@ -278,8 +277,7 @@ mod tests {
         assert_eq!(payload.block_height, Height(21000));
         assert_eq!(
             payload.block_hash,
-            "85f467f2bad583dbb08f84a47e817d8293fb8c70d033604f441f53a6cc092f18"
-                .parse::<Hash>()
+            Hash::from_hex("85f467f2bad583dbb08f84a47e817d8293fb8c70d033604f441f53a6cc092f18")
                 .unwrap()
         );
         assert_eq!(payload.prev_tx_chain, None);

@@ -155,7 +155,7 @@ impl BtcRelay for FakeBitcoinRpcClient {
     }
 
     fn transaction_info(&self, id: &Hash) -> Result<Option<BtcTransactionInfo>, failure::Error> {
-        let txid = id.to_string();
+        let txid = id.to_hex();
 
         let response = self.getrawtransaction_verbose(&txid);
 

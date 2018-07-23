@@ -101,7 +101,7 @@ impl BtcRelay for BitcoinRpcClient {
     }
 
     fn transaction_info(&self, id: &Hash) -> Result<Option<TransactionInfo>, failure::Error> {
-        let txid = id.to_string();
+        let txid = id.to_hex();
         let txinfo = match self.0.getrawtransaction_verbose(&txid) {
             Ok(info) => info,
             Err(bitcoin_rpc::Error::NoInformation(_)) => return Ok(None),
