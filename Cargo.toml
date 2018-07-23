@@ -49,4 +49,4 @@ matches = "0.1.6"
 
 [features]
 default = []
-rpc_tests = []
+testnet_tests = []

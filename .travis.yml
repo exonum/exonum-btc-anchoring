@@ -9,9 +9,7 @@ addons:
     - librocksdb
 
 rust:
-  # Feel free to bump this version if you need features of newer Rust.
-  # Sync with badge in README.md
-  - 1.27.0
+  - stable
 
 matrix:
   allow_failures:
@@ -89,7 +87,7 @@ jobs:
       fi
     - |
       if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-        cargo test --all --features rpc_tests;
+        cargo test --all --features testnet_tests;
       fi
 
   # Non-fatal checks

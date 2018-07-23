@@ -22,13 +22,13 @@ extern crate exonum_testkit;
 
 extern crate serde_json;
 
-#[cfg(feature = "rpc_tests")]
+#[cfg(feature = "testnet_tests")]
 #[macro_use]
 extern crate matches;
 
 extern crate btc_transaction_utils;
 
-#[cfg(feature = "rpc_tests")]
+#[cfg(feature = "testnet_tests")]
 mod tests {
     use exonum::blockchain::{Transaction, TransactionErrorType};
     use exonum::explorer::BlockWithTransactions;
