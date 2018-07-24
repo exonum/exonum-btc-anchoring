@@ -31,7 +31,7 @@ pub struct Hash(pub crypto::Hash);
 impl FromStr for Hash {
     type Err = FromHexError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        crypto::Hash::from_hex(s).map(|x| Hash(x))
+        crypto::Hash::from_hex(s).map(Hash)
     }
 }
 
