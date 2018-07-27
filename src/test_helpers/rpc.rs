@@ -22,13 +22,6 @@ use btc;
 use failure;
 use std::sync::{Arc, Mutex};
 
-use serde::Deserialize;
-use serde_json::value::{from_value, to_value, Value};
-
-use bitcoin_rpc;
-
-use exonum::encoding::serialize::FromHex;
-
 use rpc::{BitcoinRpcConfig, BtcRelay, TransactionInfo as BtcTransactionInfo};
 
 #[derive(Debug)]
@@ -68,6 +61,7 @@ pub struct FakeBtcRelay {
     rpc: BitcoinRpcConfig,
 }
 
+#[cfg_attr(feature = "cargo-clippy", allow(unused_variables, expect_fun_call))]
 impl FakeBtcRelay {
     fn request(&self, request: FakeRelayRequest) -> FakeRelayResponse {
         let (expected_request, response) = self.requests
@@ -102,7 +96,7 @@ impl BtcRelay for FakeBtcRelay {
 
     fn transaction_info(&self, id: &Hash) -> Result<Option<BtcTransactionInfo>, failure::Error> {
         if let FakeRelayResponse::TransactionInfo(r) =
-            self.request(FakeRelayRequest::TransactionInfo { id: id.clone() })
+            self.request(FakeRelayRequest::TransactionInfo { id: *id })
         {
             r
         } else {
