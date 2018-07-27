@@ -4,8 +4,7 @@
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
+//   http://www.apache.org/licenses/LICENSEccccc//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -20,85 +19,40 @@ extern crate exonum_bitcoinrpc as bitcoin_rpc;
 extern crate exonum_btc_anchoring;
 extern crate exonum_testkit;
 
-#[macro_use]
 extern crate serde_json;
 
 extern crate btc_transaction_utils;
 extern crate rand;
 
+use exonum::crypto::Hash;
+use exonum::encoding::serialize::FromHex;
 use exonum::helpers::Height;
 use exonum_btc_anchoring::blockchain::BtcAnchoringSchema;
+use exonum_btc_anchoring::btc::Transaction;
+use exonum_btc_anchoring::rpc::TransactionInfo as BtcTransactionInfo;
+use exonum_btc_anchoring::test_helpers::rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest};
 use exonum_btc_anchoring::test_helpers::testkit::AnchoringTestKit;
 
-macro_rules! funding_tx_request {
-    () => {
-    request! {
-        method: "getrawtransaction",
-        params: [
-            "69ef1d6847712089783bf861342568625e1e4a499993f27e10d9bb5f259d0894",
-            1
-        ],
-        response: {
-            "hash": "8aa76e05d95c7fec389561a99765543ca27031a262063030035d82a02f2050d3",
-            "hex": "02000000000101140b3f5da041f173d938b8fe778d39cb2ef801f75f294\
-                    6e490e34d6bb47bb9ce0000000000feffffff0230025400000000001600\
-                    14169fa44a9159f281122bb7f3d43d88d56dfa937e70110100000000002\
-                    200203abcf8339d06564a151942c35e4a59eee2581e3880bceb84a324e2\
-                    237f19ceb502483045022100e91d46b565f26641b353591d0c403a05ada\
-                    5735875fb0f055538bf9df4986165022044b5336772de8c5f6cbf83bcc7\
-                    099e31d7dce22ba1f3d1badc2fdd7f8013a12201210254053f15b44b825\
-                    bc5dabfe88f8b94cd217372f3f297d2696a32835b43497397358d1400",
-            "locktime": 1346869,
-            "size": 235,
-            "txid": "69ef1d6847712089783bf861342568625e1e4a499993f27e10d9bb5f259d0894",
-            "version": 2,
-            "vin": [
-                {
-                    "scriptSig": {
-                        "asm": "",
-                        "hex": ""
-                    },
-                    "sequence": 4294967294u64,
-                    "txid": "ceb97bb46b4de390e446295ff701f82ecb398d77feb838d973f141a05d3f0b14",
-                    "txinwitness": [
-                        "3045022100e91d46b565f26641b353591d0c403a05ada5735875fb0f055538bf9df4986165022044b5336772de8c5f6cbf83bcc7099e31d7dce22ba1f3d1badc2fdd7f8013a12201",
-                        "0254053f15b44b825bc5dabfe88f8b94cd217372f3f297d2696a32835b43497397"
-                    ],
-                    "vout": 0
-                }
-            ],
-            "vout": [
-                {
-                    "n": 0,
-                    "scriptPubKey": {
-                        "addresses": [
-                            "tb1qz606gj53t8egzy3tkleag0vg64kl4ym7hws0u8"
-                        ],
-                        "asm": "0 169fa44a9159f281122bb7f3d43d88d56dfa937e",
-                        "hex": "0014169fa44a9159f281122bb7f3d43d88d56dfa937e",
-                        "reqSigs": 1,
-                        "type": "witness_v0_keyhash"
-                    },
-                    "value": 0.05505584
-                },
-                {
-                    "n": 1,
-                    "scriptPubKey": {
-                        "addresses": [
-                            "tb1q8270svuaqety59gegtp4ujjeam39s83csz7whp9ryn3zxlcee66setkyq0"
-                        ],
-                        "asm": "0 3abcf8339d06564a151942c35e4a59eee2581e3880bceb84a324e2237f19ceb5",
-                        "hex": "00203abcf8339d06564a151942c35e4a59eee2581e3880bceb84a324e2237f19ceb5",
-                        "reqSigs": 1,
-                        "type": "witness_v0_scripthash"
-                    },
-                    "value": 0.0007
-                }
-            ],
-            "vsize": 153
-        }
-    };
-    }
+fn funding_tx_request() -> TestRequest {
+    (
+        FakeRelayRequest::TransactionInfo {
+            id: Hash::from_hex("69ef1d6847712089783bf861342568625e1e4a499993f27e10d9bb5f259d0894")
+                .unwrap(),
+        },
+        FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
+            content: Transaction::from_hex(
+                "02000000000101140b3f5da041f173d938b8fe778d39cb2ef801f75f294\
+                 6e490e34d6bb47bb9ce0000000000feffffff0230025400000000001600\
+                 14169fa44a9159f281122bb7f3d43d88d56dfa937e70110100000000002\
+                 200203abcf8339d06564a151942c35e4a59eee2581e3880bceb84a324e2\
+                 237f19ceb502483045022100e91d46b565f26641b353591d0c403a05ada\
+                 5735875fb0f055538bf9df4986165022044b5336772de8c5f6cbf83bcc7\
+                 099e31d7dce22ba1f3d1badc2fdd7f8013a12201210254053f15b44b825\
+                 bc5dabfe88f8b94cd217372f3f297d2696a32835b43497397358d1400",
+            ).unwrap(),
+            confirmations: 6,
+        }))),
+    )
 }
 
 #[test]
@@ -116,17 +70,20 @@ fn normal_operation() {
         .unwrap()
         .unwrap();
 
-    let anchoring_tx_id = proposed.id().to_hex();
+    let anchoring_tx_id = proposed.id();
     anchoring_testkit.create_block_with_transactions(signatures);
 
     // error white trying fetch info for anchoring  tx first time
     requests.expect(vec![
-        funding_tx_request!{},
-        request! {
-            method: "getrawtransaction",
-            params: [ anchoring_tx_id, 1],
-            error: bitcoin_rpc::Error::Memory(String::new())
-        },
+        funding_tx_request(),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: anchoring_tx_id.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Err(
+                bitcoin_rpc::Error::Memory(String::new()).into()
+            )),
+        ),
     ]);
 
     anchoring_testkit.create_blocks_until(Height(2));
@@ -136,56 +93,45 @@ fn normal_operation() {
 
     // should retry
     requests.expect(vec![
-        funding_tx_request!{},
-        request! {
-            method: "getrawtransaction",
-            params: [ anchoring_tx_id, 1],
-            error: bitcoin_rpc::Error::NoInformation(String::new())
-        },
-        request! {
-            method: "sendrawtransaction",
-            params: [ last_tx.to_string() ],
-            response: anchoring_tx_id
-        },
+        funding_tx_request(),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: anchoring_tx_id.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(None)),
+        ),
+        (
+            FakeRelayRequest::SendTransaction {
+                transaction: last_tx.clone(),
+            },
+            FakeRelayResponse::SendTransaction(Ok(anchoring_tx_id.clone())),
+        ),
     ]);
 
     anchoring_testkit.create_blocks_until(Height(4));
 
     // should ask btc network about last anchoring tx every anchoring_height / 2
     requests.expect(vec![
-        funding_tx_request!{},
-        request! {
-            method: "getrawtransaction",
-            params: [ anchoring_tx_id, 1],
-            response:  {
-                "txid": "1c87d930767143fd6f1b4616a5e84d4cf50c0705aca49f74fefb6b89c820513c",
-                "hash": "5bf1134da19f25a5d7b7df7f211eb54839c4f9407e777b407e485898ea13f13a",
-                "hex": proposed.to_string(),
-                "version": 2,
-                "size": 515,
-                "vsize": 244,
-                "locktime": 0,
-                "vin": [],
-                "vout": []
-            }
-        },
-        funding_tx_request!{},
-        request! {
-            method: "getrawtransaction",
-            params: [ anchoring_tx_id, 1],
-            response:  {
-                "txid": "1c87d930767143fd6f1b4616a5e84d4cf50c0705aca49f74fefb6b89c820513c",
-                "hash": "5bf1134da19f25a5d7b7df7f211eb54839c4f9407e777b407e485898ea13f13a",
-                "hex": proposed.to_string(),
-                "version": 2,
-                "size": 515,
-                "vsize": 244,
-                "locktime": 0,
-                "vin": [],
-                "vout": []
-            }
-
-        },
+        funding_tx_request(),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: anchoring_tx_id.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
+                content: last_tx.clone(),
+                confirmations: 6,
+            }))),
+        ),
+        funding_tx_request(),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: anchoring_tx_id.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
+                content: last_tx.clone(),
+                confirmations: 6,
+            }))),
+        ),
     ]);
     anchoring_testkit.create_blocks_until(Height(8));
 }
@@ -205,17 +151,20 @@ fn several_unsynced() {
         .unwrap()
         .unwrap();
 
-    let tx_id_0 = proposed_0.id().to_hex();
+    let tx_id_0 = proposed_0.id();
     anchoring_testkit.create_block_with_transactions(signatures);
 
     // error white trying fetch info for anchoring  tx first time
     requests.expect(vec![
-        funding_tx_request!{},
-        request! {
-            method: "getrawtransaction",
-            params: [ tx_id_0, 1],
-            error: bitcoin_rpc::Error::Memory(String::new())
-        },
+        funding_tx_request(),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: tx_id_0.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Err(
+                bitcoin_rpc::Error::Memory(String::new()).into()
+            )),
+        ),
     ]);
 
     anchoring_testkit.create_blocks_until(Height(2));
@@ -225,17 +174,19 @@ fn several_unsynced() {
 
     // sync failed
     requests.expect(vec![
-        funding_tx_request!{},
-        request! {
-            method: "getrawtransaction",
-            params: [ tx_id_0, 1],
-            error: bitcoin_rpc::Error::NoInformation(String::new())
-        },
-        request! {
-            method: "sendrawtransaction",
-            params: [ last_tx.to_string() ],
-            error: bitcoin_rpc::Error::Memory(String::new())
-        },
+        funding_tx_request(),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: tx_id_0.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(None)),
+        ),
+        (
+            FakeRelayRequest::SendTransaction {
+                transaction: proposed_0.clone(),
+            },
+            FakeRelayResponse::SendTransaction(Ok(tx_id_0.clone())),
+        ),
     ]);
 
     anchoring_testkit.create_blocks_until(Height(5));
@@ -250,41 +201,51 @@ fn several_unsynced() {
         .unwrap()
         .unwrap();
 
-    let tx_id_1 = proposed_1.id().to_hex();
+    let tx_id_1 = proposed_1.id();
 
     requests.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [ tx_id_0, 1],
-            error: bitcoin_rpc::Error::NoInformation(String::new())
-        },
-        funding_tx_request!{},
-        request! {
-            method: "getrawtransaction",
-            params: [ tx_id_0, 1],
-            error: bitcoin_rpc::Error::NoInformation(String::new())
-        },
-        request! {
-            method: "sendrawtransaction",
-            params: [ last_tx.to_string() ],
-            error: bitcoin_rpc::Error::Memory(String::new())
-        },
-        request! {
-            method: "getrawtransaction",
-            params: [ tx_id_0, 1],
-            error: bitcoin_rpc::Error::NoInformation(String::new())
-        },
-        funding_tx_request!{},
-        request! {
-            method: "getrawtransaction",
-            params: [ tx_id_0, 1],
-            error: bitcoin_rpc::Error::NoInformation(String::new())
-        },
-        request! {
-            method: "sendrawtransaction",
-            params: [ last_tx.to_string() ],
-            error: bitcoin_rpc::Error::Memory(String::new())
-        },
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: tx_id_0.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(None)),
+        ),
+        funding_tx_request(),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: tx_id_0.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(None)),
+        ),
+        (
+            FakeRelayRequest::SendTransaction {
+                transaction: last_tx.clone(),
+            },
+            FakeRelayResponse::SendTransaction(Err(
+                bitcoin_rpc::Error::Memory(String::new()).into()
+            )),
+        ),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: tx_id_0.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(None)),
+        ),
+        funding_tx_request(),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: tx_id_0.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(None)),
+        ),
+        (
+            FakeRelayRequest::SendTransaction {
+                transaction: last_tx.clone(),
+            },
+            FakeRelayResponse::SendTransaction(Err(
+                bitcoin_rpc::Error::Memory(String::new()).into()
+            )),
+        ),
     ]);
 
     anchoring_testkit.create_block_with_transactions(signatures);
@@ -296,27 +257,33 @@ fn several_unsynced() {
 
     // should walk to first uncommitted
     requests.expect(vec![
-        request! {
-            method: "getrawtransaction",
-            params: [ tx_id_1, 1],
-            error: bitcoin_rpc::Error::NoInformation(String::new())
-        },
-        request! {
-            method: "getrawtransaction",
-            params: [ tx_id_0, 1],
-            error: bitcoin_rpc::Error::NoInformation(String::new())
-        },
-        funding_tx_request!{},
-        request! {
-            method: "getrawtransaction",
-            params: [ tx_id_0, 1],
-            error: bitcoin_rpc::Error::NoInformation(String::new())
-        },
-        request! {
-            method: "sendrawtransaction",
-            params: [ last_tx.to_string() ],
-            error: bitcoin_rpc::Error::Memory(String::new())
-        },
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: tx_id_1.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(None)),
+        ),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: tx_id_0.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(None)),
+        ),
+        funding_tx_request(),
+        (
+            FakeRelayRequest::TransactionInfo {
+                id: tx_id_0.clone(),
+            },
+            FakeRelayResponse::TransactionInfo(Ok(None)),
+        ),
+        (
+            FakeRelayRequest::SendTransaction {
+                transaction: last_tx.clone(),
+            },
+            FakeRelayResponse::SendTransaction(Err(
+                bitcoin_rpc::Error::Memory(String::new()).into()
+            )),
+        ),
     ]);
 
     anchoring_testkit.create_block_with_transactions(signatures);

@@ -31,13 +31,12 @@ extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
 
-#[cfg(test)]
 #[macro_use]
-extern crate proptest;
+extern crate matches;
 
 #[cfg(test)]
 #[macro_use]
-extern crate matches;
+extern crate proptest;
 
 #[macro_use]
 extern crate maplit;

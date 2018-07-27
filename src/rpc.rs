@@ -47,7 +47,7 @@ pub trait BtcRelay: Send + Sync + ::std::fmt::Debug {
 }
 
 /// `Bitcoind` rpc configuration.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct BitcoinRpcConfig {
     /// Rpc url.
     pub host: String,

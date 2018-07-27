@@ -12,25 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bitcoin::network::constants::Network;
+use bitcoin::{network::constants::Network, util::address::Address};
 use blockchain::transactions::Signature;
 use blockchain::BtcAnchoringSchema;
 use btc;
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use config::{GlobalConfig, LocalConfig};
 use exonum::blockchain::Transaction;
+use exonum::encoding::serialize::FromHex;
 use exonum_testkit::{TestKit, TestKitBuilder, TestNetworkConfiguration, TestNode};
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 use std::collections::HashMap;
 use std::env;
 use std::ops::{Deref, DerefMut};
+use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 use {
     blockchain::BtcAnchoringState, rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
     BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME,
 };
 
-use test_helpers::rpc as fake_rpc;
+use test_helpers::rpc::*;
+
 pub fn gen_anchoring_config<R: Rng>(
     rpc: &BtcRelay,
     network: Network,
@@ -74,7 +77,7 @@ pub struct AnchoringTestKit {
     test_kit: TestKit,
     pub local_private_keys: Arc<RwLock<HashMap<btc::Address, btc::Privkey>>>,
     pub node_configs: Vec<LocalConfig>,
-    requests: Option<fake_rpc::TestRequests>,
+    requests: Option<TestRequests>,
 }
 
 impl Deref for AnchoringTestKit {
@@ -98,7 +101,7 @@ impl AnchoringTestKit {
         total_funds: u64,
         anchoring_interval: u64,
         mut rng: R,
-        requests: Option<fake_rpc::TestRequests>,
+        requests: Option<TestRequests>,
     ) -> Self {
         let network = Network::Testnet;
         let (global, locals) = gen_anchoring_config(
@@ -165,35 +168,41 @@ impl AnchoringTestKit {
     ) -> Self {
         let seed: &[_] = &[1, 2, 3, 9];
         let rng: StdRng = SeedableRng::from_seed(seed);
-        let fake_client = fake_rpc::FakeBitcoinRpcClient::new();
-        let requests = fake_client.requests.clone();
+        let fake_relay = FakeBtcRelay::default();
+        let requests = fake_relay.requests.clone();
 
+        let addr = Address::from_str(
+            "tb1q8270svuaqety59gegtp4ujjeam39s83csz7whp9ryn3zxlcee66setkyq0",
+        ).unwrap();
         requests.expect(vec![
-            request! {
-                method: "sendtoaddress",
-                params: ["tb1q8270svuaqety59gegtp4ujjeam39s83csz7whp9ryn3zxlcee66setkyq0", "0.00007"],
-                response: "69ef1d6847712089783bf861342568625e1e4a499993f27e10d9bb5f259d0894"
-            },
-            request! {
-                method: "getrawtransaction",
-                params: [
-                    "69ef1d6847712089783bf861342568625e1e4a499993f27e10d9bb5f259d0894",
-                    0
-                ],
-                response: "02000000000101140b3f5da041f173d938b8fe778d39cb2ef801f75f\
-                           2946e490e34d6bb47bb9ce0000000000feffffff0230025400000000\
-                           00160014169fa44a9159f281122bb7f3d43d88d56dfa937e70110100\
-                           000000002200203abcf8339d06564a151942c35e4a59eee2581e3880\
-                           bceb84a324e2237f19ceb502483045022100e91d46b565f26641b353\
-                           591d0c403a05ada5735875fb0f055538bf9df4986165022044b53367\
-                           72de8c5f6cbf83bcc7099e31d7dce22ba1f3d1badc2fdd7f8013a122\
-                           01210254053f15b44b825bc5dabfe88f8b94cd217372f3f297d2696a\
-                           32835b43497397358d1400"
-            },
+            (
+                FakeRelayRequest::WatchAddress {
+                    addr: addr.clone(),
+                    rescan: false,
+                },
+                FakeRelayResponse::WatchAddress(Ok(())),
+            ),
+            (
+                FakeRelayRequest::SendToAddress {
+                    addr: addr.clone(),
+                    satoshis: 7000,
+                },
+                FakeRelayResponse::SendToAddress(btc::Transaction::from_hex(
+                    "02000000000101140b3f5da041f173d938b8fe778d39cb2ef801f75f\
+                     2946e490e34d6bb47bb9ce0000000000feffffff0230025400000000\
+                     00160014169fa44a9159f281122bb7f3d43d88d56dfa937e70110100\
+                     000000002200203abcf8339d06564a151942c35e4a59eee2581e3880\
+                     bceb84a324e2237f19ceb502483045022100e91d46b565f26641b353\
+                     591d0c403a05ada5735875fb0f055538bf9df4986165022044b53367\
+                     72de8c5f6cbf83bcc7099e31d7dce22ba1f3d1badc2fdd7f8013a122\
+                     01210254053f15b44b825bc5dabfe88f8b94cd217372f3f297d2696a\
+                     32835b43497397358d1400",
+                )),
+            ),
         ]);
 
         Self::new(
-            Box::from(fake_client),
+            Box::from(fake_relay),
             validators_num,
             total_funds,
             anchoring_interval,
@@ -348,7 +357,7 @@ impl AnchoringTestKit {
         proposal
     }
 
-    pub fn requests(&mut self) -> fake_rpc::TestRequests {
+    pub fn requests(&mut self) -> TestRequests {
         self.requests.clone().unwrap().clone()
     }
 }
