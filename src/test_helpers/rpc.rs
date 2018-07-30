@@ -24,7 +24,7 @@ use std::sync::{Arc, Mutex};
 
 use rpc::{BitcoinRpcConfig, BtcRelay, TransactionInfo as BtcTransactionInfo};
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum FakeRelayRequest {
     SendToAddress { addr: Address, satoshis: u64 },
     TransactionInfo { id: Hash },
@@ -63,7 +63,7 @@ pub struct FakeBtcRelay {
 
 #[cfg_attr(feature = "cargo-clippy", allow(unused_variables, expect_fun_call))]
 impl FakeBtcRelay {
-    fn request(&self, request: FakeRelayRequest) -> FakeRelayResponse {
+    fn request(&self, request: &FakeRelayRequest) -> FakeRelayResponse {
         let (expected_request, response) = self.requests
             .0
             .lock()
@@ -71,7 +71,7 @@ impl FakeBtcRelay {
             .pop_front()
             .expect(format!("expected request {:?}", request).as_str());
 
-        assert_matches!(request, expected_request);
+        assert_eq!(request, &expected_request);
 
         trace!("request: {:?}, response={:?}", expected_request, response);
         response
@@ -84,10 +84,11 @@ impl BtcRelay for FakeBtcRelay {
         addr: &Address,
         satoshis: u64,
     ) -> Result<btc::Transaction, failure::Error> {
-        if let FakeRelayResponse::SendToAddress(r) = self.request(FakeRelayRequest::SendToAddress {
-            addr: addr.clone(),
-            satoshis,
-        }) {
+        if let FakeRelayResponse::SendToAddress(r) =
+            self.request(&FakeRelayRequest::SendToAddress {
+                addr: addr.clone(),
+                satoshis,
+            }) {
             r
         } else {
             panic!();
@@ -96,7 +97,7 @@ impl BtcRelay for FakeBtcRelay {
 
     fn transaction_info(&self, id: &Hash) -> Result<Option<BtcTransactionInfo>, failure::Error> {
         if let FakeRelayResponse::TransactionInfo(r) =
-            self.request(FakeRelayRequest::TransactionInfo { id: *id })
+            self.request(&FakeRelayRequest::TransactionInfo { id: *id })
         {
             r
         } else {
@@ -106,7 +107,7 @@ impl BtcRelay for FakeBtcRelay {
 
     fn send_transaction(&self, transaction: &btc::Transaction) -> Result<Hash, failure::Error> {
         if let FakeRelayResponse::SendTransaction(r) =
-            self.request(FakeRelayRequest::SendTransaction {
+            self.request(&FakeRelayRequest::SendTransaction {
                 transaction: transaction.clone(),
             }) {
             r
@@ -116,7 +117,7 @@ impl BtcRelay for FakeBtcRelay {
     }
 
     fn watch_address(&self, addr: &Address, rescan: bool) -> Result<(), failure::Error> {
-        if let FakeRelayResponse::WatchAddress(r) = self.request(FakeRelayRequest::WatchAddress {
+        if let FakeRelayResponse::WatchAddress(r) = self.request(&FakeRelayRequest::WatchAddress {
             addr: addr.clone(),
             rescan,
         }) {

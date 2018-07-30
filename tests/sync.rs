@@ -15,7 +15,6 @@ extern crate bitcoin;
 extern crate exonum;
 
 extern crate exonum_bitcoinrpc as bitcoin_rpc;
-#[macro_use]
 extern crate exonum_btc_anchoring;
 extern crate exonum_testkit;
 
@@ -183,7 +182,7 @@ fn several_unsynced() {
         ),
         (
             FakeRelayRequest::SendTransaction {
-                transaction: proposed_0.clone(),
+                transaction: last_tx.clone(),
             },
             FakeRelayResponse::SendTransaction(Ok(tx_id_0.clone())),
         ),
