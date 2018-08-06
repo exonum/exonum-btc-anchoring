@@ -38,9 +38,11 @@ pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;
 /// Anchoring service name.
 pub const BTC_ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
 
+type KeyPool = Arc<RwLock<HashMap<Address, Privkey>>>;
+
 pub struct BtcAnchoringService {
     global_config: GlobalConfig,
-    private_keys: Arc<RwLock<HashMap<Address, Privkey>>>,
+    private_keys: KeyPool,
     btc_relay: Option<Box<BtcRelay>>,
 }
 
@@ -53,7 +55,7 @@ impl ::std::fmt::Debug for BtcAnchoringService {
 impl BtcAnchoringService {
     pub fn new(
         global_config: GlobalConfig,
-        private_keys: Arc<RwLock<HashMap<Address, Privkey>>>,
+        private_keys: KeyPool,
         btc_relay: Option<Box<BtcRelay>>,
     ) -> BtcAnchoringService {
         BtcAnchoringService {
