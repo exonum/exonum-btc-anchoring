@@ -24,6 +24,8 @@ use std::sync::{Arc, Mutex};
 
 use rpc::{BitcoinRpcConfig, BtcRelay, TransactionInfo as BtcTransactionInfo};
 
+const UNEXPECTED_RESPONSE: &str = "Unexpected response. Error in test data.";
+
 #[derive(Debug, PartialEq)]
 pub enum FakeRelayRequest {
     SendToAddress { addr: Address, satoshis: u64 },
@@ -91,7 +93,7 @@ impl BtcRelay for FakeBtcRelay {
             }) {
             r
         } else {
-            panic!();
+            panic!(UNEXPECTED_RESPONSE);
         }
     }
 
@@ -101,7 +103,7 @@ impl BtcRelay for FakeBtcRelay {
         {
             r
         } else {
-            panic!();
+            panic!(UNEXPECTED_RESPONSE);
         }
     }
 
@@ -112,7 +114,7 @@ impl BtcRelay for FakeBtcRelay {
             }) {
             r
         } else {
-            panic!();
+            panic!(UNEXPECTED_RESPONSE);
         }
     }
 
@@ -123,7 +125,7 @@ impl BtcRelay for FakeBtcRelay {
         }) {
             r
         } else {
-            panic!();
+            panic!(UNEXPECTED_RESPONSE);
         }
     }
 
