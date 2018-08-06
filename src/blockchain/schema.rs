@@ -131,12 +131,17 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
 
             // Checks that latest anchoring transaction isn't a transition.
             if actual_state.is_transition() {
-                let address_changed = tx.0.output[0].script_pubkey == actual_state.script_pubkey();
-                if address_changed {
+                let current_address = &tx.0.output[0].script_pubkey;
+                let outgoing_address = &actual_state.script_pubkey();
+                if current_address == outgoing_address {
                     trace!("Awaiting for new configuration to become actual.");
                     return None;
                 } else {
-                    trace!("Transition to another address.");
+                    trace!(
+                        "Transition from {:?} to {:?}.",
+                        current_address,
+                        outgoing_address
+                    );
                     builder.transit_to(actual_state.script_pubkey());
                 }
             }
