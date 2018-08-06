@@ -74,7 +74,7 @@ pub fn gen_anchoring_config<R: Rng>(
 // Notorious test kit wrapper
 #[derive(Debug)]
 pub struct AnchoringTestKit {
-    test_kit: TestKit,
+    inner: TestKit,
     pub local_private_keys: Arc<RwLock<HashMap<btc::Address, btc::Privkey>>>,
     pub node_configs: Vec<LocalConfig>,
     requests: Option<TestRequests>,
@@ -84,13 +84,13 @@ impl Deref for AnchoringTestKit {
     type Target = TestKit;
 
     fn deref(&self) -> &Self::Target {
-        &self.test_kit
+        &self.inner
     }
 }
 
 impl DerefMut for AnchoringTestKit {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.test_kit
+        &mut self.inner
     }
 }
 
@@ -125,7 +125,7 @@ impl AnchoringTestKit {
             .create();
 
         Self {
-            test_kit: testkit,
+            inner: testkit,
             local_private_keys: private_keys,
             node_configs: locals,
             requests,
@@ -245,13 +245,13 @@ impl AnchoringTestKit {
     }
 
     pub fn anchoring_us(&self) -> (TestNode, LocalConfig) {
-        let node = self.test_kit.us();
+        let node = self.inner.us();
         let cfg = self.get_local_cfg(node);
         (node.clone(), cfg)
     }
 
     pub fn anchoring_validators(&self) -> Vec<(TestNode, LocalConfig)> {
-        let validators = self.test_kit.network().validators();
+        let validators = self.inner.network().validators();
         validators
             .into_iter()
             .map(|validator| (validator.clone(), self.get_local_cfg(validator)))
