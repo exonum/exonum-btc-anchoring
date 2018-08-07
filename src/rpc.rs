@@ -93,7 +93,8 @@ impl BtcRelay for BitcoinRpcClient {
         satoshis: u64,
     ) -> Result<Transaction, failure::Error> {
         let amount = satoshis as f64 / SATOSHI_DIVISOR;
-        let txid = self.0
+        let txid = self
+            .0
             .sendtoaddress(&addr.to_string(), &amount.to_string())?;
         let tx_hex = self.0.getrawtransaction(&txid)?;
 

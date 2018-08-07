@@ -28,7 +28,8 @@ use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 use {
-    blockchain::BtcAnchoringState, rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
+    blockchain::BtcAnchoringState,
+    rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
     BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME,
 };
 
@@ -289,7 +290,8 @@ impl AnchoringTestKit {
         &self,
         validators_num: u16,
     ) -> Result<Vec<Box<Transaction>>, btc::BuilderError> {
-        let validators = self.network()
+        let validators = self
+            .network()
             .validators()
             .iter()
             .filter(|v| v != &self.us())

@@ -125,7 +125,8 @@ impl BtcAnchoringTransactionBuilder {
     }
 
     pub fn additional_funds(&mut self, tx: Transaction) -> Result<(), BuilderError> {
-        let out = tx.find_out(&self.script_pubkey)
+        let out = tx
+            .find_out(&self.script_pubkey)
             .ok_or_else(|| BuilderError::UnsuitableFundingTx)?
             .0;
         self.additional_funds.push((out, tx));
@@ -147,7 +148,8 @@ impl BtcAnchoringTransactionBuilder {
             let mut input_transactions = Vec::new();
             let mut balance = 0;
 
-            let tx_iter = self.prev_tx
+            let tx_iter = self
+                .prev_tx
                 .into_iter()
                 .map(|tx| (0, tx))
                 .chain(self.additional_funds.into_iter());

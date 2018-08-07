@@ -66,7 +66,8 @@ pub struct FakeBtcRelay {
 #[cfg_attr(feature = "cargo-clippy", allow(unused_variables, expect_fun_call))]
 impl FakeBtcRelay {
     fn request(&self, request: &FakeRelayRequest) -> FakeRelayResponse {
-        let (expected_request, response) = self.requests
+        let (expected_request, response) = self
+            .requests
             .0
             .lock()
             .unwrap()

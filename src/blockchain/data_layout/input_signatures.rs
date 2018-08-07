@@ -71,7 +71,8 @@ encoding_struct! {
 
 impl From<Option<Vec<u8>>> for InputSignature {
     fn from(s: Option<Vec<u8>>) -> InputSignature {
-        let bytes = s.as_ref()
+        let bytes = s
+            .as_ref()
             .map(|x| x.as_ref())
             .unwrap_or_else(|| [].as_ref());
         InputSignature::new(bytes)

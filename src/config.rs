@@ -143,7 +143,8 @@ mod flatten_keypairs {
     {
         use serde::Serialize;
 
-        let keypairs = keys.iter()
+        let keypairs = keys
+            .iter()
             .map(|(address, private_key)| BitcoinKeypair {
                 address: address.clone(),
                 private_key: private_key.clone(),

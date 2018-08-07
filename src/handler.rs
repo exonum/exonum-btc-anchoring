@@ -50,7 +50,8 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         if let Some(validator_id) = self.context.validator_id() {
             let address = self.anchoring_state.output_address();
 
-            let privkey = self.private_keys
+            let privkey = self
+                .private_keys
                 .get(&address)
                 .ok_or_else(|| format_err!("Private key for the address {} is absent.", address))?;
 
@@ -67,7 +68,8 @@ impl<'a> UpdateAnchoringChainTask<'a> {
     ) -> Result<(), failure::Error> {
         let schema = BtcAnchoringSchema::new(self.context.snapshot());
         let latest_anchored_height = schema.latest_anchored_height();
-        let anchoring_height = self.anchoring_state
+        let anchoring_height = self
+            .anchoring_state
             .following_anchoring_height(latest_anchored_height);
 
         if self.context.height() < anchoring_height {
