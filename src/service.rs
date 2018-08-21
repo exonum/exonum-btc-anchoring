@@ -29,6 +29,7 @@ use api;
 use blockchain::consensus_storage::AnchoringConfig;
 use blockchain::dto;
 use blockchain::schema::AnchoringSchema;
+use details::error::Error as InternalError;
 use details::btc;
 use details::rpc::{BitcoinRelay, RpcClient};
 use error::Error as ServiceError;
@@ -144,6 +145,9 @@ impl Service for AnchoringService {
         match handler.after_commit(state) {
             Err(ServiceError::Handler(e @ HandlerError::IncorrectLect { .. })) => {
                 panic!("A critical error occurred: {}", e)
+            }
+            Err(ServiceError::Internal(e @ InternalError::InsufficientFunds { .. })) => {
+                trace!("{}", e);
             }
             Err(ServiceError::Handler(e)) => {
                 error!("An error in handler occurred: {}", e);

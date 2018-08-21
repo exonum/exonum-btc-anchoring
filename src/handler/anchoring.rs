@@ -71,7 +71,7 @@ impl AnchoringHandler {
                 Ok(())
             }
             LectKind::None => {
-                warn!("Unable to reach consensus in the lect");
+                trace!("Unable to reach consensus in the lect");
                 Ok(())
             }
         }
@@ -100,13 +100,11 @@ impl AnchoringHandler {
                 .prev_tx_chain(prev_tx_chain)
                 .send_to(multisig.addr.clone())
                 .into_transaction()?;
-
             trace!("initial_proposal={:?}", proposal,);
-
             // Sign proposal
             self.sign_proposal_tx(proposal, &[funding_tx.0], multisig, context)?;
         } else {
-            warn!("Funding transaction is not suitable.");
+            trace!("Funding transaction is not suitable.");
         }
         Ok(())
     }
@@ -257,7 +255,7 @@ impl AnchoringHandler {
             );
             context.transaction_sender().send(Box::new(lect_msg))?;
         } else {
-            warn!("Insufficient signatures for proposal={:#?}", proposal);
+            trace!("Insufficient signatures for proposal={:#?}", proposal);
         }
         Ok(())
     }

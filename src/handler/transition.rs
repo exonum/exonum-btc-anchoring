@@ -68,7 +68,7 @@ impl AnchoringHandler {
                         let height = multisig.common.latest_anchoring_height(state.height());
                         self.create_proposal_tx(&lect, &multisig, height, state)?;
                     } else {
-                        warn!(
+                        trace!(
                             "Insufficient confirmations for create transition transaction, \
                              tx={:#?}, confirmations={}",
                             lect, confirmations
@@ -77,7 +77,7 @@ impl AnchoringHandler {
                 }
                 LectKind::Funding(_) => panic!("We must not to change genesis configuration!"),
                 LectKind::None => {
-                    warn!("Unable to reach consensus in a lect");
+                    trace!("Unable to reach consensus in a lect");
                 }
             }
         }

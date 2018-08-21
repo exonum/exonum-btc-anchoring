@@ -95,7 +95,7 @@ pub trait BitcoinRelay: 'static + ::std::fmt::Debug + Send + Sync {
     /// Retrieves information about confirmations for transaction with the given id.
     fn get_transaction_confirmations(&self, txid: btc::TxId) -> Result<Option<u64>> {
         let info = self.get_transaction_info(txid)?;
-        Ok(info.and_then(|x| x.confirmations))
+        Ok(info.map(|x| x.confirmations.unwrap_or_default()))
     }
 
     /// Returns an actual relay configuration.

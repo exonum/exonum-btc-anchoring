@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## 0.9.0 - 2018-07-20
 
+### Internal improvements
+
+- Anchoring transaction in memory pool now is considering as transaction with the `Some(0)`
+  confirmations instead of `Null`. (#133)
+
+- Log level for "Insufficient funds" errors reduced from `error` to `trace`. (#133)
+
 ### Breaking changes
 
 - The anchoring chain observer logic has been moved to the `before_commit` stage. (#131)
