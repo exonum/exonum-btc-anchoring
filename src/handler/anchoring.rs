@@ -162,7 +162,10 @@ impl AnchoringHandler {
             let signature =
                 proposal.sign_input(&multisig.redeem_script, input, prev_tx, &multisig.priv_key);
 
-            debug_assert_eq!(proposal.input[input as usize].previous_output.txid, prev_tx.txid());
+            debug_assert_eq!(
+                proposal.input[input as usize].previous_output.txid,
+                prev_tx.txid()
+            );
 
             debug_assert!(proposal.verify_input(
                 &multisig.redeem_script,

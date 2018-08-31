@@ -290,7 +290,8 @@ impl TransactionBuilder {
     }
 
     pub fn into_transaction(mut self) -> Result<AnchoringTx, InternalError> {
-        let available_funds: u64 = self.inputs
+        let available_funds: u64 = self
+            .inputs
             .iter()
             .map(|&(ref tx, out)| tx.output[out as usize].value)
             .sum();

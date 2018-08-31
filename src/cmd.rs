@@ -342,7 +342,8 @@ impl CommandExtension for Finalize {
         let pub_keys: Vec<_> = public_config_list
             .iter()
             .map(|v| {
-                let key: String = v.services_public_configs()
+                let key: String = v
+                    .services_public_configs()
                     .get("anchoring_pub_key")
                     .expect("Anchoring validator public key not found")
                     .clone()

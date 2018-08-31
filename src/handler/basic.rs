@@ -75,7 +75,8 @@ impl AnchoringHandler {
     pub fn multisig_address<'a>(&self, common: &'a AnchoringConfig) -> MultisigAddress<'a> {
         let (redeem_script, addr) = common.redeem_script();
         let addr_str = addr.to_string();
-        let priv_key = self.node
+        let priv_key = self
+            .node
             .private_keys
             .get(&addr_str)
             .unwrap_or_else(|| panic!("Expected private key for address={}", addr_str))
@@ -260,7 +261,8 @@ impl AnchoringHandler {
                     // If the lect encodes a transition to a new anchoring address,
                     // we need to wait until it reaches enough confirmations.
                     if actual_lect_is_transition(&actual_lect, &anchoring_schema) {
-                        let confirmations = self.client()
+                        let confirmations = self
+                            .client()
                             .get_transaction_confirmations(actual_lect.id())?;
                         if !is_enough_confirmations(&actual, confirmations) {
                             let state = AnchoringState::Waiting {
@@ -366,7 +368,8 @@ impl AnchoringHandler {
         multisig: &MultisigAddress,
         state: &ServiceContext,
     ) -> Result<Option<BitcoinTx>, ServiceError> {
-        let lects = self.client()
+        let lects = self
+            .client()
             .unspent_transactions(&multisig.addr)?
             .into_iter()
             .map(|tx| tx.body);
@@ -421,7 +424,8 @@ impl AnchoringHandler {
             funding_tx,
             multisig.addr
         );
-        if let Some(info) = self.client()
+        if let Some(info) = self
+            .client()
             .unspent_transactions(&multisig.addr)?
             .iter()
             .find(|tx| tx.body.0 == funding_tx.0)

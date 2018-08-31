@@ -22,8 +22,8 @@ use secp256k1::ffi;
 use secp256k1::key;
 use secp256k1::key::SecretKey;
 use secp256k1::Error;
-use secp256k1::{SignOnly, Secp256k1};
 use secp256k1::{Message, Signature};
+use secp256k1::{Secp256k1, SignOnly};
 
 use exonum_btc_anchoring::details::btc::transactions::RawBitcoinTx;
 

@@ -227,7 +227,8 @@ where
     pub fn state_hash(&self) -> Vec<Hash> {
         let cfg = self.actual_anchoring_config();
         let mut state_hashes = vec![self.anchored_blocks().merkle_root()];
-        let lect_hashes = cfg.anchoring_keys
+        let lect_hashes = cfg
+            .anchoring_keys
             .iter()
             .map(|key| self.lects(key).merkle_root());
         state_hashes.extend(lect_hashes);

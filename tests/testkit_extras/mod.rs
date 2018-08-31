@@ -216,7 +216,8 @@ impl AnchoringTestKit {
         addr: &btc::Address,
     ) -> (AnchoringTx, Vec<Box<Transaction>>) {
         let (propose_tx, signed_tx, signs) = {
-            let (prev_tx, prev_tx_input) = self.latest_anchored_tx
+            let (prev_tx, prev_tx_input) = self
+                .latest_anchored_tx
                 .clone()
                 .map(|x| {
                     let tx = (x.0).0;
@@ -226,7 +227,8 @@ impl AnchoringTestKit {
                 .unwrap_or_else(|| {
                     let cfg = self.current_cfg();
                     let tx = cfg.funding_tx().clone();
-                    let input = tx.find_out(&cfg.redeem_script().1)
+                    let input = tx
+                        .find_out(&cfg.redeem_script().1)
                         .expect("Unable to find output");
                     (tx.0.clone(), input)
                 });
