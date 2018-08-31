@@ -88,6 +88,7 @@ locktime
 Mainnet
 mainnet
 maintainer's
+maplit
 markdownlint
 Mdewrpx
 memorydb
@@ -117,8 +118,8 @@ oneshot
 OP_CHECKSIG
 OP_EQUALVERIFY
 openssl
-PASSWD
 passwd
+PASSWD
 peekable
 permissioned
 pkey
@@ -130,8 +131,9 @@ precommits
 prevote
 prevotes
 println
-privkey
 Privkey
+privkey
+proptest
 proptest
 pubkey
 pubkeyhash
@@ -209,9 +211,9 @@ txid
 txin
 txindex
 txinfo
+txinwitness
 txout
 txvec
-txinwitness
 tymethod
 unboxed
 unreceived

@@ -18,9 +18,8 @@ use exonum::helpers::ValidatorId;
 use exonum::messages::Message;
 use exonum::storage::Fork;
 
-use btc_transaction_utils::p2wsh::InputSigner;
-use btc_transaction_utils::{InputSignature, InputSignatureRef, TxInRef};
-use secp256k1::{self, Secp256k1};
+use btc_transaction_utils::{InputSignature, InputSignatureRef, TxInRef, p2wsh::InputSigner};
+use secp256k1::{self, Secp256k1, None};
 
 use btc;
 use BTC_ANCHORING_SERVICE_ID;
@@ -59,7 +58,7 @@ impl Signature {
 
     pub fn input_signature(
         &self,
-        context: &Secp256k1,
+        context: &Secp256k1<None>,
     ) -> Result<InputSignatureRef, secp256k1::Error> {
         InputSignatureRef::from_bytes(context, self.content())
     }
