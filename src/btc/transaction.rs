@@ -11,7 +11,7 @@ use exonum::crypto::Hash;
 use exonum::helpers::Height;
 
 use bitcoin::blockdata::script::Script;
-use bitcoin::blockdata::transaction::{self, TxIn, TxOut};
+use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
 use btc_transaction_utils::multisig::RedeemScript;
 
 use super::{Payload, PayloadBuilder};
@@ -37,7 +37,7 @@ impl Transaction {
 
     pub fn prev_tx_id(&self) -> Hash {
         let mut bytes = [0u8; 32];
-        bytes.copy_from_slice(&self.0.input[0].prev_hash[..]);
+        bytes.copy_from_slice(&self.0.input[0].previous_output.txid[..]);
         bytes.reverse();
         Hash::new(bytes)
     }
@@ -155,8 +155,10 @@ impl BtcAnchoringTransactionBuilder {
                 .chain(self.additional_funds.into_iter());
             for (out_index, tx) in tx_iter {
                 let txin = TxIn {
-                    prev_hash: tx.0.txid(),
-                    prev_index: out_index as u32,
+                    previous_output: OutPoint {
+                        txid: tx.0.txid(),
+                        vout: out_index as u32,
+                    },
                     script_sig: Script::default(),
                     sequence: 0xFFFF_FFFF,
                     witness: Vec::default(),
@@ -216,7 +218,7 @@ mod tests {
     use super::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
     use bitcoin::blockdata::opcodes::All;
     use bitcoin::blockdata::script::{Builder, Script};
-    use bitcoin::blockdata::transaction::{self, TxIn, TxOut};
+    use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
     use bitcoin::network::constants::Network;
     use bitcoin::util::address::Address;
     use bitcoin::util::hash::Sha256dHash;
@@ -292,16 +294,18 @@ mod tests {
     proptest! {
         #[test]
         fn test_transaction_exonum_field(input_num in 1usize..4,
-                                         prev_index in 1u32..10,
+                                         vout in 1u32..10,
                                          output_num in 1usize..4,
                                          value in 1u64..1_000_000_000,
                                          ref s in "\\PC*") {
             let input = (0..input_num).map(|_| {
                 // just random hash
-                let prev_hash = Sha256dHash::from_data(s.as_bytes());
+                let txid = Sha256dHash::from_data(s.as_bytes());
                 TxIn {
-                    prev_hash,
-                    prev_index,
+                    previous_output: OutPoint {
+                        txid,
+                        vout,
+                    },
                     script_sig: Script::default(),
                     sequence: 0xFFFFFFFF,
                     witness: Vec::default(),
@@ -334,7 +338,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "segwit flag 10 not understood")]
+    #[should_panic(expected = "UnsupportedSegwitFlag(16)")]
     fn test_transaction_exonum_field_invalid_segwit_flag() {
         let hex_tx = "6600000000101b651818fe3855d0d5d74de1cf72b56503c16f808519440e842b6a\
                       dc2dd570c4930100000000feffffff02deaa7b0000000000160014923904449829\

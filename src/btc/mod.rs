@@ -142,7 +142,7 @@ pub fn gen_keypair_with_rng<R: Rng>(network: Network, rng: &mut R) -> (PublicKey
     let sk = secp256k1::key::SecretKey::new(&context, rng);
 
     let priv_key = privkey::Privkey::from_secret_key(sk, true, network);
-    let pub_key = secp256k1::PublicKey::from_secret_key(&context, &sk).unwrap();
+    let pub_key = secp256k1::PublicKey::from_secret_key(&context, &sk);
     (pub_key.into(), priv_key.into())
 }
 
