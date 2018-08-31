@@ -22,25 +22,20 @@ use secp256k1::ffi;
 use secp256k1::key;
 use secp256k1::key::SecretKey;
 use secp256k1::Error;
-use secp256k1::{ContextFlag, Secp256k1};
+use secp256k1::{SignOnly, Secp256k1};
 use secp256k1::{Message, Signature};
 
 use exonum_btc_anchoring::details::btc::transactions::RawBitcoinTx;
 
 /// The structure with the same memory representation as the `secp256k1::Secp256k1`.
 #[derive(Clone, Copy)]
-struct Context {
-    pub ctx: *mut ffi::Context,
-    pub caps: ContextFlag,
+pub struct Context {
+    ctx: *mut ffi::Context,
 }
 
 impl Context {
     /// Same as the 'secp256k1::Secp256k1::sign` but has a nonce argument.
     pub fn sign(&self, msg: &Message, sk: &key::SecretKey, nonce: u64) -> Result<Signature, Error> {
-        if self.caps == ContextFlag::VerifyOnly || self.caps == ContextFlag::None {
-            return Err(Error::IncapableContext);
-        }
-
         let nonce_array = {
             let mut data = [0; 32];
             LittleEndian::write_u64(&mut data, nonce);
@@ -67,15 +62,15 @@ impl Context {
     }
 }
 
-fn get_ffi_context(ctx: &mut Secp256k1) -> Context {
+fn get_ffi_context(ctx: &mut Secp256k1<SignOnly>) -> Context {
     unsafe {
-        let ctx_ptr: *mut Context = mem::transmute(ctx as *mut Secp256k1);
+        let ctx_ptr: *mut Context = mem::transmute(ctx as *mut Secp256k1<SignOnly>);
         *ctx_ptr
     }
 }
 
 fn sign_with_nonce(
-    ctx: &mut Secp256k1,
+    ctx: &mut Secp256k1<SignOnly>,
     msg: &Message,
     sk: &key::SecretKey,
     nonce: u64,
@@ -97,7 +92,7 @@ pub fn sign_tx_input_with_nonce(
         signer.signature_hash(TxInRef::new(tx, input), prev_tx)
     };
     // Make signature
-    let mut context = Secp256k1::new();
+    let mut context = Secp256k1::signing_only();
     let msg = Message::from_slice(&sighash[..]).unwrap();
     let mut sign = sign_with_nonce(&mut context, &msg, sec_key, nonce)
         .unwrap()

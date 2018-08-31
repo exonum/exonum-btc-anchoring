@@ -56,6 +56,6 @@ pub fn gen_btc_keypair_with_rng<R: Rng>(network: Network, rng: &mut R) -> (Publi
     let sk = key::SecretKey::new(&context, rng);
 
     let priv_key = PrivateKey::from_key(network, sk, true);
-    let pub_key = PublicKey::from_secret_key(&context, &sk).unwrap();
+    let pub_key = PublicKey::from_secret_key(&context, &sk);
     (pub_key, priv_key)
 }

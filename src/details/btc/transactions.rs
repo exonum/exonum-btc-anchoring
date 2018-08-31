@@ -17,7 +17,7 @@ use std::fmt;
 use std::ops::Deref;
 
 use bitcoin::blockdata::script::Script;
-use bitcoin::blockdata::transaction::{TxIn, TxOut};
+use bitcoin::blockdata::transaction::{OutPoint, TxIn, TxOut};
 use bitcoin::network::serialize::{deserialize, serialize, serialize_hex, BitcoinHash};
 use bitcoin::util::privkey::Privkey;
 use bitcoinrpc;
@@ -137,7 +137,7 @@ impl AnchoringTx {
     }
 
     pub fn prev_hash(&self) -> TxId {
-        TxId::from(self.0.input[0].prev_hash)
+        TxId::from(self.0.input[0].previous_output.txid)
     }
 
     pub fn sign_input(
@@ -328,8 +328,10 @@ where
 {
     let inputs = inputs
         .map(|&(ref unspent_tx, utxo_vout)| TxIn {
-            prev_hash: unspent_tx.txid(),
-            prev_index: utxo_vout,
+            previous_output: OutPoint {
+                txid: unspent_tx.txid(),
+                vout: utxo_vout,
+            },
             script_sig: Script::new(),
             sequence: 0xFFFF_FFFF,
             witness: Vec::default(),
