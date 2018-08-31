@@ -74,9 +74,10 @@ jobs:
 
   # Clippy linting
   - env: FEATURE=clippy
-    rust: nightly-2018-06-20
+    rust: nightly-2018-08-30
     install:
-    - cargo clippy --version | grep $CLIPPY_VERS || cargo install clippy --force --vers $CLIPPY_VERS
+    - rustup component add clippy-preview
+    - cargo clippy --version
     script:
     - cargo clippy --all -- -D warnings
 
