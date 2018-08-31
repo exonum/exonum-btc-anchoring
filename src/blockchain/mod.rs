@@ -25,6 +25,7 @@ use btc::Address;
 use config::GlobalConfig;
 
 pub mod data_layout;
+pub mod errors;
 pub mod schema;
 pub mod transactions;
 

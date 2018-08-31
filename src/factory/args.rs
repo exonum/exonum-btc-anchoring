@@ -22,6 +22,19 @@ use toml;
 use std::collections::BTreeMap;
 use std::str::FromStr;
 
+use exonum::crypto;
+use exonum::encoding::serialize::{FromHex, FromHexError};
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct Hash(pub crypto::Hash);
+
+impl FromStr for Hash {
+    type Err = FromHexError;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        crypto::Hash::from_hex(s).map(Hash)
+    }
+}
+
 pub trait TypedArgument {
     type ParsedType: FromStr;
     type OutputType: Serialize + DeserializeOwned + Clone + Send + Sync;

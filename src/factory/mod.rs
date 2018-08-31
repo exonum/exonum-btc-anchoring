@@ -13,9 +13,10 @@
 // limitations under the License.
 
 use exonum::blockchain::Service;
-use exonum::crypto::Hash;
-use exonum::helpers::fabric::{self, keys, Argument, CommandExtension, CommandName, Context,
-                              ServiceFactory};
+
+use exonum::helpers::fabric::{
+    self, keys, Argument, Command, CommandExtension, CommandName, Context, ServiceFactory,
+};
 use exonum::node::NodeConfig;
 
 use bitcoin::network::constants::Network;
@@ -27,11 +28,12 @@ use std::collections::{BTreeMap, HashMap};
 use std::io;
 use std::str::FromStr;
 
-use self::args::{NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
+use self::args::{Hash, NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
 use btc::{gen_keypair, Privkey, PublicKey};
 use config::{Config, GlobalConfig, LocalConfig};
 use rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
 
+use std::sync::{Arc, RwLock};
 mod args;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -266,7 +268,9 @@ impl CommandExtension for Finalize {
 
         // Finalize part.
         let funding_tx_amount = BTC_ANCHORING_CREATE_FUNDING_TX.input_value(&context)?;
-        let funding_txid = BTC_ANCHORING_FUNDING_TXID.input_value(&context)?;
+        let funding_txid = BTC_ANCHORING_FUNDING_TXID
+            .input_value(&context)?
+            .map(|x| x.0);
 
         // Gets anchoring public keys.
         let public_keys = {
@@ -287,12 +291,14 @@ impl CommandExtension for Finalize {
         let mut global_config = GlobalConfig::new(network.into(), public_keys)?;
         // Generates initial funding transaction.
         let relay = BitcoinRpcClient::from(rpc_config.clone());
+
         let addr = global_config.anchoring_address();
+
         let funding_tx = if let Some(funding_txid) = funding_txid {
             let info = relay.transaction_info(&funding_txid)?.ok_or_else(|| {
                 format_err!(
                     "Unable to find transaction with the given id {}",
-                    funding_txid.to_string()
+                    funding_txid.to_hex()
                 )
             })?;
             ensure!(
@@ -306,7 +312,7 @@ impl CommandExtension for Finalize {
             let satoshis = funding_tx_amount
                 .ok_or_else(|| format_err!("Expected `btc_anchoring_create_funding_tx` value"))?;
             let transaction = relay.send_to_address(&addr.0, satoshis)?;
-            println!("{}", transaction.id().to_string());
+            println!("{}", transaction.id().to_hex());
             transaction
         };
 
@@ -319,6 +325,7 @@ impl CommandExtension for Finalize {
         // Creates local config.
         let mut private_keys = HashMap::new();
         private_keys.insert(addr, private_key);
+
         let local_config = LocalConfig {
             rpc: Some(rpc_config),
             private_keys,
@@ -343,11 +350,15 @@ impl CommandExtension for Finalize {
 pub struct BtcAnchoringFactory;
 
 impl ServiceFactory for BtcAnchoringFactory {
+    fn service_name(&self) -> &str {
+        "btc_anchoring"
+    }
+
     fn command(&mut self, command: CommandName) -> Option<Box<CommandExtension>> {
         Some(match command {
-            v if v == fabric::GenerateCommonConfig::name() => Box::new(GenerateCommonConfig),
-            v if v == fabric::GenerateNodeConfig::name() => Box::new(GenerateNodeConfig),
-            v if v == fabric::Finalize::name() => Box::new(Finalize),
+            v if v == fabric::GenerateCommonConfig.name() => Box::new(GenerateCommonConfig),
+            v if v == fabric::GenerateNodeConfig.name() => Box::new(GenerateNodeConfig),
+            v if v == fabric::Finalize.name() => Box::new(Finalize),
             _ => return None,
         })
     }
@@ -369,7 +380,7 @@ impl ServiceFactory for BtcAnchoringFactory {
             .map(Box::<BtcRelay>::from);
         let service = BtcAnchoringService::new(
             btc_anchoring_config.global,
-            btc_anchoring_config.local.private_keys,
+            Arc::new(RwLock::new(btc_anchoring_config.local.private_keys)),
             btc_relay,
         );
         Box::new(service)

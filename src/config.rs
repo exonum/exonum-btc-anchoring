@@ -47,6 +47,18 @@ pub struct GlobalConfig {
     pub funding_transaction: Option<Transaction>,
 }
 
+impl Default for GlobalConfig {
+    fn default() -> Self {
+        Self {
+            network: Network::Testnet,
+            public_keys: vec![],
+            anchoring_interval: 5_000,
+            transaction_fee: 100,
+            funding_transaction: None,
+        }
+    }
+}
+
 impl GlobalConfig {
     pub fn new(
         network: Network,
@@ -59,10 +71,8 @@ impl GlobalConfig {
 
         Ok(GlobalConfig {
             network,
-            anchoring_interval: 5_000,
-            transaction_fee: 100,
             public_keys,
-            funding_transaction: None,
+            ..Default::default()
         })
     }
 
@@ -133,7 +143,8 @@ mod flatten_keypairs {
     {
         use serde::Serialize;
 
-        let keypairs = keys.iter()
+        let keypairs = keys
+            .iter()
             .map(|(address, private_key)| BitcoinKeypair {
                 address: address.clone(),
                 private_key: private_key.clone(),

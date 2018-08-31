@@ -20,6 +20,8 @@ use exonum::storage::{Fork, Snapshot};
 
 use serde_json;
 
+use std::sync::{Arc, RwLock};
+
 use std::collections::HashMap;
 
 use blockchain::{BtcAnchoringSchema, Transactions};
@@ -36,9 +38,11 @@ pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;
 /// Anchoring service name.
 pub const BTC_ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
 
+type KeyPool = Arc<RwLock<HashMap<Address, Privkey>>>;
+
 pub struct BtcAnchoringService {
     global_config: GlobalConfig,
-    private_keys: HashMap<Address, Privkey>,
+    private_keys: KeyPool,
     btc_relay: Option<Box<BtcRelay>>,
 }
 
@@ -51,7 +55,7 @@ impl ::std::fmt::Debug for BtcAnchoringService {
 impl BtcAnchoringService {
     pub fn new(
         global_config: GlobalConfig,
-        private_keys: HashMap<Address, Privkey>,
+        private_keys: KeyPool,
         btc_relay: Option<Box<BtcRelay>>,
     ) -> BtcAnchoringService {
         BtcAnchoringService {
@@ -85,7 +89,8 @@ impl Service for BtcAnchoringService {
     }
 
     fn after_commit(&self, context: &ServiceContext) {
-        let task = UpdateAnchoringChainTask::new(context, &self.private_keys);
+        let keys = &self.private_keys.read().unwrap();
+        let task = UpdateAnchoringChainTask::new(context, keys);
         task.run().log_error();
 
         // TODO make this task async via tokio core or something else.

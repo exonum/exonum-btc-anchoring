@@ -41,10 +41,13 @@ pub trait BtcRelay: Send + Sync + ::std::fmt::Debug {
     fn send_transaction(&self, transaction: &Transaction) -> Result<Hash, failure::Error>;
     /// Observes the changes on given address.
     fn watch_address(&self, addr: &Address, rescan: bool) -> Result<(), failure::Error>;
+
+    /// Returns an actual relay configuration.
+    fn config(&self) -> BitcoinRpcConfig;
 }
 
 /// `Bitcoind` rpc configuration.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct BitcoinRpcConfig {
     /// Rpc url.
     pub host: String,
@@ -90,7 +93,8 @@ impl BtcRelay for BitcoinRpcClient {
         satoshis: u64,
     ) -> Result<Transaction, failure::Error> {
         let amount = satoshis as f64 / SATOSHI_DIVISOR;
-        let txid = self.0
+        let txid = self
+            .0
             .sendtoaddress(&addr.to_string(), &amount.to_string())?;
         let tx_hex = self.0.getrawtransaction(&txid)?;
 
@@ -98,7 +102,7 @@ impl BtcRelay for BitcoinRpcClient {
     }
 
     fn transaction_info(&self, id: &Hash) -> Result<Option<TransactionInfo>, failure::Error> {
-        let txid = id.to_string();
+        let txid = id.to_hex();
         let txinfo = match self.0.getrawtransaction_verbose(&txid) {
             Ok(info) => info,
             Err(bitcoin_rpc::Error::NoInformation(_)) => return Ok(None),
@@ -128,5 +132,13 @@ impl BtcRelay for BitcoinRpcClient {
         self.0
             .importaddress(&addr.to_string(), "multisig", false, rescan)
             .map_err(From::from)
+    }
+
+    fn config(&self) -> BitcoinRpcConfig {
+        BitcoinRpcConfig {
+            host: self.0.url().to_string(),
+            username: self.0.username().clone(),
+            password: self.0.password().clone(),
+        }
     }
 }

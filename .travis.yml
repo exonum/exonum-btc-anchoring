@@ -9,9 +9,7 @@ addons:
     - librocksdb
 
 rust:
-  # Feel free to bump this version if you need features of newer Rust.
-  # Sync with badge in README.md
-  - 1.26.2
+  - stable
 
 matrix:
   allow_failures:
@@ -28,7 +26,7 @@ sudo: required
 
 env:
   global:
-  - CLIPPY_VERS=0.0.206
+  - CLIPPY_VERS=0.0.212
   - DEADLINKS_VERS=0.3.0
   - OUTDATED_VERS=0.7.0
   - SODIUM_VERS=1.0.16
@@ -74,7 +72,7 @@ jobs:
 
   # Clippy linting
   - env: FEATURE=clippy
-    rust: nightly-2018-06-02
+    rust: nightly-2018-07-07
     install:
     - cargo clippy --version | grep $CLIPPY_VERS || cargo install clippy --force --vers $CLIPPY_VERS
     script:
@@ -89,7 +87,7 @@ jobs:
       fi
     - |
       if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-        cargo test --all --features rpc_tests;
+        cargo test --all --features testnet_tests;
       fi
 
   # Non-fatal checks

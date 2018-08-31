@@ -127,34 +127,60 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
         let mut builder = BtcAnchoringTransactionBuilder::new(&config.redeem_script());
         // First anchoring transaction doesn't have previous.
         if let Some(tx) = unspent_anchoring_transaction {
+            let tx_id = tx.id();
+
             // Checks that latest anchoring transaction isn't a transition.
             if actual_state.is_transition() {
-                let address_changed = tx.0.output[0].script_pubkey == actual_state.script_pubkey();
-                if address_changed {
-                    // awaiting for new configuration to become actual.
+                let current_address = &tx.0.output[0].script_pubkey;
+                let outgoing_address = &actual_state.script_pubkey();
+                if current_address == outgoing_address {
+                    trace!("Awaiting for new configuration to become actual.");
                     return None;
                 } else {
-                    trace!("transition to another address");
-                    builder = builder.transit_to(actual_state.script_pubkey());
+                    trace!(
+                        "Transition from {:?} to {:?}.",
+                        current_address,
+                        outgoing_address
+                    );
+                    builder.transit_to(actual_state.script_pubkey());
                 }
             }
-            // TODO support transaction chain recovery.
-            builder = builder.prev_tx(tx);
+
+            if let Err(e) = builder.prev_tx(tx) {
+                if unspent_funding_transaction.is_none() {
+                    return Some(Err(e));
+                }
+                error!("Anchoring is broken: '{}'. Will try to recover", e);
+                builder.recover(tx_id);
+            }
         }
+
         if let Some(tx) = unspent_funding_transaction {
-            builder = builder.additional_funds(tx);
+            if let Err(e) = builder.additional_funds(tx) {
+                return Some(Err(e));
+            }
         }
+
         // Adds corresponding payload.
         let latest_anchored_height = self.latest_anchored_height();
         let anchoring_height = actual_state.following_anchoring_height(latest_anchored_height);
+
         let anchoring_block_hash = Schema::new(&self.snapshot)
             .block_hash_by_height(anchoring_height)
             .unwrap();
-        builder = builder
-            .payload(anchoring_height, anchoring_block_hash)
-            .fee(config.transaction_fee);
+
+        builder.payload(anchoring_height, anchoring_block_hash);
+        builder.fee(config.transaction_fee);
+
         // Creates anchoring proposal
         Some(builder.create())
+    }
+
+    pub fn actual_proposed_anchoring_transaction(
+        &self,
+    ) -> Option<Result<(Transaction, Vec<Transaction>), BuilderError>> {
+        let actual_state = self.actual_state();
+        self.proposed_anchoring_transaction(&actual_state)
     }
 
     pub fn unspent_funding_transaction(&self) -> Option<Transaction> {
