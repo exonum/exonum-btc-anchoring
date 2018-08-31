@@ -11,7 +11,7 @@ addons:
 rust:
   # Feel free to bump this version if you need features of newer Rust.
   # Sync with badge in README.md
-  - 1.28
+  - 1.28.0
 
 matrix:
   allow_failures:
@@ -57,7 +57,7 @@ jobs:
   include:
   # Formatting & other lints that do not require compilation
   - env: FEATURE=lints
-    rust: 1.28 # Use fresh rustfmt 
+    rust: 1.28.0 # Use fresh rustfmt 
     install:
     - rustup component add rustfmt-preview
     - rustfmt -V
