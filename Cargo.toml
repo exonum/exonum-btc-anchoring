@@ -15,7 +15,7 @@ description = "An Exonum service that provides anchoring to Bitcoin blockchain."
 travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 
 [dependencies]
-bitcoin = "0.14"
+bitcoin = { version = "0.14", features = ["serde"] }
 btc-transaction-utils = "0.3"
 byteorder = "1.2"
 clap = "2.32"
@@ -30,7 +30,7 @@ log = "0.4"
 maplit = "1.0"
 matches = "0.1"
 rand = "0.4"
-secp256k1 = "0.11"
+secp256k1 = { version = "0.11", features = ["serde"] }
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"

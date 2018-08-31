@@ -20,7 +20,6 @@ use bitcoin::network::constants::Network;
 use btc_transaction_utils::multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError};
 use btc_transaction_utils::p2wsh;
 
-use serde_str;
 use std::collections::HashMap;
 
 use btc::{Address, Privkey, PublicKey, Transaction};
@@ -35,7 +34,6 @@ pub fn byzantine_quorum(total: usize) -> usize {
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct GlobalConfig {
     /// Type of the used BTC network.
-    #[serde(with = "serde_str")]
     pub network: Network,
     /// Validators' Bitcoin public keys from which the current anchoring redeem script can be calculated.
     pub public_keys: Vec<PublicKey>,

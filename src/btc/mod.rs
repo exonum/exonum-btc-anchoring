@@ -36,8 +36,8 @@ pub struct Privkey(pub privkey::Privkey);
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct PublicKey(pub secp256k1::PublicKey);
 
-/// A Bitcoin address
-#[derive(Debug, Clone, From, Into, PartialEq)]
+/// A Bitcoin address wrapper.
+#[derive(Debug, Clone, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Address(pub address::Address);
 
 impl ToString for Privkey {
@@ -95,29 +95,6 @@ impl ::std::str::FromStr for Address {
 impl ::std::fmt::Display for Address {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         write!(f, "{}", self.0.to_string())
-    }
-}
-
-impl Eq for Address {}
-
-impl PartialOrd for Address {
-    fn partial_cmp(&self, other: &Address) -> Option<::std::cmp::Ordering> {
-        Some(self.to_string().cmp(&other.to_string()))
-    }
-}
-
-impl Ord for Address {
-    fn cmp(&self, other: &Address) -> ::std::cmp::Ordering {
-        // TODO: Add `Ord` to the underlying crates.
-        self.to_string().cmp(&other.to_string())
-    }
-}
-
-#[cfg_attr(feature = "cargo-clippy", allow(derive_hash_xor_eq))]
-impl ::std::hash::Hash for Address {
-    fn hash<H: ::std::hash::Hasher>(&self, state: &mut H) {
-        // TODO: Add `Hash` to the underlying crates.
-        self.to_string().hash(state)
     }
 }
 
