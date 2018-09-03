@@ -25,8 +25,6 @@ use toml;
 use {BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
 
 use std::collections::{BTreeMap, HashMap};
-use std::io;
-use std::str::FromStr;
 
 use self::args::{Hash, NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
 use btc::{gen_keypair, Privkey, PublicKey};
@@ -36,38 +34,7 @@ use rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
 use std::sync::{Arc, RwLock};
 mod args;
 
-#[derive(Debug, Clone, Serialize, Deserialize)]
-#[serde(rename_all = "lowercase")]
-enum BtcNetwork {
-    Bitcoin,
-    Testnet,
-}
-
-impl From<BtcNetwork> for Network {
-    fn from(n: BtcNetwork) -> Network {
-        match n {
-            BtcNetwork::Bitcoin => Network::Bitcoin,
-            BtcNetwork::Testnet => Network::Testnet,
-        }
-    }
-}
-
-impl FromStr for BtcNetwork {
-    type Err = io::Error;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        match s {
-            "bitcoin" => Ok(BtcNetwork::Bitcoin),
-            "testnet" => Ok(BtcNetwork::Testnet),
-            _ => Err(io::Error::new(
-                io::ErrorKind::InvalidInput,
-                format!("Invalid network type {}", s),
-            )),
-        }
-    }
-}
-
-const BTC_ANCHORING_NETWORK: NamedArgumentRequired<BtcNetwork> = NamedArgumentRequired {
+const BTC_ANCHORING_NETWORK: NamedArgumentRequired<Network> = NamedArgumentRequired {
     name: "btc_anchoring_network",
     short_key: Some("n"),
     long_key: "btc-anchoring-network",
