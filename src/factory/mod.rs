@@ -321,7 +321,7 @@ impl ServiceFactory for BtcAnchoringFactory {
         "btc_anchoring"
     }
 
-    fn command(&mut self, command: CommandName) -> Option<Box<CommandExtension>> {
+    fn command(&mut self, command: CommandName) -> Option<Box<dyn CommandExtension>> {
         Some(match command {
             v if v == fabric::GenerateCommonConfig.name() => Box::new(GenerateCommonConfig),
             v if v == fabric::GenerateNodeConfig.name() => Box::new(GenerateNodeConfig),
@@ -330,7 +330,7 @@ impl ServiceFactory for BtcAnchoringFactory {
         })
     }
 
-    fn make_service(&mut self, context: &Context) -> Box<Service> {
+    fn make_service(&mut self, context: &Context) -> Box<dyn Service> {
         let node_config = context.get(keys::NODE_CONFIG).unwrap();
         let btc_anchoring_config: Config = node_config
             .services_configs
@@ -344,7 +344,7 @@ impl ServiceFactory for BtcAnchoringFactory {
             .local
             .rpc
             .map(BitcoinRpcClient::from)
-            .map(Box::<BtcRelay>::from);
+            .map(Box::<dyn BtcRelay>::from);
         let service = BtcAnchoringService::new(
             btc_anchoring_config.global,
             Arc::new(RwLock::new(btc_anchoring_config.local.private_keys)),

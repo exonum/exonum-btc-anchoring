@@ -144,11 +144,11 @@ impl<'a> UpdateAnchoringChainTask<'a> {
 #[derive(Debug)]
 pub struct SyncWithBtcRelayTask<'a> {
     context: &'a ServiceContext,
-    relay: &'a BtcRelay,
+    relay: &'a dyn BtcRelay,
 }
 
 impl<'a> SyncWithBtcRelayTask<'a> {
-    pub fn new(context: &'a ServiceContext, relay: &'a BtcRelay) -> SyncWithBtcRelayTask<'a> {
+    pub fn new(context: &'a ServiceContext, relay: &'a dyn BtcRelay) -> SyncWithBtcRelayTask<'a> {
         SyncWithBtcRelayTask { context, relay }
     }
 

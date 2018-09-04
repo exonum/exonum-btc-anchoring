@@ -41,7 +41,7 @@ pub(crate) type KeyPool = Arc<RwLock<HashMap<Address, Privkey>>>;
 pub struct BtcAnchoringService {
     global_config: GlobalConfig,
     private_keys: KeyPool,
-    btc_relay: Option<Box<BtcRelay>>,
+    btc_relay: Option<Box<dyn BtcRelay>>,
 }
 
 impl ::std::fmt::Debug for BtcAnchoringService {
@@ -54,7 +54,7 @@ impl BtcAnchoringService {
     pub fn new(
         global_config: GlobalConfig,
         private_keys: KeyPool,
-        btc_relay: Option<Box<BtcRelay>>,
+        btc_relay: Option<Box<dyn BtcRelay>>,
     ) -> BtcAnchoringService {
         BtcAnchoringService {
             global_config,
@@ -73,11 +73,11 @@ impl Service for BtcAnchoringService {
         BTC_ANCHORING_SERVICE_NAME
     }
 
-    fn state_hash(&self, snapshot: &Snapshot) -> Vec<Hash> {
+    fn state_hash(&self, snapshot: &dyn Snapshot) -> Vec<Hash> {
         BtcAnchoringSchema::new(snapshot).state_hash()
     }
 
-    fn tx_from_raw(&self, raw: RawMessage) -> Result<Box<Transaction>, EncodingError> {
+    fn tx_from_raw(&self, raw: RawMessage) -> Result<Box<dyn Transaction>, EncodingError> {
         let tx = Transactions::tx_from_raw(raw)?;
         Ok(tx.into())
     }

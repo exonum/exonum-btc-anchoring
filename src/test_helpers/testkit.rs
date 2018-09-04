@@ -36,7 +36,7 @@ use {
 };
 
 pub fn gen_anchoring_config<R: Rng>(
-    rpc: &BtcRelay,
+    rpc: &dyn BtcRelay,
     network: Network,
     count: u16,
     total_funds: u64,
@@ -97,7 +97,7 @@ impl DerefMut for AnchoringTestKit {
 
 impl AnchoringTestKit {
     pub fn new<R: Rng>(
-        rpc: Box<BtcRelay>,
+        rpc: Box<dyn BtcRelay>,
         validators_num: u16,
         total_funds: u64,
         anchoring_interval: u64,
@@ -289,7 +289,7 @@ impl AnchoringTestKit {
     pub fn create_signature_tx_for_validators(
         &self,
         validators_num: u16,
-    ) -> Result<Vec<Box<Transaction>>, btc::BuilderError> {
+    ) -> Result<Vec<Box<dyn Transaction>>, btc::BuilderError> {
         let validators = self
             .network()
             .validators()
@@ -297,7 +297,7 @@ impl AnchoringTestKit {
             .filter(|v| v != &self.us())
             .take(validators_num as usize);
 
-        let mut signatures: Vec<Box<Transaction>> = vec![];
+        let mut signatures: Vec<Box<dyn Transaction>> = vec![];
 
         let redeem_script = self.redeem_script();
         let mut signer = p2wsh::InputSigner::new(redeem_script.clone());

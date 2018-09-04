@@ -71,6 +71,7 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
                 8
             }
 
+            #[allow(unsafe_code)]
             unsafe fn read(
                 buffer: &'a [u8],
                 from: ::exonum::encoding::Offset,
@@ -95,6 +96,7 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
                 );
             }
 
+            #[allow(unsafe_code)]
             fn check(
                 buffer: &[u8],
                 from: ::exonum::encoding::CheckedOffset,

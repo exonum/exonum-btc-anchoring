@@ -80,9 +80,9 @@ impl From<BitcoinRpcConfig> for BitcoinRpcClient {
     }
 }
 
-impl From<BitcoinRpcClient> for Box<BtcRelay> {
+impl From<BitcoinRpcClient> for Box<dyn BtcRelay> {
     fn from(client: BitcoinRpcClient) -> Self {
-        Box::new(client) as Box<BtcRelay>
+        Box::new(client) as Box<dyn BtcRelay>
     }
 }
 

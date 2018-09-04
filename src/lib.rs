@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#![deny(missing_debug_implementations)]
+#![deny(missing_debug_implementations, unsafe_code)]
 
 #[macro_use]
 extern crate derive_more;

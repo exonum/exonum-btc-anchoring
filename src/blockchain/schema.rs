@@ -50,7 +50,7 @@ pub struct BtcAnchoringSchema<T> {
     snapshot: T,
 }
 
-impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
+impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
     /// Constructs schema for the given database `snapshot`.
     pub fn new(snapshot: T) -> Self {
         BtcAnchoringSchema { snapshot }
