@@ -143,7 +143,7 @@ impl CommandExtension for GenerateNodeConfig {
 
         // Inserts bitcoin keypair.
         let network = BTC_ANCHORING_NETWORK.output_value(&common_config.services_config)?;
-        let keypair = gen_keypair(network.into());
+        let keypair = gen_keypair(network);
 
         services_public_config.insert(
             "btc_anchoring_public_key".to_owned(),
@@ -255,7 +255,7 @@ impl CommandExtension for Finalize {
         };
 
         // Creates global config.
-        let mut global_config = GlobalConfig::new(network.into(), public_keys)?;
+        let mut global_config = GlobalConfig::new(network, public_keys)?;
         // Generates initial funding transaction.
         let relay = BitcoinRpcClient::from(rpc_config.clone());
 

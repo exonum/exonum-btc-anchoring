@@ -25,7 +25,6 @@ pub struct InputSignatures {
     content: Vec<Option<Vec<u8>>>,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(len_without_is_empty))]
 impl InputSignatures {
     pub fn new(validators_count: u16) -> InputSignatures {
         let content = vec![None; validators_count as usize];
@@ -44,6 +43,10 @@ impl InputSignatures {
 
     pub fn len(&self) -> usize {
         self.content.iter().filter(|x| x.is_some()).count()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.content.iter().any(|x| x.is_some())
     }
 }
 
