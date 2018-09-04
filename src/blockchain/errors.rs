@@ -20,7 +20,7 @@ use exonum::helpers::ValidatorId;
 #[derive(Debug, Fail)]
 pub enum SignatureError {
     #[fail(
-        display = "Received signature for the incorrect anchoring transaction. Expected: {:?}. Received: {:?}.",
+        display = "Received signature for the incorrect anchoring transaction. Expected: {}. Received: {}.",
         expected_id,
         received_id
     )]
@@ -30,7 +30,7 @@ pub enum SignatureError {
     },
     #[fail(display = "Received signature for anchoring transaction while in transition state.")]
     InTransition,
-    #[fail(display = "Public key of validator {:?} is missing.", _0)]
+    #[fail(display = "Public key of validator {} is missing.", _0)]
     MissingPublicKey { validator_id: ValidatorId },
     #[fail(display = "Input with index {} doesn't exist.", _0)]
     NoSuchInput { idx: usize },

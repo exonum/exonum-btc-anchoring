@@ -138,7 +138,7 @@ impl<T: AsRef<Snapshot>> BtcAnchoringSchema<T> {
                     return None;
                 } else {
                     trace!(
-                        "Transition from {:?} to {:?}.",
+                        "Transition from {} to {}.",
                         current_address,
                         outgoing_address
                     );

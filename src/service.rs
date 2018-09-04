@@ -31,14 +31,12 @@ use handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask};
 use rpc::BtcRelay;
 use ResultEx;
 
-// TODO support recovery mode if after transition transaction with following output address doesn't exist.
-
 /// Anchoring service id.
 pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;
 /// Anchoring service name.
 pub const BTC_ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
 
-type KeyPool = Arc<RwLock<HashMap<Address, Privkey>>>;
+pub(crate) type KeyPool = Arc<RwLock<HashMap<Address, Privkey>>>;
 
 pub struct BtcAnchoringService {
     global_config: GlobalConfig,

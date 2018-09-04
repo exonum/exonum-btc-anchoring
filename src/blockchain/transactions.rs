@@ -160,10 +160,10 @@ impl Transaction for Signature {
         let payload = tx.anchoring_metadata().unwrap().1;
 
         info!("====== ANCHORING ======");
-        info!("txid: {}", tx.id().to_string(),);
-        info!("height: {}", payload.block_height,);
-        info!("hash: {}", payload.block_hash,);
-        info!("balance: {}", tx.0.output[0].value,);
+        info!("txid: {}", tx.id().to_hex());
+        info!("height: {}", payload.block_height);
+        info!("hash: {}", payload.block_hash);
+        info!("balance: {}", tx.0.output[0].value);
         trace!("Anchoring txhex: {}", tx.to_string());
 
         // Adds finalized transaction to the tail of anchoring transactions.

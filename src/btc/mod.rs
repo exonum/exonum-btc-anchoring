@@ -28,11 +28,11 @@ mod macros;
 pub mod payload;
 pub mod transaction;
 
-/// A Bitcoin ECDSA private key.
+/// A Bitcoin ECDSA private key wrapper.
 #[derive(Clone, From, Into, PartialEq, Eq)]
 pub struct Privkey(pub privkey::Privkey);
 
-/// A Secp256k1 public key, used for verification of signatures.
+/// A Secp256k1 public key wrapper, used for verification of signatures.
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct PublicKey(pub secp256k1::PublicKey);
 

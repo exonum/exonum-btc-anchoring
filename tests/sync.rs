@@ -72,7 +72,7 @@ fn normal_operation() {
     let anchoring_tx_id = proposed.id();
     anchoring_testkit.create_block_with_transactions(signatures);
 
-    // error white trying fetch info for anchoring  tx first time
+    // Error while trying fetch info for anchoring tx first time
     requests.expect(vec![
         funding_tx_request(),
         (
@@ -90,7 +90,7 @@ fn normal_operation() {
     let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
     let last_tx = schema.anchoring_transactions_chain().last().unwrap();
 
-    // should retry
+    // Should retry
     requests.expect(vec![
         funding_tx_request(),
         (
@@ -109,7 +109,7 @@ fn normal_operation() {
 
     anchoring_testkit.create_blocks_until(Height(4));
 
-    // should ask btc network about last anchoring tx every anchoring_height / 2
+    // Should ask btc network about last anchoring tx every anchoring_height / 2
     requests.expect(vec![
         funding_tx_request(),
         (
@@ -153,7 +153,7 @@ fn several_unsynced() {
     let tx_id_0 = proposed_0.id();
     anchoring_testkit.create_block_with_transactions(signatures);
 
-    // error white trying fetch info for anchoring  tx first time
+    // Error while trying fetch info for anchoring tx first time
     requests.expect(vec![
         funding_tx_request(),
         (
@@ -171,7 +171,7 @@ fn several_unsynced() {
     let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
     let last_tx = schema.anchoring_transactions_chain().last().unwrap();
 
-    // sync failed
+    // Sync failed
     requests.expect(vec![
         funding_tx_request(),
         (
@@ -254,7 +254,7 @@ fn several_unsynced() {
         .create_signature_tx_for_validators(3)
         .unwrap();
 
-    // should walk to first uncommitted
+    // Should walk to first uncommitted
     requests.expect(vec![
         (
             FakeRelayRequest::TransactionInfo {

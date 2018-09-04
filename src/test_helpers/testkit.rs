@@ -13,27 +13,27 @@
 // limitations under the License.
 
 use bitcoin::{network::constants::Network, util::address::Address};
-use blockchain::transactions::Signature;
-use blockchain::BtcAnchoringSchema;
-use btc;
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
-use config::{GlobalConfig, LocalConfig};
+use rand::{thread_rng, Rng, SeedableRng, StdRng};
+
 use exonum::blockchain::Transaction;
 use exonum::encoding::serialize::FromHex;
 use exonum_testkit::{TestKit, TestKitBuilder, TestNetworkConfiguration, TestNode};
-use rand::{thread_rng, Rng, SeedableRng, StdRng};
-use std::collections::HashMap;
+
 use std::env;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
+
 use {
-    blockchain::BtcAnchoringState,
+    blockchain::{transactions::Signature, BtcAnchoringSchema, BtcAnchoringState},
+    btc,
+    config::{GlobalConfig, LocalConfig},
     rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
+    service::KeyPool,
+    test_helpers::rpc::*,
     BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME,
 };
-
-use test_helpers::rpc::*;
 
 pub fn gen_anchoring_config<R: Rng>(
     rpc: &BtcRelay,
@@ -76,7 +76,7 @@ pub fn gen_anchoring_config<R: Rng>(
 #[derive(Debug)]
 pub struct AnchoringTestKit {
     inner: TestKit,
-    pub local_private_keys: Arc<RwLock<HashMap<btc::Address, btc::Privkey>>>,
+    pub local_private_keys: KeyPool,
     pub node_configs: Vec<LocalConfig>,
     requests: Option<TestRequests>,
 }
