@@ -56,7 +56,7 @@ fn funding_tx_request() -> TestRequest {
 
 #[test]
 fn normal_operation() {
-    let mut anchoring_testkit = AnchoringTestKit::new_with_fake_rpc(4, 7000, 4);
+    let mut anchoring_testkit = AnchoringTestKit::new_with_fake_rpc(4);
     let requests = anchoring_testkit.requests();
 
     let signatures = anchoring_testkit
@@ -137,7 +137,7 @@ fn normal_operation() {
 
 #[test]
 fn several_unsynced() {
-    let mut anchoring_testkit = AnchoringTestKit::new_with_fake_rpc(4, 7000, 4);
+    let mut anchoring_testkit = AnchoringTestKit::new_with_fake_rpc(4);
     let requests = anchoring_testkit.requests();
 
     let signatures = anchoring_testkit

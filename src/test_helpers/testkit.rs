@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bitcoin::{network::constants::Network, util::address::Address};
+use bitcoin::{self, network::constants::Network, util::address::Address};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
@@ -35,8 +35,38 @@ use {
     BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME,
 };
 
+/// Generates a fake funding transaction.
+pub fn create_fake_funding_transaction(
+    address: &bitcoin::Address,
+    value: u64,
+) -> btc::Transaction {
+    // Generates random transaction id
+    let mut rng = thread_rng();
+    let mut data = [0u8; 32];
+    rng.fill_bytes(&mut data);
+    // Creates fake funding transaction
+    let tx = bitcoin::Transaction {
+        version: 2,
+        lock_time: 0,
+        input: vec![bitcoin::TxIn {
+            previous_output: bitcoin::OutPoint {
+                vout: 0,
+                txid: ::bitcoin::util::hash::Sha256dHash::from_data(&data),
+            },
+            script_sig: bitcoin::Script::new(),
+            sequence: 0,
+            witness: vec![],
+        }],
+        output: vec![bitcoin::TxOut {
+            value,
+            script_pubkey: address.script_pubkey(),
+        }],
+    }.into();
+    tx
+}
+
 pub fn gen_anchoring_config<R: Rng>(
-    rpc: &dyn BtcRelay,
+    rpc: Option<&dyn BtcRelay>,
     network: Network,
     count: u16,
     total_funds: u64,
@@ -60,13 +90,20 @@ pub fn gen_anchoring_config<R: Rng>(
     let local_cfgs = private_keys
         .iter()
         .map(|sk| LocalConfig {
-            rpc: Some(rpc.config()),
+            rpc: rpc.map(BtcRelay::config),
             private_keys: hashmap!{ address.clone() => sk.clone() },
         })
         .collect();
 
-    rpc.watch_address(&address, false).unwrap();
-    let tx = rpc.send_to_address(&address, total_funds).unwrap();
+    let tx = if let Some(rpc) = rpc {
+        rpc.watch_address(&address, false).unwrap();
+        rpc.send_to_address(&address, total_funds).unwrap()
+    } else {
+        create_fake_funding_transaction(
+            &p2wsh::address(&global.redeem_script(), global.network),
+            total_funds,
+        )
+    };
 
     global.funding_transaction = Some(tx);
     (global, local_cfgs)
@@ -97,7 +134,7 @@ impl DerefMut for AnchoringTestKit {
 
 impl AnchoringTestKit {
     pub fn new<R: Rng>(
-        rpc: Box<dyn BtcRelay>,
+        rpc: Option<Box<dyn BtcRelay>>,
         validators_num: u16,
         total_funds: u64,
         anchoring_interval: u64,
@@ -106,7 +143,7 @@ impl AnchoringTestKit {
     ) -> Self {
         let network = Network::Testnet;
         let (global, locals) = gen_anchoring_config(
-            &*rpc,
+            rpc.as_ref().map(|rpc| &**rpc),
             network,
             validators_num,
             total_funds,
@@ -116,8 +153,7 @@ impl AnchoringTestKit {
 
         let local = locals[0].clone();
         let private_keys = Arc::new(RwLock::new(local.private_keys));
-        let service =
-            BtcAnchoringService::new(global.clone(), Arc::clone(&private_keys), Some(rpc));
+        let service = BtcAnchoringService::new(global.clone(), Arc::clone(&private_keys), rpc);
 
         let testkit = TestKitBuilder::validator()
             .with_service(service)
@@ -153,7 +189,7 @@ impl AnchoringTestKit {
 
         let client = BitcoinRpcClient::from(rpc_config);
         Self::new(
-            Box::from(client),
+            Some(Box::from(client)),
             validators_num,
             total_funds,
             anchoring_interval,
@@ -162,11 +198,10 @@ impl AnchoringTestKit {
         )
     }
 
-    pub fn new_with_fake_rpc(
-        validators_num: u16,
-        total_funds: u64,
-        anchoring_interval: u64,
-    ) -> Self {
+    pub fn new_with_fake_rpc(anchoring_interval: u64) -> Self {
+        let validators_num = 4;
+        let total_funds = 7_000;
+
         let seed: &[_] = &[1, 2, 3, 9];
         let rng: StdRng = SeedableRng::from_seed(seed);
         let fake_relay = FakeBtcRelay::default();
@@ -186,7 +221,7 @@ impl AnchoringTestKit {
             (
                 FakeRelayRequest::SendToAddress {
                     addr: addr.clone(),
-                    satoshis: 7000,
+                    satoshis: total_funds,
                 },
                 FakeRelayResponse::SendToAddress(btc::Transaction::from_hex(
                     "02000000000101140b3f5da041f173d938b8fe778d39cb2ef801f75f\
@@ -203,12 +238,26 @@ impl AnchoringTestKit {
         ]);
 
         Self::new(
-            Box::from(fake_relay),
+            Some(Box::from(fake_relay)),
             validators_num,
             total_funds,
             anchoring_interval,
             rng,
             Some(requests.clone()),
+        )
+    }
+
+    pub fn new_without_rpc(validators_num: u16, total_funds: u64, anchoring_interval: u64) -> Self {
+        let seed: &[_] = &[1, 2, 3, 9];
+        let rng: StdRng = SeedableRng::from_seed(seed);
+
+        Self::new(
+            None,
+            validators_num,
+            total_funds,
+            anchoring_interval,
+            rng,
+            None,
         )
     }
 
@@ -297,7 +346,7 @@ impl AnchoringTestKit {
             .filter(|v| v != &self.us())
             .take(validators_num as usize);
 
-        let mut signatures: Vec<Box<dyn Transaction>> = vec![];
+        let mut signatures: Vec<Box<Transaction>> = vec![];
 
         let redeem_script = self.redeem_script();
         let mut signer = p2wsh::InputSigner::new(redeem_script.clone());
