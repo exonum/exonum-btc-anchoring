@@ -36,10 +36,7 @@ use {
 };
 
 /// Generates a fake funding transaction.
-pub fn create_fake_funding_transaction(
-    address: &bitcoin::Address,
-    value: u64,
-) -> btc::Transaction {
+pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -> btc::Transaction {
     // Generates random transaction id
     let mut rng = thread_rng();
     let mut data = [0u8; 32];

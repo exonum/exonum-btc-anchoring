@@ -51,7 +51,7 @@ impl Default for GlobalConfig {
             network: Network::Testnet,
             public_keys: vec![],
             anchoring_interval: 5_000,
-            transaction_fee: 100,
+            transaction_fee: 10,
             funding_transaction: None,
         }
     }

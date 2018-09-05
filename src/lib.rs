@@ -57,6 +57,7 @@ extern crate exonum_testkit;
 pub use factory::BtcAnchoringFactory as ServiceFactory;
 pub use service::{BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME};
 
+pub mod api;
 pub mod blockchain;
 pub mod btc;
 pub mod config;
