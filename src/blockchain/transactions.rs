@@ -65,7 +65,7 @@ impl MsgAnchoringSignature {
         let anchoring_schema = AnchoringSchema::new(&view);
 
         let tx = self.tx();
-        let prev_txid = tx.input[self.input() as usize].prev_hash.into();
+        let prev_txid = tx.input[self.input() as usize].previous_output.txid.into();
         let id = self.validator().0 as usize;
         let actual_cfg = core_schema.actual_configuration();
         // Verify from field

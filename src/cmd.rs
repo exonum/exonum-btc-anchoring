@@ -98,18 +98,13 @@ impl CommandExtension for GenerateNodeConfig {
 
         let config = context.get(keys::COMMON_CONFIG).unwrap();
 
-        let network: String = config
+        let network: Network = config
             .services_config
             .get("anchoring_network")
             .expect("No network name found.")
             .clone()
             .try_into()
             .unwrap();
-        let network = match network.as_str() {
-            "testnet" => Network::Testnet,
-            "bitcoin" => Network::Bitcoin,
-            _ => panic!("Wrong network type"),
-        };
 
         let (p, s) = gen_btc_keypair(network);
         let mut services_public_configs = context
@@ -305,7 +300,7 @@ impl CommandExtension for Finalize {
             .clone()
             .try_into()?;
         // Global config section
-        let network: String = common_config
+        let network: Network = common_config
             .services_config
             .get("anchoring_network")
             .expect("Anchoring network not found")
@@ -330,19 +325,14 @@ impl CommandExtension for Finalize {
             .clone()
             .try_into()?;
 
-        let network = match network.as_str() {
-            "testnet" => Network::Testnet,
-            "bitcoin" => Network::Bitcoin,
-            _ => panic!("Wrong network type"),
-        };
-
         let priv_key: PrivateKey = PrivateKey::from_str(&sec_key).unwrap();
         //TODO: validate config keys
         let _pub_key = PublicKey::from_hex(&pub_key).unwrap();
         let pub_keys: Vec<_> = public_config_list
             .iter()
             .map(|v| {
-                let key: String = v.services_public_configs()
+                let key: String = v
+                    .services_public_configs()
                     .get("anchoring_pub_key")
                     .expect("Anchoring validator public key not found")
                     .clone()

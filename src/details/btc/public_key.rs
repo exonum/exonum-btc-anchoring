@@ -12,9 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use secp256k1::key;
-use secp256k1::Error;
-use secp256k1::Secp256k1;
+use secp256k1::{key, Secp256k1, Signing};
 
 use exonum::storage::StorageKey;
 
@@ -23,9 +21,9 @@ use super::types::{PublicKey, RawPublicKey};
 const PUBLIC_KEY_SIZE: usize = 33;
 
 impl PublicKey {
-    pub fn from_secret_key(secp: &Secp256k1, sk: &key::SecretKey) -> Result<PublicKey, Error> {
-        let raw = RawPublicKey::from_secret_key(secp, sk)?;
-        Ok(PublicKey::from(raw))
+    pub fn from_secret_key<C: Signing>(secp: &Secp256k1<C>, sk: &key::SecretKey) -> PublicKey {
+        let raw = RawPublicKey::from_secret_key(secp, sk);
+        PublicKey::from(raw)
     }
 
     pub fn to_bytes(&self) -> [u8; PUBLIC_KEY_SIZE] {

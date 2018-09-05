@@ -126,7 +126,7 @@ impl ToHex for PublicKey {
 
 impl HexValueEx for RawScript {
     fn to_hex(&self) -> String {
-        encode_hex(self.clone().into_vec())
+        encode_hex(self[..].to_vec())
     }
     fn from_hex<T: AsRef<str>>(v: T) -> ::std::result::Result<Self, FromHexError> {
         let bytes = Vec::<u8>::from_hex(v.as_ref())?;

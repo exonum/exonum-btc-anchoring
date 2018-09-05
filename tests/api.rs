@@ -154,7 +154,8 @@ impl ValidateProof for AnchoredBlockHeaderProof {
         let table_location = Blockchain::service_table_unique_key(ANCHORING_SERVICE_ID, 0);
         ensure!(proof_entry.0 == &table_location, "Invalid table location");
         // Validates value.
-        let values = self.to_block_header
+        let values = self
+            .to_block_header
             .validate(
                 *proof_entry.1,
                 self.latest_authorized_block.block.height().0,

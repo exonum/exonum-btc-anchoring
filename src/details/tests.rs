@@ -180,7 +180,7 @@ fn test_segwit_tx_builder() {
         .into_transaction()
         .unwrap();
     assert_eq!(
-        anchoring_tx.0.input[0].prev_hash.to_string(),
+        anchoring_tx.0.input[0].previous_output.txid.to_string(),
         "6f3c41d81bfa04b6a96501344ddff630188ccf48c2fd4cf14cf02c3574f29844",
     );
 }

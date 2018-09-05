@@ -11,7 +11,7 @@ addons:
 rust:
   # Feel free to bump this version if you need features of newer Rust.
   # Sync with badge in README.md
-  - 1.27.1
+  - 1.28.0
 
 matrix:
   allow_failures:
@@ -28,8 +28,6 @@ sudo: required
 
 env:
   global:
-  - CLIPPY_VERS=0.0.209
-  - RUSTFMT_VERS=0.9.0
   - DEADLINKS_VERS=0.3.0
   - OUTDATED_VERS=0.7.0
   - SODIUM_VERS=1.0.16
@@ -59,7 +57,7 @@ jobs:
   include:
   # Formatting & other lints that do not require compilation
   - env: FEATURE=lints
-    rust: 1.27.1 # Use fresh rustfmt 
+    rust: 1.28.0 # Use fresh rustfmt 
     install:
     - rustup component add rustfmt-preview
     - rustfmt -V
@@ -69,16 +67,17 @@ jobs:
     - npm install markdownlint-cli
     - ./node_modules/.bin/markdownlint --version
     script:
-    - cargo fmt --all -- --write-mode=diff
+    - cargo fmt -- --check
     - ./node_modules/.bin/cspell {src,examples,tests}/**/*.rs
     - find . -not -path "./node_modules/*" -name "*.md" | xargs ./node_modules/.bin/cspell
     - find . -not -path "./node_modules/*" -name "*.md" | xargs ./node_modules/.bin/markdownlint --config .markdownlintrc
 
   # Clippy linting
   - env: FEATURE=clippy
-    rust: nightly-2018-06-20
+    rust: nightly-2018-08-30
     install:
-    - cargo clippy --version | grep $CLIPPY_VERS || cargo install clippy --force --vers $CLIPPY_VERS
+    - rustup component add clippy-preview
+    - cargo clippy --version
     script:
     - cargo clippy --all -- -D warnings
 

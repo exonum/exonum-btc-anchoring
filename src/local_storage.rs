@@ -74,7 +74,8 @@ fn serialize_map_to_vec<S>(
 where
     S: Serializer,
 {
-    let keypairs = map.iter()
+    let keypairs = map
+        .iter()
         .map(|(address, private_key)| AnchoringKeypair {
             address: address.to_string(),
             private_key: private_key.clone(),

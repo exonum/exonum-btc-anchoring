@@ -61,7 +61,8 @@ impl AnchoringHandler {
                         return Ok(());
                     }
                     // check that we have enough confirmations
-                    let confirmations = self.client()
+                    let confirmations = self
+                        .client()
                         .get_transaction_confirmations(lect.id())?
                         .unwrap_or_else(|| 0);
                     if confirmations >= multisig.common.utxo_confirmations {
@@ -71,7 +72,8 @@ impl AnchoringHandler {
                         trace!(
                             "Insufficient confirmations for create transition transaction, \
                              tx={:#?}, confirmations={}",
-                            lect, confirmations
+                            lect,
+                            confirmations
                         );
                     }
                 }
