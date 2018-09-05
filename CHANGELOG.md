@@ -7,9 +7,47 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Internal improvements
+
+- Updated to the `Rust-bitcoin 0.14` release (#134).
+
+## 0.9.0 - 2018-07-20
+
+### Internal improvements
+
+- Anchoring transaction in memory pool now is considering as transaction with the `Some(0)`
+  confirmations instead of `Null`. (#133)
+
+- Log level for "Insufficient funds" errors reduced from `error` to `trace`. (#133)
+
 ### Breaking changes
 
-- The anchoring service has been switched to using p2wsh address format. (#123)
+- The anchoring chain observer logic has been moved to the `before_commit` stage. (#131)
+  Thus additional thread in the public api handler has been no longer used.
+  Thus now `anchoring-observer-check-interval` is measured in blocks instead of milliseconds.
+
+- The anchoring API has been ported to the new `actix-web` backend. (#132)
+  Some of API endpoints have been changed, you can see updated API description in
+  the [documentation](https://exonum.com/doc/advanced/bitcoin-anchoring/#available-api).
+  
+### Internal improvements
+
+- Added check that funding transaction in `anchoring-funding-txid` contains
+  output to the anchoring address. (#130)
+
+## 0.8.1 - 2018-06-06
+
+### Internal improvements
+
+- Changed `btc::Network` (de)serializing into/from string (#128).
+
+- Updated to the `Rust-bitcoin 0.13.1` release (#128).
+
+## 0.8 - 2018-06-01
+
+### Breaking changes
+
+- The anchoring service has been switched to using p2wsh address format (#123).
   It now uses segwit addresses....
   This change increases the limit on the number of validators and anchoring security
   as well as reduces fees for applying thereof.
@@ -18,10 +56,21 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   Hence, update of the existing blockchain to the new anchoring version is not possible.
   For use of a new anchoring format a new blockchain has to be launched.
 
+### New features
+
+- Introduced a new API method `/v1/block_header_proof/:height` that provides cryptographic
+  proofs for Exonum blocks including those anchored to Bitcoin blockchain.
+  The proof is an apparent evidence of availability of a certain Exonum block
+  in the blockchain (#124).
+
 ### Internal improvements
 
 - Updated to the [Rust-bitcoin 0.13](https://github.com/rust-bitcoin/rust-bitcoin/releases/tag/0.13)
   release (#123).
+
+### Fixed
+
+- Fixed bug with the `nearest_lect` endpoint that sometimes didn't return actual data [ECR-1387] (#125).
 
 ## 0.7 - 2018-04-11
 
@@ -42,18 +91,18 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
-- Fix txid for transactions with the witness data [ECR-986]. (#119)
+- Fix txid for transactions with the witness data [ECR-986] (#119).
   Txid for transactions should be always computed without witness data.
 
 ### Internal improvements
 
-- Implement `Display` for the wrapped bitcoin types. (#119)
+- Implement `Display` for the wrapped bitcoin types (#119).
 
 ## 0.6 - 2018-03-06
 
 ### Breaking changes
 
-- The `network` parameter became named. (#114)
+- The `network` parameter became named (#114).
   Now, to generate template config, run the following command:
 
   ```shell
@@ -64,9 +113,9 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Internal improvements
 
 - Error types now use `failure` instead of `derive-error`,
-  which makes error messages more human-readable. (#115)
+  which makes error messages more human-readable (#115).
 
-- Implemented error codes for incorrect anchoring messages. (#117)
+- Implemented error codes for incorrect anchoring messages (#117).
 
 - Updated to the [Exonum 0.6.0](https://github.com/exonum/exonum/releases/tag/v0.6)
   release (#117).
@@ -102,22 +151,22 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Fixed
 
-- Do not emit panic if lect does not found in bitcoin blockchain. (#88)
+- Do not emit panic if lect does not found in bitcoin blockchain (#88).
 
 ## 0.2 - 2017-09-14
 
 ### Added
 
-- Add `anchoring-observer-check-interval` to clap fabric (#85)
+- Add `anchoring-observer-check-interval` to clap fabric (#85).
 
 ### Changed
 
-- Run rpc tests only if the `rpc_tests` feature enabled. (#84)
-- Update anchoring chain observer configuration layout. (#85)
+- Run rpc tests only if the `rpc_tests` feature enabled (#84).
+- Update anchoring chain observer configuration layout (#85).
 
 ### Fixed
 
-- Fix typo in documentation (#83)
+- Fix typo in documentation (#83).
 
 ## 0.1 - 2017-07-17
 
