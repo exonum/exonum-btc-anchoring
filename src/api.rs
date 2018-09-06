@@ -33,6 +33,13 @@ pub struct FindTransactionQuery {
     pub height: Option<Height>,
 }
 
+/// Block header proof query parameters.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct HeightQuery {
+    /// Exonum block height.
+    pub height: u64,
+}
+
 /// A proof of existence for an anchoring transaction at the given height.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionProof {
@@ -61,14 +68,17 @@ pub struct BlockHeaderProof {
 pub trait PublicApi {
     /// Error type for the current public API implementation
     type Error: Fail;
+
     /// Returns actual anchoring address.
     ///
     /// `GET /{api_prefix}/v1/address/actual`
     fn actual_address(&self, _query: ()) -> Result<btc::Address, Self::Error>;
+
     /// Returns the following anchoring address if the node is in a transition state.
     ///
     /// `GET /{api_prefix}/v1/address/following`
     fn following_address(&self, _query: ()) -> Result<Option<btc::Address>, Self::Error>;
+
     /// Returns for the current anchoring transaction or lookups for the anchoring transaction
     /// with a height greater or equal than the given.
     /// `GET /{api_prefix}/v1/transaction`
@@ -76,6 +86,13 @@ pub trait PublicApi {
         &self,
         query: FindTransactionQuery,
     ) -> Result<Option<TransactionProof>, Self::Error>;
+
+    /// A method that provides cryptographic proofs for Exonum blocks including those anchored to
+    /// Bitcoin blockchain. The proof is an apparent evidence of availability of a certain Exonum
+    /// block in the blockchain.
+    ///
+    /// `GET /{api_prefix}/v1/block_header_proof?height={height}`
+    fn block_header_proof(&self, query: HeightQuery) -> Result<BlockHeaderProof, Self::Error>;
 }
 
 impl PublicApi for ServiceApiState {
@@ -100,7 +117,6 @@ impl PublicApi for ServiceApiState {
         query: FindTransactionQuery,
     ) -> Result<Option<TransactionProof>, Self::Error> {
         let snapshot = self.snapshot();
-        let core_schema = CoreSchema::new(&snapshot);
         let anchoring_schema = BtcAnchoringSchema::new(&snapshot);
         let tx_chain = anchoring_schema.anchoring_transactions_chain();
 
@@ -143,6 +159,7 @@ impl PublicApi for ServiceApiState {
             tx_chain.len() - 1
         };
 
+        let core_schema = CoreSchema::new(&snapshot);
         let max_height = core_schema.block_hashes_by_height().len() - 1;
         let latest_authorized_block = core_schema
             .block_and_precommits(Height(max_height))
@@ -158,6 +175,27 @@ impl PublicApi for ServiceApiState {
             payload: tx_chain.get(tx_index).unwrap().anchoring_payload().unwrap(),
         }))
     }
+
+    fn block_header_proof(&self, query: HeightQuery) -> Result<BlockHeaderProof, Self::Error> {
+        let view = self.snapshot();
+        let core_schema = CoreSchema::new(&view);
+        let anchoring_schema = BtcAnchoringSchema::new(&view);
+
+        let max_height = core_schema.block_hashes_by_height().len() - 1;
+
+        let latest_authorized_block = core_schema
+            .block_and_precommits(Height(max_height))
+            .unwrap();
+        let to_table: MapProof<Hash, Hash> =
+            core_schema.get_proof_to_service_table(BTC_ANCHORING_SERVICE_ID, 3);
+        let to_block_header = anchoring_schema.anchored_blocks().get_proof(query.height);
+
+        Ok(BlockHeaderProof {
+            latest_authorized_block,
+            to_table,
+            to_block_header,
+        })
+    }
 }
 
 pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
@@ -165,5 +203,6 @@ pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
         .public_scope()
         .endpoint("v1/address/actual", ServiceApiState::actual_address)
         .endpoint("v1/address/following", ServiceApiState::following_address)
-        .endpoint("v1/transaction", ServiceApiState::find_transaction);
+        .endpoint("v1/transaction", ServiceApiState::find_transaction)
+        .endpoint("v1/block_header_proof", ServiceApiState::block_header_proof);
 }

@@ -42,6 +42,7 @@ define_names!(
     TRANSACTIONS_CHAIN => "transactions_chain";
     TRANSACTION_SIGNATURES => "transaction_signatures";
     SPENT_FUNDING_TRANSACTIONS => "spent_funding_transactions";
+    ANCHORED_BLOCKS => "anchored_blocks";
 );
 
 /// Information schema for `exonum-btc-anchoring`.
@@ -68,12 +69,18 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         ProofMapIndex::new(TRANSACTION_SIGNATURES, &self.snapshot)
     }
 
+    /// Returns a list of hashes of Exonum blocks headers.
+    pub fn anchored_blocks(&self) -> ProofListIndex<&T, Hash> {
+        ProofListIndex::new(ANCHORED_BLOCKS, &self.snapshot)
+    }
+
     /// Returns hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
         vec![
             self.anchoring_transactions_chain().merkle_root(),
             self.spent_funding_transactions().merkle_root(),
             self.transaction_signatures().merkle_root(),
+            self.anchored_blocks().merkle_root(),
         ]
     }
 
@@ -227,5 +234,12 @@ impl<'a> BtcAnchoringSchema<&'a mut Fork> {
         &mut self,
     ) -> ProofMapIndex<&mut Fork, TxInputId, InputSignatures> {
         ProofMapIndex::new(TRANSACTION_SIGNATURES, &mut self.snapshot)
+    }
+
+    /// Mutable variant of the [`anchored_blocks`][1] index.
+    ///
+    /// [1]: struct.AnchoringSchema.html#method.anchored_blocks
+    pub fn anchored_blocks_mut(&mut self) -> ProofListIndex<&mut Fork, Hash> {
+        ProofListIndex::new("btc_anchoring.anchored_blocks", &mut self.snapshot)
     }
 }

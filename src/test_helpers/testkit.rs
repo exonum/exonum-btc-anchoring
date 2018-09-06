@@ -18,9 +18,12 @@ use failure;
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
 use exonum::api;
-use exonum::blockchain::{BlockProof, Blockchain, StoredConfiguration, Transaction};
+use exonum::blockchain::{
+    BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration, Transaction,
+};
 use exonum::crypto::{CryptoHash, Hash};
 use exonum::encoding::serialize::FromHex;
+use exonum::helpers::Height;
 use exonum::messages::Message;
 use exonum::storage::MapProof;
 use exonum_testkit::{
@@ -33,7 +36,7 @@ use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 use {
-    api::{FindTransactionQuery, PublicApi, TransactionProof},
+    api::{BlockHeaderProof, FindTransactionQuery, HeightQuery, PublicApi, TransactionProof},
     blockchain::{transactions::Signature, BtcAnchoringSchema, BtcAnchoringState},
     btc,
     config::{GlobalConfig, LocalConfig},
@@ -413,6 +416,13 @@ impl AnchoringTestKit {
     pub fn requests(&mut self) -> TestRequests {
         self.requests.clone().unwrap().clone()
     }
+
+    pub fn block_hash_on_height(&self, height: Height) -> Hash {
+        CoreSchema::new(&self.snapshot())
+            .block_hashes_by_height()
+            .get(height.0)
+            .unwrap()
+    }
 }
 
 impl PublicApi for TestKitApi {
@@ -435,6 +445,12 @@ impl PublicApi for TestKitApi {
         self.public(ApiKind::Service(BTC_ANCHORING_SERVICE_NAME))
             .query(&query)
             .get("v1/transaction")
+    }
+
+    fn block_header_proof(&self, query: HeightQuery) -> Result<BlockHeaderProof, Self::Error> {
+        self.public(ApiKind::Service(BTC_ANCHORING_SERVICE_NAME))
+            .query(&query)
+            .get("v1/block_header_proof")
     }
 }
 
@@ -501,5 +517,23 @@ impl ValidateProof for TransactionProof {
         ensure!(values.len() == 1, "Invalid values count");
 
         Ok((values[0].0, values[0].1.clone()))
+    }
+}
+
+impl ValidateProof for BlockHeaderProof {
+    type Output = (u64, Hash);
+
+    fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error> {
+        let proof_entry =
+            validate_table_proof(actual_config, &self.latest_authorized_block, self.to_table)?;
+        let table_location = Blockchain::service_table_unique_key(BTC_ANCHORING_SERVICE_ID, 3);
+        ensure!(proof_entry.0 == table_location, "Invalid table location");
+        // Validates value.
+        let values = self
+            .to_block_header
+            .validate(proof_entry.1, self.latest_authorized_block.block.height().0)
+            .map_err(|e| format_err!("An error occurred {:?}", e))?;
+        ensure!(values.len() == 1, "Invalid values count");
+        Ok((values[0].0, *values[0].1))
     }
 }

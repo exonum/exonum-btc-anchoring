@@ -13,7 +13,9 @@
 // limitations under the License.
 
 use exonum::api::ServiceApiBuilder;
-use exonum::blockchain::{Service, ServiceContext, Transaction, TransactionSet};
+use exonum::blockchain::{
+    Schema as CoreSchema, Service, ServiceContext, Transaction, TransactionSet,
+};
 use exonum::crypto::Hash;
 use exonum::encoding::Error as EncodingError;
 use exonum::messages::RawMessage;
@@ -86,6 +88,17 @@ impl Service for BtcAnchoringService {
 
     fn initialize(&self, _fork: &mut Fork) -> serde_json::Value {
         json!(self.global_config)
+    }
+
+    fn before_commit(&self, fork: &mut Fork) {
+        // Writes a hash of the latest block to the proof list index.
+        let block_header_hash = CoreSchema::new(&fork)
+            .block_hashes_by_height()
+            .last()
+            .expect("An attempt to invoke execute during the genesis block initialization.");
+
+        let mut schema = BtcAnchoringSchema::new(fork);
+        schema.anchored_blocks_mut().push(block_header_hash);
     }
 
     fn after_commit(&self, context: &ServiceContext) {

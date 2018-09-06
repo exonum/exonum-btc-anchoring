@@ -20,15 +20,15 @@ extern crate exonum_testkit;
 extern crate serde_json;
 
 use exonum::helpers::Height;
-use exonum_testkit::TestKitApi;
 use exonum_btc_anchoring::{
-    btc,
-    api::{FindTransactionQuery, PublicApi},
+    api::{FindTransactionQuery, HeightQuery, PublicApi},
     blockchain::BtcAnchoringSchema,
+    btc,
     config::GlobalConfig,
     test_helpers::testkit::{AnchoringTestKit, ValidateProof},
     BTC_ANCHORING_SERVICE_NAME,
 };
+use exonum_testkit::TestKitApi;
 
 const NULL_QUERY: () = ();
 
@@ -132,4 +132,36 @@ fn find_transaction() {
 
     assert_eq!(find_transaction(Some(Height(0))), tx_chain.get(0).unwrap());
     // assert_eq!(find_transaction(None), tx_chain.last().unwrap());
+}
+
+// Tries to get a proof of existence for an anchored block.
+#[test]
+fn block_header_proof() {
+    let validators_num = 4;
+    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
+    // Creates a few anchoring transactions
+    for _ in 0..5 {
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(2)
+            .unwrap();
+        anchoring_testkit.create_block_with_transactions(signatures);
+
+        let next_anchoring_height = anchoring_testkit
+            .actual_anchoring_configuration()
+            .following_anchoring_height(anchoring_testkit.height());
+        anchoring_testkit.create_blocks_until(next_anchoring_height);
+    }
+
+    let api = anchoring_testkit.api();
+    let cfg = anchoring_testkit.actual_configuration();
+    // Checks proof for the genesis block.
+    let genesis_block_proof = api.block_header_proof(HeightQuery { height: 0 }).unwrap();
+    let value = genesis_block_proof.validate(&cfg).unwrap();
+    assert_eq!(value.0, 0);
+    assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(0)));
+    // Checks proof for the second block.
+    let second_block_proof = api.block_header_proof(HeightQuery { height: 10 }).unwrap();
+    let value = second_block_proof.validate(&cfg).unwrap();
+    assert_eq!(value.0, 10);
+    assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(10)));
 }
