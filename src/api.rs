@@ -30,7 +30,7 @@ use BTC_ANCHORING_SERVICE_ID;
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct FindTransactionQuery {
     /// Exonum block height.
-    height: Option<Height>,
+    pub height: Option<Height>,
 }
 
 /// A proof of existence for an anchoring transaction at the given height.

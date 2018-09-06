@@ -14,11 +14,18 @@
 
 use bitcoin::{self, network::constants::Network, util::address::Address};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
+use failure;
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
-use exonum::blockchain::Transaction;
+use exonum::api;
+use exonum::blockchain::{BlockProof, Blockchain, StoredConfiguration, Transaction};
+use exonum::crypto::{CryptoHash, Hash};
 use exonum::encoding::serialize::FromHex;
-use exonum_testkit::{TestKit, TestKitBuilder, TestNetworkConfiguration, TestNode};
+use exonum::messages::Message;
+use exonum::storage::MapProof;
+use exonum_testkit::{
+    ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration, TestNode,
+};
 
 use std::env;
 use std::ops::{Deref, DerefMut};
@@ -26,13 +33,14 @@ use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 use {
+    api::{FindTransactionQuery, PublicApi, TransactionProof},
     blockchain::{transactions::Signature, BtcAnchoringSchema, BtcAnchoringState},
     btc,
     config::{GlobalConfig, LocalConfig},
     rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
     service::KeyPool,
     test_helpers::rpc::*,
-    BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME,
+    BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME,
 };
 
 /// Generates a fake funding transaction.
@@ -306,20 +314,17 @@ impl AnchoringTestKit {
     }
 
     pub fn redeem_script(&self) -> RedeemScript {
-        let fork = self.blockchain().fork();
-        let schema = BtcAnchoringSchema::new(fork);
+        self.actual_anchoring_configuration().redeem_script()
+    }
 
-        schema.actual_state().actual_configuration().redeem_script()
+    pub fn actual_anchoring_configuration(&self) -> GlobalConfig {
+        let snapshot = self.blockchain().snapshot();
+        let schema = BtcAnchoringSchema::new(snapshot);
+        schema.actual_configuration()
     }
 
     pub fn anchoring_address(&self) -> btc::Address {
-        let fork = self.blockchain().fork();
-        let schema = BtcAnchoringSchema::new(fork);
-
-        schema
-            .actual_state()
-            .actual_configuration()
-            .anchoring_address()
+        self.actual_anchoring_configuration().anchoring_address()
     }
 
     pub fn rpc_client(&self) -> BitcoinRpcClient {
@@ -407,5 +412,94 @@ impl AnchoringTestKit {
 
     pub fn requests(&mut self) -> TestRequests {
         self.requests.clone().unwrap().clone()
+    }
+}
+
+impl PublicApi for TestKitApi {
+    type Error = api::Error;
+
+    fn actual_address(&self, _query: ()) -> Result<btc::Address, Self::Error> {
+        self.public(ApiKind::Service(BTC_ANCHORING_SERVICE_NAME))
+            .get("v1/address/actual")
+    }
+
+    fn following_address(&self, _query: ()) -> Result<Option<btc::Address>, Self::Error> {
+        self.public(ApiKind::Service(BTC_ANCHORING_SERVICE_NAME))
+            .get("v1/address/following")
+    }
+
+    fn find_transaction(
+        &self,
+        query: FindTransactionQuery,
+    ) -> Result<Option<TransactionProof>, Self::Error> {
+        self.public(ApiKind::Service(BTC_ANCHORING_SERVICE_NAME))
+            .query(&query)
+            .get("v1/transaction")
+    }
+}
+
+fn validate_table_proof(
+    actual_config: &StoredConfiguration,
+    latest_authorized_block: &BlockProof,
+    to_table: MapProof<Hash, Hash>,
+) -> Result<(Hash, Hash), failure::Error> {
+    // Checks precommits.
+    for precommit in &latest_authorized_block.precommits {
+        let validator_id = precommit.validator().0 as usize;
+        let validator_keys = actual_config
+            .validator_keys
+            .get(validator_id)
+            .ok_or_else(|| {
+                format_err!(
+                    "Unable to find validator with the given id: {}",
+                    validator_id
+                )
+            })?;
+        ensure!(
+            precommit.verify_signature(&validator_keys.consensus_key),
+            "Precommit verification failed"
+        );
+        ensure!(
+            precommit.block_hash() == &latest_authorized_block.block.hash(),
+            "Block hash doesn't match"
+        );
+    }
+
+    // Checks state_hash.
+    let checked_table_proof = to_table.check()?;
+    ensure!(
+        checked_table_proof.merkle_root() == *latest_authorized_block.block.state_hash(),
+        "State hash doesn't match"
+    );
+    checked_table_proof
+        .entries()
+        .get(0)
+        .cloned()
+        .map(|(a, b)| (*a, *b))
+        .ok_or_else(|| format_err!("Unable to get `to_block_header` entry"))
+}
+
+pub trait ValidateProof {
+    type Output;
+
+    fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error>;
+}
+
+impl ValidateProof for TransactionProof {
+    type Output = (u64, btc::Transaction);
+
+    fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error> {
+        let proof_entry =
+            validate_table_proof(actual_config, &self.latest_authorized_block, self.to_table)?;
+        let table_location = Blockchain::service_table_unique_key(BTC_ANCHORING_SERVICE_ID, 0);
+        ensure!(proof_entry.0 == table_location, "Invalid table location");
+        // Validates value.
+        let values = self
+            .to_transaction
+            .validate(proof_entry.1, self.latest_authorized_block.block.height().0)
+            .map_err(|e| format_err!("An error occurred {:?}", e))?;
+        ensure!(values.len() == 1, "Invalid values count");
+
+        Ok((values[0].0, values[0].1.clone()))
     }
 }
