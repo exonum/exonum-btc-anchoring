@@ -28,7 +28,6 @@ use exonum_btc_anchoring::{
     test_helpers::testkit::{AnchoringTestKit, ValidateProof},
     BTC_ANCHORING_SERVICE_NAME,
 };
-use exonum_testkit::TestKitApi;
 
 const NULL_QUERY: () = ();
 
@@ -69,8 +68,6 @@ fn following_address() {
             .unwrap(),
         None
     );
-
-    let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
 
     let signatures = anchoring_testkit
         .create_signature_tx_for_validators(4)
@@ -131,7 +128,13 @@ fn find_transaction() {
     let tx_chain = anchoring_schema.anchoring_transactions_chain();
 
     assert_eq!(find_transaction(Some(Height(0))), tx_chain.get(0).unwrap());
-    // assert_eq!(find_transaction(None), tx_chain.last().unwrap());
+    assert_eq!(find_transaction(Some(Height(3))), tx_chain.get(1).unwrap());
+    assert_eq!(find_transaction(Some(Height(4))), tx_chain.get(1).unwrap());
+    assert_eq!(
+        find_transaction(Some(Height(1000))),
+        tx_chain.get(4).unwrap()
+    );
+    assert_eq!(find_transaction(None), tx_chain.last().unwrap());
 }
 
 // Tries to get a proof of existence for an anchored block.
@@ -160,8 +163,8 @@ fn block_header_proof() {
     assert_eq!(value.0, 0);
     assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(0)));
     // Checks proof for the second block.
-    let second_block_proof = api.block_header_proof(HeightQuery { height: 10 }).unwrap();
+    let second_block_proof = api.block_header_proof(HeightQuery { height: 4 }).unwrap();
     let value = second_block_proof.validate(&cfg).unwrap();
-    assert_eq!(value.0, 10);
-    assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(10)));
+    assert_eq!(value.0, 4);
+    assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(4)));
 }

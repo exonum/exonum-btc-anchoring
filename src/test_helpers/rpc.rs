@@ -63,7 +63,7 @@ pub struct FakeBtcRelay {
     rpc: BitcoinRpcConfig,
 }
 
-#[cfg_attr(feature = "cargo-clippy", allow(unused_variables, expect_fun_call))]
+#[cfg_attr(feature = "cargo-clippy", allow(unused_variables))]
 impl FakeBtcRelay {
     fn request(&self, request: &FakeRelayRequest) -> FakeRelayResponse {
         let (expected_request, response) = self
@@ -72,7 +72,7 @@ impl FakeBtcRelay {
             .lock()
             .unwrap()
             .pop_front()
-            .expect(format!("expected request {:?}", request).as_str());
+            .unwrap_or_else(|| panic!("expected request {:?}", request));
 
         assert_eq!(request, &expected_request);
 

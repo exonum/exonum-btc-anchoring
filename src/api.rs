@@ -49,8 +49,8 @@ pub struct TransactionProof {
     pub to_table: MapProof<Hash, Hash>,
     /// Proof for the specific transaction in this table.
     pub to_transaction: ListProof<btc::Transaction>,
-    /// Anchoring transaction payload.
-    pub payload: btc::Payload,
+    /// Anchoring transactions total count.
+    pub transactions_count: u64,
 }
 
 /// A proof of existence for an anchored or a non-anchored Exonum block at the given height.
@@ -120,7 +120,7 @@ impl PublicApi for ServiceApiState {
         let anchoring_schema = BtcAnchoringSchema::new(&snapshot);
         let tx_chain = anchoring_schema.anchoring_transactions_chain();
 
-        if tx_chain.len() == 0 {
+        if tx_chain.is_empty() {
             return Ok(None);
         }
 
@@ -172,7 +172,7 @@ impl PublicApi for ServiceApiState {
             latest_authorized_block,
             to_table,
             to_transaction,
-            payload: tx_chain.get(tx_index).unwrap().anchoring_payload().unwrap(),
+            transactions_count: tx_chain.len(),
         }))
     }
 

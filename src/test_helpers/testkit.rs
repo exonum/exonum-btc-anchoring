@@ -53,7 +53,7 @@ pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -
     let mut data = [0u8; 32];
     rng.fill_bytes(&mut data);
     // Creates fake funding transaction
-    let tx = bitcoin::Transaction {
+    bitcoin::Transaction {
         version: 2,
         lock_time: 0,
         input: vec![bitcoin::TxIn {
@@ -69,8 +69,7 @@ pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -
             value,
             script_pubkey: address.script_pubkey(),
         }],
-    }.into();
-    tx
+    }.into()
 }
 
 pub fn gen_anchoring_config<R: Rng>(
@@ -512,7 +511,7 @@ impl ValidateProof for TransactionProof {
         // Validates value.
         let values = self
             .to_transaction
-            .validate(proof_entry.1, self.latest_authorized_block.block.height().0)
+            .validate(proof_entry.1, self.transactions_count)
             .map_err(|e| format_err!("An error occurred {:?}", e))?;
         ensure!(values.len() == 1, "Invalid values count");
 
