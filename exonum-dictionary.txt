@@ -1,3 +1,4 @@
+actix
 addrs
 amqvim
 ARQF
@@ -85,8 +86,8 @@ libsodium
 libssl
 listunspent
 locktime
-Mainnet
 mainnet
+Mainnet
 maintainer's
 maplit
 markdownlint
@@ -141,8 +142,8 @@ pubkeys
 PUSHBYTES
 readonly
 reddit
-Regtest
 regtest
+Regtest
 reimplemented
 repr
 reqwest
