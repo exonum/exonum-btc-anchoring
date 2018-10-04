@@ -28,6 +28,7 @@ use blockchain::{BtcAnchoringSchema, BtcAnchoringState};
 use btc::{Address, Privkey};
 use rpc::BtcRelay;
 
+/// The goal of this task is to create anchoring transactions for the corresponding heights.
 pub struct UpdateAnchoringChainTask<'a> {
     context: &'a ServiceContext,
     anchoring_state: BtcAnchoringState,
@@ -35,6 +36,7 @@ pub struct UpdateAnchoringChainTask<'a> {
 }
 
 impl<'a> UpdateAnchoringChainTask<'a> {
+    /// Creates the anchoring chain updater for the given context and private keys.
     pub fn new(
         context: &'a ServiceContext,
         private_keys: &'a HashMap<Address, Privkey>,
@@ -46,6 +48,8 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         }
     }
 
+    /// For validators this method creates an exonum transaction with the signature for 
+    /// the corresponding anchoring transaction if there is such a need.
     pub fn run(self) -> Result<(), failure::Error> {
         if let Some(validator_id) = self.context.validator_id() {
             let address = self.anchoring_state.output_address();
@@ -137,10 +141,12 @@ impl<'a> UpdateAnchoringChainTask<'a> {
     }
 
     fn handle_as_auditor(self) -> Result<(), failure::Error> {
-        unimplemented!();
+        // TODO Think about corresponding business logic.
+        Ok(())
     }
 }
 
+/// The goal of this task is to push uncommitted anchoring transactions to the bitcoin blockchain.
 #[derive(Debug)]
 pub struct SyncWithBtcRelayTask<'a> {
     context: &'a ServiceContext,
@@ -148,10 +154,14 @@ pub struct SyncWithBtcRelayTask<'a> {
 }
 
 impl<'a> SyncWithBtcRelayTask<'a> {
+    /// Creates sync task instance for the given context and the bitcoin rpc relay.
     pub fn new(context: &'a ServiceContext, relay: &'a dyn BtcRelay) -> SyncWithBtcRelayTask<'a> {
         SyncWithBtcRelayTask { context, relay }
     }
 
+    /// Performs anchoring transactions syncrhonization with the bitcoin blockchain.
+    /// That is it finds the first uncommitted anchoring transaction in the bitcoin 
+    /// blockchain and sequentially sends it and the subsequent ones to the bitcoin mempool.
     pub fn run(self) -> Result<(), failure::Error> {
         let schema = BtcAnchoringSchema::new(self.context.snapshot());
         let sync_interval = cmp::max(1, schema.actual_configuration().anchoring_interval / 2);

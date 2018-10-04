@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-pub use self::payload::{Payload, PayloadBuilder};
+pub use self::payload::{Payload};
 pub use self::transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 
 use bitcoin::network::constants::Network;
@@ -25,8 +25,8 @@ use std::ops::Deref;
 #[macro_use]
 mod macros;
 
-pub mod payload;
-pub mod transaction;
+pub(crate) mod payload;
+pub(crate) mod transaction;
 
 /// A Bitcoin ECDSA private key wrapper.
 #[derive(Clone, From, Into, PartialEq, Eq)]

@@ -14,8 +14,9 @@ use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
 use btc_transaction_utils::multisig::RedeemScript;
 
-use super::{Payload, PayloadBuilder};
+use super::{Payload, payload::PayloadBuilder};
 
+/// A Bitcoin transaction wrapper.
 #[derive(Debug, Clone, From, Into, PartialEq)]
 pub struct Transaction(pub transaction::Transaction);
 
@@ -28,6 +29,7 @@ impl AsRef<transaction::Transaction> for Transaction {
 }
 
 impl Transaction {
+    /// Returns the bitcoin transaction identifier.
     pub fn id(&self) -> Hash {
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(&self.0.txid()[..]);
@@ -35,6 +37,7 @@ impl Transaction {
         Hash::new(bytes)
     }
 
+    /// Returns the previous anchoring transaction identifier.
     pub fn prev_tx_id(&self) -> Hash {
         let mut bytes = [0u8; 32];
         bytes.copy_from_slice(&self.0.input[0].previous_output.txid[..]);
@@ -42,6 +45,7 @@ impl Transaction {
         Hash::new(bytes)
     }
 
+    /// Find output number for the given script pubkey.
     pub fn find_out(&self, script_pubkey: &Script) -> Option<(usize, &TxOut)> {
         self.0
             .output
@@ -50,22 +54,28 @@ impl Transaction {
             .find(|out| &out.1.script_pubkey == script_pubkey)
     }
 
+    /// Returns the anchoring payload for the transaction if it is the anchoring transaction.
     pub fn anchoring_payload(&self) -> Option<Payload> {
         let out = self.0.output.get(1)?;
         Payload::from_script(&out.script_pubkey)
     }
 
+    /// Returns the complete metainformation for the transaction
+    /// if it is the anchoring transaction.
     pub fn anchoring_metadata(&self) -> Option<(&Script, Payload)> {
         let payload = self.anchoring_payload()?;
         let script_pubkey = self.0.output.get(0).map(|out| &out.script_pubkey)?;
         Some((script_pubkey, payload))
     }
 
+    /// Returns the total available amount for the transaction
+    /// if it is the anchoring transaction.
     pub fn unspent_value(&self) -> Option<u64> {
         self.0.output.get(0).map(|out| out.value)
     }
 }
 
+/// Builder for the anchoring transactions.
 #[derive(Debug)]
 pub struct BtcAnchoringTransactionBuilder {
     script_pubkey: Script,
@@ -77,24 +87,35 @@ pub struct BtcAnchoringTransactionBuilder {
     payload: Option<(Height, Hash)>,
 }
 
+/// Anchoring transaction builder errors.
 #[derive(Debug, Copy, Clone, PartialEq, Display, Fail)]
 pub enum BuilderError {
+    /// Insufficient funds to construct a new anchoring transaction.
     #[display(
         fmt = "Insufficient funds to construct a new anchoring transaction,\
                total fee is {}, total balance is {}",
         _0,
         _1
     )]
-    InsufficientFunds { total_fee: u64, balance: u64 },
+    InsufficientFunds {
+        /// Total transaction fee.
+        total_fee: u64,
+        /// Available balance.
+        balance: u64,
+    },
+    /// At least one input should be provided.
     #[display(fmt = "At least one input should be provided.")]
     NoInputs,
+    /// Output address in a previous anchoring transaction is not suitable.
     #[display(fmt = "Output address in a previous anchoring transaction is not suitable.")]
     UnsuitableOutput,
+    /// Funding transaction doesn't contains outputs to the anchoring address.
     #[display(fmt = "Funding transaction doesn't contains outputs to the anchoring address.")]
     UnsuitableFundingTx,
 }
 
 impl BtcAnchoringTransactionBuilder {
+    /// Creates a new btc anchoring transaction builder for the given redeem script.
     pub fn new(redeem_script: &RedeemScript) -> BtcAnchoringTransactionBuilder {
         BtcAnchoringTransactionBuilder {
             script_pubkey: redeem_script.as_ref().to_v0_p2wsh(),
@@ -107,10 +128,13 @@ impl BtcAnchoringTransactionBuilder {
         }
     }
 
+    /// Marks anchoring transaction as transition to the given address.
     pub fn transit_to(&mut self, script: Script) {
         self.transit_to = Some(script);
     }
 
+    /// Sets an transaction which corresponding unspent output will use
+    /// as input for the following anchoring transaction.
     pub fn prev_tx(&mut self, tx: Transaction) -> Result<(), BuilderError> {
         if tx.anchoring_metadata().unwrap().0 != &self.script_pubkey {
             Err(BuilderError::UnsuitableOutput)
@@ -120,10 +144,14 @@ impl BtcAnchoringTransactionBuilder {
         }
     }
 
+    /// Set a transaction identifier of the latest transaction of the
+    /// corrupted anchoring chain.
     pub fn recover(&mut self, last_tx: Hash) {
         self.recovery_tx = Some(last_tx);
     }
 
+    /// Add an additional funding transaction which corresponding unspent output
+    /// will use as additional input for the following anchoring transaction.
     pub fn additional_funds(&mut self, tx: Transaction) -> Result<(), BuilderError> {
         let out = tx
             .find_out(&self.script_pubkey)
@@ -133,14 +161,18 @@ impl BtcAnchoringTransactionBuilder {
         Ok(())
     }
 
+    /// Sets the fee per byte value.
     pub fn fee(&mut self, fee: u64) {
         self.fee = Some(fee);
     }
 
+    /// Sets the anchoring transaction payload.
     pub fn payload(&mut self, block_height: Height, block_hash: Hash) {
         self.payload = Some((block_height, block_hash));
     }
 
+    /// Finalizes the anchoring transaction and returns
+    /// it and also the list of input transactions.
     pub fn create(mut self) -> Result<(Transaction, Vec<Transaction>), BuilderError> {
         // Creates transaction inputs.
         let (input, input_transactions, balance) = {
@@ -386,8 +418,8 @@ mod tests {
             "020ae2216f42575c4196864eda0252c75c61273065f691b32be9a99cb2a3c9b4d1",
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ].iter()
-            .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
-            .collect::<Vec<_>>();
+        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .collect::<Vec<_>>();
 
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)
             .to_script()
@@ -453,8 +485,8 @@ mod tests {
             "020ae2216f42575c4196864eda0252c75c61273065f691b32be9a99cb2a3c9b4d1",
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ].iter()
-            .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
-            .collect::<Vec<_>>();
+        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .collect::<Vec<_>>();
 
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)
             .to_script()
@@ -500,8 +532,8 @@ mod tests {
             "020ae2216f42575c4196864eda0252c75c61273065f691b32be9a99cb2a3c9b4d1",
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ].iter()
-            .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
-            .collect::<Vec<_>>();
+        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .collect::<Vec<_>>();
 
         let prev_tx: Transaction = Transaction::from_hex(
             "01000000000101348ead2317da8c6ae12305af07e33b8c0320c9319f21007a704e44f32e7a75500000000\
@@ -547,8 +579,8 @@ mod tests {
             "020ae2216f42575c4196864eda0252c75c61273065f691b32be9a99cb2a3c9b4d1",
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ].iter()
-            .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
-            .collect::<Vec<_>>();
+        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .collect::<Vec<_>>();
 
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)
             .to_script()

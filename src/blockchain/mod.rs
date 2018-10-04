@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Blockchain implementation details for the btc anchoring service.
+
 pub use self::schema::BtcAnchoringSchema;
 pub use self::transactions::Transactions;
 

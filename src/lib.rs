@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#![warn(missing_docs)]
 #![deny(missing_debug_implementations, unsafe_code)]
 
 #[macro_use]

@@ -41,7 +41,6 @@ pub trait BtcRelay: Send + Sync + ::std::fmt::Debug {
     fn send_transaction(&self, transaction: &Transaction) -> Result<Hash, failure::Error>;
     /// Observes the changes on given address.
     fn watch_address(&self, addr: &Address, rescan: bool) -> Result<(), failure::Error>;
-
     /// Returns an actual relay configuration.
     fn config(&self) -> BitcoinRpcConfig;
 }
