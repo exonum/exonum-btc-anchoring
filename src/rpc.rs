@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Collections of helpers for synchronization with the Bitcoin network.
+
 use exonum::crypto::Hash;
 use exonum::encoding::serialize::FromHex;
 
@@ -67,6 +69,7 @@ const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 pub struct BitcoinRpcClient(bitcoin_rpc::Client);
 
 impl BitcoinRpcClient {
+    /// Creates a new rpc client for the given configuration.
     pub fn new(config: BitcoinRpcConfig) -> BitcoinRpcClient {
         let inner = bitcoin_rpc::Client::new(config.host, config.username, config.password);
         BitcoinRpcClient(inner)

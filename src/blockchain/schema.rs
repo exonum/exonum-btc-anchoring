@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Information schema for the btc anchoring service.
+
 use exonum::blockchain::{Schema, StoredConfiguration};
 use exonum::crypto::Hash;
 use exonum::helpers::Height;
@@ -57,14 +59,17 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         BtcAnchoringSchema { snapshot }
     }
 
+    /// Returns table that contains complete chain of the anchoring transactions.
     pub fn anchoring_transactions_chain(&self) -> ProofListIndex<&T, Transaction> {
         ProofListIndex::new(TRANSACTIONS_CHAIN, &self.snapshot)
     }
 
+    /// Returns the table that contnains already spent funding transactions.
     pub fn spent_funding_transactions(&self) -> ProofMapIndex<&T, Hash, Transaction> {
         ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, &self.snapshot)
     }
 
+    /// Returns the table that contains signatures for the given transaction input.
     pub fn transaction_signatures(&self) -> ProofMapIndex<&T, TxInputId, InputSignatures> {
         ProofMapIndex::new(TRANSACTION_SIGNATURES, &self.snapshot)
     }
@@ -97,6 +102,7 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         Self::parse_config(&following_configuration)
     }
 
+    /// Returns the list of signatures for the given transaction input.
     pub fn input_signatures(
         &self,
         input: &TxInputId,
@@ -107,6 +113,7 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         })
     }
 
+    /// Returns the actual state of anchoring.
     pub fn actual_state(&self) -> BtcAnchoringState {
         let actual_configuration = self.actual_configuration();
         if let Some(following_configuration) = self.following_configuration() {
@@ -123,6 +130,7 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         }
     }
 
+    /// Returns the proposal of next anchoring transaction for the given anchoring state.
     pub fn proposed_anchoring_transaction(
         &self,
         actual_state: &BtcAnchoringState,
@@ -183,6 +191,7 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         Some(builder.create())
     }
 
+    /// Returns the proposal of next anchoring transaction for the actual anchoring state.
     pub fn actual_proposed_anchoring_transaction(
         &self,
     ) -> Option<Result<(Transaction, Vec<Transaction>), BuilderError>> {
@@ -190,6 +199,7 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         self.proposed_anchoring_transaction(&actual_state)
     }
 
+    /// Returns the unspent funding transaction if it is exist.
     pub fn unspent_funding_transaction(&self) -> Option<Transaction> {
         let tx_candidate = self.actual_configuration().funding_transaction?;
         let txid = tx_candidate.id();
@@ -200,6 +210,7 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         }
     }
 
+    /// Returns the height of the latest anchored block.
     pub fn latest_anchored_height(&self) -> Option<Height> {
         let tx = self.anchoring_transactions_chain().last()?;
         Some(
@@ -220,16 +231,25 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
 }
 
 impl<'a> BtcAnchoringSchema<&'a mut Fork> {
+    /// Mutable variant of the [`anchoring_transactions_chain`][1] index.
+    ///
+    /// [1]: struct.AnchoringSchema.html#method.anchoring_transactions_chain_mut
     pub fn anchoring_transactions_chain_mut(&mut self) -> ProofListIndex<&mut Fork, Transaction> {
         ProofListIndex::new(TRANSACTIONS_CHAIN, &mut self.snapshot)
     }
 
+    /// Mutable variant of the [`spent_funding_transactions`][1] index.
+    ///
+    /// [1]: struct.AnchoringSchema.html#method.spent_funding_transactions
     pub fn spent_funding_transactions_mut(
         &mut self,
     ) -> ProofMapIndex<&mut Fork, Hash, Transaction> {
         ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, &mut self.snapshot)
     }
 
+    /// Mutable variant of the [`anchored_blocks`][1] index.
+    ///
+    /// [1]: struct.AnchoringSchema.html#method.anchored_blocks
     pub fn transaction_signatures_mut(
         &mut self,
     ) -> ProofMapIndex<&mut Fork, TxInputId, InputSignatures> {

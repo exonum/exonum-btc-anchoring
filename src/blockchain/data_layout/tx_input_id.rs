@@ -19,13 +19,18 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use std::io::{Cursor, Read, Write};
 
+/// Unique identifier of the input for the transaction with the
+/// given identifier.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TxInputId {
+    /// Transaction identifier.
     pub txid: Hash,
+    /// Transaction input index.
     pub input: u32,
 }
 
 impl TxInputId {
+    /// Creates a new identifier.
     pub fn new(txid: Hash, input: u32) -> TxInputId {
         TxInputId { txid, input }
     }

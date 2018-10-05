@@ -12,6 +12,49 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! # Introduction
+//!
+//! Private blockchain infrastructure necessitates additional measures for
+//! accountability of the blockchain validators.
+//! In public proof of work blockchains (e.g., Bitcoin), accountability is purely economic and is
+//! based on game theory and equivocation or retroactive modifications being economically costly.
+//! Not so in private blockchains, where these two behaviors
+//! are a real threat per any realistic threat model that assumes
+//! that the blockchain is of use not only to the system validators,
+//! but also to third parties.
+//!
+//! This crate implements a protocol for blockchain anchoring onto the Bitcoin blockchain
+//! that utilizes the native Bitcoin capabilities of creating multisig([p2sh][1]) transactions.
+//! This transactions contains metadata from Exonum blockchain (block's hash on corresponding
+//! height) and forms a chain.
+//!
+//! You can read the details in [specification][2].
+//!
+//! [1]: https://bitcoin.org/en/glossary/p2sh-multisig
+//! [2]: https://github.com/exonum/exonum-doc/blob/master/src/advanced/bitcoin-anchoring.md
+//!
+//! # Examples
+//!
+//! Create application with anchoring service
+//!
+//! ```rust,no_run
+//! extern crate exonum;
+//! extern crate exonum_btc_anchoring as anchoring;
+//! extern crate exonum_configuration as configuration;
+//! use exonum::helpers::fabric::NodeBuilder;
+//! use exonum::helpers;
+//!
+//! fn main() {
+//!     exonum::crypto::init();
+//!     helpers::init_logger().unwrap();
+//!     let node = NodeBuilder::new()
+//!        .with_service(Box::new(configuration::ServiceFactory))
+//!        .with_service(Box::new(anchoring::ServiceFactory));
+//!     node.run();
+//! }
+//! ```
+//!
+
 #![warn(missing_docs)]
 #![deny(missing_debug_implementations, unsafe_code)]
 
@@ -62,9 +105,9 @@ pub mod api;
 pub mod blockchain;
 pub mod btc;
 pub mod config;
-pub mod factory;
+pub(crate) mod factory;
 pub mod rpc;
-pub mod service;
+pub(crate) mod service;
 
 pub mod test_helpers;
 

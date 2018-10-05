@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Set of helpers for btc anchoring testing.
+
 #[macro_use]
 pub mod rpc;
 pub mod testkit;

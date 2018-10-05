@@ -20,31 +20,37 @@ use std::borrow::Cow;
 use std::iter::{FilterMap, IntoIterator};
 use std::vec::IntoIter;
 
+/// A set of signatures for a transaction input ordered by the validators identifiers.
 #[derive(Debug, Clone, PartialEq)]
 pub struct InputSignatures {
     content: Vec<Option<Vec<u8>>>,
 }
 
 impl InputSignatures {
+    /// Creates an empty signatures set for the given validators count.
     pub fn new(validators_count: u16) -> InputSignatures {
         let content = vec![None; validators_count as usize];
         InputSignatures { content }
     }
 
+    /// Inserts a signature from the validator with the given id.
     pub fn insert(&mut self, id: ValidatorId, signature: Vec<u8>) {
         let index = id.0 as usize;
         self.content[index] = Some(signature);
     }
 
+    /// Checks the existence of a signature from the validator with the given id.
     pub fn contains(&self, id: ValidatorId) -> bool {
         let index = id.0 as usize;
         self.content[index].is_some()
     }
 
+    /// Returns the total count of signatures.
     pub fn len(&self) -> usize {
         self.content.iter().filter(|x| x.is_some()).count()
     }
 
+    /// Checks that signatures set doesn't empty.
     pub fn is_empty(&self) -> bool {
         self.content.iter().any(|x| x.is_some())
     }

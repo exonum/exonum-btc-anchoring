@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Helpers for the bitcoin rpc testing.
+
 use bitcoin::util::address::Address;
 
 use std::collections::VecDeque;
@@ -26,39 +28,67 @@ use rpc::{BitcoinRpcConfig, BtcRelay, TransactionInfo as BtcTransactionInfo};
 
 const UNEXPECTED_RESPONSE: &str = "Unexpected response. Error in test data.";
 
+/// Possible rpc requests.
 #[derive(Debug, PartialEq)]
 pub enum FakeRelayRequest {
-    SendToAddress { addr: Address, satoshis: u64 },
-    TransactionInfo { id: Hash },
-    SendTransaction { transaction: btc::Transaction },
-    WatchAddress { addr: Address, rescan: bool },
+    /// Send some satoshis to the given address request.
+    SendToAddress {
+        /// Bitcoin address.
+        addr: Address,
+        /// Amount in satoshis.
+        satoshis: u64 },
+    /// Transaction information request.
+    TransactionInfo {
+        /// Transaction id.
+        id: Hash },
+    /// Send transaction to bitcoin mempool request.
+    SendTransaction {
+        /// Raw bitcoin transaction
+        transaction: btc::Transaction },
+    /// Observe changes on given address request.
+    WatchAddress {
+        /// Bitcoin address.
+        addr: Address,
+        /// Full blockchain rescan option.
+        rescan: bool },
 }
 
+/// Possible rpc responses.
 #[derive(Debug)]
 pub enum FakeRelayResponse {
+    /// Response to the send to address request.
     SendToAddress(Result<btc::Transaction, failure::Error>),
+    /// Response to the transaction info request.
     TransactionInfo(Result<Option<BtcTransactionInfo>, failure::Error>),
+    /// Response to the send transaction request.
     SendTransaction(Result<Hash, failure::Error>),
+    /// Response to the watch address request.
     WatchAddress(Result<(), failure::Error>),
 }
 
+/// Request response pair.
 pub type TestRequest = (FakeRelayRequest, FakeRelayResponse);
 
+/// Shared requests list.
 #[derive(Debug, Clone, Default)]
 pub struct TestRequests(Arc<Mutex<VecDeque<TestRequest>>>);
 
 impl TestRequests {
+    /// Creates a new shared requests instance.
     pub fn new() -> TestRequests {
         TestRequests(Arc::new(Mutex::new(VecDeque::new())))
     }
 
+    /// The following requests are expecting
     pub fn expect(&self, requests: impl IntoIterator<Item = TestRequest>) {
         self.0.lock().unwrap().extend(requests);
     }
 }
 
+/// Fake btc relay client.
 #[derive(Debug, Default)]
 pub struct FakeBtcRelay {
+    /// List of the expected requests.
     pub requests: TestRequests,
     rpc: BitcoinRpcConfig,
 }

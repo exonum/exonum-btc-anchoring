@@ -12,44 +12,70 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Error types of the btc anchoring service.
+
 use btc;
 use exonum::blockchain::ExecutionError;
 use exonum::crypto::Hash;
 use exonum::helpers::ValidatorId;
 
+/// Possible errors during execution of the `Signature` transaction.
 #[derive(Debug, Fail)]
 pub enum SignatureError {
+    /// Received signature for the incorrect anchoring transaction.
     #[fail(
         display = "Received signature for the incorrect anchoring transaction. Expected: {}. Received: {}.",
         expected_id,
         received_id
     )]
     Unexpected {
+        /// Expected id of anchoring transaction.
         expected_id: Hash,
+        /// Actually received id of anchoring transaction.
         received_id: Hash,
     },
+    /// Received signature for anchoring transaction while in transition state.
     #[fail(display = "Received signature for anchoring transaction while in transition state.")]
     InTransition,
+    /// Public key of validator with the given id is missing.
     #[fail(display = "Public key of validator {} is missing.", _0)]
-    MissingPublicKey { validator_id: ValidatorId },
+    MissingPublicKey {
+        /// Validator id.
+        validator_id: ValidatorId,
+    },
+    /// Input with the given index doesn't exist.
     #[fail(display = "Input with index {} doesn't exist.", _0)]
-    NoSuchInput { idx: usize },
+    NoSuchInput {
+        /// Input index.
+        idx: usize,
+    },
+    /// Signature verification failed.
     #[fail(display = "Signature verification failed.")]
     VerificationFailed,
+    /// An error in transaction builder occurred.
     #[fail(display = "{}", _0)]
     TxBuilderError(btc::BuilderError),
+    /// An unknown error occurred.
     #[fail(display = "Unknown error")]
     UnknownError,
 }
 
+/// Error codes for the btc anchoring transactions.
 #[derive(Debug)]
 pub enum ErrorCode {
+    /// [description](SignatureError.t.html#variant.Unexpected)
     Unexpected = 1,
+    /// [description](SignatureError.t.html#variant.InTransition)
     InTransition = 2,
+    /// [description](SignatureError.t.html#variant.MissingPublicKey)
     MissingPublicKey = 3,
+    /// [description](SignatureError.t.html#variant.NoSuchInput)
     NoSuchInput = 4,
+    /// [description](SignatureError.t.html#variant.VerificationFailed)
     VerificationFailed = 5,
+    /// [description](SignatureError.t.html#variant.TxBuilderError)
     TxBuilderError = 6,
+    /// [description](SignatureError.t.html#variant.UnknownError)
     UnknownError = 255,
 }
 

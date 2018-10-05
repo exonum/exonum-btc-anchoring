@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Btc anchoring transactions.
+
 use exonum::blockchain::{ExecutionResult, Transaction};
 use exonum::crypto::PublicKey;
 use exonum::helpers::ValidatorId;
@@ -29,6 +31,7 @@ use super::errors::SignatureError;
 use super::BtcAnchoringSchema;
 
 transactions! {
+    /// Exonum btc anchoring transactions.
     pub Transactions {
         const SERVICE_ID = BTC_ANCHORING_SERVICE_ID;
 
@@ -49,6 +52,7 @@ transactions! {
 }
 
 impl Signature {
+    /// Returns identifier of the signed transaction input.
     pub fn input_id(&self) -> TxInputId {
         TxInputId {
             txid: self.tx().id(),
@@ -56,6 +60,7 @@ impl Signature {
         }
     }
 
+    /// Returns the signature content.
     pub fn input_signature(
         &self,
         context: &Secp256k1<None>,

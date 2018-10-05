@@ -42,6 +42,7 @@ pub const BTC_ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
 /// Set of bitcoin private keys for corresponding anchoring addresses.
 pub(crate) type KeyPool = Arc<RwLock<HashMap<Address, Privkey>>>;
 
+/// Btc anchoring service implementation for the Exonum blockchain.
 pub struct BtcAnchoringService {
     global_config: GlobalConfig,
     private_keys: KeyPool,
@@ -55,6 +56,7 @@ impl ::std::fmt::Debug for BtcAnchoringService {
 }
 
 impl BtcAnchoringService {
+    /// Creates a new btc anchoring service instance.
     pub fn new(
         global_config: GlobalConfig,
         private_keys: KeyPool,

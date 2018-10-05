@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Additional data types for the btc anchoring information schema.
+
 pub use self::input_signatures::InputSignatures;
 pub use self::tx_input_id::TxInputId;
 

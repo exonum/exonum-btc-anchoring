@@ -29,10 +29,10 @@ const PAYLOAD_V1_KIND_RECOVER: u8 = 1;
 ///
 /// Data layout in `OP_RETURN` script for `Payload` v.1:
 ///
-/// | Position in bytes 	| Description                   	                |
-/// |-------------------	|----------------------------------------------     |
-/// | 0..6               	| ASCII-encoded prefix `EXONUM` 	                |
-/// | 6                 	| Version byte, currently is 1             	        |
+/// | Position in bytes     | Description                                       |
+/// |-----------------------|---------------------------------------------------|
+/// | 0..6                  | ASCII-encoded prefix `EXONUM` 	                |
+/// | 6                     | Version byte, currently is 1             	        |
 /// | 7                     | Payload kind: (0 is regular, 1 is recover)        |
 /// | 8..16                 | Block height                                      |
 /// | 16..48                | Block hash                                        |
@@ -41,9 +41,9 @@ const PAYLOAD_V1_KIND_RECOVER: u8 = 1;
 /// In this way the length of `regular` payload is 48, and for `recover` is 80.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct Payload {
-    /// Anchored block height
+    /// Anchored block height.
     pub block_height: Height,
-    /// Anchored block hash
+    /// Anchored block hash.
     pub block_hash: Hash,
     /// `Txid` of previous transactions chain if it has been lost.
     pub prev_tx_chain: Option<Hash>,

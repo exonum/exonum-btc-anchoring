@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! A collection of wrappers for the rust-bitcoin crate.
+
 pub use self::payload::{Payload};
 pub use self::transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 

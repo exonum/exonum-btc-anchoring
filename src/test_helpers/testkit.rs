@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+//! Helpers collection to test the service with the testkit.
+
 use bitcoin::{self, network::constants::Network, util::address::Address};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use failure;
@@ -30,7 +32,6 @@ use exonum_testkit::{
     ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration, TestNode,
 };
 
-use std::env;
 use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
@@ -40,7 +41,7 @@ use {
     blockchain::{transactions::Signature, BtcAnchoringSchema, BtcAnchoringState},
     btc,
     config::{GlobalConfig, LocalConfig},
-    rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
+    rpc::{BtcRelay},
     service::KeyPool,
     test_helpers::rpc::*,
     BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME,
@@ -72,6 +73,7 @@ pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -
     }.into()
 }
 
+/// Generates a complete anchoring configuration for the given arguments.
 pub fn gen_anchoring_config<R: Rng>(
     rpc: Option<&dyn BtcRelay>,
     network: Network,
@@ -99,8 +101,7 @@ pub fn gen_anchoring_config<R: Rng>(
         .map(|sk| LocalConfig {
             rpc: rpc.map(BtcRelay::config),
             private_keys: hashmap!{ address.clone() => sk.clone() },
-        })
-        .collect();
+        }).collect();
 
     let tx = if let Some(rpc) = rpc {
         rpc.watch_address(&address, false).unwrap();
@@ -116,12 +117,14 @@ pub fn gen_anchoring_config<R: Rng>(
     (global, local_cfgs)
 }
 
-// Notorious test kit wrapper
+/// The notorious testkit wrapper with extensions for anchoring service.
 #[derive(Debug)]
 pub struct AnchoringTestKit {
-    inner: TestKit,
+    /// Private bitcoin keys for the `us` node.
     pub local_private_keys: KeyPool,
+    /// List of the local configs of the validators.
     pub node_configs: Vec<LocalConfig>,
+    inner: TestKit,
     requests: Option<TestRequests>,
 }
 
@@ -140,7 +143,8 @@ impl DerefMut for AnchoringTestKit {
 }
 
 impl AnchoringTestKit {
-    pub fn new<R: Rng>(
+    /// Creates a new testkit instance with the extensions for anchoring.
+    fn new<R: Rng>(
         rpc: Option<Box<dyn BtcRelay>>,
         validators_num: u16,
         total_funds: u64,
@@ -176,35 +180,8 @@ impl AnchoringTestKit {
         }
     }
 
-    pub fn new_with_testnet(
-        validators_num: u16,
-        total_funds: u64,
-        anchoring_interval: u64,
-    ) -> Self {
-        let rng = thread_rng();
-
-        let rpc_config = BitcoinRpcConfig {
-            host: env::var("ANCHORING_RELAY_HOST")
-                .unwrap_or_else(|_| String::from("http://127.0.0.1:18332")),
-            username: env::var("ANCHORING_USER")
-                .ok()
-                .or_else(|| Some(String::from("testnet"))),
-            password: env::var("ANCHORING_PASSWORD")
-                .ok()
-                .or_else(|| Some(String::from("testnet"))),
-        };
-
-        let client = BitcoinRpcClient::from(rpc_config);
-        Self::new(
-            Some(Box::from(client)),
-            validators_num,
-            total_funds,
-            anchoring_interval,
-            rng,
-            None,
-        )
-    }
-
+    /// Creates an anchoring testkit for the four validators with the fake rpc client
+    /// under the hood.
     pub fn new_with_fake_rpc(anchoring_interval: u64) -> Self {
         let validators_num = 4;
         let total_funds = 7_000;
@@ -214,9 +191,9 @@ impl AnchoringTestKit {
         let fake_relay = FakeBtcRelay::default();
         let requests = fake_relay.requests.clone();
 
-        let addr = Address::from_str(
-            "tb1q8270svuaqety59gegtp4ujjeam39s83csz7whp9ryn3zxlcee66setkyq0",
-        ).unwrap();
+        let addr =
+            Address::from_str("tb1q8270svuaqety59gegtp4ujjeam39s83csz7whp9ryn3zxlcee66setkyq0")
+                .unwrap();
         requests.expect(vec![
             (
                 FakeRelayRequest::WatchAddress {
@@ -254,6 +231,7 @@ impl AnchoringTestKit {
         )
     }
 
+    /// Creates an anchoring testkit without rpc client.
     pub fn new_without_rpc(validators_num: u16, total_funds: u64, anchoring_interval: u64) -> Self {
         let seed: &[_] = &[1, 2, 3, 9];
         let rng: StdRng = SeedableRng::from_seed(seed);
@@ -268,6 +246,7 @@ impl AnchoringTestKit {
         )
     }
 
+    /// Updates the private keys pool in testkit for the transition state.
     pub fn renew_address(&mut self) {
         let schema = BtcAnchoringSchema::new(self.snapshot());
 
@@ -285,7 +264,7 @@ impl AnchoringTestKit {
             };
 
             if old_addr != new_addr {
-                trace!("setting new pkey for addr {:?} ", new_addr);
+                trace!("Setting new pkey for addr {:?} ", new_addr);
                 let mut private_keys = self.local_private_keys.write().unwrap();
                 private_keys.insert(new_addr.clone(), pk.clone());
 
@@ -297,16 +276,15 @@ impl AnchoringTestKit {
         }
     }
 
-    fn get_local_cfg(&self, node: &TestNode) -> LocalConfig {
-        self.node_configs[node.validator_id().unwrap().0 as usize].clone()
-    }
-
+    /// Returns the node in the emulated network, from whose perspective the testkit operates and
+    /// its local anchoring configuration.
     pub fn anchoring_us(&self) -> (TestNode, LocalConfig) {
         let node = self.inner.us();
         let cfg = self.get_local_cfg(node);
         (node.clone(), cfg)
     }
 
+    /// Returns the current list of validators with their local anchoring configuration.
     pub fn anchoring_validators(&self) -> Vec<(TestNode, LocalConfig)> {
         let validators = self.inner.network().validators();
         validators
@@ -315,30 +293,31 @@ impl AnchoringTestKit {
             .collect::<Vec<(TestNode, LocalConfig)>>()
     }
 
+    /// Returns the redeem script for the current anchoring configuration.
     pub fn redeem_script(&self) -> RedeemScript {
         self.actual_anchoring_configuration().redeem_script()
     }
 
+    /// Returns the current anchoring global configuration.
     pub fn actual_anchoring_configuration(&self) -> GlobalConfig {
         let snapshot = self.blockchain().snapshot();
         let schema = BtcAnchoringSchema::new(snapshot);
         schema.actual_configuration()
     }
 
+    /// Returns the anchoring address for the current anchoring configuration.
     pub fn anchoring_address(&self) -> btc::Address {
         self.actual_anchoring_configuration().anchoring_address()
     }
 
-    pub fn rpc_client(&self) -> BitcoinRpcClient {
-        let rpc_cfg = self.get_local_cfg(self.us()).rpc.unwrap();
-        BitcoinRpcClient::from(rpc_cfg)
-    }
-
+    /// Returns the latest anchoring transaction.
     pub fn last_anchoring_tx(&self) -> Option<btc::Transaction> {
         let schema = BtcAnchoringSchema::new(self.snapshot());
         schema.anchoring_transactions_chain().last()
     }
 
+    /// Creates signature transactions for the actual proposed anchoring transaction
+    /// for the given number of validators.
     pub fn create_signature_tx_for_validators(
         &self,
         validators_num: u16,
@@ -373,8 +352,7 @@ impl AnchoringTestKit {
                             TxInRef::new(proposal.as_ref(), index),
                             proposal_input.as_ref(),
                             privkey.0.secret_key(),
-                        )
-                        .unwrap();
+                        ).unwrap();
 
                     let tx = Signature::new(
                         &public_key,
@@ -391,6 +369,8 @@ impl AnchoringTestKit {
         Ok(signatures)
     }
 
+    /// Creates a configuration change proposal which excludes
+    /// one of validators from the consensus.
     pub fn drop_validator_proposal(&mut self) -> TestNetworkConfiguration {
         let mut proposal = self.configuration_change_proposal();
         let mut validators = proposal.validators().to_vec();
@@ -412,15 +392,21 @@ impl AnchoringTestKit {
         proposal
     }
 
+    /// Returns the list of expected requests to the fake rpc.
     pub fn requests(&mut self) -> TestRequests {
         self.requests.clone().unwrap().clone()
     }
 
+    /// Returns the block hash for the given height.
     pub fn block_hash_on_height(&self, height: Height) -> Hash {
         CoreSchema::new(&self.snapshot())
             .block_hashes_by_height()
             .get(height.0)
             .unwrap()
+    }
+
+    fn get_local_cfg(&self, node: &TestNode) -> LocalConfig {
+        self.node_configs[node.validator_id().unwrap().0 as usize].clone()
     }
 }
 
@@ -494,9 +480,11 @@ fn validate_table_proof(
         .ok_or_else(|| format_err!("Unable to get `to_block_header` entry"))
 }
 
+/// Proof validation extension.
 pub trait ValidateProof {
+    /// Output value.
     type Output;
-
+    /// Perform the proof validation procedure with the given exonum blockchain configuration.
     fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error>;
 }
 
