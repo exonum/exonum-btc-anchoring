@@ -190,8 +190,7 @@ impl Payload {
                 } else {
                     None
                 }
-            })
-            .and_then(|instr| {
+            }).and_then(|instr| {
                 if let Instruction::PushBytes(bytes) = instr {
                     if bytes.len() < PAYLOAD_HEADER_LEN {
                         return None;

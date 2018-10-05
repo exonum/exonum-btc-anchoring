@@ -14,7 +14,7 @@
 
 //! A collection of wrappers for the rust-bitcoin crate.
 
-pub use self::payload::{Payload};
+pub use self::payload::Payload;
 pub use self::transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 
 use bitcoin::network::constants::Network;

@@ -82,7 +82,8 @@ impl Transaction for Signature {
         if schema
             .anchoring_transactions_chain()
             .last()
-            .map(|tx| tx.id()) == Some(tx.id())
+            .map(|tx| tx.id())
+            == Some(tx.id())
         {
             return Ok(());
         }

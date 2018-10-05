@@ -14,7 +14,7 @@ use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
 use btc_transaction_utils::multisig::RedeemScript;
 
-use super::{Payload, payload::PayloadBuilder};
+use super::{payload::PayloadBuilder, Payload};
 
 /// Bitcoin transaction wrapper.
 #[derive(Debug, Clone, From, Into, PartialEq)]

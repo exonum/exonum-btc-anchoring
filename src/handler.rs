@@ -48,7 +48,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         }
     }
 
-    /// For validators this method creates an exonum transaction with the signature for 
+    /// For validators this method creates an exonum transaction with the signature for
     /// the corresponding anchoring transaction if there is such a need.
     pub fn run(self) -> Result<(), failure::Error> {
         if let Some(validator_id) = self.context.validator_id() {
@@ -120,8 +120,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                     proposal_input.as_ref(),
                     &pubkey,
                     &signature,
-                )
-                .unwrap();
+                ).unwrap();
 
             let signature_tx = Signature::new(
                 self.context.public_key(),
@@ -160,7 +159,7 @@ impl<'a> SyncWithBtcRelayTask<'a> {
     }
 
     /// Performs anchoring transactions synchronization with the bitcoin blockchain.
-    /// That is it finds the first uncommitted anchoring transaction in the bitcoin 
+    /// That is it finds the first uncommitted anchoring transaction in the bitcoin
     /// blockchain and sequentially sends it and the subsequent ones to the bitcoin mempool.
     pub fn run(self) -> Result<(), failure::Error> {
         let schema = BtcAnchoringSchema::new(self.context.snapshot());

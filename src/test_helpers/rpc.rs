@@ -36,21 +36,25 @@ pub enum FakeRelayRequest {
         /// Bitcoin address.
         addr: Address,
         /// Amount in satoshis.
-        satoshis: u64 },
+        satoshis: u64,
+    },
     /// Transaction information request.
     TransactionInfo {
         /// Transaction id.
-        id: Hash },
+        id: Hash,
+    },
     /// Send transaction to bitcoin mempool request.
     SendTransaction {
         /// Raw bitcoin transaction
-        transaction: btc::Transaction },
+        transaction: btc::Transaction,
+    },
     /// Observe changes on given address request.
     WatchAddress {
         /// Bitcoin address.
         addr: Address,
         /// Full blockchain rescan option.
-        rescan: bool },
+        rescan: bool,
+    },
 }
 
 /// Possible rpc responses.

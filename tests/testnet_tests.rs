@@ -431,11 +431,10 @@ fn broken_anchoring_recovery() {
     );
 
     assert!(
-        recovery_tx.anchoring_payload().unwrap().block_height
-            > latest_successful_tx
-                .anchoring_payload()
-                .unwrap()
-                .block_height
+        recovery_tx.anchoring_payload().unwrap().block_height > latest_successful_tx
+            .anchoring_payload()
+            .unwrap()
+            .block_height
     );
 
     let signatures = anchoring_testkit

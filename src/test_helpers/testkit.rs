@@ -41,7 +41,7 @@ use {
     blockchain::{transactions::Signature, BtcAnchoringSchema, BtcAnchoringState},
     btc,
     config::{GlobalConfig, LocalConfig},
-    rpc::{BtcRelay},
+    rpc::BtcRelay,
     service::KeyPool,
     test_helpers::rpc::*,
     BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME,
