@@ -64,7 +64,7 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         ProofListIndex::new(TRANSACTIONS_CHAIN, &self.snapshot)
     }
 
-    /// Returns the table that contnains already spent funding transactions.
+    /// Returns the table that contains already spent funding transactions.
     pub fn spent_funding_transactions(&self) -> ProofMapIndex<&T, Hash, Transaction> {
         ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, &self.snapshot)
     }

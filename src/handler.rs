@@ -159,7 +159,7 @@ impl<'a> SyncWithBtcRelayTask<'a> {
         SyncWithBtcRelayTask { context, relay }
     }
 
-    /// Performs anchoring transactions syncrhonization with the bitcoin blockchain.
+    /// Performs anchoring transactions synchronization with the bitcoin blockchain.
     /// That is it finds the first uncommitted anchoring transaction in the bitcoin 
     /// blockchain and sequentially sends it and the subsequent ones to the bitcoin mempool.
     pub fn run(self) -> Result<(), failure::Error> {

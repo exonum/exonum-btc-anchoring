@@ -16,7 +16,7 @@ use btc_transaction_utils::multisig::RedeemScript;
 
 use super::{Payload, payload::PayloadBuilder};
 
-/// A Bitcoin transaction wrapper.
+/// Bitcoin transaction wrapper.
 #[derive(Debug, Clone, From, Into, PartialEq)]
 pub struct Transaction(pub transaction::Transaction);
 
@@ -60,7 +60,7 @@ impl Transaction {
         Payload::from_script(&out.script_pubkey)
     }
 
-    /// Returns the complete metainformation for the transaction
+    /// Returns the complete meta information for the transaction
     /// if it is the anchoring transaction.
     pub fn anchoring_metadata(&self) -> Option<(&Script, Payload)> {
         let payload = self.anchoring_payload()?;

@@ -41,7 +41,7 @@ pub enum BtcAnchoringState {
     },
     /// The transition from the current anchoring address to the following.
     Transition {
-        /// Current anchroing configuration.
+        /// Current anchoring configuration.
         actual_configuration: GlobalConfig,
         /// Following anchoring configuration.
         following_configuration: GlobalConfig,
