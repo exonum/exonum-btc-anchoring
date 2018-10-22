@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Anchoring rest API implementation.
+//! Anchoring HTTP API implementation.
 //!
 use exonum::api::{self, ServiceApiBuilder, ServiceApiState};
 use exonum::blockchain::{BlockProof, Schema as CoreSchema};
@@ -26,14 +26,14 @@ use blockchain::BtcAnchoringSchema;
 use btc;
 use BTC_ANCHORING_SERVICE_ID;
 
-/// Find transaction query parameters.
+/// Query parameters for the find transaction request.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct FindTransactionQuery {
     /// Exonum block height.
     pub height: Option<Height>,
 }
 
-/// Block header proof query parameters.
+/// Query parameters for the block header proof request.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]
 pub struct HeightQuery {
     /// Exonum block height.
@@ -66,7 +66,7 @@ pub struct BlockHeaderProof {
 
 /// Public API specification for the Exonum Bitcoin anchoring service.
 pub trait PublicApi {
-    /// Error type for the current public API implementation
+    /// Error type for the current public API implementation.
     type Error: Fail;
 
     /// Returns actual anchoring address.
@@ -74,13 +74,15 @@ pub trait PublicApi {
     /// `GET /{api_prefix}/v1/address/actual`
     fn actual_address(&self, _query: ()) -> Result<btc::Address, Self::Error>;
 
-    /// Returns the following anchoring address if the node is in a transition state.
+    /// Returns the following anchoring address if the node is in the transition state.
     ///
     /// `GET /{api_prefix}/v1/address/following`
     fn following_address(&self, _query: ()) -> Result<Option<btc::Address>, Self::Error>;
 
-    /// Returns for the current anchoring transaction or lookups for the anchoring transaction
-    /// with a height greater or equal than the given.
+
+    /// Returns the latest anchoring transaction if the height is not specified,
+    /// otherwise, returns the anchoring transaction with the height that is greater or equal
+    /// to the given one.
     /// `GET /{api_prefix}/v1/transaction`
     fn find_transaction(
         &self,
@@ -125,7 +127,7 @@ impl PublicApi for ServiceApiState {
         }
 
         let tx_index = if let Some(height) = query.height {
-            // Handmade binary search
+            // Handmade binary search.
             let get_tx_height = |index| -> Height {
                 tx_chain
                     .get(index)
