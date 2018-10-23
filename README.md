@@ -97,7 +97,7 @@ fn main() {
 
 * `btc-anchoring-interval` - interval in blocks between anchored blocks.
 * `btc-anchoring-fee` - transaction fee per byte in satoshi that anchoring nodes should use.
-* `btc-anchoring-utxo-confirmations` - the minimum number of confirmations for the first funding transactions.
+* `btc-anchoring-utxo-confirmations` - the minimum number of confirmations for the first funding transaction.
 
 ### For the `generate-config` subcommand
 
@@ -126,6 +126,12 @@ Variables that you can modify
 ***The option is not to be used for changing the applied Bitcoin network, otherwise the service will come to a halt.***
 
 ## Deployment
+
+For the fast anchoring demonstration you can use built-in anchoring example.
+
+***Warning!*** `bitcoind` node should have some bitcoin amount, since the initial funding 
+transaction will be created during the Exonum network generation. 
+For testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.
 
 ## Maintaince
 
