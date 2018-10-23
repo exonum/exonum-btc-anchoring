@@ -62,7 +62,7 @@ const BTC_ANCHORING_UTXO_CONFIRMATIONS: NamedArgumentRequired<u64> = NamedArgume
     name: "btc_anchoring_utxo_confirmations",
     short_key: None,
     long_key: "btc-anchoring-utxo-confirmations",
-    help: "The minimum number of confirmations for funding transactions.",
+    help: "The minimum number of confirmations for the first funding transactions.",
     default: Some(2),
 };
 
@@ -194,7 +194,7 @@ const BTC_ANCHORING_FUNDING_TXID: NamedArgumentOptional<Hash> = NamedArgumentOpt
     name: "btc_anchoring_funding_txid",
     short_key: None,
     long_key: "btc-anchoring-funding-txid",
-    help: "Txid of the initial funding tx",
+    help: "Identifier of the initial funding transaction which was created earlier",
     default: None,
 };
 

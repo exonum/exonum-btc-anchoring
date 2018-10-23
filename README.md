@@ -59,7 +59,7 @@ bitcoind --daemon
 Downloading and indexing of the bitcoin blockchain may take a lot of time,
 especially for the mainnet.
 
-## Service startup
+## Usage
 
 Include `exonum-btc-anchoring` as a dependency in your `Cargo.toml`:
 
@@ -91,15 +91,47 @@ fn main() {
 
 ### For the `generate-template` subcommand
 
+* `btc-anchoring-network` - bitcoin network type used for downloading Bitcoin blocks headers. 
+  
+  Possible values: [mainnet, testnet, regtest]
+
+* `btc-anchoring-interval` - interval in blocks between anchored blocks.
+* `btc-anchoring-fee` - transaction fee per byte in satoshi that anchoring nodes should use.
+* `btc-anchoring-utxo-confirmations` - the minimum number of confirmations for the first funding transactions.
+
 ### For the `generate-config` subcommand
+
+* `btc-anchoring-rpc-host` - Bitcoin rpc url.
+* `btc-anchoring-rpc-user` - User to login into bitcoind.
+* `btc-anchoring-rpc-password` - Password to login into bitcoind.
 
 ### For the `finalize` subcommand
 
+* `btc-anchoring-create-funding-tx` - if this option is set, node will create an initial funding 
+  transaction with the given amount in satoshis and return it identifier.
+* `btc-anchoring-funding-txid` - Identifier of the initial funding transaction which was created 
+  previously using the option above. 
+
 ### For adjusting the running blockchain configuration
+
+Variables that you can modify
+
+* `transaction_fee` - the amount of the fee per byte in satoshis for the anchoring transactions.
+* `anchoring_interval` - the interval in blocks between anchored blocks.
+* `funding_transaction` - the hex representation of current funding transaction, 
+  node would use it as input if it did not spent.
+* `public_keys` - the list of hex-encoded compressed bitcoin public keys of
+  exonum validators that collects into the current anchoring address.
+
+***The option is not to be used for changing the applied Bitcoin network, otherwise the service will come to a halt.***
 
 ## Deployment
 
 ## Maintaince
+
+### Add funds
+
+### Modify list of validators 
 
 ## Licence
 
