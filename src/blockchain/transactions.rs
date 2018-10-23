@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Btc anchoring transactions.
+//! BTC anchoring transactions.
 
 use exonum::blockchain::{ExecutionResult, Transaction};
 use exonum::crypto::PublicKey;
@@ -31,7 +31,7 @@ use super::errors::SignatureError;
 use super::BtcAnchoringSchema;
 
 transactions! {
-    /// Exonum btc anchoring transactions.
+    /// Exonum BTC anchoring transactions.
     pub Transactions {
         const SERVICE_ID = BTC_ANCHORING_SERVICE_ID;
 
@@ -39,7 +39,7 @@ transactions! {
         struct Signature {
             /// Public key of validator.
             from: &PublicKey,
-            /// Public key index in anchoring public keys list.
+            /// Public key index in the anchoring public keys list.
             validator: ValidatorId,
             /// Signed transaction.
             tx: btc::Transaction,
@@ -78,7 +78,7 @@ impl Transaction for Signature {
     fn execute(&self, fork: &mut Fork) -> ExecutionResult {
         let tx = self.tx();
         let mut schema = BtcAnchoringSchema::new(fork);
-        // We already have enough signatures to spend anchoring transaction.
+        // Number of signatures is enough to spend anchoring transaction.
         if schema
             .anchoring_transactions_chain()
             .last()
@@ -117,7 +117,7 @@ impl Transaction for Signature {
         let input_signer = InputSigner::new(redeem_script.clone());
         let context = Secp256k1::without_caps();
 
-        // Checks signature content
+        // Checks signature content.
         let input_signature_ref = self.input_signature(&context).unwrap();
         let input_idx = self.input() as usize;
         let input_tx = match expected_inputs.get(input_idx) {

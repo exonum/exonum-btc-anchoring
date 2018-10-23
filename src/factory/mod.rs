@@ -141,7 +141,7 @@ impl CommandExtension for GenerateNodeConfig {
             .unwrap_or_default();
         let common_config = context.get(keys::COMMON_CONFIG).unwrap_or_default();
 
-        // Inserts bitcoin keypair.
+        // Inserts Bitcoin keypair.
         let network = BTC_ANCHORING_NETWORK.output_value(&common_config.services_config)?;
         let keypair = gen_keypair(network);
 
@@ -162,7 +162,7 @@ impl CommandExtension for GenerateNodeConfig {
             ].into_iter(),
         );
 
-        // Inserts rpc host.
+        // Inserts RPC host.
         let host = BTC_ANCHORING_RPC_HOST.input_value(&context)?;
         let rpc_config = BitcoinRpcConfig {
             host,
@@ -173,7 +173,7 @@ impl CommandExtension for GenerateNodeConfig {
             "btc_anchoring_rpc_config".to_owned(),
             toml::Value::try_from(rpc_config)?,
         );
-        // Push changes to the context.
+        // Pushes changes to the context.
         context.set(keys::SERVICES_SECRET_CONFIGS, services_secret_config);
         context.set(keys::SERVICES_PUBLIC_CONFIGS, services_public_config);
         Ok(context)
@@ -214,7 +214,7 @@ impl CommandExtension for Finalize {
             .unwrap_or_default();
         let common_config = context.get(keys::COMMON_CONFIG)?;
 
-        // Common part.
+        // Public part.
         let network = BTC_ANCHORING_NETWORK.output_value(&common_config.services_config)?;
         let interval = BTC_ANCHORING_INTERVAL.output_value(&common_config.services_config)?;
         let fee = BTC_ANCHORING_FEE.output_value(&common_config.services_config)?;
@@ -254,7 +254,7 @@ impl CommandExtension for Finalize {
             public_keys
         };
 
-        // Creates global config.
+        // Creates global configuration.
         let mut global_config = GlobalConfig::new(network, public_keys)?;
         // Generates initial funding transaction.
         let relay = BitcoinRpcClient::from(rpc_config.clone());
@@ -289,7 +289,7 @@ impl CommandExtension for Finalize {
         global_config.anchoring_interval = interval;
         global_config.transaction_fee = fee;
 
-        // Creates local config.
+        // Creates local configuration.
         let mut private_keys = HashMap::new();
         private_keys.insert(addr, private_key);
 
@@ -298,7 +298,7 @@ impl CommandExtension for Finalize {
             private_keys,
         };
 
-        // Writes complete config to node_config
+        // Writes complete configuration to node_config.
         let config = Config {
             local: local_config,
             global: global_config,
@@ -312,7 +312,7 @@ impl CommandExtension for Finalize {
     }
 }
 
-/// A BTC oracle service creator for the `NodeBuilder`.
+/// A BTC anchoring service creator for the `NodeBuilder`.
 #[derive(Debug, Copy, Clone)]
 pub struct BtcAnchoringFactory;
 

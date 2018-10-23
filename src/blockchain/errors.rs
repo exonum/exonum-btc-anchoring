@@ -62,7 +62,7 @@ pub enum SignatureError {
     UnknownError,
 }
 
-/// Error codes for the btc anchoring transactions.
+/// Error codes for the BTC anchoring transactions.
 #[derive(Debug)]
 pub enum ErrorCode {
     /// [description](SignatureError.t.html#variant.Unexpected)

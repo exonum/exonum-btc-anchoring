@@ -48,7 +48,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         }
     }
 
-    /// For validators this method creates an exonum transaction with the signature for
+    /// For validators this method creates an Exonum transaction with the signature for
     /// the corresponding anchoring transaction if there is such a need.
     pub fn run(self) -> Result<(), failure::Error> {
         if let Some(validator_id) = self.context.validator_id() {
@@ -80,7 +80,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
             return Ok(());
         }
 
-        // Creates anchoring proposal
+        // Creates anchoring proposal.
         let (proposal, proposal_inputs) =
             if let Some(proposal) = schema.proposed_anchoring_transaction(&self.anchoring_state) {
                 proposal?
@@ -90,7 +90,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
 
         let config = self.anchoring_state.actual_configuration();
         let redeem_script = config.redeem_script();
-        // Creates Signature transactions.
+        // Creates `Signature` transactions.
         let pubkey = redeem_script.content().public_keys[validator_id.0 as usize];
         let mut signer = p2wsh::InputSigner::new(redeem_script);
 
@@ -145,7 +145,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
     }
 }
 
-/// The goal of this task is to push uncommitted anchoring transactions to the bitcoin blockchain.
+/// The goal of this task is to push uncommitted anchoring transactions to the Bitcoin blockchain.
 #[derive(Debug)]
 pub struct SyncWithBtcRelayTask<'a> {
     context: &'a ServiceContext,
@@ -153,14 +153,14 @@ pub struct SyncWithBtcRelayTask<'a> {
 }
 
 impl<'a> SyncWithBtcRelayTask<'a> {
-    /// Creates sync task instance for the given context and the bitcoin rpc relay.
+    /// Creates synchronization task instance for the given context and the Bitcoin RPC relay.
     pub fn new(context: &'a ServiceContext, relay: &'a dyn BtcRelay) -> SyncWithBtcRelayTask<'a> {
         SyncWithBtcRelayTask { context, relay }
     }
 
-    /// Performs anchoring transactions synchronization with the bitcoin blockchain.
-    /// That is it finds the first uncommitted anchoring transaction in the bitcoin
-    /// blockchain and sequentially sends it and the subsequent ones to the bitcoin mempool.
+    /// Performs anchoring transactions synchronization with the Bitcoin blockchain.
+    /// That is, it finds the first uncommitted anchoring transaction in the Bitcoin
+    /// blockchain and sequentially sends it and the subsequent ones to the Bitcoin mempool.
     pub fn run(self) -> Result<(), failure::Error> {
         let schema = BtcAnchoringSchema::new(self.context.snapshot());
         let sync_interval = cmp::max(1, schema.actual_configuration().anchoring_interval / 2);

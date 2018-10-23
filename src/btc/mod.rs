@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! A collection of wrappers for the rust-bitcoin crate.
+//! Collection of wrappers for the rust-bitcoin crate.
 
 pub use self::payload::Payload;
 pub use self::transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
@@ -30,15 +30,15 @@ mod macros;
 pub(crate) mod payload;
 pub(crate) mod transaction;
 
-/// A Bitcoin ECDSA private key wrapper.
+/// Bitcoin ECDSA private key wrapper.
 #[derive(Clone, From, Into, PartialEq, Eq)]
 pub struct Privkey(pub privkey::Privkey);
 
-/// A Secp256k1 public key wrapper, used for verification of signatures.
+/// Secp256k1 public key wrapper, used for verification of signatures.
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
 pub struct PublicKey(pub secp256k1::PublicKey);
 
-/// A Bitcoin address wrapper.
+/// Bitcoin address wrapper.
 #[derive(Debug, Clone, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Address(pub address::Address);
 

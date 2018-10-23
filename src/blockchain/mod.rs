@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Blockchain implementation details for the btc anchoring service.
+//! Blockchain implementation details for the BTC anchoring service.
 
 pub use self::schema::BtcAnchoringSchema;
 pub use self::transactions::Transactions;
@@ -31,7 +31,7 @@ pub mod errors;
 pub mod schema;
 pub mod transactions;
 
-/// The current state of the btc anchoring service.
+/// Current state of the BTC anchoring service.
 #[derive(Debug, Clone)]
 pub enum BtcAnchoringState {
     /// The usual anchoring workflow.
@@ -39,7 +39,7 @@ pub enum BtcAnchoringState {
         /// Current anchoring configuration.
         actual_configuration: GlobalConfig,
     },
-    /// The transition from the current anchoring address to the following.
+    /// The transition from the current anchoring address to the following one.
     Transition {
         /// Current anchoring configuration.
         actual_configuration: GlobalConfig,
@@ -82,7 +82,7 @@ impl BtcAnchoringState {
         }
     }
 
-    /// Checks that anchoring state is transition.
+    /// Checks that anchoring is in transition state.
     pub fn is_transition(&self) -> bool {
         if let BtcAnchoringState::Transition { .. } = self {
             true
@@ -104,7 +104,7 @@ impl BtcAnchoringState {
         }
     }
 
-    /// Returns the following anchoring configuration if the anchoring state is transition.
+    /// Returns the following anchoring configuration if anchoring is in transition state.
     pub fn following_configuration(&self) -> Option<&GlobalConfig> {
         match self {
             BtcAnchoringState::Regular { .. } => None,

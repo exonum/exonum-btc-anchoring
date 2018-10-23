@@ -79,7 +79,6 @@ pub trait PublicApi {
     /// `GET /{api_prefix}/v1/address/following`
     fn following_address(&self, _query: ()) -> Result<Option<btc::Address>, Self::Error>;
 
-
     /// Returns the latest anchoring transaction if the height is not specified,
     /// otherwise, returns the anchoring transaction with the height that is greater or equal
     /// to the given one.

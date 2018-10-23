@@ -35,11 +35,11 @@ pub fn byzantine_quorum(total: usize) -> usize {
 pub struct GlobalConfig {
     /// Type of the used BTC network.
     pub network: Network,
-    /// Validators' Bitcoin public keys from which the current anchoring redeem script can be calculated.
+    /// Bitcoin public keys of validators from from which the current anchoring redeem script can be calculated.
     pub public_keys: Vec<PublicKey>,
     /// Interval in blocks between anchored blocks.
     pub anchoring_interval: u64,
-    /// Fee per byte in satoshi.
+    /// Fee per byte in satoshis.
     pub transaction_fee: u64,
     /// Funding transaction.
     pub funding_transaction: Option<Transaction>,
@@ -59,7 +59,7 @@ impl Default for GlobalConfig {
 
 impl GlobalConfig {
     /// Creates global configuration instance with default parameters for the
-    /// given bitcoin network and public keys of partipicants.
+    /// given Bitcoin network and public keys of partipicants.
     pub fn new(
         network: Network,
         keys: impl IntoIterator<Item = PublicKey>,
@@ -76,7 +76,7 @@ impl GlobalConfig {
         })
     }
 
-    /// Returns the corresponding bitcoin address.
+    /// Returns the corresponding Bitcoin address.
     pub fn anchoring_address(&self) -> Address {
         p2wsh::address(&self.redeem_script(), self.network).into()
     }
@@ -95,17 +95,17 @@ impl GlobalConfig {
         Height(current_height.0 - current_height.0 % self.anchoring_interval)
     }
 
-    /// Returns the nearest height upper the given height which should be anchored.
+    /// Returns the nearest height above the given height which must be anchored.
     pub fn following_anchoring_height(&self, current_height: Height) -> Height {
         Height(self.previous_anchoring_height(current_height).0 + self.anchoring_interval)
     }
 }
 
-/// Local part of anchoring service configuration stored on a local machine.
+/// Local part of anchoring service configuration stored on the local machine.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct LocalConfig {
-    /// Rpc configuration. Must exist if node is validator.
-    /// Otherwise node can only check `lect` payload without any checks with `bitcoind`.
+    /// Bitcoin RPC client configuration, which used to send an anchoring transactions
+    /// to the Bitcoin network.
     pub rpc: Option<BitcoinRpcConfig>,
     /// Set of private keys for each anchoring address.
     #[serde(with = "flatten_keypairs")]
@@ -117,7 +117,7 @@ pub struct LocalConfig {
 pub struct Config {
     /// Public part of the configuration stored in the blockchain.
     pub global: GlobalConfig,
-    /// Local part of the configuration stored at the local machine.
+    /// Local part of the configuration stored on the local machine.
     pub local: LocalConfig,
 }
 
@@ -126,8 +126,8 @@ mod flatten_keypairs {
 
     use std::collections::HashMap;
 
-    /// The structure for storing the anchoring address and private key. The structure is needed to
-    /// convert data from the toml-file into memory.
+    /// The structure for storing the anchoring address and the private key.
+    /// It is required to read data from the .toml file into memory.
     #[derive(Deserialize, Serialize)]
     struct BitcoinKeypair {
         /// Bitcoin address.
