@@ -125,7 +125,7 @@ pub fn gen_keypair_with_rng<R: Rng>(network: Network, rng: &mut R) -> (PublicKey
     (pub_key.into(), priv_key.into())
 }
 
-/// Same as [`gen_btc_keypair_with_rng`](fn.gen_btc_keypair_with_rng.html)
+/// Same as [`gen_keypair_with_rng`](fn.gen_keypair_with_rng.html)
 /// but it uses default random number generator.
 pub fn gen_keypair(network: Network) -> (PublicKey, Privkey) {
     let mut rng = rand::thread_rng();

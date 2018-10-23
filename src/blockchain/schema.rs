@@ -233,14 +233,14 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
 impl<'a> BtcAnchoringSchema<&'a mut Fork> {
     /// Mutable variant of the [`anchoring_transactions_chain`][1] index.
     ///
-    /// [1]: struct.AnchoringSchema.html#method.anchoring_transactions_chain_mut
+    /// [1]: struct.BtcAnchoringSchema.html#method.anchoring_transactions_chain_mut
     pub fn anchoring_transactions_chain_mut(&mut self) -> ProofListIndex<&mut Fork, Transaction> {
         ProofListIndex::new(TRANSACTIONS_CHAIN, &mut self.snapshot)
     }
 
     /// Mutable variant of the [`spent_funding_transactions`][1] index.
     ///
-    /// [1]: struct.AnchoringSchema.html#method.spent_funding_transactions
+    /// [1]: struct.BtcAnchoringSchema.html#method.spent_funding_transactions
     pub fn spent_funding_transactions_mut(
         &mut self,
     ) -> ProofMapIndex<&mut Fork, Hash, Transaction> {
@@ -249,7 +249,7 @@ impl<'a> BtcAnchoringSchema<&'a mut Fork> {
 
     /// Mutable variant of the [`anchored_blocks`][1] index.
     ///
-    /// [1]: struct.AnchoringSchema.html#method.anchored_blocks
+    /// [1]: struct.BtcAnchoringSchema.html#method.anchored_blocks
     pub fn transaction_signatures_mut(
         &mut self,
     ) -> ProofMapIndex<&mut Fork, TxInputId, InputSignatures> {
@@ -258,7 +258,7 @@ impl<'a> BtcAnchoringSchema<&'a mut Fork> {
 
     /// Mutable variant of the [`anchored_blocks`][1] index.
     ///
-    /// [1]: struct.AnchoringSchema.html#method.anchored_blocks
+    /// [1]: struct.BtcAnchoringSchema.html#method.anchored_blocks
     pub fn anchored_blocks_mut(&mut self) -> ProofListIndex<&mut Fork, Hash> {
         ProofListIndex::new("btc_anchoring.anchored_blocks", &mut self.snapshot)
     }

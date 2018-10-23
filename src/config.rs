@@ -127,7 +127,7 @@ mod flatten_keypairs {
     use std::collections::HashMap;
 
     /// The structure for storing the anchoring address and the private key.
-    /// It is required to read data from the .toml file into memory.
+    /// It is required for reading data from the .toml file into memory.
     #[derive(Deserialize, Serialize)]
     struct BitcoinKeypair {
         /// Bitcoin address.

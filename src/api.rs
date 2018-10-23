@@ -82,6 +82,7 @@ pub trait PublicApi {
     /// Returns the latest anchoring transaction if the height is not specified,
     /// otherwise, returns the anchoring transaction with the height that is greater or equal
     /// to the given one.
+    ///
     /// `GET /{api_prefix}/v1/transaction`
     fn find_transaction(
         &self,
