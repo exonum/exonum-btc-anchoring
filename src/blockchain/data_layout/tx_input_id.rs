@@ -19,8 +19,8 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use std::io::{Cursor, Read, Write};
 
-/// Unique identifier of the input for the transaction with the
-/// given identifier.
+/// Unique transaction input identifier composed of a transaction identifier
+/// and an input index.
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TxInputId {
     /// Transaction identifier.

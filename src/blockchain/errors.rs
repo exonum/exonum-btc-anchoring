@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Error types of the btc anchoring service.
+//! Error types of the BTC anchoring service.
 
 use btc;
 use exonum::blockchain::ExecutionError;
@@ -22,25 +22,27 @@ use exonum::helpers::ValidatorId;
 /// Possible errors during execution of the `Signature` transaction.
 #[derive(Debug, Fail)]
 pub enum SignatureError {
-    /// Received signature for the incorrect anchoring transaction.
+    /// Received signature is for the incorrect anchoring transaction.
     #[fail(
-        display = "Received signature for the incorrect anchoring transaction. Expected: {}. Received: {}.",
+        display = "Received signature is for the incorrect anchoring transaction. Expected: {}. Received: {}.",
         expected_id,
         received_id
     )]
     Unexpected {
-        /// Expected id of anchoring transaction.
+        /// Expected identifier of the anchoring transaction.
         expected_id: Hash,
-        /// Actually received id of anchoring transaction.
+        /// Actually received identifier of the anchoring transaction.
         received_id: Hash,
     },
-    /// Received signature for anchoring transaction while in transition state.
-    #[fail(display = "Received signature for anchoring transaction while in transition state.")]
+    /// Received signature for anchoring transaction while the node is in transition state.
+    #[fail(
+        display = "Received signature for anchoring transaction while the node is in transition state."
+    )]
     InTransition,
-    /// Public key of validator with the given id is missing.
+    /// Public key of validator with the given identifier is missing.
     #[fail(display = "Public key of validator {} is missing.", _0)]
     MissingPublicKey {
-        /// Validator id.
+        /// Validator identifier.
         validator_id: ValidatorId,
     },
     /// Input with the given index doesn't exist.
