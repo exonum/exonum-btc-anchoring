@@ -37,6 +37,9 @@ testnet=1
 # server=1 tells Bitcoin-Qt and bitcoind to accept JSON-RPC commands.
 server=1
 # Maintain a full transaction index, used by the getrawtransaction rpc call.
+# An arbitrary `bitcoind` daemon is not required to respond to a request for
+# information about an arbitrary transaction,
+# thus you should uncomment line bellow if you want to use daemon in an existing Exonum network.
 # txindex=1
 
 # Bind to given address to listen for JSON-RPC connections.
@@ -91,8 +94,8 @@ fn main() {
 
 ### For the `generate-template` subcommand
 
-* `btc-anchoring-network` - bitcoin network type used for downloading Bitcoin blocks headers. 
-  
+* `btc-anchoring-network` - bitcoin network type used for downloading Bitcoin blocks headers.
+
   Possible values: [mainnet, testnet, regtest]
 
 * `btc-anchoring-interval` - interval in blocks between anchored blocks.
@@ -107,10 +110,10 @@ fn main() {
 
 ### For the `finalize` subcommand
 
-* `btc-anchoring-create-funding-tx` - if this option is set, node will create an initial funding 
+* `btc-anchoring-create-funding-tx` - if this option is set, node will create an initial funding
   transaction with the given amount in satoshis and return it identifier.
-* `btc-anchoring-funding-txid` - Identifier of the initial funding transaction which was created 
-  previously using the option above. 
+* `btc-anchoring-funding-txid` - Identifier of the initial funding transaction which was created
+  previously using the option above.
 
 ### For adjusting the running blockchain configuration
 
@@ -118,7 +121,7 @@ Variables that you can modify
 
 * `transaction_fee` - the amount of the fee per byte in satoshis for the anchoring transactions.
 * `anchoring_interval` - the interval in blocks between anchored blocks.
-* `funding_transaction` - the hex representation of current funding transaction, 
+* `funding_transaction` - the hex representation of current funding transaction,
   node would use it as input if it did not spent.
 * `public_keys` - the list of hex-encoded compressed bitcoin public keys of
   exonum validators that collects into the current anchoring address.
@@ -127,17 +130,79 @@ Variables that you can modify
 
 ## Deployment
 
+### Install anchoring service example
+
 For the fast anchoring demonstration you can use built-in anchoring example.
 
-***Warning!*** `bitcoind` node should have some bitcoin amount, since the initial funding 
-transaction will be created during the Exonum network generation. 
-For testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.
+```bash
+cargo install --example anchoring
+```
+
+### Generate configuration template
+
+For example create an BTC anchoring configuration template for the testnet bitcoin network.
+
+```bash
+btc_anchoring generate-template template.toml \
+    --validators-count 2 \
+    --btc-anchoring-network testnet \
+    --btc-anchoring-fee 100 \
+    --btc-anchoring-utxo-confirmations 0
+```
+
+Then each of the participants generates own public and secret node configuration files.
+
+```bash
+btc_anchoring generate-config template.toml pub/0.toml sec/0.toml \
+    --peer-address 127.0.0.0:7000 \
+    --btc-anchoring-rpc-host http://localhost:18332 \
+    --btc-anchoring-rpc-user user \
+    --btc-anchoring-rpc-password password
+```
+
+Participants need to send some bitcoins to the anchoring address in order to enable Bitcoin anchoring. For this:
+
+* One of the participants generates initial `funding_transaction` by init command:
+
+  ```bash
+  btc_anchoring finalize sec/0.toml nodes/0.toml \
+      --public-configs pub/0.toml pub/1.toml
+      --btc-anchoring-create-funding-tx 100000000
+  ```
+
+  This command generates configuration of node and returns transaction
+  identifier of generated `funding_transaction`.
+
+  ***`bitcoind` node should have some bitcoin amount, since the initial funding
+  transaction will be created during the Exonum network generation.
+  For testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.***
+
+* While others should use this transaction identifier.
+
+  ```bash
+  btc_anchoring finalize sec/0.toml nodes/0.toml \
+      --public-configs pub/0.toml pub/1.toml \
+      --btc-anchoring-funding-txid 73f5f6797bedd4b1024805bc6d7e08e5206a5597f97fd8a47ed7ad5a5bb174ae
+  ```
+
+  ***Funding transaction should have enough amount of confirmations which setted before by
+  the `btc-anchoring-utxo-confirmations` parameter.***
+
+### Launch node
+
+Launch all exonum nodes in the given Exonum network. To launch node concrete just execute:
+
+```bash
+btc_anchoring run --node-config <destdir>/<N>.toml --db-path <destdir>/db/<N>
+```
+
+If you want to see additional information you may specify log level by environment variable `RUST_LOG="exonum_btc_anchoring=info"`.
 
 ## Maintaince
 
 ### Add funds
 
-### Modify list of validators 
+### Modify list of validators
 
 ## Licence
 
