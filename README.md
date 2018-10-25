@@ -173,9 +173,9 @@ Participants need to send some bitcoins to the anchoring address in order to ena
   This command generates configuration of node and returns transaction
   identifier of generated `funding_transaction`.
 
-  ***`bitcoind` node should have some bitcoin amount, since the initial funding
+  ***Note!** `bitcoind` node should have some bitcoin amount, since the initial funding
   transaction will be created during the Exonum network generation.
-  For testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.***
+  For testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.*
 
 * While others should use this transaction identifier.
 
@@ -185,8 +185,8 @@ Participants need to send some bitcoins to the anchoring address in order to ena
       --btc-anchoring-funding-txid 73f5f6797bedd4b1024805bc6d7e08e5206a5597f97fd8a47ed7ad5a5bb174ae
   ```
 
-  ***Funding transaction should have enough amount of confirmations which setted before by
-  the `btc-anchoring-utxo-confirmations` parameter.***
+  ***Important note!** Funding transaction should have enough amount of confirmations which setted before by
+  the `btc-anchoring-utxo-confirmations` parameter.*
 
 ### Launch node
 
@@ -200,9 +200,61 @@ If you want to see additional information you may specify log level by environme
 
 ## Maintaince
 
+As maintainer you can perform the following actions.
+
+### Modify configuration parameters
+
+You can safely change the following parameters: `transaction_fee` and `anchoring_interval`.
+
 ### Add funds
 
+Send to the current anchoring [wallet][exonum:actual_address] some Bitcoins and save raw
+transaction body hex.
+Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex.
+
+***Note!** If the current anchoring chain [becomes unusable][exonum:anchoring_transferring]
+you may start a new chain by adding corresponding funding transaction.*
+
 ### Modify list of validators
+
+***Important warning!*** After changing of the validators list the anchoring address also changes,
+thus there are no possibility to sign anchoring transactions adressed to the old anchoring address.
+
+So please make shure that:
+
+* The current anchoring wallet has enought amount to create an anchoring transaction
+  to the new address.
+* Difference between the activation height (`actual_from`) and
+  current Exonum blockchain height is enough to sign an anchoring transaction.
+
+And then perform the following steps:
+
+* If necessary, generate a new key pair for anchoring.
+* Change list of validators via editing `public_keys` array.
+* Initiate the configuration update procedure.
+* Make sure that configuration update procedure is not delayed. That is, do not delay
+  the voting procedure for the new configuration.
+* Look at the new [address][exonum:following_address] of the anchoring.
+* Modify anchoring private keys.
+
+  Each exonum node stores in the local configuration a map for the anchoring
+  address and its corresponding private key. The address is encoded using
+  [`base58check`][bitcoin:base58check] encoding and the private key uses
+  [`WIF`][bitcoin:wif] format.
+
+  ```ini
+  [[services_configs.btc_anchoring.local.private_keys]]
+  address = "tb1q65fdqxzzd8sfjdjnmanf3agg5np9yz8fn33znmjgt9lm2m0chw8slahxwf"
+  private_key = "cTncKFuKUWuNCu5vD9RJuvkPD6oStf7k3PaXwGLBZqEJURGXgMJX"
+  ```
+
+  Add the lines with new address and corresponding private key for it. If node
+  public key is not changed you must use the old key for the new address
+  otherwise use a new key. After modifying the configuration file you need to
+  restart the node for the changes to take effect.
+
+***Note!** If transferring transaction has been lost you need to establish a
+new anchoring chain by a new funding transaction.*
 
 ## Licence
 
@@ -221,3 +273,5 @@ See [LICENSE](LICENSE) for details.
 [anchoring:specification]: https://exonum.com/doc/advanced/bitcoin-anchoring/
 [exonum:contribution]: https://exonum.com/doc/contributing/
 [exonum:install]: https://exonum.com/doc/get-started/install/
+[exonum:actual_address]: https://exonum.com/doc/advanced/bitcoin-anchoring/#actual-address
+[exonum:following_address]: https://exonum.com/doc/advanced/bitcoin-anchoring/#following-address
