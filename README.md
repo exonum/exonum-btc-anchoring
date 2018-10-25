@@ -8,15 +8,15 @@ native Bitcoin capabilities of creating multisig transactions.
 
 * [Reference documentation][exonum:reference]
 * [Specification][anchoring:specification]
-* [Example code](examples/anchoring.rs)
-* [Deployment guide](DEPLOY.md)
+* [Example code](examples/btc_anchoring.rs)
+* [Deployment guide](#deployment)
 * [Contribution guide][exonum:contribution]
 
 ## Prerequisites
 
 ### Installation
 
-Just follow the installation guide of the [`exonum`][exonum:install] to
+Just follow the installation guide of the [Exonum][exonum:install] to
 install dependencies.
 
 ### Bitcoin node deployment
@@ -126,7 +126,7 @@ Variables that you can modify
 * `public_keys` - the list of hex-encoded compressed bitcoin public keys of
   exonum validators that collects into the current anchoring address.
 
-***The option is not to be used for changing the applied Bitcoin network, otherwise the service will come to a halt.***
+***Warning!** The `network` parameter shouldn't be changed otherwise the service will come to a halt.*
 
 ## Deployment
 
@@ -212,7 +212,7 @@ Send to the current anchoring [wallet][exonum:actual_address] some Bitcoins and 
 transaction body hex.
 Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex.
 
-***Note!** If the current anchoring chain [becomes unusable][exonum:anchoring_transferring]
+***Note!** If the current anchoring chain [becomes unusable][exonum:change_address]
 you may start a new chain by adding corresponding funding transaction.*
 
 ### Modify list of validators
@@ -239,7 +239,7 @@ And then perform the following steps:
 
   Each exonum node stores in the local configuration a map for the anchoring
   address and its corresponding private key. The address is encoded using
-  [`base58check`][bitcoin:base58check] encoding and the private key uses
+  [`bech32`][bitcoin:bech32] encoding and the private key uses
   [`WIF`][bitcoin:wif] format.
 
   ```ini
@@ -262,8 +262,8 @@ Exonum core library is licensed under the Apache License (Version 2.0).
 See [LICENSE](LICENSE) for details.
 
 [bitcoin:install]: https://bitcoin.org/en/full-node#what-is-a-full-node
-[bitcoin:faucet]: https://testnet.manu.backend.hamburg/faucet
-[bitcoin:base58check]: https://en.bitcoin.it/wiki/Base58Check_encoding
+[bitcoin:faucet]: https://duckduckgo.com/?q=bitcoin+testnet+faucet&t=epiphany&ia=web
+[bitcoin:bech32]: https://en.bitcoin.it/wiki/Bech32
 [bitcoin:wif]: https://en.bitcoin.it/wiki/Wallet_import_format
 [bitcoin_wiki:configuration]: https://en.bitcoin.it/wiki/Running_Bitcoin#Bitcoin.conf_Configuration_File
 [travis:image]: https://travis-ci.org/exonum/exonum-btc-anchoring.svg?branch=master
@@ -275,3 +275,4 @@ See [LICENSE](LICENSE) for details.
 [exonum:install]: https://exonum.com/doc/get-started/install/
 [exonum:actual_address]: https://exonum.com/doc/advanced/bitcoin-anchoring/#actual-address
 [exonum:following_address]: https://exonum.com/doc/advanced/bitcoin-anchoring/#following-address
+[exonum:change_address]: https://exonum.com/doc/advanced/bitcoin-anchoring/#changing-validators-list
