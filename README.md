@@ -16,42 +16,41 @@ native Bitcoin capabilities of creating multisig transactions.
 
 ### Installation
 
-Just follow the installation guide of the [Exonum][exonum:install] to
-install dependencies.
+Just follow [Exonum][exonum:install] installation guide to install dependencies.
 
-### Bitcoin node deployment
+### Bitcoin Node Deployment
 
 First of all install `bitcoind` via your package manager and ensure that you
 use the latest stable version. You may visit official bitcoin [site][bitcoin:install]
 for more information about installation.
 
-Then create bitcoind configuration file in according to this [tutorial][bitcoin_wiki:configuration].
+Then create `bitcoind` configuration file in according to this [tutorial][bitcoin_wiki:configuration].
 
 For correct work of the service, the `bitcoind` configuration file
 should contain the following settings:
 
 ```ini
-# Run on the test network instead of the real bitcoin network.
-# If you want to use main network comment line bellow:
+# Run the node in the test network instead of the real Bitcoin network.
+# If you want to use the main network comment line bellow:
 testnet=1
-# server=1 tells Bitcoin-Qt and bitcoind to accept JSON-RPC commands.
+# server=1 tells `Bitcoin-Qt` and `bitcoind` to accept JSON-RPC commands.
 server=1
-# Maintain a full transaction index, used by the getrawtransaction rpc call.
+# Maintain a full transaction index, used by the `getrawtransaction` RPC call.
 # An arbitrary `bitcoind` daemon is not required to respond to a request for
-# information about an arbitrary transaction,
-# thus you should uncomment line bellow if you want to use daemon in an existing Exonum network.
+# information about an arbitrary transaction, thus you should uncomment the
+# line bellow if you want to use daemon in an existing Exonum network.
 # txindex=1
 
-# Bind to given address to listen for JSON-RPC connections.
+# Bind to the given address to listen to JSON-RPC connections.
 # Use [host]:port notation for IPv6.
 # This option can be specified multiple times (default: bind to all interfaces)
 #rpcbind=<addr>
-# You must specify rpcuser and rpcpassword to secure the JSON-RPC API
+# You must specify `rpcuser` and `rpcpassword` to secure the JSON-RPC API
 #rpcuser=<username>
 #rpcpassword=YourSuperGreatPasswordNumber_DO_NOT_USE_THIS_OR_YOU_WILL_GET_ROBBED_385593
 ```
 
-These rpc settings will be used by the service.
+These RPC settings will be used by the service.
 
 After creating configuration file, launch `bitcoind` daemon via command:
 
@@ -59,8 +58,8 @@ After creating configuration file, launch `bitcoind` daemon via command:
 bitcoind --daemon
 ```
 
-Downloading and indexing of the bitcoin blockchain may take a lot of time,
-especially for the mainnet.
+***Note!** Downloading and indexing of the bitcoin blockchain may take a lot of time,
+especially for the mainnet.*
 
 ## Usage
 
@@ -90,28 +89,28 @@ fn main() {
 
 ```
 
-## Configuration parameters
+## Configuration Parameters
 
 ### For the `generate-template` subcommand
 
-* `btc-anchoring-network` - bitcoin network type used for downloading Bitcoin blocks headers.
+* `btc-anchoring-network` - Bitcoin network type used for downloading Bitcoin blocks headers.
 
   Possible values: [mainnet, testnet, regtest]
 
 * `btc-anchoring-interval` - interval in blocks between anchored blocks.
-* `btc-anchoring-fee` - transaction fee per byte in satoshi that anchoring nodes should use.
+* `btc-anchoring-fee` - transaction fee per byte in satoshis that anchoring nodes should use.
 * `btc-anchoring-utxo-confirmations` - the minimum number of confirmations for the first funding transaction.
 
 ### For the `generate-config` subcommand
 
-* `btc-anchoring-rpc-host` - Bitcoin rpc url.
-* `btc-anchoring-rpc-user` - User to login into bitcoind.
-* `btc-anchoring-rpc-password` - Password to login into bitcoind.
+* `btc-anchoring-rpc-host` - Bitcoin RPC URL.
+* `btc-anchoring-rpc-user` - User to login into `bitcoind`.
+* `btc-anchoring-rpc-password` - Password to login into `bitcoind`.
 
 ### For the `finalize` subcommand
 
-* `btc-anchoring-create-funding-tx` - if this option is set, node will create an initial funding
-  transaction with the given amount in satoshis and return it identifier.
+* `btc-anchoring-create-funding-tx` - if this option is set, the node will create an initial
+  funding transaction with the given amount in satoshis and return its identifier.
 * `btc-anchoring-funding-txid` - Identifier of the initial funding transaction which was created
   previously using the option above.
 
@@ -121,26 +120,26 @@ Variables that you can modify
 
 * `transaction_fee` - the amount of the fee per byte in satoshis for the anchoring transactions.
 * `anchoring_interval` - the interval in blocks between anchored blocks.
-* `funding_transaction` - the hex representation of current funding transaction,
-  node would use it as input if it did not spent.
-* `public_keys` - the list of hex-encoded compressed bitcoin public keys of
-  exonum validators that collects into the current anchoring address.
+* `funding_transaction` - the hex representation of the current funding transaction,
+  the node will use it as an input if it is not spent.
+* `public_keys` - the list of the hex-encoded compressed Bitcoin public keys of the
+  Exonum validators that form a redeem script. The script is transformed into the
+  anchoring address.
 
 ***Warning!** The `network` parameter shouldn't be changed otherwise the service will come to a halt.*
 
 ## Deployment
 
-### Install anchoring service example
+### Example of the Anchoring Service Installation
 
-For the fast anchoring demonstration you can use built-in anchoring example.
+For the fast anchoring demonstration you can use a built-in anchoring example.
 
 ```bash
 cargo install --example anchoring
 ```
 
-### Generate configuration template
-
-For example create an BTC anchoring configuration template for the testnet bitcoin network.
+For example, create an BTC anchoring configuration template for the testnet Bitcoin network.
+In our case we create a template for the network with several validators.
 
 ```bash
 btc_anchoring generate-template template.toml \
@@ -150,7 +149,7 @@ btc_anchoring generate-template template.toml \
     --btc-anchoring-utxo-confirmations 0
 ```
 
-Then each of the participants generates own public and secret node configuration files.
+Each node generates its own public and secret node configuration files.
 
 ```bash
 btc_anchoring generate-config template.toml pub/0.toml sec/0.toml \
@@ -162,7 +161,7 @@ btc_anchoring generate-config template.toml pub/0.toml sec/0.toml \
 
 Participants need to send some bitcoins to the anchoring address in order to enable Bitcoin anchoring. For this:
 
-* One of the participants generates initial `funding_transaction` by init command:
+* One of the nodes generates initial `funding_transaction` by the finalize command:
 
   ```bash
   btc_anchoring finalize sec/0.toml nodes/0.toml \
@@ -170,12 +169,12 @@ Participants need to send some bitcoins to the anchoring address in order to ena
       --btc-anchoring-create-funding-tx 100000000
   ```
 
-  This command generates configuration of node and returns transaction
-  identifier of generated `funding_transaction`.
+  This command generates configuration of the node and returns transaction
+  identifier of the generated `funding_transaction`.
 
-  ***Note!** `bitcoind` node should have some bitcoin amount, since the initial funding
+  ***Note!** `bitcoind` node should a certain amount of Bitcoins, since the initial funding
   transaction will be created during the Exonum network generation.
-  For testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.*
+  For the testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.*
 
 * While others should use this transaction identifier.
 
@@ -185,22 +184,23 @@ Participants need to send some bitcoins to the anchoring address in order to ena
       --btc-anchoring-funding-txid 73f5f6797bedd4b1024805bc6d7e08e5206a5597f97fd8a47ed7ad5a5bb174ae
   ```
 
-  ***Important note!** Funding transaction should have enough amount of confirmations which setted before by
-  the `btc-anchoring-utxo-confirmations` parameter.*
+  ***Important note!** The funding transaction should have a sufficient number of confirmations.
+  Said number is set in advance by the `btc-anchoring-utxo-confirmations` parameter.*
 
 ### Launch node
 
-Launch all exonum nodes in the given Exonum network. To launch node concrete just execute:
+Launch all the Exonum nodes in the given Exonum network. To launch a particular node just execute:
 
 ```bash
 btc_anchoring run --node-config <destdir>/<N>.toml --db-path <destdir>/db/<N>
 ```
 
-If you want to see additional information you may specify log level by environment variable `RUST_LOG="exonum_btc_anchoring=info"`.
+If you want to see additional information you may specify the log level by an environment
+variable `RUST_LOG="exonum_btc_anchoring=info"`.
 
-## Maintaince
+## Maintenance
 
-As maintainer you can perform the following actions.
+As a maintainer you can perform the following actions.
 
 ### Modify configuration parameters
 
@@ -208,38 +208,40 @@ You can safely change the following parameters: `transaction_fee` and `anchoring
 
 ### Add funds
 
-Send to the current anchoring [wallet][exonum:actual_address] some Bitcoins and save raw
+Send some Bitcoins to the current anchoring [wallet][exonum:actual_address] and save a raw
 transaction body hex.
-Wait until transaction got enough confirmations. Then replace `funding_tx` variable by saved hex.
+Wait until transaction gets enough confirmations. Then replace the `funding_tx` variable by the
+saved hex.
 
-***Note!** If the current anchoring chain [becomes unusable][exonum:change_address]
-you may start a new chain by adding corresponding funding transaction.*
+***Note!** If the current anchoring chain [becomes unusable][exonum:change_address],
+you may start a new chain by adding a corresponding funding transaction.*
 
 ### Modify list of validators
 
 ***Important warning!*** After changing of the validators list the anchoring address also changes,
-thus there are no possibility to sign anchoring transactions adressed to the old anchoring address.
+thus, there is no possibility to sign anchoring transactions addressed to the old anchoring address.
 
-So please make shure that:
+So please make sure that:
 
-* The current anchoring wallet has enought amount to create an anchoring transaction
-  to the new address.
-* Difference between the activation height (`actual_from`) and
+* The current anchoring wallet has enough coins to create an anchoring transaction
+  to a new address.
+* Difference between the activation height (`actual_from`) and the
   current Exonum blockchain height is enough to sign an anchoring transaction.
 
 And then perform the following steps:
 
 * If necessary, generate a new key pair for anchoring.
-* Change list of validators via editing `public_keys` array.
+* Change the list of validators via editing `public_keys` array.
 * Initiate the configuration update procedure.
-* Make sure that configuration update procedure is not delayed. That is, do not delay
-  the voting procedure for the new configuration.
-* Look at the new [address][exonum:following_address] of the anchoring.
+* Make sure that the configuration update procedure is not delayed. That is, do not delay
+  the voting procedure for a new configuration.
+* Look at a new [address][exonum:following_address] of the anchoring.
 * Modify anchoring private keys.
 
-  Each exonum node stores in the local configuration a map for the anchoring
-  address and its corresponding private key. The address is encoded using
-  [`bech32`][bitcoin:bech32] encoding and the private key uses
+  Each Exonum node stores  a map for the anchoring address and its corresponding private key
+  in the local configuration.
+
+  The address is encoded using [`bech32`][bitcoin:bech32] encoding and the private key uses
   [`WIF`][bitcoin:wif] format.
 
   ```ini
@@ -248,12 +250,12 @@ And then perform the following steps:
   private_key = "cTncKFuKUWuNCu5vD9RJuvkPD6oStf7k3PaXwGLBZqEJURGXgMJX"
   ```
 
-  Add the lines with new address and corresponding private key for it. If node
-  public key is not changed you must use the old key for the new address
-  otherwise use a new key. After modifying the configuration file you need to
+  Add the lines with the new address and the corresponding private key for it. If the
+  public key of the node is not changed, you must use the old key for the new address.
+  Otherwise use a new key. After modifying the configuration file you need to
   restart the node for the changes to take effect.
 
-***Note!** If transferring transaction has been lost you need to establish a
+***Note!** If the transferring transaction has been lost, you need to establish a
 new anchoring chain by a new funding transaction.*
 
 ## Licence
