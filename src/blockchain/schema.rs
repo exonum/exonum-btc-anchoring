@@ -108,9 +108,9 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         input: &TxInputId,
         redeem_script: &RedeemScript,
     ) -> InputSignatures {
-        self.transaction_signatures().get(input).unwrap_or_else(|| {
-            InputSignatures::new(redeem_script.content().public_keys.len() as u16)
-        })
+        self.transaction_signatures()
+            .get(input)
+            .unwrap_or_else(|| InputSignatures::new(redeem_script.content().public_keys.len()))
     }
 
     /// Returns the actual state of anchoring.
@@ -260,6 +260,6 @@ impl<'a> BtcAnchoringSchema<&'a mut Fork> {
     ///
     /// [1]: struct.BtcAnchoringSchema.html#method.anchored_blocks
     pub fn anchored_blocks_mut(&mut self) -> ProofListIndex<&mut Fork, Hash> {
-        ProofListIndex::new("btc_anchoring.anchored_blocks", &mut self.snapshot)
+        ProofListIndex::new(ANCHORED_BLOCKS, &mut self.snapshot)
     }
 }

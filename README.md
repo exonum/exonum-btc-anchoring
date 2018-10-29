@@ -67,7 +67,7 @@ Include `exonum-btc-anchoring` as a dependency in your `Cargo.toml`:
 
 ```toml
 [dependencies]
-exonum-btc-oracle = "*"
+exonum-btc-anchoring = "0.10"
 ```
 
 Add the BTC anchoring service to the blockchain in the main project file:

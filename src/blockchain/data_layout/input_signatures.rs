@@ -28,7 +28,7 @@ pub struct InputSignatures {
 
 impl InputSignatures {
     /// Creates an empty signatures set for the given validators count.
-    pub fn new(validators_count: u16) -> InputSignatures {
+    pub fn new(validators_count: usize) -> InputSignatures {
         let content = vec![None; validators_count as usize];
         InputSignatures { content }
     }

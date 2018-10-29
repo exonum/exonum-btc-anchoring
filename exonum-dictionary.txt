@@ -136,7 +136,6 @@ println
 Privkey
 privkey
 proptest
-proptest
 pubkey
 pubkeyhash
 pubkeys
