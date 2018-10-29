@@ -159,7 +159,8 @@ btc_anchoring generate-config template.toml pub/0.toml sec/0.toml \
     --btc-anchoring-rpc-password password
 ```
 
-Participants need to send some bitcoins to the anchoring address in order to enable Bitcoin anchoring. For this:
+Participants need to send some bitcoins to the anchoring address in order to enable
+Bitcoin anchoring. For this:
 
 * One of the nodes generates initial `funding_transaction` by the finalize command:
 
