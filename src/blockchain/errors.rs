@@ -45,8 +45,8 @@ pub enum SignatureError {
         /// Validator identifier.
         validator_id: ValidatorId,
     },
-    /// Input with the given index doesn't exist.
-    #[fail(display = "Input with index {} doesn't exist.", _0)]
+    /// Input with the given index does not exist.
+    #[fail(display = "Input with index {} does not exist.", _0)]
     NoSuchInput {
         /// Input index.
         idx: usize,

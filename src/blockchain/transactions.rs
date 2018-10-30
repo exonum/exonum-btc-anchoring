@@ -78,7 +78,7 @@ impl Transaction for Signature {
     fn execute(&self, fork: &mut Fork) -> ExecutionResult {
         let tx = self.tx();
         let mut schema = BtcAnchoringSchema::new(fork);
-        // Number of signatures is enough to spend anchoring transaction.
+        // Checks that the number of signatures is sufficient to spend.
         if schema
             .anchoring_transactions_chain()
             .last()

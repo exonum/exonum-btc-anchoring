@@ -21,24 +21,24 @@ Just follow [Exonum][exonum:install] installation guide to install dependencies.
 ### Bitcoin Node Deployment
 
 First of all install `bitcoind` via your package manager and ensure that you
-use the latest stable version. You may visit official bitcoin [site][bitcoin:install]
+use the latest stable version. You may visit official Bitcoin [site][bitcoin:install]
 for more information about installation.
 
-Then create `bitcoind` configuration file in according to this [tutorial][bitcoin_wiki:configuration].
+Then create `bitcoind` configuration file according to this [tutorial][bitcoin_wiki:configuration].
 
 For correct work of the service, the `bitcoind` configuration file
 should contain the following settings:
 
 ```ini
 # Run the node in the test network instead of the real Bitcoin network.
-# If you want to use the main network comment line bellow:
+# If you want to use the main network comment the line bellow:
 testnet=1
 # server=1 tells `Bitcoin-Qt` and `bitcoind` to accept JSON-RPC commands.
 server=1
 # Maintain a full transaction index, used by the `getrawtransaction` RPC call.
 # An arbitrary `bitcoind` daemon is not required to respond to a request for
 # information about an arbitrary transaction, thus you should uncomment the
-# line bellow if you want to use daemon in an existing Exonum network.
+# line bellow if you want to use the daemon in an existing Exonum network.
 # txindex=1
 
 # Bind to the given address to listen to JSON-RPC connections.
@@ -58,12 +58,12 @@ After creating configuration file, launch `bitcoind` daemon via command:
 bitcoind --daemon
 ```
 
-***Note!** Downloading and indexing of the bitcoin blockchain may take a lot of time,
+***Note!** Downloading and indexing of the Bitcoin blockchain may take a lot of time,
 especially for the mainnet.*
 
 ## Usage
 
-Include `exonum-btc-anchoring` as a dependency in your `Cargo.toml`:
+Include `exonum-btc-anchoring` as a dependency into your `Cargo.toml`:
 
 ```toml
 [dependencies]
@@ -111,14 +111,14 @@ fn main() {
 
 * `btc-anchoring-create-funding-tx` - if this option is set, the node will create an initial
   funding transaction with the given amount in satoshis and return its identifier.
-* `btc-anchoring-funding-txid` - Identifier of the initial funding transaction which was created
+* `btc-anchoring-funding-txid` - identifier of the initial funding transaction which was created
   previously using the option above.
 
 ### For adjusting the running blockchain configuration
 
 Variables that you can modify
 
-* `transaction_fee` - the amount of the fee per byte in satoshis for the anchoring transactions.
+* `transaction_fee` - the amount of the fee per byte in satoshis for anchoring transactions.
 * `anchoring_interval` - the interval in blocks between anchored blocks.
 * `funding_transaction` - the hex representation of the current funding transaction,
   the node will use it as an input if it is not spent.
@@ -138,7 +138,7 @@ For the fast anchoring demonstration you can use a built-in anchoring example.
 cargo install --example anchoring
 ```
 
-For example, create an BTC anchoring configuration template for the testnet Bitcoin network.
+For example, create a BTC anchoring configuration template for the testnet Bitcoin network.
 In our case we create a template for the network with several validators.
 
 ```bash
@@ -173,11 +173,11 @@ Bitcoin anchoring. For this:
   This command generates configuration of the node and returns transaction
   identifier of the generated `funding_transaction`.
 
-  ***Note!** `bitcoind` node should a certain amount of Bitcoins, since the initial funding
+  ***Note!** `bitcoind` node should have a certain amount of Bitcoins, since the initial funding
   transaction will be created during the Exonum network generation.
   For the testnet you may use a [`faucet`][bitcoin:faucet] to get some coins.*
 
-* While others should use this transaction identifier.
+* While others should use this transaction identifier:
 
   ```bash
   btc_anchoring finalize sec/0.toml nodes/0.toml \
@@ -188,7 +188,7 @@ Bitcoin anchoring. For this:
   ***Important note!** The funding transaction should have a sufficient number of confirmations.
   Said number is set in advance by the `btc-anchoring-utxo-confirmations` parameter.*
 
-### Launch node
+### Launch Node
 
 Launch all the Exonum nodes in the given Exonum network. To launch a particular node just execute:
 
@@ -203,11 +203,11 @@ variable `RUST_LOG="exonum_btc_anchoring=info"`.
 
 As a maintainer you can perform the following actions.
 
-### Modify configuration parameters
+### Modify Configuration Parameters
 
 You can safely change the following parameters: `transaction_fee` and `anchoring_interval`.
 
-### Add funds
+### Add Funds
 
 Send some Bitcoins to the current anchoring [wallet][exonum:actual_address] and save a raw
 transaction body hex.
@@ -217,9 +217,9 @@ saved hex.
 ***Note!** If the current anchoring chain [becomes unusable][exonum:change_address],
 you may start a new chain by adding a corresponding funding transaction.*
 
-### Modify list of validators
+### Modify List of Validators
 
-***Important warning!*** After changing of the validators list the anchoring address also changes,
+***Important warning!*** After change of the validators list the anchoring address also changes,
 thus, there is no possibility to sign anchoring transactions addressed to the old anchoring address.
 
 So please make sure that:
@@ -227,7 +227,7 @@ So please make sure that:
 * The current anchoring wallet has enough coins to create an anchoring transaction
   to a new address.
 * Difference between the activation height (`actual_from`) and the
-  current Exonum blockchain height is enough to sign an anchoring transaction.
+  current Exonum blockchain height is sufficient to sign an anchoring transaction.
 
 And then perform the following steps:
 
@@ -239,7 +239,7 @@ And then perform the following steps:
 * Look at a new [address][exonum:following_address] of the anchoring.
 * Modify anchoring private keys.
 
-  Each Exonum node stores  a map for the anchoring address and its corresponding private key
+  Each Exonum node stores a map for the anchoring address and its corresponding private key
   in the local configuration.
 
   The address is encoded using [`bech32`][bitcoin:bech32] encoding and the private key uses
