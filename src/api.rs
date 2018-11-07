@@ -13,7 +13,7 @@
 // limitations under the License.
 
 //! Anchoring HTTP API implementation.
-//!
+
 use exonum::api::{self, ServiceApiBuilder, ServiceApiState};
 use exonum::blockchain::{BlockProof, Schema as CoreSchema};
 use exonum::crypto::Hash;
@@ -21,6 +21,11 @@ use exonum::helpers::Height;
 use exonum::storage::{ListProof, MapProof};
 
 use failure::Fail;
+
+use std::cmp::{
+    self,
+    Ordering::{self, Equal, Greater, Less},
+};
 
 use blockchain::BtcAnchoringSchema;
 use btc;
@@ -126,36 +131,47 @@ impl PublicApi for ServiceApiState {
             return Ok(None);
         }
 
+        debug!("Find transaction, query: {:?}", query);
+        for idx in 0..tx_chain.len() {
+            let tx = tx_chain.get(idx).unwrap();
+            debug!(
+                "idx {}: txid: {}, payload: {:?}",
+                idx,
+                tx.id().to_hex(),
+                tx.anchoring_payload().unwrap()
+            );
+        }
+
         let tx_index = if let Some(height) = query.height {
             // Handmade binary search.
-            let get_tx_height = |index| -> Height {
-                tx_chain
+            let f = |index| -> Ordering {
+                // index is always in [0, size), that means index is >= 0 and < size.
+                // index >= 0: by definition
+                // index < size: index = size / 2 + size / 4 + size / 8 ...
+                let other = tx_chain
                     .get(index)
                     .unwrap()
                     .anchoring_payload()
                     .unwrap()
-                    .block_height
+                    .block_height;
+                other.cmp(&height)
             };
 
             let mut base = 0;
-            let mut mid = 0;
             let mut size = tx_chain.len();
             while size > 1 {
                 let half = size / 2;
-                mid = base + half;
-                match get_tx_height(mid) {
-                    value if value == height => break,
-                    value if value < height => base = mid,
-                    value if value > height => base = base,
-                    _ => unreachable!(),
-                }
+                let mid = base + half;
+                let cmp = f(mid);
+                base = if cmp == Greater { base } else { mid };
                 size -= half;
             }
             // Don't forget to check base value.
-            if get_tx_height(base) == height {
+            let cmp = f(base);
+            if cmp == Equal {
                 base
             } else {
-                mid
+                cmp::min(base + (cmp == Less) as u64, tx_chain.len() - 1)
             }
         } else {
             tx_chain.len() - 1
@@ -169,6 +185,8 @@ impl PublicApi for ServiceApiState {
         let to_table: MapProof<Hash, Hash> =
             core_schema.get_proof_to_service_table(BTC_ANCHORING_SERVICE_ID, 0);
         let to_transaction = tx_chain.get_proof(tx_index);
+
+        debug!("Found index: {}", tx_index);
 
         Ok(Some(TransactionProof {
             latest_authorized_block,
