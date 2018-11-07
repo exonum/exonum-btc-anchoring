@@ -15,8 +15,8 @@
 extern crate exonum;
 extern crate exonum_btc_anchoring;
 
-extern crate structopt;
 extern crate serde_json;
+extern crate structopt;
 #[macro_use]
 extern crate failure;
 

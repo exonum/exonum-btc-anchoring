@@ -146,16 +146,16 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
 
             // Checks that latest anchoring transaction isn't a transition.
             if actual_state.is_transition() {
-                let current_address = &tx.0.output[0].script_pubkey;
-                let outgoing_address = &actual_state.script_pubkey();
-                if current_address == outgoing_address {
+                let current_script_pubkey = &tx.0.output[0].script_pubkey;
+                let outgoing_script_pubkey = &actual_state.script_pubkey();
+                if current_script_pubkey == outgoing_script_pubkey {
                     trace!("Awaiting for new configuration to become actual.");
                     return None;
                 } else {
                     trace!(
                         "Transition from {} to {}.",
-                        current_address,
-                        outgoing_address
+                        actual_state.actual_configuration().anchoring_address(),
+                        actual_state.output_address(),
                     );
                     builder.transit_to(actual_state.script_pubkey());
                 }
@@ -187,7 +187,7 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         builder.payload(anchoring_height, anchoring_block_hash);
         builder.fee(config.transaction_fee);
 
-        // Creates anchoring proposal
+        // Creates anchoring proposal.
         Some(builder.create())
     }
 

@@ -169,7 +169,10 @@ impl<'a> SyncWithBtcRelayTask<'a> {
             if let Some(index) = self.find_index_of_first_uncommitted_transaction()? {
                 let anchoring_txs = schema.anchoring_transactions_chain();
                 for tx in anchoring_txs.iter_from(index) {
-                    trace!("Send anchoring transaction to btc relay: {}", tx.id());
+                    trace!(
+                        "Send anchoring transaction to btc relay: {}",
+                        tx.id().to_hex()
+                    );
                     self.relay.send_transaction(&tx)?;
                 }
             }
