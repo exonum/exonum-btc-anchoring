@@ -131,17 +131,6 @@ impl PublicApi for ServiceApiState {
             return Ok(None);
         }
 
-        debug!("Find transaction, query: {:?}", query);
-        for idx in 0..tx_chain.len() {
-            let tx = tx_chain.get(idx).unwrap();
-            debug!(
-                "idx {}: txid: {}, payload: {:?}",
-                idx,
-                tx.id().to_hex(),
-                tx.anchoring_payload().unwrap()
-            );
-        }
-
         let tx_index = if let Some(height) = query.height {
             // Handmade binary search.
             let f = |index| -> Ordering {
@@ -185,8 +174,6 @@ impl PublicApi for ServiceApiState {
         let to_table: MapProof<Hash, Hash> =
             core_schema.get_proof_to_service_table(BTC_ANCHORING_SERVICE_ID, 0);
         let to_transaction = tx_chain.get_proof(tx_index);
-
-        debug!("Found index: {}", tx_index);
 
         Ok(Some(TransactionProof {
             latest_authorized_block,
