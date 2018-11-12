@@ -168,7 +168,7 @@ impl Transaction for Signature {
         info!("====== ANCHORING ======");
         info!("txid: {}", tx.id().to_hex());
         info!("height: {}", payload.block_height);
-        info!("hash: {}", payload.block_hash);
+        info!("hash: {}", payload.block_hash.to_hex());
         info!("balance: {}", tx.0.output[0].value);
         trace!("Anchoring txhex: {}", tx.to_string());
 
