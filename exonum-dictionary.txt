@@ -6,8 +6,8 @@ Asyqzv
 atomicity
 Awnht
 backend
-bigint
 bech32
+bigint
 bitcoind
 bitcoinrpc
 bitfury
@@ -42,6 +42,7 @@ deserializer
 deserializes
 deserializing
 DESTDIR
+determenistic
 dhash
 dumprpivkey
 ecdsa
@@ -120,8 +121,8 @@ oneshot
 OP_CHECKSIG
 OP_EQUALVERIFY
 openssl
-passwd
 PASSWD
+passwd
 peekable
 permissioned
 pkey
