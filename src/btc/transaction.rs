@@ -232,7 +232,7 @@ impl BtcAnchoringTransactionBuilder {
 
         // Computes a total fee value.
         let size_in_bytes = {
-            let bytes = ::bitcoin::network::serialize::serialize(&transaction.0).unwrap();
+            let bytes = ::bitcoin::consensus::serialize(&transaction.0);
             bytes.len() as u64
         };
         let total_fee = self.fee.expect("Fee per byte isn't set.") * size_in_bytes;
