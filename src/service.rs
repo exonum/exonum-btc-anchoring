@@ -18,8 +18,8 @@ use exonum::blockchain::{
 };
 use exonum::crypto::Hash;
 use exonum::encoding::Error as EncodingError;
-use exonum::messages::RawMessage;
 use exonum::storage::{Fork, Snapshot};
+use exonum::messages::RawTransaction;
 
 use serde_json;
 
@@ -83,7 +83,7 @@ impl Service for BtcAnchoringService {
         BtcAnchoringSchema::new(snapshot).state_hash()
     }
 
-    fn tx_from_raw(&self, raw: RawMessage) -> Result<Box<dyn Transaction>, EncodingError> {
+    fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<dyn Transaction>, EncodingError> {
         let tx = Transactions::tx_from_raw(raw)?;
         Ok(tx.into())
     }

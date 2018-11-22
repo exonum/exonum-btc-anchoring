@@ -21,12 +21,12 @@ use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
 use exonum::api;
 use exonum::blockchain::{
-    BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration, Transaction,
+    BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration,
 };
 use exonum::crypto::{CryptoHash, Hash};
 use exonum::encoding::serialize::FromHex;
 use exonum::helpers::Height;
-use exonum::messages::Message;
+use exonum::messages::{Message, Signed, RawTransaction};
 use exonum::storage::MapProof;
 use exonum_testkit::{
     ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration, TestNode,
@@ -321,7 +321,7 @@ impl AnchoringTestKit {
     pub fn create_signature_tx_for_validators(
         &self,
         validators_num: u16,
-    ) -> Result<Vec<Box<dyn Transaction>>, btc::BuilderError> {
+    ) -> Result<Vec<Signed<RawTransaction>>, btc::BuilderError> {
         let validators = self
             .network()
             .validators()
@@ -329,7 +329,7 @@ impl AnchoringTestKit {
             .filter(|v| v != &self.us())
             .take(validators_num as usize);
 
-        let mut signatures: Vec<Box<Transaction>> = vec![];
+        let mut signatures = Vec::new();
 
         let redeem_script = self.redeem_script();
         let mut signer = p2wsh::InputSigner::new(redeem_script.clone());
@@ -354,15 +354,18 @@ impl AnchoringTestKit {
                             privkey.0.secret_key(),
                         ).unwrap();
 
-                    let tx = Signature::new(
-                        &public_key,
-                        validator_id,
-                        proposal.clone(),
-                        index as u32,
-                        signature.as_ref(),
+                    let tx = Message::sign_transaction(
+                        Signature::new(
+                            validator_id,
+                            proposal.clone(),
+                            index as u32,
+                            signature.as_ref(),
+                        ),
+                        BTC_ANCHORING_SERVICE_ID,
+                        *public_key,
                         &private_key,
                     );
-                    signatures.push(tx.into());
+                    signatures.push(tx);
                 }
             }
         }
@@ -457,10 +460,6 @@ fn validate_table_proof(
                 )
             })?;
         ensure!(
-            precommit.verify_signature(&validator_keys.consensus_key),
-            "Precommit verification failed"
-        );
-        ensure!(
             precommit.block_hash() == &latest_authorized_block.block.hash(),
             "Block hash doesn't match"
         );
@@ -472,12 +471,12 @@ fn validate_table_proof(
         checked_table_proof.merkle_root() == *latest_authorized_block.block.state_hash(),
         "State hash doesn't match"
     );
-    checked_table_proof
+    let value = checked_table_proof
         .entries()
-        .get(0)
-        .cloned()
+        .next()
         .map(|(a, b)| (*a, *b))
-        .ok_or_else(|| format_err!("Unable to get `to_block_header` entry"))
+        .ok_or_else(|| format_err!("Unable to get `to_block_header` entry"));
+    value
 }
 
 /// Proof validation extension.

@@ -122,18 +122,12 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                     &signature,
                 ).unwrap();
 
-            let signature_tx = Signature::new(
-                self.context.public_key(),
+            self.context.broadcast_transaction(Signature::new(
                 validator_id,
                 proposal.clone(),
                 index as u32,
                 signature.as_ref(),
-                self.context.secret_key(),
-            );
-
-            self.context
-                .transaction_sender()
-                .send(Box::new(signature_tx))?;
+            ));
         }
 
         Ok(())

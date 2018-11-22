@@ -14,17 +14,15 @@
 
 //! BTC anchoring transactions.
 
-use exonum::blockchain::{ExecutionResult, Transaction};
-use exonum::crypto::PublicKey;
-use exonum::helpers::ValidatorId;
-use exonum::messages::Message;
-use exonum::storage::Fork;
+use exonum::{
+    blockchain::{ExecutionResult, Transaction, TransactionContext},
+    helpers::ValidatorId,
+};
 
 use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, InputSignatureRef, TxInRef};
 use secp256k1::{self, None, Secp256k1};
 
 use btc;
-use BTC_ANCHORING_SERVICE_ID;
 
 use super::data_layout::TxInputId;
 use super::errors::SignatureError;
@@ -33,12 +31,8 @@ use super::BtcAnchoringSchema;
 transactions! {
     /// Exonum BTC anchoring transactions.
     pub Transactions {
-        const SERVICE_ID = BTC_ANCHORING_SERVICE_ID;
-
         /// Exonum message with the signature for the new anchoring transaction.
         struct Signature {
-            /// Public key of validator.
-            from: &PublicKey,
             /// Public key index in the anchoring public keys list.
             validator: ValidatorId,
             /// Signed transaction.
@@ -70,14 +64,10 @@ impl Signature {
 }
 
 impl Transaction for Signature {
-    fn verify(&self) -> bool {
-        let context = Secp256k1::without_caps();
-        self.input_signature(&context).is_ok() && self.verify_signature(self.from())
-    }
-
-    fn execute(&self, fork: &mut Fork) -> ExecutionResult {
+    fn execute(&self, mut context: TransactionContext) -> ExecutionResult {
+        // TODO Checks that transaction author is validator
         let tx = self.tx();
-        let mut schema = BtcAnchoringSchema::new(fork);
+        let mut schema = BtcAnchoringSchema::new(context.fork());
         // Checks that the number of signatures is sufficient to spend.
         if schema
             .anchoring_transactions_chain()
@@ -118,7 +108,9 @@ impl Transaction for Signature {
         let context = Secp256k1::without_caps();
 
         // Checks signature content.
-        let input_signature_ref = self.input_signature(&context).unwrap();
+        let input_signature_ref = self
+            .input_signature(&context)
+            .map_err(|_| SignatureError::UnknownError)?;
         let input_idx = self.input() as usize;
         let input_tx = match expected_inputs.get(input_idx) {
             Some(input_tx) => input_tx,
