@@ -12,18 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate exonum;
-extern crate exonum_btc_anchoring as anchoring;
-extern crate exonum_configuration as configuration;
+//! Additional data types for the BTC anchoring information schema.
 
-use exonum::helpers;
-use exonum::helpers::fabric::NodeBuilder;
+pub use self::input_signatures::InputSignatures;
+pub use self::tx_input_id::TxInputId;
 
-fn main() {
-    exonum::crypto::init();
-    helpers::init_logger().unwrap();
-    let node = NodeBuilder::new()
-        .with_service(Box::new(configuration::ServiceFactory))
-        .with_service(Box::new(anchoring::ServiceFactory));
-    node.run();
-}
+mod input_signatures;
+mod tx_input_id;

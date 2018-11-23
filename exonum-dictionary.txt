@@ -6,6 +6,7 @@ Asyqzv
 atomicity
 Awnht
 backend
+bech32
 bigint
 bitcoind
 bitcoinrpc
@@ -41,6 +42,7 @@ deserializer
 deserializes
 deserializing
 DESTDIR
+determenistic
 dhash
 dumprpivkey
 ecdsa
@@ -58,6 +60,7 @@ getnewaddress
 getrawtransaction
 GFBRKYE
 gitter
+Hasher
 hdkeypath
 hdmasterkeyid
 healthcheck
@@ -72,6 +75,7 @@ iswatchonly
 JJBZ
 Jjqe
 keepalive
+keyhash
 keypair
 keypairs
 lects
@@ -84,9 +88,10 @@ libsodium
 libssl
 listunspent
 locktime
-Mainnet
 mainnet
+Mainnet
 maintainer's
+maplit
 markdownlint
 Mdewrpx
 memorydb
@@ -120,6 +125,7 @@ PASSWD
 passwd
 peekable
 permissioned
+pkey
 postcondition
 postpropose
 postvote
@@ -130,6 +136,7 @@ prevotes
 println
 Privkey
 privkey
+proptest
 pubkey
 pubkeyhash
 pubkeys
@@ -203,13 +210,17 @@ toml
 toolchain
 txhex
 txid
+txin
 txindex
 txinfo
+txinwitness
+txout
 txvec
 tymethod
 unboxed
 unreceived
 unsync
+unsynced
 untagged
 userid
 usize

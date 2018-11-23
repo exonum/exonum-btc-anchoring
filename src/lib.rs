@@ -1,4 +1,4 @@
-// Copyright 2017 The Exonum Team
+// Copyright 2018 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -55,62 +55,79 @@
 //! ```
 //!
 
-#![deny(missing_docs, missing_debug_implementations)]
+#![warn(missing_docs)]
+#![deny(missing_debug_implementations, unsafe_code)]
 
-extern crate bitcoin;
-extern crate btc_transaction_utils;
-extern crate byteorder;
+#[macro_use]
+extern crate derive_more;
 #[macro_use]
 extern crate display_derive;
-extern crate exonum_bitcoinrpc as bitcoinrpc;
+#[macro_use]
+extern crate exonum;
 #[macro_use]
 extern crate failure;
 #[macro_use]
 extern crate failure_derive;
 #[macro_use]
 extern crate log;
-extern crate secp256k1;
-extern crate serde;
 #[macro_use]
 extern crate serde_derive;
-extern crate serde_json;
-extern crate toml;
-
 #[macro_use]
-extern crate exonum;
-extern crate rand;
+extern crate serde_json;
 
 #[cfg(test)]
 #[macro_use]
-extern crate pretty_assertions;
+extern crate matches;
+
+#[cfg(test)]
+#[macro_use]
+extern crate proptest;
+
+#[macro_use]
+extern crate maplit;
+
+extern crate bitcoin;
+extern crate btc_transaction_utils;
+extern crate byteorder;
+extern crate exonum_bitcoinrpc as bitcoin_rpc;
+extern crate rand;
+extern crate secp256k1;
+extern crate serde;
+extern crate serde_str;
+extern crate toml;
+
+extern crate exonum_testkit;
+
+pub use factory::BtcAnchoringFactory as ServiceFactory;
+pub use service::{BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME};
 
 pub mod api;
 pub mod blockchain;
-pub mod cmd;
-#[doc(hidden)]
-pub mod details;
-#[doc(hidden)]
-pub mod error;
-#[doc(hidden)]
-pub mod handler;
-#[doc(hidden)]
-pub mod local_storage;
-#[doc(hidden)]
-pub mod service;
+pub mod btc;
+pub mod config;
+pub(crate) mod factory;
+pub mod rpc;
+pub(crate) mod service;
 
-pub use blockchain::consensus_storage::AnchoringConfig;
-pub use cmd::AnchoringServiceFactory as ServiceFactory;
-pub use details::btc::{gen_btc_keypair, gen_btc_keypair_with_rng, Network as BitcoinNetwork};
-pub use details::rpc::{AnchoringRpcConfig, BitcoinRelay, RpcClient};
-pub use error::Error;
-pub use handler::AnchoringHandler;
-pub use local_storage::AnchoringNodeConfig;
-pub use service::{
-    gen_anchoring_testnet_config, gen_anchoring_testnet_config_with_rng, AnchoringService,
-    ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME,
-};
+pub mod test_helpers;
 
-#[doc(hidden)]
-pub fn majority_count(cnt: u8) -> u8 {
-    cnt * 2 / 3 + 1
+mod handler;
+
+pub(crate) trait ResultEx {
+    fn log_error(self);
+    fn log_warn(self);
+}
+
+impl<T: ::std::fmt::Display> ResultEx for Result<(), T> {
+    fn log_error(self) {
+        if let Err(e) = self {
+            error!("{}", e);
+        }
+    }
+
+    fn log_warn(self) {
+        if let Err(e) = self {
+            warn!("{}", e);
+        }
+    }
 }

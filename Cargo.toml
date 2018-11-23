@@ -19,26 +19,27 @@ bitcoin = { version = "0.14", features = ["serde"] }
 btc-transaction-utils = "0.3"
 byteorder = "1.2"
 clap = "2.32"
+derive_more = "0.13"
 display_derive = "0.0"
-exonum = "0.9.1" 
+exonum = "0.9"
 exonum_bitcoinrpc = "0.5"
+exonum-testkit = "0.9"
 failure = "0.1"
 failure_derive = "0.1"
 log = "0.4"
+maplit = "1.0"
+matches = "0.1"
 rand = "0.4"
-secp256k1 = "0.11"
+secp256k1 = { version = "0.11", features = ["serde"] }
 serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
-tempdir = "0.3"
+serde_str = "0.1"
+structopt = "0.2"
 toml = "0.4"
 
 [dev-dependencies]
-exonum-configuration = "0.9.1"
-exonum-testkit = "0.9.1"
-libc = "0.2.43"
-pretty_assertions = "0.5.1"
-
-[features]
-default = []
-rpc_tests = []
+exonum-configuration = "0.9"
+libc = "0.2"
+pretty_assertions = "0.5"
+proptest = "0.8"

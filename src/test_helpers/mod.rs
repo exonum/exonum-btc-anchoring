@@ -12,18 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate exonum;
-extern crate exonum_btc_anchoring as anchoring;
-extern crate exonum_configuration as configuration;
+//! Set of helpers for btc anchoring testing.
 
-use exonum::helpers;
-use exonum::helpers::fabric::NodeBuilder;
-
-fn main() {
-    exonum::crypto::init();
-    helpers::init_logger().unwrap();
-    let node = NodeBuilder::new()
-        .with_service(Box::new(configuration::ServiceFactory))
-        .with_service(Box::new(anchoring::ServiceFactory));
-    node.run();
-}
+#[macro_use]
+pub mod rpc;
+pub mod testkit;

@@ -1,4 +1,4 @@
-// Copyright 2017 The Exonum Team
+// Copyright 2018 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,103 +12,84 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use std::sync::{Arc, Mutex};
-
-use rand::{thread_rng, Rng};
-use serde_json;
-use serde_json::value::Value;
-
 use exonum::api::ServiceApiBuilder;
-use exonum::blockchain::{Schema as CoreSchema, Service, ServiceContext, Transaction};
+use exonum::blockchain::{
+    Schema as CoreSchema, Service, ServiceContext, Transaction, TransactionSet,
+};
 use exonum::crypto::Hash;
-use exonum::encoding::Error as StreamStructError;
-use exonum::messages::RawTransaction;
+use exonum::encoding::Error as EncodingError;
+use exonum::messages::RawMessage;
 use exonum::storage::{Fork, Snapshot};
 
+use serde_json;
+
+use std::sync::{Arc, RwLock};
+
+use std::collections::HashMap;
+
 use api;
-use blockchain::consensus_storage::AnchoringConfig;
-use blockchain::dto;
-use blockchain::schema::AnchoringSchema;
-use details::btc;
-use details::error::Error as InternalError;
-use details::rpc::{BitcoinRelay, RpcClient};
-use error::Error as ServiceError;
-use handler::{error::Error as HandlerError, observer::AnchoringChainObserver, AnchoringHandler};
-use local_storage::AnchoringNodeConfig;
+use blockchain::{BtcAnchoringSchema, Transactions};
+use btc::{Address, Privkey};
+use config::GlobalConfig;
+use handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask};
+use rpc::BtcRelay;
+use ResultEx;
 
 /// Anchoring service id.
-pub const ANCHORING_SERVICE_ID: u16 = 3;
+pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;
 /// Anchoring service name.
-pub const ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
+pub const BTC_ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
+/// Set of bitcoin private keys for corresponding anchoring addresses.
+pub(crate) type KeyPool = Arc<RwLock<HashMap<Address, Privkey>>>;
 
-/// Anchoring service implementation for the Exonum blockchain.
-#[derive(Debug)]
-pub struct AnchoringService {
-    genesis: AnchoringConfig,
-    local: AnchoringNodeConfig,
-    handler: Arc<Mutex<AnchoringHandler>>,
+/// Btc anchoring service implementation for the Exonum blockchain.
+pub struct BtcAnchoringService {
+    global_config: GlobalConfig,
+    private_keys: KeyPool,
+    btc_relay: Option<Box<dyn BtcRelay>>,
 }
 
-impl AnchoringService {
-    /// Creates a new service instance with the given `consensus` and `local` configurations.
-    pub fn new(consensus: AnchoringConfig, local: AnchoringNodeConfig) -> AnchoringService {
-        let client = local.rpc.clone().map(RpcClient::from).map(Into::into);
-        AnchoringService {
-            genesis: consensus,
-            handler: Arc::new(Mutex::new(AnchoringHandler::new(client, local.clone()))),
-            local,
-        }
-    }
-
-    #[doc(hidden)]
-    pub fn new_with_client(
-        client: Box<BitcoinRelay>,
-        genesis: AnchoringConfig,
-        local: AnchoringNodeConfig,
-    ) -> AnchoringService {
-        AnchoringService {
-            genesis,
-            handler: Arc::new(Mutex::new(AnchoringHandler::new(
-                Some(client),
-                local.clone(),
-            ))),
-            local,
-        }
-    }
-
-    /// Returns an internal handler
-    pub fn handler(&self) -> Arc<Mutex<AnchoringHandler>> {
-        Arc::clone(&self.handler)
+impl ::std::fmt::Debug for BtcAnchoringService {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+        f.debug_struct("BtcAnchoringService").finish()
     }
 }
 
-impl Service for AnchoringService {
+impl BtcAnchoringService {
+    /// Creates a new btc anchoring service instance.
+    pub fn new(
+        global_config: GlobalConfig,
+        private_keys: KeyPool,
+        btc_relay: Option<Box<dyn BtcRelay>>,
+    ) -> BtcAnchoringService {
+        BtcAnchoringService {
+            global_config,
+            private_keys,
+            btc_relay,
+        }
+    }
+}
+
+impl Service for BtcAnchoringService {
     fn service_id(&self) -> u16 {
-        ANCHORING_SERVICE_ID
+        BTC_ANCHORING_SERVICE_ID
     }
 
     fn service_name(&self) -> &'static str {
-        ANCHORING_SERVICE_NAME
+        BTC_ANCHORING_SERVICE_NAME
     }
 
-    fn state_hash(&self, snapshot: &Snapshot) -> Vec<Hash> {
-        let schema = AnchoringSchema::new(snapshot);
-        schema.state_hash()
+    fn state_hash(&self, snapshot: &dyn Snapshot) -> Vec<Hash> {
+        BtcAnchoringSchema::new(snapshot).state_hash()
     }
 
-    fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<Transaction>, StreamStructError> {
-        dto::tx_from_raw(raw)
+    fn tx_from_raw(&self, raw: RawMessage) -> Result<Box<dyn Transaction>, EncodingError> {
+        let tx = Transactions::tx_from_raw(raw)?;
+        Ok(tx.into())
     }
 
-    fn initialize(&self, fork: &mut Fork) -> Value {
-        let mut handler = self.handler.lock().unwrap();
-        let cfg = self.genesis.clone();
-        let (_, addr) = cfg.redeem_script();
-        if handler.client.is_some() {
-            handler.import_address(&addr).unwrap();
-        }
-        AnchoringSchema::new(fork).create_genesis_config(&cfg);
-        serde_json::to_value(cfg).unwrap()
+    fn initialize(&self, _fork: &mut Fork) -> serde_json::Value {
+        json!(self.global_config)
     }
 
     fn before_commit(&self, fork: &mut Fork) {
@@ -118,115 +99,22 @@ impl Service for AnchoringService {
             .last()
             .expect("An attempt to invoke execute during the genesis block initialization.");
 
-        let fork = {
-            let mut schema = AnchoringSchema::new(fork);
-            schema.anchored_blocks_mut().push(block_header_hash);
-            schema.into_inner()
-        };
-
-        if self.local.observer.enabled {
-            let height = CoreSchema::new(&fork).height();
-            if height.0 % self.local.observer.check_interval.0 == 0 {
-                let handler = self.handler.lock().unwrap();
-                let client = handler.client();
-                let observer = AnchoringChainObserver::new(fork, client);
-                if let Err(e) = observer.check_anchoring_chain() {
-                    error!(
-                        "An error during `check_anchoring_chain` occurred, msg={:?}",
-                        e
-                    );
-                }
-            }
-        }
+        let mut schema = BtcAnchoringSchema::new(fork);
+        schema.anchored_blocks_mut().push(block_header_hash);
     }
 
-    fn after_commit(&self, state: &ServiceContext) {
-        let mut handler = self.handler.lock().unwrap();
-        match handler.after_commit(state) {
-            Err(ServiceError::Handler(e @ HandlerError::IncorrectLect { .. })) => {
-                panic!("A critical error occurred: {}", e)
-            }
-            Err(ServiceError::Internal(e @ InternalError::InsufficientFunds { .. })) => {
-                trace!("{}", e);
-            }
-            Err(ServiceError::Handler(e)) => {
-                error!("An error in handler occurred: {}", e);
-                if let Some(sink) = handler.errors_sink.as_ref() {
-                    let res = sink.send(e);
-                    if let Err(err) = res {
-                        error!("Can't send error to channel: {}", err);
-                    }
-                }
-            }
-            Err(e) => {
-                error!("An error occurred: {:?}", e);
-            }
-            Ok(()) => (),
+    fn after_commit(&self, context: &ServiceContext) {
+        let keys = &self.private_keys.read().unwrap();
+        let task = UpdateAnchoringChainTask::new(context, keys);
+        task.run().log_error();
+        // TODO make this task async via tokio core or something else.
+        if let Some(ref relay) = self.btc_relay.as_ref() {
+            let task = SyncWithBtcRelayTask::new(context, relay.as_ref());
+            task.run().log_error();
         }
     }
 
     fn wire_api(&self, builder: &mut ServiceApiBuilder) {
         api::wire(builder);
     }
-}
-
-/// Generates testnet configuration by given rpc for given nodes amount
-/// using given random number generator.
-///
-/// Note: Bitcoin node that is used by rpc should have enough bitcoin amount to generate
-/// funding transaction by given `total_funds`.
-pub fn gen_anchoring_testnet_config_with_rng<R>(
-    client: &BitcoinRelay,
-    network: btc::Network,
-    count: u8,
-    total_funds: u64,
-    rng: &mut R,
-) -> (AnchoringConfig, Vec<AnchoringNodeConfig>)
-where
-    R: Rng,
-{
-    let rpc = client.config();
-    let mut pub_keys = Vec::new();
-    let mut node_cfgs = Vec::new();
-    let mut priv_keys = Vec::new();
-
-    for _ in 0..count as usize {
-        let (pub_key, priv_key) = btc::gen_btc_keypair_with_rng(network, rng);
-
-        pub_keys.push(pub_key);
-        node_cfgs.push(AnchoringNodeConfig::new(Some(rpc.clone())));
-        priv_keys.push(priv_key.clone());
-    }
-
-    let address = {
-        let majority_count = ::majority_count(count);
-        let keys = pub_keys.iter().map(|x| x.0);
-        let redeem_script = btc::RedeemScriptBuilder::with_public_keys(keys)
-            .quorum(majority_count as usize)
-            .to_script()
-            .unwrap();
-        btc::Address::from_script(&redeem_script, network)
-    };
-    client.watch_address(&address, false).unwrap();
-    let tx = client.send_to_address(&address, total_funds).unwrap();
-
-    let genesis_cfg = AnchoringConfig::new_with_funding_tx(network, pub_keys, tx);
-    for (idx, node_cfg) in node_cfgs.iter_mut().enumerate() {
-        node_cfg
-            .private_keys
-            .insert(address.to_string(), priv_keys[idx].clone());
-    }
-    (genesis_cfg, node_cfgs)
-}
-
-/// Same as [`gen_anchoring_testnet_config_with_rng`](fn.gen_anchoring_testnet_config_with_rng.html)
-/// but it uses default random number generator.
-pub fn gen_anchoring_testnet_config(
-    client: &BitcoinRelay,
-    network: btc::Network,
-    count: u8,
-    total_funds: u64,
-) -> (AnchoringConfig, Vec<AnchoringNodeConfig>) {
-    let mut rng = thread_rng();
-    gen_anchoring_testnet_config_with_rng(client, network, count, total_funds, &mut rng)
 }

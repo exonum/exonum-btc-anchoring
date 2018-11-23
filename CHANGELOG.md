@@ -11,6 +11,20 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 - Updated to the `Rust-bitcoin 0.14` release (#134).
 
+### Breaking changes
+
+- New anchoring implementation based on native segwit transactions. (#136)
+
+  In this way:
+
+  - It is fully determenistic and does not contain LECT messages.
+
+  - It does not need an observer anymore.
+
+  - Exonum nodes can work without connection with the `bitcoind`.
+
+  For more details you can visit the [readme](README.md) page.
+
 ## 0.9.0 - 2018-07-20
 
 ### Internal improvements
@@ -23,13 +37,15 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Breaking changes
 
 - The anchoring chain observer logic has been moved to the `before_commit` stage. (#131)
+
   Thus additional thread in the public api handler has been no longer used.
   Thus now `anchoring-observer-check-interval` is measured in blocks instead of milliseconds.
 
 - The anchoring API has been ported to the new `actix-web` backend. (#132)
+
   Some of API endpoints have been changed, you can see updated API description in
   the [documentation](https://exonum.com/doc/advanced/bitcoin-anchoring/#available-api).
-  
+
 ### Internal improvements
 
 - Added check that funding transaction in `anchoring-funding-txid` contains
@@ -48,6 +64,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Breaking changes
 
 - The anchoring service has been switched to using p2wsh address format (#123).
+
   It now uses segwit addresses....
   This change increases the limit on the number of validators and anchoring security
   as well as reduces fees for applying thereof.
@@ -92,6 +109,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Fixed
 
 - Fix txid for transactions with the witness data [ECR-986] (#119).
+
   Txid for transactions should be always computed without witness data.
 
 ### Internal improvements
@@ -103,6 +121,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 ### Breaking changes
 
 - The `network` parameter became named (#114).
+
   Now, to generate template config, run the following command:
 
   ```shell

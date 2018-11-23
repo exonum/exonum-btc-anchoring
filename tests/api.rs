@@ -1,11 +1,10 @@
-// Copyright 2017 The Exonum Team
+// Copyright 2018 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
 // You may obtain a copy of the License at
 //
-//   http://www.apache.org/licenses/LICENSE-2.0
-//
+//   http://www.apache.org/licenses/LICENSEccccc//
 // Unless required by applicable law or agreed to in writing, software
 // distributed under the License is distributed on an "AS IS" BASIS,
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -14,339 +13,295 @@
 
 extern crate bitcoin;
 extern crate btc_transaction_utils;
-extern crate byteorder;
 extern crate exonum;
-extern crate exonum_bitcoinrpc as bitcoinrpc;
+extern crate exonum_bitcoinrpc as bitcoin_rpc;
 extern crate exonum_btc_anchoring;
 extern crate exonum_testkit;
-#[macro_use]
-extern crate failure;
-extern crate libc;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate pretty_assertions;
-extern crate rand;
-extern crate secp256k1;
-extern crate serde;
-#[macro_use]
 extern crate serde_json;
 
-#[macro_use]
-pub mod testkit_extras;
-
-use exonum::blockchain::{Blockchain, StoredConfiguration};
-use exonum::crypto::{CryptoHash, Hash};
-use exonum::encoding::serialize::FromHex;
-use exonum::helpers::{Height, ValidatorId};
-use exonum::messages::Message;
-use exonum_testkit::{ApiKind, TestKitApi};
-
-use exonum_btc_anchoring::api::{
-    AnchoredBlockHeaderProof, AnchoringInfo, HeightQuery, LectInfo, ValidatorQuery,
+use exonum::{helpers::Height, storage::Snapshot};
+use exonum_btc_anchoring::{
+    api::{FindTransactionQuery, HeightQuery, PublicApi},
+    blockchain::BtcAnchoringSchema,
+    btc,
+    config::GlobalConfig,
+    test_helpers::testkit::{AnchoringTestKit, ValidateProof},
+    BTC_ANCHORING_SERVICE_NAME,
 };
-use exonum_btc_anchoring::blockchain::dto::MsgAnchoringUpdateLatest;
-use exonum_btc_anchoring::details::btc;
-use exonum_btc_anchoring::details::btc::transactions::{AnchoringTx, BitcoinTx};
-use exonum_btc_anchoring::handler::AnchoringChainObserver;
-use exonum_btc_anchoring::{ANCHORING_SERVICE_ID, ANCHORING_SERVICE_NAME};
-use testkit_extras::helpers::*;
-use testkit_extras::{AnchoringTestKit, TestClient};
 
-trait AnchoringApi {
-    fn actual_lect(&self) -> Option<AnchoringInfo>;
+const NULL_QUERY: () = ();
 
-    fn current_lect_of_validator(&self, id: u32) -> LectInfo;
-
-    fn actual_address(&self) -> btc::Address;
-
-    fn following_address(&self) -> Option<btc::Address>;
-
-    fn nearest_lect(&self, height: u64) -> Option<AnchoringTx>;
-
-    fn anchored_block_header_proof(&self, height: u64) -> AnchoredBlockHeaderProof;
-}
-
-impl AnchoringApi for TestKitApi {
-    fn actual_lect(&self) -> Option<AnchoringInfo> {
-        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
-            .get("v1/actual_lect")
-            .unwrap()
-    }
-
-    fn current_lect_of_validator(&self, id: u32) -> LectInfo {
-        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
-            .query(&ValidatorQuery { id })
-            .get("v1/actual_lect/validator")
-            .unwrap()
-    }
-
-    fn actual_address(&self) -> btc::Address {
-        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
-            .get("v1/address/actual")
-            .unwrap()
-    }
-
-    fn following_address(&self) -> Option<btc::Address> {
-        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
-            .get("v1/address/following")
-            .unwrap()
-    }
-
-    fn nearest_lect(&self, height: u64) -> Option<AnchoringTx> {
-        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
-            .query(&HeightQuery { height })
-            .get("v1/nearest_lect")
-            .unwrap()
-    }
-
-    fn anchored_block_header_proof(&self, height: u64) -> AnchoredBlockHeaderProof {
-        self.public(ApiKind::Service(ANCHORING_SERVICE_NAME))
-            .query(&HeightQuery { height })
-            .get("v1/block_header_proof")
-            .unwrap()
-    }
-}
-
-trait ValidateProof {
-    type Output;
-
-    fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error>;
-}
-
-impl ValidateProof for AnchoredBlockHeaderProof {
-    type Output = (u64, Hash);
-
-    fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error> {
-        // Checks precommits.
-        for precommit in self.latest_authorized_block.precommits {
-            let validator_id = precommit.validator().0 as usize;
-            let validator_keys = actual_config
-                .validator_keys
-                .get(validator_id)
-                .ok_or_else(|| {
-                    format_err!(
-                        "Unable to find validator with the given id: {}",
-                        validator_id
-                    )
-                })?;
-            ensure!(
-                precommit.verify_signature(&validator_keys.consensus_key),
-                "Precommit verification failed"
-            );
-            ensure!(
-                precommit.block_hash() == &self.latest_authorized_block.block.hash(),
-                "Block hash doesn't match"
-            );
-        }
-
-        // Checks state_hash.
-        let checked_table_proof = self.to_table.check()?;
-        ensure!(
-            checked_table_proof.merkle_root() == *self.latest_authorized_block.block.state_hash(),
-            "State hash doesn't match"
-        );
-        let proof_entry = checked_table_proof
-            .entries()
-            .get(0)
-            .cloned()
-            .ok_or_else(|| format_err!("Unable to get `to_block_header` entry"))?;
-        let table_location = Blockchain::service_table_unique_key(ANCHORING_SERVICE_ID, 0);
-        ensure!(proof_entry.0 == &table_location, "Invalid table location");
-        // Validates value.
-        let values = self
-            .to_block_header
-            .validate(
-                *proof_entry.1,
-                self.latest_authorized_block.block.height().0,
-            )
-            .map_err(|e| format_err!("An error occurred {:?}", e))?;
-        ensure!(values.len() == 1, "Invalid values count");
-        Ok((values[0].0, *values[0].1))
-    }
-}
-
-// Test normal API usage.
-#[test]
-fn test_api_public_common() {
-    let mut testkit = AnchoringTestKit::default();
-    anchor_first_block(&mut testkit);
-
-    let lects = (0..4)
-        .map(|idx| {
-            gen_service_tx_lect(&testkit, ValidatorId(idx), &testkit.latest_anchored_tx(), 1)
+fn find_transaction(
+    anchoring_testkit: &AnchoringTestKit,
+    height: Option<Height>,
+) -> Option<btc::Transaction> {
+    let api = anchoring_testkit.api();
+    api.find_transaction(FindTransactionQuery { height })
+        .unwrap()
+        .map(|proof| {
+            proof
+                .validate(&anchoring_testkit.actual_configuration())
+                .unwrap()
+                .1
         })
-        .collect::<Vec<_>>();
+}
 
-    let api = testkit.api();
-    let anchoring_info = AnchoringInfo::from(lects[0].tx());
-    assert_eq!(api.actual_lect(), Some(anchoring_info));
-    // Check validators lects
-    for (id, lect) in lects.iter().enumerate() {
-        let lect_info = LectInfo {
-            hash: Message::hash(lect),
-            content: AnchoringInfo::from(lect.tx()),
-        };
-        assert_eq!(api.current_lect_of_validator(id as u32), lect_info);
+fn btc_anchoring_schema(testkit: &AnchoringTestKit) -> BtcAnchoringSchema<Box<dyn Snapshot>> {
+    let snapshot = testkit.snapshot();
+    BtcAnchoringSchema::new(snapshot)
+}
+
+#[test]
+fn actual_address() {
+    let validators_num = 4;
+    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
+
+    assert!(anchoring_testkit.last_anchoring_tx().is_none());
+
+    let signatures = anchoring_testkit
+        .create_signature_tx_for_validators(2)
+        .unwrap();
+    anchoring_testkit.create_block_with_transactions(signatures);
+    anchoring_testkit.create_blocks_until(Height(4));
+
+    let anchoring_api = anchoring_testkit.api();
+    assert_eq!(
+        anchoring_api.actual_address(NULL_QUERY).unwrap(),
+        anchoring_testkit.anchoring_address()
+    );
+}
+
+#[test]
+fn following_address() {
+    let validators_num = 5;
+    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 150000, 4);
+    let signatures = anchoring_testkit
+        .create_signature_tx_for_validators(3)
+        .unwrap();
+    anchoring_testkit.create_block_with_transactions(signatures);
+    anchoring_testkit.create_blocks_until(Height(4));
+    // Following address should be none for regular anchoring.
+    assert_eq!(
+        anchoring_testkit
+            .api()
+            .following_address(NULL_QUERY)
+            .unwrap(),
+        None
+    );
+
+    let signatures = anchoring_testkit
+        .create_signature_tx_for_validators(4)
+        .unwrap();
+    anchoring_testkit.create_block_with_transactions(signatures);
+    anchoring_testkit.create_blocks_until(Height(6));
+
+    // Removing one of validators
+    let mut proposal = anchoring_testkit.drop_validator_proposal();
+    let service_config: GlobalConfig = proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
+    // Following address
+    let following_address = service_config.anchoring_address();
+    proposal.set_actual_from(Height(16));
+    anchoring_testkit.commit_configuration_change(proposal);
+    anchoring_testkit.create_block();
+
+    assert_eq!(
+        anchoring_testkit
+            .api()
+            .following_address(NULL_QUERY)
+            .unwrap(),
+        Some(following_address)
+    );
+}
+
+#[test]
+fn find_transaction_regular() {
+    let validators_num = 4;
+    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
+
+    assert!(anchoring_testkit.last_anchoring_tx().is_none());
+
+    // Creates a few anchoring transactions
+    for _ in 0..5 {
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(2)
+            .unwrap();
+        anchoring_testkit.create_block_with_transactions(signatures);
+
+        let next_anchoring_height = anchoring_testkit
+            .actual_anchoring_configuration()
+            .following_anchoring_height(anchoring_testkit.height());
+        anchoring_testkit.create_blocks_until(next_anchoring_height);
     }
+
+    let anchoring_schema = btc_anchoring_schema(&anchoring_testkit);
+    let tx_chain = anchoring_schema.anchoring_transactions_chain();
+
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(0))).unwrap(),
+        tx_chain.get(0).unwrap()
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(3))).unwrap(),
+        tx_chain.get(1).unwrap()
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(4))).unwrap(),
+        tx_chain.get(1).unwrap()
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(1000))).unwrap(),
+        tx_chain.get(4).unwrap()
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, None).unwrap(),
+        tx_chain.last().unwrap()
+    );
 }
 
-// Tries to get LECT from nonexistent validator id.
-// result: Panic
+// Checks come corner cases in the find_transaction api method.
 #[test]
-#[should_panic(expected = "Unknown validator id")]
-fn test_api_public_get_lect_nonexistent_validator() {
-    let testkit = AnchoringTestKit::default();
-    let api = testkit.api();
-    api.current_lect_of_validator(100);
-}
+fn find_transaction_configuration_change() {
+    let validators_num = 5;
+    let anchoring_frequency = 10;
+    let mut anchoring_testkit =
+        AnchoringTestKit::new_without_rpc(validators_num, 150000, anchoring_frequency);
+    let signatures = anchoring_testkit
+        .create_signature_tx_for_validators(4)
+        .unwrap();
+    anchoring_testkit.create_block_with_transactions(signatures);
 
-// Tries to get current LECT when there is no agreed [or consensus] LECT.
-// result: Returns null
-#[test]
-fn test_api_public_get_lect_unavailable() {
-    let mut testkit = AnchoringTestKit::default();
+    // removing one of validators
+    let mut proposal = anchoring_testkit.drop_validator_proposal();
+    proposal.set_actual_from(Height(20));
+    anchoring_testkit.commit_configuration_change(proposal);
+    anchoring_testkit.create_block();
+    anchoring_testkit.renew_address();
+    // Creates transition transaction
+    let signatures = anchoring_testkit
+        .create_signature_tx_for_validators(3)
+        .unwrap();
+    anchoring_testkit.create_block_with_transactions(signatures);
+    anchoring_testkit.create_block();
 
-    let lect_tx = BitcoinTx::from_hex(
-        "020000000152f2e44424d6cc16ce29566b54468084d1d15329b28e\
-         8fc7cb9d9d783b8a76d3010000006b4830450221009e5ae44ba558\
-         6e4aadb9e1bc5369cc9fe9f16c12ff94454ac90414f1c5a3df9002\
-         20794b24afab7501ba12ea504853a31359d718c2a7ff6dd2688e95\
-         c5bc6634ce39012102f81d4470a303a508bf03de893223c89360a5\
-         d093e3095560b71de245aaf45d57feffffff028096980000000000\
-         17a914dcfbafb4c432a24dd4b268570d26d7841a20fbbd87e7cc39\
-         0a000000001976a914b3203ee5a42f8f524d14397ef10b84277f78\
-         4b4a88acd81d1100",
-    ).unwrap();
-    let lects = (0..2)
-        .map(|id| {
-            let validator_id = ValidatorId(id);
-            let keypair = testkit.validator(validator_id).service_keypair();
-            MsgAnchoringUpdateLatest::new(
-                keypair.0,
-                validator_id,
-                lect_tx.clone(),
-                lects_count(&testkit, validator_id),
-                keypair.1,
-            )
-        })
-        .collect::<Vec<_>>();
-    force_commit_lects(&mut testkit, lects);
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(0))),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(1)
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(1))),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(1)
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, None),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(1)
+    );
 
-    let api = testkit.api();
-    assert_eq!(api.actual_lect(), None);
-}
+    anchoring_testkit.create_blocks_until(Height(20));
+    // Resumes regular anchoring (anchors block on height 10).
+    let signatures = anchoring_testkit
+        .create_signature_tx_for_validators(3)
+        .unwrap();
+    anchoring_testkit.create_block_with_transactions(signatures);
+    anchoring_testkit.create_block();
 
-// Tries to get actual anchoring address.
-#[test]
-fn test_api_public_get_current_address() {
-    let testkit = AnchoringTestKit::default();
-    let api = testkit.api();
-    assert_eq!(api.actual_address(), testkit.current_addr());
-}
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(0))),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(1)
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(1))),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(2)
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(10))),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(2)
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, None),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(2)
+    );
 
-// Tries to get following address.
-#[test]
-fn test_api_public_get_following_address_existent() {
-    let mut testkit = AnchoringTestKit::default();
-    let requests = testkit.requests();
-    let api = testkit.api();
+    // Anchors block on height 20.
+    let signatures = anchoring_testkit
+        .create_signature_tx_for_validators(3)
+        .unwrap();
+    anchoring_testkit.create_block_with_transactions(signatures);
+    anchoring_testkit.create_block();
 
-    let (cfg_proposal, following_cfg) =
-        gen_following_cfg_exclude_validator(&mut testkit, Height(10));
-    let following_addr = following_cfg.redeem_script().1;
-
-    anchor_first_block(&mut testkit);
-    anchor_first_block_lect_normal(&mut testkit);
-
-    requests.expect(vec![
-        request! {
-            method: "importaddress",
-            params: [&following_addr, "multisig", false, false]
-        },
-        confirmations_request(&testkit.latest_anchored_tx(), 0),
-    ]);
-    testkit.commit_configuration_change(cfg_proposal);
-    testkit.create_block();
-
-    assert_eq!(api.following_address(), Some(following_addr));
-}
-
-// Tries to get the following address which does not exist.
-// result: Returns null
-#[test]
-fn test_api_public_get_following_address_nonexistent() {
-    let testkit = AnchoringTestKit::default();
-    let api = testkit.api();
-    assert_eq!(api.following_address(), None);
-}
-
-// Testing the observer for the existing anchoring chain.
-#[test]
-fn test_api_anchoring_observer_normal() {
-    let mut testkit = AnchoringTestKit::default();
-    let anchoring_addr = testkit.current_addr();
-
-    anchor_first_block(&mut testkit);
-    anchor_first_block_lect_normal(&mut testkit);
-    // Anchoring transaction for block with height 0.
-    let first_anchored_tx = testkit.latest_anchored_tx();
-
-    anchor_second_block_normal(&mut testkit);
-    // Anchoring transaction for block with height 10.
-    let second_anchored_tx = testkit.latest_anchored_tx();
-
-    let client = TestClient::default();
-    let requests = client.requests();
-    let mut fork = testkit.blockchain_mut().fork();
-    {
-        let observer = AnchoringChainObserver::new(&mut fork, &client);
-        requests.expect(vec![
-            request! {
-                method: "listunspent",
-                params: [0, 9_999_999, [&anchoring_addr]],
-                response: [
-                    listunspent_entry(&second_anchored_tx, &anchoring_addr, 10)
-                ]
-            },
-            get_transaction_request(&second_anchored_tx),
-            confirmations_request(&second_anchored_tx, 100),
-            get_transaction_request(&first_anchored_tx),
-            confirmations_request(&first_anchored_tx, 200),
-            get_transaction_request(&testkit.current_funding_tx()),
-        ]);
-        observer.check_anchoring_chain().unwrap();
-    };
-    testkit.blockchain_mut().merge(fork.into_patch()).unwrap();
-
-    let api = testkit.api();
-
-    // Checks that `first_anchored_tx` anchors the block at height 0.
-    assert_eq!(api.nearest_lect(0), Some(first_anchored_tx));
-    // Checks that closest anchoring transaction for height 1 is
-    // `second_anchored_tx` that anchors the block at height 10.
-    assert_eq!(api.nearest_lect(1), Some(second_anchored_tx));
-    // Checks that there are no anchoring transactions for heights that are greater than 10.
-    assert_eq!(api.nearest_lect(11), None);
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(0))),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(1)
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(1))),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(2)
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(10))),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(2)
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, Some(Height(11))),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(3)
+    );
+    assert_eq!(
+        find_transaction(&anchoring_testkit, None),
+        btc_anchoring_schema(&anchoring_testkit)
+            .anchoring_transactions_chain()
+            .get(3)
+    );
 }
 
 // Tries to get a proof of existence for an anchored block.
 #[test]
-fn test_api_anchored_block_header_proof() {
-    let mut testkit = AnchoringTestKit::default();
-    let cfg = testkit.actual_configuration();
-    anchor_first_block(&mut testkit);
+fn block_header_proof() {
+    let validators_num = 4;
+    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
+    // Creates a few anchoring transactions
+    for _ in 0..5 {
+        let signatures = anchoring_testkit
+            .create_signature_tx_for_validators(2)
+            .unwrap();
+        anchoring_testkit.create_block_with_transactions(signatures);
+
+        let next_anchoring_height = anchoring_testkit
+            .actual_anchoring_configuration()
+            .following_anchoring_height(anchoring_testkit.height());
+        anchoring_testkit.create_blocks_until(next_anchoring_height);
+    }
+
+    let api = anchoring_testkit.api();
+    let cfg = anchoring_testkit.actual_configuration();
     // Checks proof for the genesis block.
-    let genesis_block_proof = testkit.api().anchored_block_header_proof(0);
+    let genesis_block_proof = api.block_header_proof(HeightQuery { height: 0 }).unwrap();
     let value = genesis_block_proof.validate(&cfg).unwrap();
     assert_eq!(value.0, 0);
-    assert_eq!(value.1, testkit.block_hash_on_height(Height(0)));
-
-    anchor_first_block_lect_normal(&mut testkit);
-    anchor_second_block_normal(&mut testkit);
+    assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(0)));
     // Checks proof for the second block.
-    let second_block_proof = testkit.api().anchored_block_header_proof(10);
+    let second_block_proof = api.block_header_proof(HeightQuery { height: 4 }).unwrap();
     let value = second_block_proof.validate(&cfg).unwrap();
-    assert_eq!(value.0, 10);
-    assert_eq!(value.1, testkit.block_hash_on_height(Height(10)));
+    assert_eq!(value.0, 4);
+    assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(4)));
 }
