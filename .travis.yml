@@ -4,9 +4,27 @@ addons:
   apt:
     sources:
     - sourceline: 'ppa:giskou/librocksdb'
+    - sourceline: 'ppa:maarten-fonville/protobuf'
+    - sourceline: 'ppa:fsgmhoward/shadowsocks-libev'
     packages:
-    - libsnappy-dev
+    - binutils-dev
+    - build-essential
+    - cmake
+    - g++
+    - gcc
+    - libcurl4-openssl-dev
+    - libdw-dev
+    - libelf-dev
+    - libiberty-dev
+    - libprotobuf-dev
     - librocksdb
+    - libsnappy-dev
+    - libsodium-dev
+    - libssl-dev
+    - pkg-config
+    - protobuf-compiler
+    - unzip
+    - zlib1g-dev
 
 rust:
   # Feel free to bump this version if you need features of newer Rust.
@@ -24,39 +42,19 @@ cache:
   - node_modules
 
 dist: trusty
-sudo: required
 
 env:
   global:
   - DEADLINKS_VERS=0.3.0
-  - OUTDATED_VERS=0.7.0
   - SODIUM_VERS=1.0.16
   - RUSTFLAGS="-D warnings"
   - ROCKSDB_LIB_DIR=/usr/lib/x86_64-linux-gnu
   - SNAPPY_LIB_DIR=/usr/lib/x86_64-linux-gnu
-  matrix:
-  - FEATURE=test
-
-# Separate jobs should use `install` hook in order not to override these common
-# instructions.
-before_install:
-- |
-  if [ ! -f "$HOME/.local/lib/libsodium.a" ]; then
-    wget "https://github.com/jedisct1/libsodium/releases/download/$SODIUM_VERS/libsodium-$SODIUM_VERS.tar.gz" -t 5 -O "libsodium.tar.gz"
-    tar xvf libsodium.tar.gz
-    cd libsodium-$SODIUM_VERS
-    ./configure --prefix=$HOME/.local
-    make
-    make install
-    cd ..
-  fi
-- export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:$HOME/.local/lib
-- export PKG_CONFIG_PATH=$PKG_CONFIG_PATH:$HOME/.local/lib/pkgconfig
 
 jobs:
   include:
   # Formatting & other lints that do not require compilation
-  - env: FEATURE=lints
+  - name: lints
     rust: 1.30.1 # Use fresh rustfmt
     install:
     - rustup component add rustfmt-preview
@@ -73,7 +71,7 @@ jobs:
     - find . -not -path "./node_modules/*" -name "*.md" | xargs ./node_modules/.bin/markdownlint --config .markdownlintrc
 
   # Clippy linting
-  - env: FEATURE=clippy
+  - name: clippy
     rust: 1.30.1 # Use fresh clippy
     install:
     - rustup component add clippy-preview
@@ -82,25 +80,16 @@ jobs:
     - cargo clippy --all -- -D warnings
 
   # Tests
-  - env: FEATURE=test
+  - name: linux-tests
     script:
-    - |
-      if [ "$TRAVIS_PULL_REQUEST" != "false" ]; then
-        cargo test --all;
-      fi
-    - |
-      if [ "$TRAVIS_PULL_REQUEST" = "false" ]; then
-        cargo test --all --features rpc_tests;
-      fi
+    - cargo test --all
 
   # Non-fatal checks
-  - env: FEATURE=non-fatal-checks
+  - name: deadlinks
+    env: FEATURE=non-fatal-checks
     install:
     - cargo-deadlinks -V | grep $DEADLINKS_VERS || cargo install cargo-deadlinks --vers $DEADLINKS_VERS --force
     script:
     - cargo doc --no-deps
     - cargo deadlinks --dir target/doc
-
-notifications:
-  slack:
-    secure: Wr4+GsNyuFui2pE3X7vYEucThsrQeRZlDoK9MrxA6+tZkQ090/dC/N0dVXlAi8m1g9uzCzf02rAGhM6QvTRCGO1lLccKAD2LYHbQ8wMxuhu98Kw3LasInUoVKHkkGWWoZ4If5oKYQ+tNX6d83uqjx9q4Z7DX7NylgMiRragnWb/qfnSHbcvJYx0dKLOzuNPTzTHajduS5bwW3yVi91zv/7vveoytCy8h06z6O6jNeGQMie/6ivpsAbmJYqMtfRbT//ZXjXIr3yzU5p5MAsPILHlWLZQWTxhs+k7ik3bRX1TnbA9F5EGv3F/QpM7FBmKpTORwqRpmMZ7q0ATjM9lUEkLd+WofcGQFrAzWLtd9oPtCUuGd+9DFlP9b8c7zcTgZMFj4zS2HgHKhGa11MVvAvhetISQ1ChoKyyEX+Lng3XYE1q4/VXT2Eq2W/QEwY4hCQTqpPWW8Ku8y6mi1MYMYH+/YJa/fe98YrLAxCCbXqNCdAdpaW3f1AabK9PdXqAEp8JvEI4oABFdX0QWXGw27u/YCQM9TGSUpPdWM28DhRG16Lc880mBB5ijjmdY5aJN+qvve865e5+pf3A82eqQv2yUIrrTXrcOZqPOUdkNMHedHNqVXMIoPrp7b8kjIJiy0KbzsfAsbK7NtmQcKqfDi4Zh0RBRJTO4cvsd0F337xzo=
+    
