@@ -72,7 +72,7 @@ jobs:
 
   # Clippy linting
   - name: clippy
-    rust: 1.30.1 # Use fresh clippy
+    rust: nightly-2018-11-25 # Use fresh clippy
     install:
     - rustup component add clippy-preview
     - cargo clippy --version

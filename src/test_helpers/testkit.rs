@@ -20,13 +20,11 @@ use failure;
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
 use exonum::api;
-use exonum::blockchain::{
-    BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration,
-};
+use exonum::blockchain::{BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration};
 use exonum::crypto::{CryptoHash, Hash};
 use exonum::encoding::serialize::FromHex;
 use exonum::helpers::Height;
-use exonum::messages::{Message, Signed, RawTransaction};
+use exonum::messages::{Message, RawTransaction, Signed};
 use exonum::storage::MapProof;
 use exonum_testkit::{
     ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration, TestNode,
@@ -288,7 +286,7 @@ impl AnchoringTestKit {
     pub fn anchoring_validators(&self) -> Vec<(TestNode, LocalConfig)> {
         let validators = self.inner.network().validators();
         validators
-            .into_iter()
+            .iter()
             .map(|validator| (validator.clone(), self.get_local_cfg(validator)))
             .collect::<Vec<(TestNode, LocalConfig)>>()
     }
@@ -450,7 +448,7 @@ fn validate_table_proof(
     // Checks precommits.
     for precommit in &latest_authorized_block.precommits {
         let validator_id = precommit.validator().0 as usize;
-        let validator_keys = actual_config
+        let _validator_keys = actual_config
             .validator_keys
             .get(validator_id)
             .ok_or_else(|| {
@@ -471,12 +469,8 @@ fn validate_table_proof(
         checked_table_proof.merkle_root() == *latest_authorized_block.block.state_hash(),
         "State hash doesn't match"
     );
-    let value = checked_table_proof
-        .entries()
-        .next()
-        .map(|(a, b)| (*a, *b))
-        .ok_or_else(|| format_err!("Unable to get `to_block_header` entry"));
-    value
+    let value = checked_table_proof.entries().map(|(a, b)| (*a, *b)).next();
+    value.ok_or_else(|| format_err!("Unable to get `to_block_header` entry"))
 }
 
 /// Proof validation extension.
