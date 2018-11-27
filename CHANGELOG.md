@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## 0.9.1 - 2018-11-27
+
+- Fixed compatibility with the `bitcoind` 0.17 rpc.
+
 ## 0.9.0 - 2018-07-20
 
 ### Breaking changes

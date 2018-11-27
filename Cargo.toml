@@ -1,6 +1,6 @@
 [package]
 name = "exonum-btc-anchoring"
-version = "0.9.0"
+version = "0.9.1"
 authors = ["The Exonum Team <exonum@bitfury.com>"]
 homepage = "https://exonum.com/doc/advanced/bitcoin-anchoring/"
 repository = "https://github.com/exonum/exonum-btc-anchoring"
@@ -16,7 +16,7 @@ travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 
 [dependencies]
 exonum = "0.9.0" 
-exonum_bitcoinrpc = "0.5.1"
+exonum_bitcoinrpc = "0.6.0"
 
 bitcoin = "=0.13.1"
 byteorder = "1.2.0"
