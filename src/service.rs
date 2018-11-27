@@ -18,8 +18,8 @@ use exonum::blockchain::{
 };
 use exonum::crypto::Hash;
 use exonum::encoding::Error as EncodingError;
-use exonum::storage::{Fork, Snapshot};
 use exonum::messages::RawTransaction;
+use exonum::storage::{Fork, Snapshot};
 
 use serde_json;
 

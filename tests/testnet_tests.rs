@@ -27,7 +27,7 @@ extern crate matches;
 
 extern crate btc_transaction_utils;
 
-use exonum::blockchain::{TransactionErrorType};
+use exonum::blockchain::TransactionErrorType;
 use exonum::explorer::BlockWithTransactions;
 use exonum::helpers::Height;
 use exonum_btc_anchoring::{
