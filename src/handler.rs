@@ -23,7 +23,7 @@ use std::cmp;
 use std::collections::HashMap;
 
 use blockchain::data_layout::TxInputId;
-use blockchain::transactions::Signature;
+use blockchain::transactions::TxSignature;
 use blockchain::{BtcAnchoringSchema, BtcAnchoringState};
 use btc::{Address, Privkey};
 use rpc::BtcRelay;
@@ -122,12 +122,12 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                     &signature,
                 ).unwrap();
 
-            self.context.broadcast_transaction(Signature::new(
-                validator_id,
-                proposal.clone(),
-                index as u32,
-                signature.as_ref(),
-            ));
+            self.context.broadcast_transaction(TxSignature {
+                validator: validator_id,
+                transaction: proposal.clone(),
+                input: index as u32,
+                input_signature: signature.into(),
+            });
         }
 
         Ok(())

@@ -63,7 +63,7 @@ extern crate derive_more;
 #[macro_use]
 extern crate display_derive;
 #[macro_use]
-extern crate exonum;
+extern crate exonum_derive;
 #[macro_use]
 extern crate failure;
 #[macro_use]
@@ -74,22 +74,23 @@ extern crate log;
 extern crate serde_derive;
 #[macro_use]
 extern crate serde_json;
+#[macro_use]
+extern crate maplit;
 
 #[cfg(test)]
 #[macro_use]
 extern crate matches;
-
 #[cfg(test)]
 #[macro_use]
 extern crate proptest;
 
-#[macro_use]
-extern crate maplit;
-
+extern crate bincode;
 extern crate bitcoin;
 extern crate btc_transaction_utils;
 extern crate byteorder;
+extern crate exonum;
 extern crate exonum_bitcoinrpc as bitcoin_rpc;
+extern crate protobuf;
 extern crate rand;
 extern crate secp256k1;
 extern crate serde;
@@ -112,6 +113,7 @@ pub(crate) mod service;
 pub mod test_helpers;
 
 mod handler;
+mod proto;
 
 pub(crate) trait ResultEx {
     fn log_error(self);

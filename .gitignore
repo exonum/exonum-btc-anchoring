@@ -24,3 +24,6 @@ __pycache__/
 # other
 *.orig
 .python-version
+
+#protobuf generated files
+src/proto/btc_anchoring.rs

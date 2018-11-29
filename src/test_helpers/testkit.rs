@@ -36,7 +36,7 @@ use std::sync::{Arc, RwLock};
 
 use {
     api::{BlockHeaderProof, FindTransactionQuery, HeightQuery, PublicApi, TransactionProof},
-    blockchain::{transactions::Signature, BtcAnchoringSchema, BtcAnchoringState},
+    blockchain::{transactions::TxSignature, BtcAnchoringSchema, BtcAnchoringState},
     btc,
     config::{GlobalConfig, LocalConfig},
     rpc::BtcRelay,
@@ -353,12 +353,12 @@ impl AnchoringTestKit {
                         ).unwrap();
 
                     let tx = Message::sign_transaction(
-                        Signature::new(
-                            validator_id,
-                            proposal.clone(),
-                            index as u32,
-                            signature.as_ref(),
-                        ),
+                        TxSignature {
+                            validator: validator_id,
+                            transaction: proposal.clone(),
+                            input: index as u32,
+                            input_signature: signature.into(),
+                        },
                         BTC_ANCHORING_SERVICE_ID,
                         *public_key,
                         &private_key,

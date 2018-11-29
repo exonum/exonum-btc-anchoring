@@ -20,6 +20,8 @@ pub use self::transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transa
 use bitcoin::network::constants::Network;
 use bitcoin::util::address;
 use bitcoin::util::privkey;
+use btc_transaction_utils;
+
 use rand::{self, Rng};
 use secp256k1;
 use std::ops::Deref;
@@ -41,6 +43,10 @@ pub struct PublicKey(pub secp256k1::PublicKey);
 /// Bitcoin address wrapper.
 #[derive(Debug, Clone, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Address(pub address::Address);
+
+/// Bitcoin input signature wrapper.
+#[derive(Debug, Clone, PartialEq, Into, From)]
+pub struct InputSignature(pub btc_transaction_utils::InputSignature);
 
 impl ToString for Privkey {
     fn to_string(&self) -> String {
@@ -108,11 +114,46 @@ impl Deref for Address {
     }
 }
 
+impl ::exonum::encoding::serialize::FromHex for InputSignature {
+    type Error = ::failure::Error;
+
+    fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
+        let bytes = ::exonum::encoding::serialize::decode_hex(hex)?;
+        let context = secp256k1::Secp256k1::without_caps();
+        let inner = btc_transaction_utils::InputSignature::from_bytes(&context, bytes)?;
+        Ok(InputSignature(inner))
+    }
+}
+
+impl ::exonum::encoding::serialize::ToHex for InputSignature {
+    fn write_hex<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
+        self.0.as_ref().write_hex(w)
+    }
+
+    fn write_hex_upper<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
+        self.0.as_ref().write_hex_upper(w)
+    }
+}
+
+impl AsRef<btc_transaction_utils::InputSignature> for InputSignature {
+    fn as_ref(&self) -> &btc_transaction_utils::InputSignature {
+        &self.0
+    }
+}
+
+impl From<InputSignature> for Vec<u8> {
+    fn from(f: InputSignature) -> Self {
+        f.0.into()
+    }
+}
+
 impl_string_conversions_for_hex! { PublicKey }
+impl_string_conversions_for_hex! { InputSignature }
 
 impl_serde_str! { Privkey }
 impl_serde_str! { PublicKey }
 impl_serde_str! { Address }
+impl_serde_str! { InputSignature }
 
 /// Generates public and secret keys for Bitcoin node
 /// using given random number generator.

@@ -12,7 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::{CryptoHash, Hash};
+use bincode;
+
+use exonum::crypto::{self, CryptoHash, Hash};
 use exonum::helpers::ValidatorId;
 use exonum::storage::StorageValue;
 
@@ -21,7 +23,7 @@ use std::iter::{FilterMap, IntoIterator};
 use std::vec::IntoIter;
 
 /// A set of signatures for a transaction input ordered by the validators identifiers.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InputSignatures {
     content: Vec<Option<Vec<u8>>>,
 }
@@ -66,67 +68,19 @@ impl IntoIterator for InputSignatures {
     }
 }
 
-encoding_struct! {
-    struct InputSignature {
-        content: &[u8]
-    }
-}
-
-encoding_struct! {
-    struct InputSignaturesStored {
-        content: Vec<InputSignature>
-    }
-}
-
-impl From<Option<Vec<u8>>> for InputSignature {
-    fn from(s: Option<Vec<u8>>) -> InputSignature {
-        let bytes = s
-            .as_ref()
-            .map(|x| x.as_ref())
-            .unwrap_or_else(|| [].as_ref());
-        InputSignature::new(bytes)
-    }
-}
-
-impl From<InputSignature> for Option<Vec<u8>> {
-    fn from(s: InputSignature) -> Option<Vec<u8>> {
-        if s.content().is_empty() {
-            None
-        } else {
-            Some(s.content().to_vec())
-        }
-    }
-}
-
-impl From<InputSignatures> for InputSignaturesStored {
-    fn from(s: InputSignatures) -> InputSignaturesStored {
-        let content = s.content.into_iter().map(From::from).collect::<_>();
-        InputSignaturesStored::new(content)
-    }
-}
-
-impl From<InputSignaturesStored> for InputSignatures {
-    fn from(s: InputSignaturesStored) -> InputSignatures {
-        let content = s.content().into_iter().map(From::from).collect::<_>();
-        InputSignatures { content }
-    }
-}
-
 impl StorageValue for InputSignatures {
     fn into_bytes(self) -> Vec<u8> {
-        let stored = InputSignaturesStored::from(self);
-        stored.into_bytes()
+        bincode::serialize(&self).unwrap()
     }
 
     fn from_bytes(value: Cow<[u8]>) -> Self {
-        let stored = InputSignaturesStored::from_bytes(value);
-        stored.into()
+        bincode::deserialize(value.as_ref()).unwrap()
     }
 }
 
 impl CryptoHash for InputSignatures {
     fn hash(&self) -> Hash {
-        InputSignaturesStored::from(self.clone()).hash()
+        crypto::hash(&self.clone().into_bytes())
     }
 }
 
