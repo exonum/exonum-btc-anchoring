@@ -42,7 +42,8 @@ deserializer
 deserializes
 deserializing
 DESTDIR
-determenistic
+deterministic
+deterministically
 dhash
 dumprpivkey
 ecdsa
