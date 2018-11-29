@@ -137,6 +137,9 @@ println
 Privkey
 privkey
 proptest
+proto
+protobuf
+protoc
 pubkey
 pubkeyhash
 pubkeys

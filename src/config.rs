@@ -59,20 +59,20 @@ impl Default for GlobalConfig {
 
 impl GlobalConfig {
     /// Creates global configuration instance with default parameters for the
-    /// given Bitcoin network and public keys of partipicants.
+    /// given Bitcoin network and public keys of participants.
     pub fn new(
         network: Network,
         keys: impl IntoIterator<Item = PublicKey>,
-    ) -> Result<GlobalConfig, RedeemScriptError> {
+    ) -> Result<Self, RedeemScriptError> {
         let public_keys = keys.into_iter().collect::<Vec<_>>();
         if public_keys.is_empty() {
             Err(RedeemScriptError::NotEnoughPublicKeys)?;
         }
 
-        Ok(GlobalConfig {
+        Ok(Self {
             network,
             public_keys,
-            ..Default::default()
+            ..Self::default()
         })
     }
 

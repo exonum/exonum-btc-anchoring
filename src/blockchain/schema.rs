@@ -56,7 +56,7 @@ pub struct BtcAnchoringSchema<T> {
 impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
     /// Constructs schema for the given database `snapshot`.
     pub fn new(snapshot: T) -> Self {
-        BtcAnchoringSchema { snapshot }
+        Self { snapshot }
     }
 
     /// Returns table that contains complete chain of the anchoring transactions.

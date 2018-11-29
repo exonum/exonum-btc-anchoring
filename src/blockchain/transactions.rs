@@ -88,16 +88,15 @@ impl Transaction for TxSignature {
 
         let redeem_script = schema.actual_state().actual_configuration().redeem_script();
         let redeem_script_content = redeem_script.content();
-        let public_key = match redeem_script_content
+        let public_key = if let Some(pk) = redeem_script_content
             .public_keys
             .get(self.validator.0 as usize)
         {
-            Some(pk) => pk,
-            _ => {
-                return Err(SignatureError::MissingPublicKey {
-                    validator_id: self.validator,
-                }.into());
-            }
+            pk
+        } else {
+            return Err(SignatureError::MissingPublicKey {
+                validator_id: self.validator,
+            }.into());
         };
 
         let input_signer = InputSigner::new(redeem_script.clone());

@@ -70,7 +70,7 @@ pub struct BitcoinRpcClient(bitcoin_rpc::Client);
 
 impl BitcoinRpcClient {
     /// Creates a new rpc client for the given configuration.
-    pub fn new(config: BitcoinRpcConfig) -> BitcoinRpcClient {
+    pub fn new(config: BitcoinRpcConfig) -> Self {
         let inner = bitcoin_rpc::Client::new(config.host, config.username, config.password);
         BitcoinRpcClient(inner)
     }
@@ -78,13 +78,13 @@ impl BitcoinRpcClient {
 
 impl From<BitcoinRpcConfig> for BitcoinRpcClient {
     fn from(cfg: BitcoinRpcConfig) -> Self {
-        BitcoinRpcClient::new(cfg)
+        Self::new(cfg)
     }
 }
 
 impl From<BitcoinRpcClient> for Box<dyn BtcRelay> {
     fn from(client: BitcoinRpcClient) -> Self {
-        Box::new(client) as Box<dyn BtcRelay>
+        Box::new(client) as Self
     }
 }
 

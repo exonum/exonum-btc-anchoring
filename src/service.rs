@@ -61,8 +61,8 @@ impl BtcAnchoringService {
         global_config: GlobalConfig,
         private_keys: KeyPool,
         btc_relay: Option<Box<dyn BtcRelay>>,
-    ) -> BtcAnchoringService {
-        BtcAnchoringService {
+    ) -> Self {
+        Self {
             global_config,
             private_keys,
             btc_relay,

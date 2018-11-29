@@ -49,7 +49,7 @@ use {
 pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -> btc::Transaction {
     // Generates random transaction id
     let mut rng = thread_rng();
-    let mut data = [0u8; 32];
+    let mut data = [0_u8; 32];
     rng.fill_bytes(&mut data);
     // Creates fake funding transaction
     bitcoin::Transaction {
@@ -90,7 +90,7 @@ pub fn gen_anchoring_config<R: Rng>(
         public_keys,
         funding_transaction: None,
         anchoring_interval,
-        ..Default::default()
+        ..GlobalConfig::default()
     };
 
     let address = global.anchoring_address();

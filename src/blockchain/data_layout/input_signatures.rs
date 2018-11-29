@@ -12,13 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use bincode;
+use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 
 use exonum::crypto::{self, CryptoHash, Hash};
 use exonum::helpers::ValidatorId;
 use exonum::storage::StorageValue;
 
 use std::borrow::Cow;
+use std::io::{Cursor, Write};
 use std::iter::{FilterMap, IntoIterator};
 use std::vec::IntoIter;
 
@@ -30,9 +31,9 @@ pub struct InputSignatures {
 
 impl InputSignatures {
     /// Creates an empty signatures set for the given validators count.
-    pub fn new(validators_count: usize) -> InputSignatures {
+    pub fn new(validators_count: usize) -> Self {
         let content = vec![None; validators_count as usize];
-        InputSignatures { content }
+        Self { content }
     }
 
     /// Inserts a signature from the validator with the given identifier.
@@ -70,11 +71,33 @@ impl IntoIterator for InputSignatures {
 
 impl StorageValue for InputSignatures {
     fn into_bytes(self) -> Vec<u8> {
-        bincode::serialize(&self).unwrap()
+        let mut buf = Cursor::new(Vec::new());
+        for signature in &self.content {
+            let bytes = signature.as_ref().map_or_else(|| [].as_ref(), |x| &x.as_slice());
+            buf.write_u64::<LittleEndian>(bytes.len() as u64).unwrap();
+            buf.write_all(bytes).unwrap();
+        }
+        buf.into_inner()
     }
 
     fn from_bytes(value: Cow<[u8]>) -> Self {
-        bincode::deserialize(value.as_ref()).unwrap()
+        let mut signatures = Vec::new();
+        let mut reader = value.as_ref();
+        while !reader.is_empty() {
+            let bytes_len = LittleEndian::read_u64(reader) as usize;
+            reader = &reader[8..];
+            let signature = if bytes_len == 0 {
+                None
+            } else {
+                let buf = Some(reader[0..bytes_len].to_vec());
+                reader = &reader[bytes_len..];
+                buf
+            };
+            signatures.push(signature);
+        }
+        Self {
+            content: signatures,
+        }
     }
 }
 

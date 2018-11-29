@@ -43,7 +43,7 @@ impl ProtobufConvert for btc::Transaction {
     fn from_pb(pb: Self::ProtoStruct) -> Result<Self, ()> {
         let bytes = pb.get_data();
         Ok(btc::Transaction(
-            bitcoin::consensus::deserialize(bytes.as_ref()).map_err(drop)?,
+            bitcoin::consensus::deserialize(bytes).map_err(drop)?,
         ))
     }
 }

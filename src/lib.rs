@@ -55,8 +55,12 @@
 //! ```
 //!
 
-#![warn(missing_docs)]
-#![deny(missing_debug_implementations, unsafe_code)]
+#![warn(
+    missing_docs,
+    missing_debug_implementations,
+    unsafe_code,
+    bare_trait_objects
+)]
 
 #[macro_use]
 extern crate derive_more;
@@ -84,7 +88,6 @@ extern crate matches;
 #[macro_use]
 extern crate proptest;
 
-extern crate bincode;
 extern crate bitcoin;
 extern crate btc_transaction_utils;
 extern crate byteorder;
