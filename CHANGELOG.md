@@ -13,17 +13,31 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Breaking changes
 
-- New anchoring implementation based on native segwit transactions. (#136)
+- New anchoring implementation is based on native segwit transactions. Acceptance of an
+anchoring transaction still requires the majority of votes of the validators - `2/3n+1`.
+As the votes are now separated from the transaction body, they do not affect transaction
+hash and, correspondingly, its ID.(#136)
 
   In this way:
 
-  - It is fully determenistic and does not contain LECT messages.
+  - Anchoring transactions have become fully deterministic. The problem of transaction
+  [malleability]( https://en.wikipedia.org/wiki/Malleability_(cryptography)) has, thus,
+  been solved. The validators do not have to agree on the latest Exonum transaction
+  anchored to Bitcoin blockchain, which we called LECT, any more to continue the
+  anchoring chain.
 
-  - It does not need an observer anymore.
+  - The service can extract the anchoring chain or information on a particular
+  anchoring transaction from its database any time by a simple API request. It does not
+  need to use a separate observer functionality any more to extract information on
+  LECTs from Bitcoin blockchain and rebuild the anchoring chain out of these LECTs.
 
-  - Exonum nodes can work without connection with the `bitcoind`.
+  - There is no need to connect each Exonum node to the `bitcoind`. The anchoring
+  transactions are generated deterministically and independently from the connection to
+  the Bitcoin blockchain. New anchoring transactions are monitored by a separate method
+  and forwarded to the Bitcoin blockchain whenever they occur.
 
-  For more details you can visit the [readme](README.md) page.
+  For more details on the updated anchoring service operation you can visit the
+  [readme](README.md) page.
 
 ## 0.9.0 - 2018-07-20
 
