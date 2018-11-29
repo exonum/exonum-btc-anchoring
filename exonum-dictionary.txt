@@ -88,8 +88,8 @@ libsodium
 libssl
 listunspent
 locktime
-mainnet
 Mainnet
+mainnet
 maintainer's
 maplit
 markdownlint
@@ -134,8 +134,8 @@ precommits
 prevote
 prevotes
 println
-Privkey
 privkey
+Privkey
 proptest
 proto
 protobuf
@@ -146,8 +146,8 @@ pubkeys
 PUSHBYTES
 readonly
 reddit
-regtest
 Regtest
+regtest
 reimplemented
 repr
 reqwest
@@ -220,6 +220,7 @@ txinwitness
 txout
 txvec
 tymethod
+uint
 unboxed
 unreceived
 unsync
@@ -234,6 +235,7 @@ validateaddress
 validator
 validator's
 validators
+Varint
 vout
 vsize
 Vxyzr

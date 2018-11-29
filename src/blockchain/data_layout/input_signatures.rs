@@ -73,7 +73,9 @@ impl StorageValue for InputSignatures {
     fn into_bytes(self) -> Vec<u8> {
         let mut buf = Cursor::new(Vec::new());
         for signature in &self.content {
-            let bytes = signature.as_ref().map_or_else(|| [].as_ref(), |x| &x.as_slice());
+            let bytes = signature
+                .as_ref()
+                .map_or_else(|| [].as_ref(), |x| &x.as_slice());
             buf.write_u64::<LittleEndian>(bytes.len() as u64).unwrap();
             buf.write_all(bytes).unwrap();
         }
