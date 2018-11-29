@@ -135,7 +135,7 @@ Variables that you can modify
 For the fast anchoring demonstration you can use a built-in anchoring example.
 
 ```bash
-cargo install --example anchoring
+cargo install --example btc_anchoring
 ```
 
 For example, create a BTC anchoring configuration template for the testnet Bitcoin network.
