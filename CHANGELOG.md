@@ -16,7 +16,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 - New anchoring implementation is based on native segwit transactions. Acceptance of an
   anchoring transaction still requires the majority of votes of the validators -
   `2/3n+1`. As the votes are now separated from the transaction body, they do not
-  affect transaction hash and, correspondingly, its ID.(#136)
+  affect transaction hash and, correspondingly, its ID. (#136)
 
   In this way:
 
