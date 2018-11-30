@@ -23,13 +23,13 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Anchoring transactions have become fully deterministic. The problem of transaction
     [malleability]( https://en.wikipedia.org/wiki/Malleability_(cryptography)) has,
     thus, been solved. The validators do not have to agree on the latest Exonum
-    transaction anchored to Bitcoin blockchain, which we called LECT, any more to
-    continue the anchoring chain.
+    transaction anchored to Bitcoin blockchain any more to continue the anchoring
+    chain.
   - The service can extract the anchoring chain or information on a particular
     anchoring transaction from its database any time by a simple API request. It does
     not need to use a separate observer functionality any more to extract information
-    on LECTs from Bitcoin blockchain and rebuild the anchoring chain out of these
-    LECTs.
+    on the latest Exonum anchoring transaction from Bitcoin blockchain and rebuild the
+    anchoring chain from of this transaction.
   - There is no need to connect each Exonum node to the `bitcoind`. The anchoring
     transactions are generated deterministically and independently from the connection
     to the Bitcoin blockchain. New anchoring transactions are monitored by a separate
