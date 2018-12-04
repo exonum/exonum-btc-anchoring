@@ -181,8 +181,7 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         let anchoring_height = actual_state.following_anchoring_height(latest_anchored_height);
 
         let anchoring_block_hash = Schema::new(&self.snapshot)
-            .block_hash_by_height(anchoring_height)
-            .unwrap();
+            .block_hash_by_height(anchoring_height)?;
 
         builder.payload(anchoring_height, anchoring_block_hash);
         builder.fee(config.transaction_fee);
