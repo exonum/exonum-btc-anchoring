@@ -117,12 +117,11 @@ impl BtcAnchoringState {
 
     /// Returns the nearest following anchoring height for the given height.
     pub fn following_anchoring_height(&self, latest_anchored_height: Option<Height>) -> Height {
-        latest_anchored_height
-            .map(|height| match self {
-                BtcAnchoringState::Regular {
-                    ref actual_configuration,
-                } => actual_configuration.following_anchoring_height(height),
-                BtcAnchoringState::Transition { .. } => height,
-            }).unwrap_or_else(Height::zero)
+        latest_anchored_height.map_or_else(Height::zero, |height| match self {
+            BtcAnchoringState::Regular {
+                ref actual_configuration,
+            } => actual_configuration.following_anchoring_height(height),
+            BtcAnchoringState::Transition { .. } => height,
+        })
     }
 }

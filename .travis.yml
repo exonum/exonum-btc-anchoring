@@ -65,14 +65,16 @@ jobs:
     - npm install markdownlint-cli
     - ./node_modules/.bin/markdownlint --version
     script:
+    # Force build.rs execution.
+    - cargo check 
     - cargo fmt -- --check
-    - ./node_modules/.bin/cspell {src,examples,tests}/**/*.rs
+    - find . -not -path "./src/proto/btc_anchoring.rs" -not -path "./target/**" -name "*.rs" | xargs ./node_modules/.bin/cspell
     - find . -not -path "./node_modules/*" -name "*.md" | xargs ./node_modules/.bin/cspell
     - find . -not -path "./node_modules/*" -name "*.md" | xargs ./node_modules/.bin/markdownlint --config .markdownlintrc
 
   # Clippy linting
   - name: clippy
-    rust: 1.30.1 # Use fresh clippy
+    rust: nightly-2018-11-25 # Use fresh clippy
     install:
     - rustup component add clippy-preview
     - cargo clippy --version

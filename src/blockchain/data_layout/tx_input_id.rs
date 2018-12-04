@@ -31,8 +31,8 @@ pub struct TxInputId {
 
 impl TxInputId {
     /// Creates a new identifier.
-    pub fn new(txid: Hash, input: u32) -> TxInputId {
-        TxInputId { txid, input }
+    pub fn new(txid: Hash, input: u32) -> Self {
+        Self { txid, input }
     }
 }
 
@@ -45,12 +45,12 @@ impl StorageKey for TxInputId {
         let mut reader = Cursor::new(inp);
 
         let txid = {
-            let mut txid = [0u8; 32];
+            let mut txid = [0_u8; 32];
             let _ = reader.read(&mut txid).unwrap();
             Hash::new(txid)
         };
         let input = reader.read_u32::<LittleEndian>().unwrap();
-        TxInputId { txid, input }
+        Self { txid, input }
     }
 
     fn write(&self, out: &mut [u8]) {
@@ -62,7 +62,7 @@ impl StorageKey for TxInputId {
 
 impl CryptoHash for TxInputId {
     fn hash(&self) -> Hash {
-        let mut bytes = [0u8; 36];
+        let mut bytes = [0_u8; 36];
         self.write(&mut bytes);
         crypto::hash(bytes.as_ref())
     }

@@ -27,7 +27,7 @@ extern crate matches;
 
 extern crate btc_transaction_utils;
 
-use exonum::blockchain::{Transaction, TransactionErrorType};
+use exonum::blockchain::TransactionErrorType;
 use exonum::explorer::BlockWithTransactions;
 use exonum::helpers::Height;
 use exonum_btc_anchoring::{
@@ -38,7 +38,7 @@ use exonum_btc_anchoring::{
     BTC_ANCHORING_SERVICE_NAME,
 };
 
-fn assert_tx_error(block: BlockWithTransactions<Box<Transaction>>, e: ErrorCode) {
+fn assert_tx_error(block: BlockWithTransactions, e: ErrorCode) {
     assert_eq!(
         block[0].status().unwrap_err().error_type(),
         TransactionErrorType::Code(e as u8),

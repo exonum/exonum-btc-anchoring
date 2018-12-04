@@ -12,25 +12,28 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::{CryptoHash, Hash};
+use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+
+use exonum::crypto::{self, CryptoHash, Hash};
 use exonum::helpers::ValidatorId;
 use exonum::storage::StorageValue;
 
 use std::borrow::Cow;
+use std::io::{Cursor, Write};
 use std::iter::{FilterMap, IntoIterator};
 use std::vec::IntoIter;
 
 /// A set of signatures for a transaction input ordered by the validators identifiers.
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InputSignatures {
     content: Vec<Option<Vec<u8>>>,
 }
 
 impl InputSignatures {
     /// Creates an empty signatures set for the given validators count.
-    pub fn new(validators_count: usize) -> InputSignatures {
+    pub fn new(validators_count: usize) -> Self {
         let content = vec![None; validators_count as usize];
-        InputSignatures { content }
+        Self { content }
     }
 
     /// Inserts a signature from the validator with the given identifier.
@@ -66,67 +69,43 @@ impl IntoIterator for InputSignatures {
     }
 }
 
-encoding_struct! {
-    struct InputSignature {
-        content: &[u8]
-    }
-}
-
-encoding_struct! {
-    struct InputSignaturesStored {
-        content: Vec<InputSignature>
-    }
-}
-
-impl From<Option<Vec<u8>>> for InputSignature {
-    fn from(s: Option<Vec<u8>>) -> InputSignature {
-        let bytes = s
-            .as_ref()
-            .map(|x| x.as_ref())
-            .unwrap_or_else(|| [].as_ref());
-        InputSignature::new(bytes)
-    }
-}
-
-impl From<InputSignature> for Option<Vec<u8>> {
-    fn from(s: InputSignature) -> Option<Vec<u8>> {
-        if s.content().is_empty() {
-            None
-        } else {
-            Some(s.content().to_vec())
-        }
-    }
-}
-
-impl From<InputSignatures> for InputSignaturesStored {
-    fn from(s: InputSignatures) -> InputSignaturesStored {
-        let content = s.content.into_iter().map(From::from).collect::<_>();
-        InputSignaturesStored::new(content)
-    }
-}
-
-impl From<InputSignaturesStored> for InputSignatures {
-    fn from(s: InputSignaturesStored) -> InputSignatures {
-        let content = s.content().into_iter().map(From::from).collect::<_>();
-        InputSignatures { content }
-    }
-}
-
 impl StorageValue for InputSignatures {
     fn into_bytes(self) -> Vec<u8> {
-        let stored = InputSignaturesStored::from(self);
-        stored.into_bytes()
+        let mut buf = Cursor::new(Vec::new());
+        for signature in &self.content {
+            let bytes = signature
+                .as_ref()
+                .map_or_else(|| [].as_ref(), |x| &x.as_slice());
+            buf.write_u64::<LittleEndian>(bytes.len() as u64).unwrap();
+            buf.write_all(bytes).unwrap();
+        }
+        buf.into_inner()
     }
 
     fn from_bytes(value: Cow<[u8]>) -> Self {
-        let stored = InputSignaturesStored::from_bytes(value);
-        stored.into()
+        let mut signatures = Vec::new();
+        let mut reader = value.as_ref();
+        while !reader.is_empty() {
+            let bytes_len = LittleEndian::read_u64(reader) as usize;
+            reader = &reader[8..];
+            let signature = if bytes_len == 0 {
+                None
+            } else {
+                let buf = Some(reader[0..bytes_len].to_vec());
+                reader = &reader[bytes_len..];
+                buf
+            };
+            signatures.push(signature);
+        }
+        Self {
+            content: signatures,
+        }
     }
 }
 
 impl CryptoHash for InputSignatures {
     fn hash(&self) -> Hash {
-        InputSignaturesStored::from(self.clone()).hash()
+        crypto::hash(&self.clone().into_bytes())
     }
 }
 

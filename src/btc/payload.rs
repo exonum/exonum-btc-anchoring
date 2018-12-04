@@ -64,9 +64,12 @@ pub struct PayloadV1Builder {
 
 pub type PayloadBuilder = PayloadV1Builder;
 
-#[cfg_attr(feature = "cargo-clippy", allow(len_without_is_empty))]
+#[cfg_attr(
+    feature = "cargo-clippy",
+    allow(clippy::len_without_is_empty)
+)]
 impl PayloadV1 {
-    fn read(bytes: &[u8]) -> Option<PayloadV1> {
+    fn read(bytes: &[u8]) -> Option<Self> {
         let kind = bytes[0];
         let data = &bytes[1..];
         match kind {
@@ -143,25 +146,25 @@ impl PayloadV1 {
 }
 
 impl PayloadV1Builder {
-    pub fn new() -> PayloadV1Builder {
-        PayloadV1Builder {
+    pub fn new() -> Self {
+        Self {
             block_hash: None,
             block_height: None,
             prev_tx_chain: None,
         }
     }
 
-    pub fn block_height(mut self, height: Height) -> PayloadV1Builder {
+    pub fn block_height(mut self, height: Height) -> Self {
         self.block_height = Some(height);
         self
     }
 
-    pub fn block_hash(mut self, hash: Hash) -> PayloadV1Builder {
+    pub fn block_hash(mut self, hash: Hash) -> Self {
         self.block_hash = Some(hash);
         self
     }
 
-    pub fn prev_tx_chain(mut self, txid: Option<Hash>) -> PayloadV1Builder {
+    pub fn prev_tx_chain(mut self, txid: Option<Hash>) -> Self {
         self.prev_tx_chain = txid;
         self
     }
@@ -180,7 +183,7 @@ impl PayloadV1Builder {
 
 impl Payload {
     /// Tries to extract payload from given `Script`
-    pub fn from_script(script: &Script) -> Option<Payload> {
+    pub fn from_script(script: &Script) -> Option<Self> {
         let mut instructions = script.iter(true);
         instructions
             .next()
@@ -201,7 +204,7 @@ impl Payload {
                     // Parse metadata
                     let version = bytes[6];
                     match version {
-                        PAYLOAD_V1 => PayloadV1::read(&bytes[7..]).map(Payload::from),
+                        PAYLOAD_V1 => PayloadV1::read(&bytes[7..]).map(Self::from),
                         _ => None,
                     }
                 } else {
@@ -212,14 +215,14 @@ impl Payload {
 }
 
 impl From<PayloadV1> for Payload {
-    fn from(v1: PayloadV1) -> Payload {
+    fn from(v1: PayloadV1) -> Self {
         match v1 {
-            PayloadV1::Regular(height, hash) => Payload {
+            PayloadV1::Regular(height, hash) => Self {
                 block_height: height,
                 block_hash: hash,
                 prev_tx_chain: None,
             },
-            PayloadV1::Recover(height, hash, txid) => Payload {
+            PayloadV1::Recover(height, hash, txid) => Self {
                 block_height: height,
                 block_hash: hash,
                 prev_tx_chain: Some(txid),

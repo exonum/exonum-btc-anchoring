@@ -96,8 +96,8 @@ impl SignatureError {
 }
 
 impl From<SignatureError> for ExecutionError {
-    fn from(value: SignatureError) -> ExecutionError {
+    fn from(value: SignatureError) -> Self {
         let description = format!("{}", value);
-        ExecutionError::with_description(value.code() as u8, description)
+        Self::with_description(value.code() as u8, description)
     }
 }

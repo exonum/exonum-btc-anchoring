@@ -31,7 +31,7 @@ impl AsRef<transaction::Transaction> for Transaction {
 impl Transaction {
     /// Returns the bitcoin transaction identifier.
     pub fn id(&self) -> Hash {
-        let mut bytes = [0u8; 32];
+        let mut bytes = [0_u8; 32];
         bytes.copy_from_slice(&self.0.txid()[..]);
         bytes.reverse();
         Hash::new(bytes)
@@ -39,7 +39,7 @@ impl Transaction {
 
     /// Returns the previous anchoring transaction identifier.
     pub fn prev_tx_id(&self) -> Hash {
-        let mut bytes = [0u8; 32];
+        let mut bytes = [0_u8; 32];
         bytes.copy_from_slice(&self.0.input[0].previous_output.txid[..]);
         bytes.reverse();
         Hash::new(bytes)
@@ -232,7 +232,7 @@ impl BtcAnchoringTransactionBuilder {
 
         // Computes a total fee value.
         let size_in_bytes = {
-            let bytes = ::bitcoin::network::serialize::serialize(&transaction.0).unwrap();
+            let bytes = ::bitcoin::consensus::serialize(&transaction.0);
             bytes.len() as u64
         };
         let total_fee = self.fee.expect("Fee per byte isn't set.") * size_in_bytes;
