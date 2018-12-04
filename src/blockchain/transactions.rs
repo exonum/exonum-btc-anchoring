@@ -61,6 +61,10 @@ impl TxSignature {
 
 impl Transaction for TxSignature {
     fn execute(&self, mut context: TransactionContext) -> ExecutionResult {
+        debug!("Execute tx from validator {}", self.validator,);
+        debug!("data:  {:?}", self.transaction.anchoring_metadata());
+        debug!("prev_tx: {}", self.transaction.prev_tx_id().to_hex());
+
         // TODO Checks that transaction author is validator
         let tx = &self.transaction;
         let mut schema = BtcAnchoringSchema::new(context.fork());
@@ -121,50 +125,49 @@ impl Transaction for TxSignature {
             return Err(SignatureError::VerificationFailed.into());
         }
 
-        // Adds signature to schema.
         let input_id = self.input_id();
         let mut input_signatures = schema.input_signatures(&input_id, &redeem_script);
         if input_signatures.len() != redeem_script_content.quorum {
+            // Adds signature to schema.
             input_signatures.insert(self.validator, self.input_signature.clone().into());
             schema
                 .transaction_signatures_mut()
                 .put(&input_id, input_signatures);
-        }
-        // Tries to finalize transaction.
-        let mut tx: btc::Transaction = tx.clone();
-        for index in 0..expected_inputs.len() {
-            let input_id = TxInputId::new(self.transaction.id(), index as u32);
-            let input_signatures = schema.input_signatures(&input_id, &redeem_script);
+            // Tries to finalize transaction.
+            let mut tx: btc::Transaction = tx.clone();
+            for index in 0..expected_inputs.len() {
+                let input_id = TxInputId::new(self.transaction.id(), index as u32);
+                let input_signatures = schema.input_signatures(&input_id, &redeem_script);
 
-            if input_signatures.len() != redeem_script_content.quorum {
-                return Ok(());
+                if input_signatures.len() != redeem_script_content.quorum {
+                    return Ok(());
+                }
+
+                input_signer.spend_input(
+                    &mut tx.0.input[index],
+                    input_signatures
+                        .into_iter()
+                        .map(|bytes| InputSignature::from_bytes(&context, bytes).unwrap()),
+                );
             }
 
-            input_signer.spend_input(
-                &mut tx.0.input[index],
-                input_signatures
-                    .into_iter()
-                    .map(|bytes| InputSignature::from_bytes(&context, bytes).unwrap()),
-            );
+            let payload = tx.anchoring_metadata().unwrap().1;
+
+            info!("====== ANCHORING ======");
+            info!("txid: {}", tx.id().to_hex());
+            info!("height: {}", payload.block_height);
+            info!("hash: {}", payload.block_hash.to_hex());
+            info!("balance: {}", tx.0.output[0].value);
+            trace!("Anchoring txhex: {}", tx.to_string());
+
+            // Adds finalized transaction to the tail of anchoring transactions.
+            schema.anchoring_transactions_chain_mut().push(tx);
+            if let Some(unspent_funding_tx) = schema.unspent_funding_transaction() {
+                schema
+                    .spent_funding_transactions_mut()
+                    .put(&unspent_funding_tx.id(), unspent_funding_tx);
+            }
         }
-
-        let payload = tx.anchoring_metadata().unwrap().1;
-
-        info!("====== ANCHORING ======");
-        info!("txid: {}", tx.id().to_hex());
-        info!("height: {}", payload.block_height);
-        info!("hash: {}", payload.block_hash.to_hex());
-        info!("balance: {}", tx.0.output[0].value);
-        trace!("Anchoring txhex: {}", tx.to_string());
-
-        // Adds finalized transaction to the tail of anchoring transactions.
-        schema.anchoring_transactions_chain_mut().push(tx);
-        if let Some(unspent_funding_tx) = schema.unspent_funding_transaction() {
-            schema
-                .spent_funding_transactions_mut()
-                .put(&unspent_funding_tx.id(), unspent_funding_tx);
-        }
-
         Ok(())
     }
 }
