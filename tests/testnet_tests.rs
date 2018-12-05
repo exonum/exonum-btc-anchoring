@@ -431,10 +431,11 @@ fn broken_anchoring_recovery() {
     );
 
     assert!(
-        recovery_tx.anchoring_payload().unwrap().block_height > latest_successful_tx
-            .anchoring_payload()
-            .unwrap()
-            .block_height
+        recovery_tx.anchoring_payload().unwrap().block_height
+            > latest_successful_tx
+                .anchoring_payload()
+                .unwrap()
+                .block_height
     );
 
     let signatures = anchoring_testkit
@@ -444,13 +445,11 @@ fn broken_anchoring_recovery() {
     anchoring_testkit.create_blocks_until(Height(32));
 
     let after_recovery_tx = anchoring_testkit.last_anchoring_tx().unwrap();
-    assert!(
-        after_recovery_tx
-            .anchoring_payload()
-            .unwrap()
-            .prev_tx_chain
-            .is_none()
-    );
+    assert!(after_recovery_tx
+        .anchoring_payload()
+        .unwrap()
+        .prev_tx_chain
+        .is_none());
     assert!(
         after_recovery_tx.anchoring_payload().unwrap().block_height
             > recovery_tx.anchoring_payload().unwrap().block_height

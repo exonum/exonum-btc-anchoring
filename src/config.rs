@@ -150,7 +150,8 @@ mod flatten_keypairs {
             .map(|(address, private_key)| BitcoinKeypair {
                 address: address.clone(),
                 private_key: private_key.clone(),
-            }).collect::<Vec<_>>();
+            })
+            .collect::<Vec<_>>();
         keypairs.serialize(ser)
     }
 

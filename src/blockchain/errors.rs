@@ -25,8 +25,7 @@ pub enum SignatureError {
     /// Received signature is for the incorrect anchoring transaction.
     #[fail(
         display = "Received signature is for the incorrect anchoring transaction. Expected: {}. Received: {}.",
-        expected_id,
-        received_id
+        expected_id, received_id
     )]
     Unexpected {
         /// Expected identifier of the anchoring transaction.

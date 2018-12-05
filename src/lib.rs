@@ -65,8 +65,6 @@
 #[macro_use]
 extern crate derive_more;
 #[macro_use]
-extern crate display_derive;
-#[macro_use]
 extern crate exonum_derive;
 #[macro_use]
 extern crate failure;

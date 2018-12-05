@@ -28,7 +28,7 @@ use exonum::encoding::protobuf::ProtobufConvert;
 
 use btc;
 
-mod btc_anchoring;
+include!(concat!(env!("OUT_DIR"), "/protobuf_mod.rs"));
 
 impl ProtobufConvert for btc::Transaction {
     type ProtoStruct = btc_anchoring::BtcTransaction;

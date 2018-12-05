@@ -48,7 +48,8 @@ fn funding_tx_request() -> TestRequest {
                  5735875fb0f055538bf9df4986165022044b5336772de8c5f6cbf83bcc7\
                  099e31d7dce22ba1f3d1badc2fdd7f8013a12201210254053f15b44b825\
                  bc5dabfe88f8b94cd217372f3f297d2696a32835b43497397358d1400",
-            ).unwrap(),
+            )
+            .unwrap(),
             confirmations: 6,
         }))),
     )

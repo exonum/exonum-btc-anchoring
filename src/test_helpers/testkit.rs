@@ -68,7 +68,8 @@ pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -
             value,
             script_pubkey: address.script_pubkey(),
         }],
-    }.into()
+    }
+    .into()
 }
 
 /// Generates a complete anchoring configuration for the given arguments.
@@ -98,8 +99,9 @@ pub fn gen_anchoring_config<R: Rng>(
         .iter()
         .map(|sk| LocalConfig {
             rpc: rpc.map(BtcRelay::config),
-            private_keys: hashmap!{ address.clone() => sk.clone() },
-        }).collect();
+            private_keys: hashmap! { address.clone() => sk.clone() },
+        })
+        .collect();
 
     let tx = if let Some(rpc) = rpc {
         rpc.watch_address(&address, false).unwrap();
@@ -350,7 +352,8 @@ impl AnchoringTestKit {
                             TxInRef::new(proposal.as_ref(), index),
                             proposal_input.as_ref(),
                             privkey.0.secret_key(),
-                        ).unwrap();
+                        )
+                        .unwrap();
 
                     let tx = Message::sign_transaction(
                         TxSignature {

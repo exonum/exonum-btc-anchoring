@@ -64,10 +64,7 @@ pub struct PayloadV1Builder {
 
 pub type PayloadBuilder = PayloadV1Builder;
 
-#[cfg_attr(
-    feature = "cargo-clippy",
-    allow(clippy::len_without_is_empty)
-)]
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::len_without_is_empty))]
 impl PayloadV1 {
     fn read(bytes: &[u8]) -> Option<Self> {
         let kind = bytes[0];
@@ -193,7 +190,8 @@ impl Payload {
                 } else {
                     None
                 }
-            }).and_then(|instr| {
+            })
+            .and_then(|instr| {
                 if let Instruction::PushBytes(bytes) = instr {
                     if bytes.len() < PAYLOAD_HEADER_LEN {
                         return None;
