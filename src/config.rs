@@ -60,7 +60,7 @@ impl Default for GlobalConfig {
 impl GlobalConfig {
     /// Creates global configuration instance with default parameters for the
     /// given Bitcoin network and public keys of participants.
-    pub fn new(
+    pub fn with_public_keys(
         network: Network,
         keys: impl IntoIterator<Item = PublicKey>,
     ) -> Result<Self, RedeemScriptError> {
@@ -185,7 +185,7 @@ mod tests {
             .map(|_| secp_gen_keypair().0.into())
             .collect::<Vec<_>>();
 
-        let config = GlobalConfig::new(Network::Bitcoin, public_keys).unwrap();
+        let config = GlobalConfig::with_public_keys(Network::Bitcoin, public_keys).unwrap();
         assert_eq!(config.redeem_script().content().quorum, 3);
 
         let json = ::serde_json::to_value(&config).unwrap();
@@ -221,7 +221,7 @@ mod tests {
             .map(|_| secp_gen_keypair().0.into())
             .collect::<Vec<_>>();
 
-        let mut config = GlobalConfig::new(Network::Bitcoin, public_keys).unwrap();
+        let mut config = GlobalConfig::with_public_keys(Network::Bitcoin, public_keys).unwrap();
         config.anchoring_interval = 1000;
 
         assert_eq!(config.previous_anchoring_height(Height(0)), Height(0));

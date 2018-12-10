@@ -257,12 +257,10 @@ impl CommandExtension for Finalize {
         };
 
         // Creates global configuration.
-        let mut global_config = GlobalConfig::new(network, public_keys)?;
+        let mut global_config = GlobalConfig::with_public_keys(network, public_keys)?;
         // Generates initial funding transaction.
         let relay = BitcoinRpcClient::from(rpc_config.clone());
-
         let addr = global_config.anchoring_address();
-
         let funding_tx = if let Some(funding_txid) = funding_txid {
             let info = relay.transaction_info(&funding_txid)?.ok_or_else(|| {
                 format_err!(
