@@ -91,6 +91,7 @@ extern crate btc_transaction_utils;
 extern crate byteorder;
 extern crate exonum;
 extern crate exonum_bitcoinrpc as bitcoin_rpc;
+extern crate hex;
 extern crate protobuf;
 extern crate rand;
 extern crate secp256k1;

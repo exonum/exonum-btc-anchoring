@@ -42,17 +42,17 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
             }
         }
 
-        impl ::exonum::encoding::serialize::FromHex for $name {
+        impl ::hex::FromHex for $name {
             type Error = ::failure::Error;
 
             fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
-                let bytes = ::exonum::encoding::serialize::decode_hex(hex)?;
+                let bytes = ::hex::decode(hex)?;
                 let inner = ::bitcoin::consensus::deserialize(bytes.as_ref())?;
                 Ok($name(inner))
             }
         }
 
-        impl ::exonum::encoding::serialize::ToHex for $name {
+        impl ::hex::ToHex for $name {
             fn write_hex<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
                 let bytes = ::bitcoin::consensus::serialize(&self.0);
                 bytes.write_hex(w)
@@ -71,7 +71,7 @@ macro_rules! impl_string_conversions_for_hex {
     ($name:ident) => {
         impl ::std::fmt::LowerHex for $name {
             fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-                use exonum::encoding::serialize::ToHex;
+                use hex::ToHex;
                 let mut buf = String::new();
                 self.write_hex(&mut buf).unwrap();
                 write!(f, "{}", buf)
@@ -88,7 +88,7 @@ macro_rules! impl_string_conversions_for_hex {
             type Err = ::failure::Error;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
-                use exonum::encoding::serialize::FromHex;
+                use hex::FromHex;
                 Self::from_hex(s).map_err(From::from)
             }
         }

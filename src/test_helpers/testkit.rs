@@ -17,12 +17,12 @@
 use bitcoin::{self, network::constants::Network, util::address::Address};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use failure;
+use hex::FromHex;
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
 use exonum::api;
 use exonum::blockchain::{BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration};
 use exonum::crypto::{CryptoHash, Hash};
-use exonum::encoding::serialize::FromHex;
 use exonum::helpers::Height;
 use exonum::messages::{Message, RawTransaction, Signed};
 use exonum::storage::MapProof;

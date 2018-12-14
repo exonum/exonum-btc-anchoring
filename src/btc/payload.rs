@@ -232,10 +232,10 @@ impl From<PayloadV1> for Payload {
 #[cfg(test)]
 mod tests {
     use exonum::crypto::{hash, Hash};
-    use exonum::encoding::serialize::{decode_hex, encode_hex};
     use exonum::helpers::Height;
 
     use bitcoin::blockdata::script::Script;
+    use hex;
 
     use super::{Payload, PayloadBuilder};
 
@@ -246,13 +246,13 @@ mod tests {
 
     impl HexValue for Script {
         fn from_hex(hex: impl AsRef<[u8]>) -> Self {
-            let bytes = decode_hex(hex).unwrap();
+            let bytes = hex::decode(hex).unwrap();
             Script::from(bytes)
         }
 
         fn to_hex(&self) -> String {
             let bytes = self[..].to_vec();
-            encode_hex(bytes)
+            hex::encode(bytes)
         }
     }
 

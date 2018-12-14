@@ -246,7 +246,8 @@ impl BtcAnchoringTransactionBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
+    use std::borrow::Cow;
+
     use bitcoin::blockdata::opcodes::All;
     use bitcoin::blockdata::script::{Builder, Script};
     use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
@@ -255,12 +256,14 @@ mod tests {
     use bitcoin::util::hash::Sha256dHash;
     use btc::PublicKey;
     use btc_transaction_utils::multisig::RedeemScriptBuilder;
+    use hex::FromHex;
+
     use exonum::crypto::CryptoHash;
     use exonum::crypto::Hash;
-    use exonum::encoding::serialize::FromHex;
     use exonum::helpers::Height;
     use exonum::storage::StorageValue;
-    use std::borrow::Cow;
+
+    use super::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 
     #[test]
     fn test_transaction_conversions() {

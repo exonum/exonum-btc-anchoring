@@ -20,12 +20,17 @@ btc-transaction-utils = "0.4"
 byteorder = "1.2"
 clap = "2.32"
 derive_more = "0.13"
+exonum = "0.10.0"
 exonum_bitcoinrpc = "0.6"
+exonum-derive = "0.10.0"
+exonum-testkit = "0.10.0"
 failure = "0.1"
 failure_derive = "0.1"
+hex = "0.3"
 log = "0.4"
 maplit = "1.0"
 matches = "0.1"
+protobuf = { version = "2.2", features = ["with-serde"] }
 rand = "0.4"
 secp256k1 = { version = "0.11", features = ["serde"] }
 serde = "1.0"
@@ -34,17 +39,12 @@ serde_json = "1.0"
 serde_str = "0.1"
 structopt = "0.2"
 toml = "0.4"
-protobuf = { version = "2.2", features = ["with-serde"] }
-
-exonum = { git = "https://github.com/exonum/exonum", rev = "1c35d07975423b7cf8b543ea05adfcf3dffb26db" }
-exonum-testkit = { git = "https://github.com/exonum/exonum", rev = "1c35d07975423b7cf8b543ea05adfcf3dffb26db" }
-exonum_derive = { git = "https://github.com/exonum/exonum", rev = "1c35d07975423b7cf8b543ea05adfcf3dffb26db" }
 
 [dev-dependencies]
-exonum-configuration = { git = "https://github.com/exonum/exonum", rev = "1c35d07975423b7cf8b543ea05adfcf3dffb26db" }
+exonum-configuration = "0.10.0"
 libc = "0.2"
 pretty_assertions = "0.5"
 proptest = "0.8"
 
 [build-dependencies]
-exonum_build = { git = "https://github.com/exonum/exonum", rev = "1c35d07975423b7cf8b543ea05adfcf3dffb26db" }
+exonum-build = "0.10.0"

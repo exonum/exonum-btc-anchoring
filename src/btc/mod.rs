@@ -21,6 +21,7 @@ use bitcoin::network::constants::Network;
 use bitcoin::util::address;
 use bitcoin::util::privkey;
 use btc_transaction_utils;
+use hex::{self, FromHex, ToHex};
 
 use rand::{self, Rng};
 use secp256k1;
@@ -68,18 +69,18 @@ impl ::std::fmt::Debug for Privkey {
     }
 }
 
-impl ::exonum::encoding::serialize::FromHex for PublicKey {
+impl FromHex for PublicKey {
     type Error = ::failure::Error;
 
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
-        let bytes = ::exonum::encoding::serialize::decode_hex(hex)?;
+        let bytes = hex::decode(hex)?;
         let context = secp256k1::Secp256k1::without_caps();
         let inner = secp256k1::PublicKey::from_slice(&context, &bytes)?;
         Ok(PublicKey(inner))
     }
 }
 
-impl ::exonum::encoding::serialize::ToHex for PublicKey {
+impl ToHex for PublicKey {
     fn write_hex<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
         let bytes = self.0.serialize();
         bytes.as_ref().write_hex(w)
@@ -114,18 +115,18 @@ impl Deref for Address {
     }
 }
 
-impl ::exonum::encoding::serialize::FromHex for InputSignature {
+impl FromHex for InputSignature {
     type Error = ::failure::Error;
 
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
-        let bytes = ::exonum::encoding::serialize::decode_hex(hex)?;
+        let bytes = hex::decode(hex)?;
         let context = secp256k1::Secp256k1::without_caps();
         let inner = btc_transaction_utils::InputSignature::from_bytes(&context, bytes)?;
         Ok(InputSignature(inner))
     }
 }
 
-impl ::exonum::encoding::serialize::ToHex for InputSignature {
+impl ToHex for InputSignature {
     fn write_hex<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
         self.0.as_ref().write_hex(w)
     }

@@ -15,11 +15,11 @@
 //! Collections of helpers for synchronization with the Bitcoin network.
 
 use exonum::crypto::Hash;
-use exonum::encoding::serialize::FromHex;
 
 use bitcoin::util::address::Address;
 use bitcoin_rpc;
 use failure;
+use hex::FromHex;
 
 use btc::Transaction;
 

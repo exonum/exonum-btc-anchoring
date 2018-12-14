@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## 0.10.0 - 2018-12-14
+
 ### Internal improvements
 
 - Updated to the `Rust-bitcoin 0.14` release (#134).
