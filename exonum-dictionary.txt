@@ -89,8 +89,8 @@ libsodium
 libssl
 listunspent
 locktime
-Mainnet
 mainnet
+Mainnet
 maintainer's
 maplit
 markdownlint
@@ -141,14 +141,15 @@ proptest
 proto
 protobuf
 protoc
+PROTOS
 pubkey
 pubkeyhash
 pubkeys
 PUSHBYTES
 readonly
 reddit
-Regtest
 regtest
+Regtest
 reimplemented
 repr
 reqwest

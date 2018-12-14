@@ -15,6 +15,7 @@
 use exonum::helpers::fabric::{Argument, Context};
 
 use failure;
+use hex::{FromHex, FromHexError};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
 use toml;
@@ -23,7 +24,6 @@ use std::collections::BTreeMap;
 use std::str::FromStr;
 
 use exonum::crypto;
-use exonum::encoding::serialize::{FromHex, FromHexError};
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Hash(pub crypto::Hash);

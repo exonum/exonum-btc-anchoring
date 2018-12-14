@@ -12,19 +12,19 @@
 // limitations under the License.
 
 extern crate bitcoin;
-extern crate exonum;
+extern crate btc_transaction_utils;
+extern crate hex;
+extern crate rand;
+extern crate serde_json;
 
+extern crate exonum;
 extern crate exonum_bitcoinrpc as bitcoin_rpc;
 extern crate exonum_btc_anchoring;
 extern crate exonum_testkit;
 
-extern crate serde_json;
-
-extern crate btc_transaction_utils;
-extern crate rand;
+use hex::FromHex;
 
 use exonum::crypto::Hash;
-use exonum::encoding::serialize::FromHex;
 use exonum::helpers::Height;
 use exonum_btc_anchoring::blockchain::BtcAnchoringSchema;
 use exonum_btc_anchoring::btc::Transaction;
@@ -48,7 +48,8 @@ fn funding_tx_request() -> TestRequest {
                  5735875fb0f055538bf9df4986165022044b5336772de8c5f6cbf83bcc7\
                  099e31d7dce22ba1f3d1badc2fdd7f8013a12201210254053f15b44b825\
                  bc5dabfe88f8b94cd217372f3f297d2696a32835b43497397358d1400",
-            ).unwrap(),
+            )
+            .unwrap(),
             confirmations: 6,
         }))),
     )

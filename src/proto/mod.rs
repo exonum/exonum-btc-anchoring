@@ -22,13 +22,14 @@ pub use self::btc_anchoring::TxSignature;
 
 use bitcoin;
 use btc_transaction_utils;
+use failure;
 use secp256k1::Secp256k1;
 
-use exonum::encoding::protobuf::ProtobufConvert;
+use exonum::proto::ProtobufConvert;
 
 use btc;
 
-mod btc_anchoring;
+include!(concat!(env!("OUT_DIR"), "/protobuf_mod.rs"));
 
 impl ProtobufConvert for btc::Transaction {
     type ProtoStruct = btc_anchoring::BtcTransaction;
@@ -40,11 +41,9 @@ impl ProtobufConvert for btc::Transaction {
         proto_struct
     }
 
-    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, ()> {
+    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
         let bytes = pb.get_data();
-        Ok(btc::Transaction(
-            bitcoin::consensus::deserialize(bytes).map_err(drop)?,
-        ))
+        Ok(btc::Transaction(bitcoin::consensus::deserialize(bytes)?))
     }
 }
 
@@ -57,11 +56,11 @@ impl ProtobufConvert for btc::InputSignature {
         proto_struct
     }
 
-    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, ()> {
+    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
         let bytes = pb.get_data().to_vec();
         let context = Secp256k1::without_caps();
         Ok(btc::InputSignature(
-            btc_transaction_utils::InputSignature::from_bytes(&context, bytes).map_err(drop)?,
+            btc_transaction_utils::InputSignature::from_bytes(&context, bytes)?,
         ))
     }
 }

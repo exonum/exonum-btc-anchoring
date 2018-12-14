@@ -15,14 +15,15 @@
 extern crate exonum;
 extern crate exonum_btc_anchoring;
 
+extern crate hex;
 extern crate serde_json;
 extern crate structopt;
 #[macro_use]
 extern crate failure;
 
+use hex::FromHex;
 use structopt::StructOpt;
 
-use exonum::encoding::serialize::FromHex;
 use exonum_btc_anchoring::btc::Transaction;
 
 /// BTC anchoring payload extractor

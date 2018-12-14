@@ -17,10 +17,10 @@ use exonum::blockchain::{
     Schema as CoreSchema, Service, ServiceContext, Transaction, TransactionSet,
 };
 use exonum::crypto::Hash;
-use exonum::encoding::Error as EncodingError;
 use exonum::messages::RawTransaction;
 use exonum::storage::{Fork, Snapshot};
 
+use failure;
 use serde_json;
 
 use std::sync::{Arc, RwLock};
@@ -83,7 +83,7 @@ impl Service for BtcAnchoringService {
         BtcAnchoringSchema::new(snapshot).state_hash()
     }
 
-    fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<dyn Transaction>, EncodingError> {
+    fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<dyn Transaction>, failure::Error> {
         let tx = Transactions::tx_from_raw(raw)?;
         Ok(tx.into())
     }

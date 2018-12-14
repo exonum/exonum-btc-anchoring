@@ -89,7 +89,8 @@ impl CommandExtension for GenerateCommonConfig {
                 BTC_ANCHORING_INTERVAL.input_value_to_toml(&context)?,
                 BTC_ANCHORING_FEE.input_value_to_toml(&context)?,
                 BTC_ANCHORING_UTXO_CONFIRMATIONS.input_value_to_toml(&context)?,
-            ].into_iter(),
+            ]
+            .into_iter(),
         );
 
         context.set(keys::SERVICES_CONFIG, values);
@@ -159,7 +160,8 @@ impl CommandExtension for GenerateNodeConfig {
                     "btc_anchoring_private_key".to_owned(),
                     toml::Value::try_from(keypair.1)?,
                 ),
-            ].into_iter(),
+            ]
+            .into_iter(),
         );
 
         // Inserts RPC host.
@@ -255,12 +257,10 @@ impl CommandExtension for Finalize {
         };
 
         // Creates global configuration.
-        let mut global_config = GlobalConfig::new(network, public_keys)?;
+        let mut global_config = GlobalConfig::with_public_keys(network, public_keys)?;
         // Generates initial funding transaction.
         let relay = BitcoinRpcClient::from(rpc_config.clone());
-
         let addr = global_config.anchoring_address();
-
         let funding_tx = if let Some(funding_txid) = funding_txid {
             let info = relay.transaction_info(&funding_txid)?.ok_or_else(|| {
                 format_err!(

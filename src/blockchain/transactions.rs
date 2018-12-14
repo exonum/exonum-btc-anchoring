@@ -83,7 +83,8 @@ impl Transaction for TxSignature {
             return Err(SignatureError::Unexpected {
                 expected_id: expected_transaction.id(),
                 received_id: tx.id(),
-            }.into());
+            }
+            .into());
         }
 
         let redeem_script = schema.actual_state().actual_configuration().redeem_script();
@@ -96,7 +97,8 @@ impl Transaction for TxSignature {
         } else {
             return Err(SignatureError::MissingPublicKey {
                 validator_id: self.validator,
-            }.into());
+            }
+            .into());
         };
 
         let input_signer = InputSigner::new(redeem_script.clone());

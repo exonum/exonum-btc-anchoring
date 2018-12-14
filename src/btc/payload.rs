@@ -64,10 +64,7 @@ pub struct PayloadV1Builder {
 
 pub type PayloadBuilder = PayloadV1Builder;
 
-#[cfg_attr(
-    feature = "cargo-clippy",
-    allow(clippy::len_without_is_empty)
-)]
+#[cfg_attr(feature = "cargo-clippy", allow(clippy::len_without_is_empty))]
 impl PayloadV1 {
     fn read(bytes: &[u8]) -> Option<Self> {
         let kind = bytes[0];
@@ -193,7 +190,8 @@ impl Payload {
                 } else {
                     None
                 }
-            }).and_then(|instr| {
+            })
+            .and_then(|instr| {
                 if let Instruction::PushBytes(bytes) = instr {
                     if bytes.len() < PAYLOAD_HEADER_LEN {
                         return None;
@@ -234,10 +232,10 @@ impl From<PayloadV1> for Payload {
 #[cfg(test)]
 mod tests {
     use exonum::crypto::{hash, Hash};
-    use exonum::encoding::serialize::{decode_hex, encode_hex};
     use exonum::helpers::Height;
 
     use bitcoin::blockdata::script::Script;
+    use hex;
 
     use super::{Payload, PayloadBuilder};
 
@@ -248,13 +246,13 @@ mod tests {
 
     impl HexValue for Script {
         fn from_hex(hex: impl AsRef<[u8]>) -> Self {
-            let bytes = decode_hex(hex).unwrap();
+            let bytes = hex::decode(hex).unwrap();
             Script::from(bytes)
         }
 
         fn to_hex(&self) -> String {
             let bytes = self[..].to_vec();
-            encode_hex(bytes)
+            hex::encode(bytes)
         }
     }
 

@@ -125,7 +125,8 @@ impl BtcRelay for FakeBtcRelay {
             self.request(&FakeRelayRequest::SendToAddress {
                 addr: addr.clone(),
                 satoshis,
-            }) {
+            })
+        {
             r
         } else {
             panic!(UNEXPECTED_RESPONSE);
@@ -146,7 +147,8 @@ impl BtcRelay for FakeBtcRelay {
         if let FakeRelayResponse::SendTransaction(r) =
             self.request(&FakeRelayRequest::SendTransaction {
                 transaction: transaction.clone(),
-            }) {
+            })
+        {
             r
         } else {
             panic!(UNEXPECTED_RESPONSE);

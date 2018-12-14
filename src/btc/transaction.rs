@@ -88,14 +88,13 @@ pub struct BtcAnchoringTransactionBuilder {
 }
 
 /// Anchoring transaction builder errors.
-#[derive(Debug, Copy, Clone, PartialEq, Display, Fail)]
+#[derive(Debug, Copy, Clone, PartialEq, Fail)]
 pub enum BuilderError {
     /// Insufficient funds to construct a new anchoring transaction.
-    #[display(
-        fmt = "Insufficient funds to construct a new anchoring transaction,\
-               total fee is {}, total balance is {}",
-        _0,
-        _1
+    #[fail(
+        display = "Insufficient funds to construct a new anchoring transaction,\
+                   total fee is {}, total balance is {}",
+        _0, _1
     )]
     InsufficientFunds {
         /// Total transaction fee.
@@ -104,13 +103,13 @@ pub enum BuilderError {
         balance: u64,
     },
     /// At least one input should be provided.
-    #[display(fmt = "At least one input should be provided.")]
+    #[fail(display = "At least one input should be provided.")]
     NoInputs,
     /// Output address in a previous anchoring transaction is not suitable.
-    #[display(fmt = "Output address in a previous anchoring transaction is not suitable.")]
+    #[fail(display = "Output address in a previous anchoring transaction is not suitable.")]
     UnsuitableOutput,
     /// Funding transaction doesn't contains outputs to the anchoring address.
-    #[display(fmt = "Funding transaction doesn't contains outputs to the anchoring address.")]
+    #[fail(display = "Funding transaction doesn't contains outputs to the anchoring address.")]
     UnsuitableFundingTx,
 }
 
@@ -247,7 +246,8 @@ impl BtcAnchoringTransactionBuilder {
 
 #[cfg(test)]
 mod tests {
-    use super::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
+    use std::borrow::Cow;
+
     use bitcoin::blockdata::opcodes::All;
     use bitcoin::blockdata::script::{Builder, Script};
     use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
@@ -256,12 +256,14 @@ mod tests {
     use bitcoin::util::hash::Sha256dHash;
     use btc::PublicKey;
     use btc_transaction_utils::multisig::RedeemScriptBuilder;
+    use hex::FromHex;
+
     use exonum::crypto::CryptoHash;
     use exonum::crypto::Hash;
-    use exonum::encoding::serialize::FromHex;
     use exonum::helpers::Height;
     use exonum::storage::StorageValue;
-    use std::borrow::Cow;
+
+    use super::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 
     #[test]
     fn test_transaction_conversions() {
@@ -287,7 +289,8 @@ mod tests {
              fcd39e298e50f4b87024830450221008f9378080defdb2029f9c96e149e85e93d8fb860a1c06a7c988908\
              09077eec8b02206049967206a4bd35f8fa4c59a8cd9f46b08e48f794a6b325986b4e9227b9d8d30121037\
              f72563a0750831ab4fb762e01cfe368ddd412042be6b78af5ee5a9bd38d0ed093a81300",
-        ).unwrap();
+        )
+        .unwrap();
         let txid_hex = "6ed431718c73787ad92e6bcbd6ac7c8151e08dffeeebb6d9e5af2d25b6837d98";
         assert_eq!(tx.id().to_hex(), txid_hex);
     }
@@ -307,7 +310,8 @@ mod tests {
              4380e84ac4e78fac684848d32198bac5985d116c74ae6862103d9d4eb85dad869dc54a65f77a7e81eea0e\
              a5d81129928d6d5b6dcb7b57c8991b21033ea315ab975c6424740c305db3f07b62b1121e27d3052b9a30d\
              b56a8b504713c53ae00000000",
-        ).unwrap();
+        )
+        .unwrap();
         let (script_pubkey, payload) = tx.anchoring_metadata().unwrap();
 
         assert_eq!(payload.block_height, Height(21000));
@@ -411,13 +415,15 @@ mod tests {
              e33981f1a7d78ce2915402d4b9b38b8d5311e0aef2e3ccf9284d2ce602968d0121\
              021d0478acd223fb9b2ad7485f06f12914a1b7effc78390a08c50bfe53b3b24815\
              062c1400",
-        ).unwrap();
+        )
+        .unwrap();
 
         let keys = vec![
             "038b782f94d19f34536a96e12e0bad99e6f82c838fa16a4234572f5f132d95ba29",
             "020ae2216f42575c4196864eda0252c75c61273065f691b32be9a99cb2a3c9b4d1",
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
-        ].iter()
+        ]
+        .iter()
         .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
         .collect::<Vec<_>>();
 
@@ -458,7 +464,8 @@ mod tests {
              e33981f1a7d78ce2915402d4b9b38b8d5311e0aef2e3ccf9284d2ce602968d0121\
              021d0478acd223fb9b2ad7485f06f12914a1b7effc78390a08c50bfe53b3b24815\
              062c1400",
-        ).unwrap();
+        )
+        .unwrap();
         let funding_tx1: Transaction = Transaction::from_hex(
             "020000000001018aa4065d472efc80d2a9f26bf0f77aabd5b8fcb45661de8a0161\
              cbcc6b5fef9e0000000000feffffff0235837b00000000001600143e9fd2829e66\
@@ -468,7 +475,8 @@ mod tests {
              066bf6d747c06b3721ac878104e434e977e0e321191a0c860f05fb3bb319012103\
              b475c0164be599df74ea5d4b669fe1c439953e40eea2d4958d66698f26eeaa5f2a\
              2c1400",
-        ).unwrap();
+        )
+        .unwrap();
         let funding_tx2: Transaction = Transaction::from_hex(
             "0200000000010115c9acef986ba57a7fcf43c6cb60221b70af1da6d3ad6d1e2480\
              e55bc80c559c00000000171600147881a57eadd9361c497e2b1671da4ed1c0ac1e\
@@ -478,13 +486,15 @@ mod tests {
              76de5436165c27ea415a8175f5fdff634bf91cd402204252dbd3af0ba8a7490912\
              68491169dca4477515e2b3155de04ffacfa39f00d4012102ad0617b920ce3a7a48\
              1a10222344a7b338e7a13e8e725eb44a3a53354a90f9e32a2c1400",
-        ).unwrap();
+        )
+        .unwrap();
 
         let keys = vec![
             "038b782f94d19f34536a96e12e0bad99e6f82c838fa16a4234572f5f132d95ba29",
             "020ae2216f42575c4196864eda0252c75c61273065f691b32be9a99cb2a3c9b4d1",
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
-        ].iter()
+        ]
+        .iter()
         .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
         .collect::<Vec<_>>();
 
@@ -525,13 +535,15 @@ mod tests {
              e33981f1a7d78ce2915402d4b9b38b8d5311e0aef2e3ccf9284d2ce602968d0121\
              021d0478acd223fb9b2ad7485f06f12914a1b7effc78390a08c50bfe53b3b24815\
              062c1400",
-        ).unwrap();
+        )
+        .unwrap();
 
         let keys = vec![
             "038b782f94d19f34536a96e12e0bad99e6f82c838fa16a4234572f5f132d95ba29",
             "020ae2216f42575c4196864eda0252c75c61273065f691b32be9a99cb2a3c9b4d1",
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
-        ].iter()
+        ]
+        .iter()
         .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
         .collect::<Vec<_>>();
 
@@ -548,7 +560,8 @@ mod tests {
              4380e84ac4e78fac684848d32198bac5985d116c74ae6862103d9d4eb85dad869dc54a65f77a7e81eea0e\
              a5d81129928d6d5b6dcb7b57c8991b21033ea315ab975c6424740c305db3f07b62b1121e27d3052b9a30d\
              b56a8b504713c53ae00000000",
-        ).unwrap();
+        )
+        .unwrap();
 
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)
             .to_script()
@@ -578,7 +591,8 @@ mod tests {
             "038b782f94d19f34536a96e12e0bad99e6f82c838fa16a4234572f5f132d95ba29",
             "020ae2216f42575c4196864eda0252c75c61273065f691b32be9a99cb2a3c9b4d1",
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
-        ].iter()
+        ]
+        .iter()
         .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
         .collect::<Vec<_>>();
 

@@ -17,12 +17,12 @@
 use bitcoin::{self, network::constants::Network, util::address::Address};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use failure;
+use hex::FromHex;
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
 use exonum::api;
 use exonum::blockchain::{BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration};
 use exonum::crypto::{CryptoHash, Hash};
-use exonum::encoding::serialize::FromHex;
 use exonum::helpers::Height;
 use exonum::messages::{Message, RawTransaction, Signed};
 use exonum::storage::MapProof;
@@ -68,7 +68,8 @@ pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -
             value,
             script_pubkey: address.script_pubkey(),
         }],
-    }.into()
+    }
+    .into()
 }
 
 /// Generates a complete anchoring configuration for the given arguments.
@@ -98,8 +99,9 @@ pub fn gen_anchoring_config<R: Rng>(
         .iter()
         .map(|sk| LocalConfig {
             rpc: rpc.map(BtcRelay::config),
-            private_keys: hashmap!{ address.clone() => sk.clone() },
-        }).collect();
+            private_keys: hashmap! { address.clone() => sk.clone() },
+        })
+        .collect();
 
     let tx = if let Some(rpc) = rpc {
         rpc.watch_address(&address, false).unwrap();
@@ -350,7 +352,8 @@ impl AnchoringTestKit {
                             TxInRef::new(proposal.as_ref(), index),
                             proposal_input.as_ref(),
                             privkey.0.secret_key(),
-                        ).unwrap();
+                        )
+                        .unwrap();
 
                     let tx = Message::sign_transaction(
                         TxSignature {

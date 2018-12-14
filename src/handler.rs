@@ -120,7 +120,8 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                     proposal_input.as_ref(),
                     &pubkey,
                     &signature,
-                ).unwrap();
+                )
+                .unwrap();
 
             self.context.broadcast_transaction(TxSignature {
                 validator: validator_id,
