@@ -14,10 +14,11 @@
 
 use exonum::helpers::fabric::{Argument, Context};
 
-use failure;
+use failure::format_err;
 use hex::{FromHex, FromHexError};
 use serde::de::DeserializeOwned;
 use serde::Serialize;
+use serde_derive::{Deserialize, Serialize};
 use toml;
 
 use std::collections::BTreeMap;

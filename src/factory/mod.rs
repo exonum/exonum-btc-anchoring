@@ -20,18 +20,20 @@ use exonum::helpers::fabric::{
 use exonum::node::NodeConfig;
 
 use bitcoin::network::constants::Network;
-use failure;
+use failure::{ensure, format_err};
+use log::info;
 use toml;
-use crate::{BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
 
 use std::collections::{BTreeMap, HashMap};
+use std::sync::{Arc, RwLock};
 
-use self::args::{Hash, NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
 use crate::btc::{gen_keypair, PrivateKey, PublicKey};
 use crate::config::{Config, GlobalConfig, LocalConfig};
 use crate::rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
+use crate::{BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
 
-use std::sync::{Arc, RwLock};
+use self::args::{Hash, NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
+
 mod args;
 
 const BTC_ANCHORING_NETWORK: NamedArgumentRequired<Network> = NamedArgumentRequired {

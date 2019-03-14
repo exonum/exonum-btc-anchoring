@@ -20,6 +20,7 @@ pub use self::transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transa
 use bitcoin::network::constants::Network;
 use bitcoin::util::address;
 use btc_transaction_utils;
+use derive_more::{From, Into};
 use hex::{self, FromHex, ToHex};
 
 use rand::Rng;

@@ -20,6 +20,7 @@ use exonum::helpers::Height;
 use exonum::storage::{Fork, ProofListIndex, ProofMapIndex, Snapshot};
 
 use btc_transaction_utils::multisig::RedeemScript;
+use log::{error, trace};
 use serde_json;
 
 use crate::btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};

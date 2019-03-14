@@ -62,48 +62,15 @@
     bare_trait_objects
 )]
 
-#[macro_use]
-extern crate derive_more;
-#[macro_use]
-extern crate exonum_derive;
-#[macro_use]
-extern crate failure;
-#[macro_use]
-extern crate failure_derive;
-#[macro_use]
-extern crate log;
-#[macro_use]
-extern crate serde_derive;
-#[macro_use]
-extern crate serde_json;
-#[macro_use]
-extern crate maplit;
+use log::{error, warn};
 
-#[cfg(test)]
-#[macro_use]
-extern crate matches;
-#[cfg(test)]
-#[macro_use]
-extern crate proptest;
-
-extern crate bitcoin;
-extern crate bitcoin_hashes;
-extern crate btc_transaction_utils;
-extern crate byteorder;
-extern crate exonum;
-extern crate exonum_bitcoinrpc as bitcoin_rpc;
-extern crate hex;
-extern crate protobuf;
-extern crate rand;
-extern crate secp256k1;
-extern crate serde;
-extern crate serde_str;
-extern crate toml;
-
-extern crate exonum_testkit;
+mod handler;
+mod proto;
 
 pub use crate::factory::BtcAnchoringFactory as ServiceFactory;
-pub use crate::service::{BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME};
+pub use crate::service::{
+    BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME,
+};
 
 pub mod api;
 pub mod blockchain;
@@ -114,9 +81,6 @@ pub mod test_helpers;
 
 pub(crate) mod factory;
 pub(crate) mod service;
-
-mod handler;
-mod proto;
 
 pub(crate) trait ResultEx {
     fn log_error(self);

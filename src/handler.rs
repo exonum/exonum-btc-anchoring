@@ -17,7 +17,8 @@ use exonum::helpers::ValidatorId;
 
 use btc_transaction_utils::p2wsh;
 use btc_transaction_utils::TxInRef;
-use failure;
+use failure::format_err;
+use log::trace;
 
 use std::cmp;
 use std::collections::HashMap;

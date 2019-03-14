@@ -20,8 +20,7 @@ use exonum::crypto::Hash;
 use exonum::messages::RawTransaction;
 use exonum::storage::{Fork, Snapshot};
 
-use failure;
-use serde_json;
+use serde_json::json;
 
 use std::sync::{Arc, RwLock};
 

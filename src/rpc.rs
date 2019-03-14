@@ -17,9 +17,10 @@
 use exonum::crypto::Hash;
 
 use bitcoin::util::address::Address;
-use crate::bitcoin_rpc;
+use exonum_bitcoinrpc as bitcoin_rpc;
 use failure;
 use hex::FromHex;
+use serde_derive::{Deserialize, Serialize};
 
 use crate::btc::Transaction;
 

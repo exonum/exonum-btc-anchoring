@@ -18,14 +18,18 @@ use exonum::{
     blockchain::{ExecutionResult, Transaction, TransactionContext},
     helpers::ValidatorId,
 };
+use exonum_derive::{ProtobufConvert, TransactionSet};
 
 use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
+use log::{info, trace};
+use serde_derive::{Deserialize, Serialize};
+
+use crate::btc;
+use crate::proto;
 
 use super::data_layout::TxInputId;
 use super::errors::SignatureError;
 use super::BtcAnchoringSchema;
-use crate::btc;
-use crate::proto;
 
 /// Exonum message with the signature for the new anchoring transaction.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert)]

@@ -13,6 +13,8 @@ use exonum::helpers::Height;
 use bitcoin::blockdata::script::Script;
 use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
 use btc_transaction_utils::multisig::RedeemScript;
+use derive_more::{From, Into};
+use failure_derive::Fail;
 
 use super::{payload::PayloadBuilder, Payload};
 
@@ -246,7 +248,10 @@ impl BtcAnchoringTransactionBuilder {
 
 #[cfg(test)]
 mod tests {
-    use std::borrow::Cow;
+    use exonum::crypto::CryptoHash;
+    use exonum::crypto::Hash;
+    use exonum::helpers::Height;
+    use exonum::storage::StorageValue;
 
     use bitcoin::blockdata::opcodes::all::OP_RETURN;
     use bitcoin::blockdata::script::{Builder, Script};
@@ -254,14 +259,14 @@ mod tests {
     use bitcoin::network::constants::Network;
     use bitcoin::util::address::Address;
     use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
-    use crate::btc::PublicKey;
     use btc_transaction_utils::multisig::RedeemScriptBuilder;
     use hex::FromHex;
+    use matches::assert_matches;
+    use proptest::{proptest, proptest_helper};
 
-    use exonum::crypto::CryptoHash;
-    use exonum::crypto::Hash;
-    use exonum::helpers::Height;
-    use exonum::storage::StorageValue;
+    use std::borrow::Cow;
+
+    use crate::btc::PublicKey;
 
     use super::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
 

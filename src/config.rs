@@ -19,6 +19,7 @@ use exonum::helpers::Height;
 use bitcoin::network::constants::Network;
 use btc_transaction_utils::multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError};
 use btc_transaction_utils::p2wsh;
+use serde_derive::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 
@@ -123,6 +124,8 @@ pub struct Config {
 
 mod flatten_keypairs {
     use crate::btc::{Address, PrivateKey};
+
+    use serde_derive::{Deserialize, Serialize};
 
     use std::collections::HashMap;
 

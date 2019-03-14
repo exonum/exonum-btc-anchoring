@@ -18,6 +18,7 @@ use exonum::helpers::Height;
 use bitcoin::blockdata::opcodes::all::OP_RETURN;
 use bitcoin::blockdata::script::{Builder, Instruction, Script};
 use byteorder::{ByteOrder, LittleEndian};
+use serde_derive::{Deserialize, Serialize};
 
 const PAYLOAD_PREFIX: &[u8] = b"EXONUM";
 const PAYLOAD_HEADER_LEN: usize = 8;

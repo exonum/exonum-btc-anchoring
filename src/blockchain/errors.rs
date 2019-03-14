@@ -14,10 +14,13 @@
 
 //! Error types of the BTC anchoring service.
 
-use crate::btc;
 use exonum::blockchain::ExecutionError;
 use exonum::crypto::Hash;
 use exonum::helpers::ValidatorId;
+
+use failure_derive::Fail;
+
+use crate::btc;
 
 /// Possible errors during execution of the `Signature` transaction.
 #[derive(Debug, Fail)]

@@ -17,8 +17,10 @@
 use bitcoin::{self, network::constants::Network, util::address::Address};
 use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
-use failure;
+use failure::{ensure, format_err};
 use hex::FromHex;
+use log::trace;
+use maplit::hashmap;
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
 use exonum::api;

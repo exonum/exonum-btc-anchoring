@@ -14,17 +14,19 @@
 
 //! Helpers for the bitcoin rpc testing.
 
-use bitcoin::util::address::Address;
-
-use std::collections::VecDeque;
-
 use exonum::crypto::Hash;
 
-use crate::btc;
+use bitcoin::util::address::Address;
 use failure;
+use log::trace;
+
+use std::collections::VecDeque;
 use std::sync::{Arc, Mutex};
 
-use crate::rpc::{BitcoinRpcConfig, BtcRelay, TransactionInfo as BtcTransactionInfo};
+use crate::{
+    btc,
+    rpc::{BitcoinRpcConfig, BtcRelay, TransactionInfo as BtcTransactionInfo},
+};
 
 const UNEXPECTED_RESPONSE: &str = "Unexpected response. Error in test data.";
 
