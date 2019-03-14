@@ -26,6 +26,7 @@ use toml;
 
 use std::collections::{BTreeMap, HashMap};
 use std::sync::{Arc, RwLock};
+use std::path::PathBuf;
 
 use crate::btc::{gen_keypair, PrivateKey, PublicKey};
 use crate::config::{Config, GlobalConfig, LocalConfig};
@@ -211,7 +212,7 @@ impl CommandExtension for Finalize {
     }
 
     fn execute(&self, mut context: Context) -> Result<Context, failure::Error> {
-        let mut node_config: NodeConfig = context.get(keys::NODE_CONFIG)?;
+        let mut node_config: NodeConfig<PathBuf> = context.get(keys::NODE_CONFIG)?;
         let public_config_list = context.get(keys::PUBLIC_CONFIG_LIST)?;
         let services_secret_config: BTreeMap<String, toml::Value> = context
             .get(keys::SERVICES_SECRET_CONFIGS)
