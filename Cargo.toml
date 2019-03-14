@@ -1,7 +1,7 @@
 [package]
 name = "exonum-btc-anchoring"
 edition = "2018"
-version = "0.10.0"
+version = "0.11.0"
 authors = ["The Exonum Team <exonum@bitfury.com>"]
 homepage = "https://exonum.com/doc/advanced/bitcoin-anchoring/"
 repository = "https://github.com/exonum/exonum-btc-anchoring"

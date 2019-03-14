@@ -25,8 +25,8 @@ use log::info;
 use toml;
 
 use std::collections::{BTreeMap, HashMap};
-use std::sync::{Arc, RwLock};
 use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
 
 use crate::btc::{gen_keypair, PrivateKey, PublicKey};
 use crate::config::{Config, GlobalConfig, LocalConfig};

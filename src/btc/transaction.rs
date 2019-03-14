@@ -262,7 +262,7 @@ mod tests {
     use btc_transaction_utils::multisig::RedeemScriptBuilder;
     use hex::FromHex;
     use matches::assert_matches;
-    use proptest::{proptest};
+    use proptest::proptest;
 
     use std::borrow::Cow;
 
