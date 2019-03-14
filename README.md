@@ -152,14 +152,13 @@ btc_anchoring generate-template template.toml \
 Each node generates its own public and secret node configuration files.
 
 ```bash
-mkdir 0
-cd 0
-btc_anchoring generate-config ../template.toml pub.toml sec.toml \
+btc_anchoring generate-config template.toml 0/pub.toml 0/sec.toml \
+    --consensus-path 0/.keys/consensus.toml
+    --service-path 0/.keys/service.toml
     --peer-address 127.0.0.0:7000 \
     --btc-anchoring-rpc-host http://localhost:18332 \
     --btc-anchoring-rpc-user user \
     --btc-anchoring-rpc-password password
-cd ..
 ```
 
 Participants need to send some bitcoins to the anchoring address in order to enable
@@ -168,8 +167,8 @@ Bitcoin anchoring. For this:
 * One of the nodes generates initial `funding_transaction` by the finalize command:
 
   ```bash
-  btc_anchoring finalize 0/sec.toml 0/node.toml \
-      --public-configs 0/pub.toml 1/pub.toml
+  btc_anchoring finalize sec/0.toml nodes/0.toml \
+      --public-configs pub/0.toml pub/1.toml
       --btc-anchoring-create-funding-tx 100000000
   ```
 
@@ -183,8 +182,8 @@ Bitcoin anchoring. For this:
 * While others should use this transaction identifier:
 
   ```bash
-  btc_anchoring finalize 0/sec.toml 0/node.toml \
-      --public-configs 0/pub.toml 1/pub.toml \
+  btc_anchoring finalize sec/0.toml nodes/0.toml \
+      --public-configs pub/0.toml pub/1.toml \
       --btc-anchoring-funding-txid 73f5f6797bedd4b1024805bc6d7e08e5206a5597f97fd8a47ed7ad5a5bb174ae
   ```
 
