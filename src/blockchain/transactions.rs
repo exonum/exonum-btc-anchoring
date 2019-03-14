@@ -24,8 +24,8 @@ use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
 use super::data_layout::TxInputId;
 use super::errors::SignatureError;
 use super::BtcAnchoringSchema;
-use btc;
-use proto;
+use crate::btc;
+use crate::proto;
 
 /// Exonum message with the signature for the new anchoring transaction.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert)]

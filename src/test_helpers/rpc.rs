@@ -20,11 +20,11 @@ use std::collections::VecDeque;
 
 use exonum::crypto::Hash;
 
-use btc;
+use crate::btc;
 use failure;
 use std::sync::{Arc, Mutex};
 
-use rpc::{BitcoinRpcConfig, BtcRelay, TransactionInfo as BtcTransactionInfo};
+use crate::rpc::{BitcoinRpcConfig, BtcRelay, TransactionInfo as BtcTransactionInfo};
 
 const UNEXPECTED_RESPONSE: &str = "Unexpected response. Error in test data.";
 

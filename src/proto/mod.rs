@@ -26,7 +26,7 @@ use failure;
 
 use exonum::proto::ProtobufConvert;
 
-use btc;
+use crate::btc;
 
 include!(concat!(env!("OUT_DIR"), "/protobuf_mod.rs"));
 

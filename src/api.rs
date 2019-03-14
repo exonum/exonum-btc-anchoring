@@ -27,9 +27,9 @@ use std::cmp::{
     Ordering::{self, Equal, Greater, Less},
 };
 
-use blockchain::BtcAnchoringSchema;
-use btc;
-use BTC_ANCHORING_SERVICE_ID;
+use crate::blockchain::BtcAnchoringSchema;
+use crate::btc;
+use crate::BTC_ANCHORING_SERVICE_ID;
 
 /// Query parameters for the find transaction request.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

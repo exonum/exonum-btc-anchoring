@@ -22,11 +22,11 @@ use failure;
 use std::cmp;
 use std::collections::HashMap;
 
-use blockchain::data_layout::TxInputId;
-use blockchain::transactions::TxSignature;
-use blockchain::{BtcAnchoringSchema, BtcAnchoringState};
-use btc::{Address, PrivateKey};
-use rpc::BtcRelay;
+use crate::blockchain::data_layout::TxInputId;
+use crate::blockchain::transactions::TxSignature;
+use crate::blockchain::{BtcAnchoringSchema, BtcAnchoringState};
+use crate::btc::{Address, PrivateKey};
+use crate::rpc::BtcRelay;
 
 /// The goal of this task is to create anchoring transactions for the corresponding heights.
 pub struct UpdateAnchoringChainTask<'a> {

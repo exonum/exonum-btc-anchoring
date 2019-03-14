@@ -22,14 +22,14 @@ use exonum::node::NodeConfig;
 use bitcoin::network::constants::Network;
 use failure;
 use toml;
-use {BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
+use crate::{BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
 
 use std::collections::{BTreeMap, HashMap};
 
 use self::args::{Hash, NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
-use btc::{gen_keypair, PrivateKey, PublicKey};
-use config::{Config, GlobalConfig, LocalConfig};
-use rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
+use crate::btc::{gen_keypair, PrivateKey, PublicKey};
+use crate::config::{Config, GlobalConfig, LocalConfig};
+use crate::rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
 
 use std::sync::{Arc, RwLock};
 mod args;

@@ -22,8 +22,8 @@ use btc_transaction_utils::p2wsh;
 
 use std::collections::HashMap;
 
-use btc::{Address, PrivateKey, PublicKey, Transaction};
-use rpc::BitcoinRpcConfig;
+use crate::btc::{Address, PrivateKey, PublicKey, Transaction};
+use crate::rpc::BitcoinRpcConfig;
 
 /// Returns sufficient number of keys for the given validators number.
 pub fn byzantine_quorum(total: usize) -> usize {
@@ -122,7 +122,7 @@ pub struct Config {
 }
 
 mod flatten_keypairs {
-    use btc::{Address, PrivateKey};
+    use crate::btc::{Address, PrivateKey};
 
     use std::collections::HashMap;
 
@@ -177,7 +177,7 @@ mod tests {
     use btc_transaction_utils::test_data::secp_gen_keypair;
 
     use super::{GlobalConfig, LocalConfig};
-    use rpc::BitcoinRpcConfig;
+    use crate::rpc::BitcoinRpcConfig;
 
     #[test]
     fn test_global_config() {

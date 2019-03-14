@@ -17,11 +17,11 @@
 use exonum::crypto::Hash;
 
 use bitcoin::util::address::Address;
-use bitcoin_rpc;
+use crate::bitcoin_rpc;
 use failure;
 use hex::FromHex;
 
-use btc::Transaction;
+use crate::btc::Transaction;
 
 /// Short information about bitcoin transaction.
 #[derive(Debug, Clone, PartialEq)]

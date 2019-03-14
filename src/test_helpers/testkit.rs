@@ -35,7 +35,7 @@ use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-use {
+use crate::{
     api::{BlockHeaderProof, FindTransactionQuery, HeightQuery, PublicApi, TransactionProof},
     blockchain::{transactions::TxSignature, BtcAnchoringSchema, BtcAnchoringState},
     btc,

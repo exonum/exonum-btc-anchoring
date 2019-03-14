@@ -254,7 +254,7 @@ mod tests {
     use bitcoin::network::constants::Network;
     use bitcoin::util::address::Address;
     use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
-    use btc::PublicKey;
+    use crate::btc::PublicKey;
     use btc_transaction_utils::multisig::RedeemScriptBuilder;
     use hex::FromHex;
 
