@@ -135,8 +135,8 @@ precommits
 prevote
 prevotes
 println
-privkey
-Privkey
+PrivateKey
+PrivateKey
 proptest
 proto
 protobuf

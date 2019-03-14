@@ -20,7 +20,6 @@ use exonum::{
 };
 
 use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
-use secp256k1::Secp256k1;
 
 use super::data_layout::TxInputId;
 use super::errors::SignatureError;
@@ -102,7 +101,6 @@ impl Transaction for TxSignature {
         };
 
         let input_signer = InputSigner::new(redeem_script.clone());
-        let context = Secp256k1::without_caps();
 
         // Checks signature content.
         let input_signature_ref = self.input_signature.as_ref();
@@ -145,7 +143,7 @@ impl Transaction for TxSignature {
                     &mut tx.0.input[index],
                     input_signatures
                         .into_iter()
-                        .map(|bytes| InputSignature::from_bytes(&context, bytes).unwrap()),
+                        .map(|bytes| InputSignature::from_bytes(bytes).unwrap()),
                 );
             }
 

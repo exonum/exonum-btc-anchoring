@@ -15,7 +15,7 @@
 use exonum::crypto::Hash;
 use exonum::helpers::Height;
 
-use bitcoin::blockdata::opcodes::All;
+use bitcoin::blockdata::opcodes::all::OP_RETURN;
 use bitcoin::blockdata::script::{Builder, Instruction, Script};
 use byteorder::{ByteOrder, LittleEndian};
 
@@ -136,7 +136,7 @@ impl PayloadV1 {
         self.write(&mut buf[7..]);
         // Build script
         Builder::new()
-            .push_opcode(All::OP_RETURN)
+            .push_opcode(OP_RETURN)
             .push_slice(buf.as_ref())
             .into_script()
     }
@@ -185,7 +185,7 @@ impl Payload {
         instructions
             .next()
             .and_then(|instr| {
-                if instr == Instruction::Op(All::OP_RETURN) {
+                if instr == Instruction::Op(OP_RETURN) {
                     instructions.next()
                 } else {
                     None

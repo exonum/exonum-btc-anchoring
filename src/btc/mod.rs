@@ -19,27 +19,27 @@ pub use self::transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transa
 
 use bitcoin::network::constants::Network;
 use bitcoin::util::address;
-use bitcoin::util::privkey;
 use btc_transaction_utils;
 use hex::{self, FromHex, ToHex};
 
-use rand::{self, Rng};
-use secp256k1;
+use rand::Rng;
 use std::ops::Deref;
 
 #[macro_use]
 mod macros;
+
+pub use btc_transaction_utils::test_data::{secp_gen_keypair, secp_gen_keypair_with_rng};
 
 pub(crate) mod payload;
 pub(crate) mod transaction;
 
 /// Bitcoin ECDSA private key wrapper.
 #[derive(Clone, From, Into, PartialEq, Eq)]
-pub struct Privkey(pub privkey::Privkey);
+pub struct PrivateKey(pub bitcoin::PrivateKey);
 
 /// Secp256k1 public key wrapper, used for verification of signatures.
 #[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
-pub struct PublicKey(pub secp256k1::PublicKey);
+pub struct PublicKey(pub bitcoin::PublicKey);
 
 /// Bitcoin address wrapper.
 #[derive(Debug, Clone, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -49,23 +49,23 @@ pub struct Address(pub address::Address);
 #[derive(Debug, Clone, PartialEq, Into, From)]
 pub struct InputSignature(pub btc_transaction_utils::InputSignature);
 
-impl ToString for Privkey {
+impl ToString for PrivateKey {
     fn to_string(&self) -> String {
         self.0.to_string()
     }
 }
 
-impl ::std::str::FromStr for Privkey {
-    type Err = <privkey::Privkey as ::std::str::FromStr>::Err;
+impl ::std::str::FromStr for PrivateKey {
+    type Err = <bitcoin::PrivateKey as ::std::str::FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        privkey::Privkey::from_str(s).map(From::from)
+        bitcoin::PrivateKey::from_str(s).map(From::from)
     }
 }
 
-impl ::std::fmt::Debug for Privkey {
+impl ::std::fmt::Debug for PrivateKey {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        f.debug_struct("Privkey").finish()
+        f.debug_struct("PrivateKey").finish()
     }
 }
 
@@ -74,21 +74,22 @@ impl FromHex for PublicKey {
 
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
         let bytes = hex::decode(hex)?;
-        let context = secp256k1::Secp256k1::without_caps();
-        let inner = secp256k1::PublicKey::from_slice(&context, &bytes)?;
+        let inner = bitcoin::PublicKey::from_slice(&bytes)?;
         Ok(PublicKey(inner))
     }
 }
 
 impl ToHex for PublicKey {
     fn write_hex<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
-        let bytes = self.0.serialize();
-        bytes.as_ref().write_hex(w)
+        let mut bytes = Vec::default();
+        self.0.write_into(&mut bytes);
+        bytes.write_hex(w)
     }
 
     fn write_hex_upper<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
-        let bytes = self.0.serialize();
-        bytes.as_ref().write_hex_upper(w)
+        let mut bytes = Vec::default();
+        self.0.write_into(&mut bytes);
+        bytes.write_hex_upper(w)
     }
 }
 
@@ -120,8 +121,7 @@ impl FromHex for InputSignature {
 
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
         let bytes = hex::decode(hex)?;
-        let context = secp256k1::Secp256k1::without_caps();
-        let inner = btc_transaction_utils::InputSignature::from_bytes(&context, bytes)?;
+        let inner = btc_transaction_utils::InputSignature::from_bytes(bytes)?;
         Ok(InputSignature(inner))
     }
 }
@@ -151,25 +151,21 @@ impl From<InputSignature> for Vec<u8> {
 impl_string_conversions_for_hex! { PublicKey }
 impl_string_conversions_for_hex! { InputSignature }
 
-impl_serde_str! { Privkey }
+impl_serde_str! { PrivateKey }
 impl_serde_str! { PublicKey }
 impl_serde_str! { Address }
 impl_serde_str! { InputSignature }
 
 /// Generates public and secret keys for Bitcoin node
 /// using given random number generator.
-pub fn gen_keypair_with_rng<R: Rng>(network: Network, rng: &mut R) -> (PublicKey, Privkey) {
-    let context = secp256k1::Secp256k1::new();
-    let sk = secp256k1::key::SecretKey::new(&context, rng);
-
-    let priv_key = privkey::Privkey::from_secret_key(sk, true, network);
-    let pub_key = secp256k1::PublicKey::from_secret_key(&context, &sk);
-    (pub_key.into(), priv_key.into())
+pub fn gen_keypair_with_rng<R: Rng>(rng: &mut R, network: Network) -> (PublicKey, PrivateKey) {
+    let (pk, sk) = secp_gen_keypair_with_rng(rng, network);
+    (PublicKey(pk), PrivateKey(sk))
 }
 
 /// Same as [`gen_keypair_with_rng`](fn.gen_keypair_with_rng.html)
 /// but it uses default random number generator.
-pub fn gen_keypair(network: Network) -> (PublicKey, Privkey) {
-    let mut rng = rand::thread_rng();
-    gen_keypair_with_rng(network, &mut rng)
+pub fn gen_keypair(network: Network) -> (PublicKey, PrivateKey) {
+    let (pk, sk) = secp_gen_keypair(network);
+    (PublicKey(pk), PrivateKey(sk))
 }

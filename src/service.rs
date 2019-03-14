@@ -29,7 +29,7 @@ use std::collections::HashMap;
 
 use api;
 use blockchain::{BtcAnchoringSchema, Transactions};
-use btc::{Address, Privkey};
+use btc::{Address, PrivateKey};
 use config::GlobalConfig;
 use handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask};
 use rpc::BtcRelay;
@@ -40,7 +40,7 @@ pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;
 /// Anchoring service name.
 pub const BTC_ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
 /// Set of bitcoin private keys for corresponding anchoring addresses.
-pub(crate) type KeyPool = Arc<RwLock<HashMap<Address, Privkey>>>;
+pub(crate) type KeyPool = Arc<RwLock<HashMap<Address, PrivateKey>>>;
 
 /// Btc anchoring service implementation for the Exonum blockchain.
 pub struct BtcAnchoringService {

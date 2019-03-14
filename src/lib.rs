@@ -87,6 +87,7 @@ extern crate matches;
 extern crate proptest;
 
 extern crate bitcoin;
+extern crate bitcoin_hashes;
 extern crate btc_transaction_utils;
 extern crate byteorder;
 extern crate exonum;

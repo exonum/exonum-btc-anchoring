@@ -248,12 +248,12 @@ impl BtcAnchoringTransactionBuilder {
 mod tests {
     use std::borrow::Cow;
 
-    use bitcoin::blockdata::opcodes::All;
+    use bitcoin::blockdata::opcodes::all::OP_RETURN;
     use bitcoin::blockdata::script::{Builder, Script};
     use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
     use bitcoin::network::constants::Network;
     use bitcoin::util::address::Address;
-    use bitcoin::util::hash::Sha256dHash;
+    use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
     use btc::PublicKey;
     use btc_transaction_utils::multisig::RedeemScriptBuilder;
     use hex::FromHex;
@@ -335,8 +335,8 @@ mod tests {
                                          value in 1u64..1_000_000_000,
                                          ref s in "\\PC*") {
             let input = (0..input_num).map(|_| {
-                // just random hash
-                let txid = Sha256dHash::from_data(s.as_bytes());
+                // Just a random hash
+                let txid = Sha256dHash::hash(s.as_bytes());
                 TxIn {
                     previous_output: OutPoint {
                         txid,
@@ -352,7 +352,7 @@ mod tests {
                 TxOut {
                     value,
                     script_pubkey: Builder::new()
-                        .push_opcode(All::OP_RETURN)
+                        .push_opcode(OP_RETURN)
                         .push_slice(s.as_bytes())
                         .into_script(),
                 }

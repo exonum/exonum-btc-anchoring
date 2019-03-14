@@ -27,7 +27,7 @@ use {BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
 use std::collections::{BTreeMap, HashMap};
 
 use self::args::{Hash, NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
-use btc::{gen_keypair, Privkey, PublicKey};
+use btc::{gen_keypair, PrivateKey, PublicKey};
 use config::{Config, GlobalConfig, LocalConfig};
 use rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
 
@@ -224,7 +224,7 @@ impl CommandExtension for Finalize {
             BTC_ANCHORING_UTXO_CONFIRMATIONS.output_value(&common_config.services_config)?;
 
         // Private part.
-        let private_key: Privkey = services_secret_config
+        let private_key: PrivateKey = services_secret_config
             .get("btc_anchoring_private_key")
             .ok_or_else(|| format_err!("BTC private key not found"))?
             .clone()
