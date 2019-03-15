@@ -15,9 +15,12 @@
 //! Helpers collection to test the service with the testkit.
 
 use bitcoin::{self, network::constants::Network, util::address::Address};
+use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
-use failure;
+use failure::{ensure, format_err};
 use hex::FromHex;
+use log::trace;
+use maplit::hashmap;
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
 use exonum::api;
@@ -34,7 +37,7 @@ use std::ops::{Deref, DerefMut};
 use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
-use {
+use crate::{
     api::{BlockHeaderProof, FindTransactionQuery, HeightQuery, PublicApi, TransactionProof},
     blockchain::{transactions::TxSignature, BtcAnchoringSchema, BtcAnchoringState},
     btc,
@@ -58,7 +61,7 @@ pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -
         input: vec![bitcoin::TxIn {
             previous_output: bitcoin::OutPoint {
                 vout: 0,
-                txid: ::bitcoin::util::hash::Sha256dHash::from_data(&data),
+                txid: Sha256dHash::from_slice(&data).unwrap(),
             },
             script_sig: bitcoin::Script::new(),
             sequence: 0,
@@ -83,7 +86,7 @@ pub fn gen_anchoring_config<R: Rng>(
 ) -> (GlobalConfig, Vec<LocalConfig>) {
     let count = count as usize;
     let (public_keys, private_keys): (Vec<_>, Vec<_>) = (0..count)
-        .map(|_| btc::gen_keypair_with_rng(network, rng))
+        .map(|_| btc::gen_keypair_with_rng(rng, network))
         .unzip();
 
     let mut global = GlobalConfig {
@@ -344,14 +347,15 @@ impl AnchoringTestKit {
                 let (proposal, proposal_inputs) = p?;
 
                 let address = schema.actual_state().output_address();
-                let privkey = &self.node_configs[validator_id.0 as usize].private_keys[&address];
+                let btc_private_key =
+                    &self.node_configs[validator_id.0 as usize].private_keys[&address];
 
                 for (index, proposal_input) in proposal_inputs.iter().enumerate() {
                     let signature = signer
                         .sign_input(
                             TxInRef::new(proposal.as_ref(), index),
                             proposal_input.as_ref(),
-                            privkey.0.secret_key(),
+                            &btc_private_key.0.key,
                         )
                         .unwrap();
 

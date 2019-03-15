@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#[macro_export]
 macro_rules! impl_wrapper_for_bitcoin_type {
     ($name:ident) => {
         impl_wrapper_for_bitcoin_consensus_encoding! { $name }
@@ -21,7 +20,6 @@ macro_rules! impl_wrapper_for_bitcoin_type {
     };
 }
 
-#[macro_export]
 macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
     ($name:ident) => {
         impl ::exonum::storage::StorageValue for $name {
@@ -66,7 +64,6 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
     };
 }
 
-#[macro_export]
 macro_rules! impl_string_conversions_for_hex {
     ($name:ident) => {
         impl ::std::fmt::LowerHex for $name {
@@ -95,7 +92,6 @@ macro_rules! impl_string_conversions_for_hex {
     };
 }
 
-#[macro_export]
 macro_rules! impl_serde_str {
     ($name:ident) => {
         impl ::serde::Serialize for $name {

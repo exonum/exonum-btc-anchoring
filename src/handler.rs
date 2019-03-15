@@ -17,29 +17,30 @@ use exonum::helpers::ValidatorId;
 
 use btc_transaction_utils::p2wsh;
 use btc_transaction_utils::TxInRef;
-use failure;
+use failure::format_err;
+use log::trace;
 
 use std::cmp;
 use std::collections::HashMap;
 
-use blockchain::data_layout::TxInputId;
-use blockchain::transactions::TxSignature;
-use blockchain::{BtcAnchoringSchema, BtcAnchoringState};
-use btc::{Address, Privkey};
-use rpc::BtcRelay;
+use crate::blockchain::data_layout::TxInputId;
+use crate::blockchain::transactions::TxSignature;
+use crate::blockchain::{BtcAnchoringSchema, BtcAnchoringState};
+use crate::btc::{Address, PrivateKey};
+use crate::rpc::BtcRelay;
 
 /// The goal of this task is to create anchoring transactions for the corresponding heights.
 pub struct UpdateAnchoringChainTask<'a> {
     context: &'a ServiceContext,
     anchoring_state: BtcAnchoringState,
-    private_keys: &'a HashMap<Address, Privkey>,
+    private_keys: &'a HashMap<Address, PrivateKey>,
 }
 
 impl<'a> UpdateAnchoringChainTask<'a> {
     /// Creates the anchoring chain updater for the given context and private keys.
     pub fn new(
         context: &'a ServiceContext,
-        private_keys: &'a HashMap<Address, Privkey>,
+        private_keys: &'a HashMap<Address, PrivateKey>,
     ) -> UpdateAnchoringChainTask<'a> {
         UpdateAnchoringChainTask {
             context,
@@ -54,12 +55,12 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         if let Some(validator_id) = self.context.validator_id() {
             let address = self.anchoring_state.output_address();
 
-            let privkey = self
+            let private_key = self
                 .private_keys
                 .get(&address)
                 .ok_or_else(|| format_err!("Private key for the address {} is absent.", address))?;
 
-            self.handle_as_validator(validator_id, &privkey)
+            self.handle_as_validator(validator_id, &private_key)
         } else {
             self.handle_as_auditor()
         }
@@ -68,7 +69,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
     fn handle_as_validator(
         self,
         validator_id: ValidatorId,
-        privkey: &Privkey,
+        private_key: &PrivateKey,
     ) -> Result<(), failure::Error> {
         let schema = BtcAnchoringSchema::new(self.context.snapshot());
         let latest_anchored_height = schema.latest_anchored_height();
@@ -111,7 +112,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
             let signature = signer.sign_input(
                 TxInRef::new(proposal.as_ref(), index),
                 proposal_inputs[index].as_ref(),
-                privkey.0.secret_key(),
+                &private_key.0.key,
             )?;
 
             signer

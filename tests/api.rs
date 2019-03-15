@@ -11,14 +11,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate bitcoin;
-extern crate btc_transaction_utils;
-extern crate exonum;
-extern crate exonum_bitcoinrpc as bitcoin_rpc;
-extern crate exonum_btc_anchoring;
-extern crate exonum_testkit;
-extern crate serde_json;
-
 use exonum::{helpers::Height, storage::Snapshot};
 use exonum_btc_anchoring::{
     api::{FindTransactionQuery, HeightQuery, PublicApi},

@@ -11,21 +11,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate bitcoin;
-extern crate btc_transaction_utils;
-extern crate hex;
-extern crate rand;
-extern crate serde_json;
-
-extern crate exonum;
-extern crate exonum_bitcoinrpc as bitcoin_rpc;
-extern crate exonum_btc_anchoring;
-extern crate exonum_testkit;
-
 use hex::FromHex;
 
 use exonum::crypto::Hash;
 use exonum::helpers::Height;
+use exonum_bitcoinrpc as bitcoin_rpc;
 use exonum_btc_anchoring::blockchain::BtcAnchoringSchema;
 use exonum_btc_anchoring::btc::Transaction;
 use exonum_btc_anchoring::rpc::TransactionInfo as BtcTransactionInfo;

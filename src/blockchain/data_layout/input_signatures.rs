@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-
 use exonum::crypto::{self, CryptoHash, Hash};
 use exonum::helpers::ValidatorId;
 use exonum::storage::StorageValue;
+
+use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use serde_derive::{Deserialize, Serialize};
 
 use std::borrow::Cow;
 use std::io::{Cursor, Write};

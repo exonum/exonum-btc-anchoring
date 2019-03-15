@@ -19,11 +19,12 @@ use exonum::helpers::Height;
 use bitcoin::network::constants::Network;
 use btc_transaction_utils::multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError};
 use btc_transaction_utils::p2wsh;
+use serde_derive::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 
-use btc::{Address, Privkey, PublicKey, Transaction};
-use rpc::BitcoinRpcConfig;
+use crate::btc::{Address, PrivateKey, PublicKey, Transaction};
+use crate::rpc::BitcoinRpcConfig;
 
 /// Returns sufficient number of keys for the given validators number.
 pub fn byzantine_quorum(total: usize) -> usize {
@@ -109,7 +110,7 @@ pub struct LocalConfig {
     pub rpc: Option<BitcoinRpcConfig>,
     /// Set of private keys for each anchoring address.
     #[serde(with = "flatten_keypairs")]
-    pub private_keys: HashMap<Address, Privkey>,
+    pub private_keys: HashMap<Address, PrivateKey>,
 }
 
 /// BTC anchoring configuration.
@@ -122,7 +123,9 @@ pub struct Config {
 }
 
 mod flatten_keypairs {
-    use btc::{Address, Privkey};
+    use crate::btc::{Address, PrivateKey};
+
+    use serde_derive::{Deserialize, Serialize};
 
     use std::collections::HashMap;
 
@@ -133,11 +136,11 @@ mod flatten_keypairs {
         /// Bitcoin address.
         address: Address,
         /// Corresponding private key.
-        private_key: Privkey,
+        private_key: PrivateKey,
     }
 
     pub fn serialize<S>(
-        keys: &HashMap<Address, Privkey>,
+        keys: &HashMap<Address, PrivateKey>,
         ser: S,
     ) -> ::std::result::Result<S::Ok, S::Error>
     where
@@ -155,7 +158,7 @@ mod flatten_keypairs {
         keypairs.serialize(ser)
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<Address, Privkey>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<Address, PrivateKey>, D::Error>
     where
         D: ::serde::Deserializer<'de>,
     {
@@ -177,12 +180,12 @@ mod tests {
     use btc_transaction_utils::test_data::secp_gen_keypair;
 
     use super::{GlobalConfig, LocalConfig};
-    use rpc::BitcoinRpcConfig;
+    use crate::rpc::BitcoinRpcConfig;
 
     #[test]
     fn test_global_config() {
         let public_keys = (0..4)
-            .map(|_| secp_gen_keypair().0.into())
+            .map(|_| secp_gen_keypair(Network::Bitcoin).0.into())
             .collect::<Vec<_>>();
 
         let config = GlobalConfig::with_public_keys(Network::Bitcoin, public_keys).unwrap();
@@ -218,7 +221,7 @@ mod tests {
     #[test]
     fn test_global_config_anchoring_height() {
         let public_keys = (0..4)
-            .map(|_| secp_gen_keypair().0.into())
+            .map(|_| secp_gen_keypair(Network::Bitcoin).0.into())
             .collect::<Vec<_>>();
 
         let mut config = GlobalConfig::with_public_keys(Network::Bitcoin, public_keys).unwrap();

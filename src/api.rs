@@ -21,15 +21,16 @@ use exonum::helpers::Height;
 use exonum::storage::{ListProof, MapProof};
 
 use failure::Fail;
+use serde_derive::{Deserialize, Serialize};
 
 use std::cmp::{
     self,
     Ordering::{self, Equal, Greater, Less},
 };
 
-use blockchain::BtcAnchoringSchema;
-use btc;
-use BTC_ANCHORING_SERVICE_ID;
+use crate::blockchain::BtcAnchoringSchema;
+use crate::btc;
+use crate::BTC_ANCHORING_SERVICE_ID;
 
 /// Query parameters for the find transaction request.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

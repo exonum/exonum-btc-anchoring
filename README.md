@@ -152,7 +152,9 @@ btc_anchoring generate-template template.toml \
 Each node generates its own public and secret node configuration files.
 
 ```bash
-btc_anchoring generate-config template.toml pub/0.toml sec/0.toml \
+btc_anchoring generate-config template.toml 0/pub.toml 0/sec.toml \
+    --consensus-path 0/.keys/consensus.toml
+    --service-path 0/.keys/service.toml
     --peer-address 127.0.0.0:7000 \
     --btc-anchoring-rpc-host http://localhost:18332 \
     --btc-anchoring-rpc-user user \

@@ -23,11 +23,10 @@ pub use self::btc_anchoring::TxSignature;
 use bitcoin;
 use btc_transaction_utils;
 use failure;
-use secp256k1::Secp256k1;
 
 use exonum::proto::ProtobufConvert;
 
-use btc;
+use crate::btc;
 
 include!(concat!(env!("OUT_DIR"), "/protobuf_mod.rs"));
 
@@ -58,9 +57,8 @@ impl ProtobufConvert for btc::InputSignature {
 
     fn from_pb(pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
         let bytes = pb.get_data().to_vec();
-        let context = Secp256k1::without_caps();
         Ok(btc::InputSignature(
-            btc_transaction_utils::InputSignature::from_bytes(&context, bytes)?,
+            btc_transaction_utils::InputSignature::from_bytes(bytes)?,
         ))
     }
 }

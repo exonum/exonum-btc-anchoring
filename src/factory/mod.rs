@@ -20,18 +20,21 @@ use exonum::helpers::fabric::{
 use exonum::node::NodeConfig;
 
 use bitcoin::network::constants::Network;
-use failure;
+use failure::{ensure, format_err};
+use log::info;
 use toml;
-use {BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
 
 use std::collections::{BTreeMap, HashMap};
+use std::path::PathBuf;
+use std::sync::{Arc, RwLock};
+
+use crate::btc::{gen_keypair, PrivateKey, PublicKey};
+use crate::config::{Config, GlobalConfig, LocalConfig};
+use crate::rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
+use crate::{BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
 
 use self::args::{Hash, NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
-use btc::{gen_keypair, Privkey, PublicKey};
-use config::{Config, GlobalConfig, LocalConfig};
-use rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
 
-use std::sync::{Arc, RwLock};
 mod args;
 
 const BTC_ANCHORING_NETWORK: NamedArgumentRequired<Network> = NamedArgumentRequired {
@@ -209,7 +212,7 @@ impl CommandExtension for Finalize {
     }
 
     fn execute(&self, mut context: Context) -> Result<Context, failure::Error> {
-        let mut node_config: NodeConfig = context.get(keys::NODE_CONFIG)?;
+        let mut node_config: NodeConfig<PathBuf> = context.get(keys::NODE_CONFIG)?;
         let public_config_list = context.get(keys::PUBLIC_CONFIG_LIST)?;
         let services_secret_config: BTreeMap<String, toml::Value> = context
             .get(keys::SERVICES_SECRET_CONFIGS)
@@ -224,7 +227,7 @@ impl CommandExtension for Finalize {
             BTC_ANCHORING_UTXO_CONFIRMATIONS.output_value(&common_config.services_config)?;
 
         // Private part.
-        let private_key: Privkey = services_secret_config
+        let private_key: PrivateKey = services_secret_config
             .get("btc_anchoring_private_key")
             .ok_or_else(|| format_err!("BTC private key not found"))?
             .clone()

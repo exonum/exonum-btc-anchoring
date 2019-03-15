@@ -12,21 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate bitcoin;
-extern crate exonum;
-
-extern crate exonum_bitcoinrpc as bitcoin_rpc;
-
-extern crate exonum_btc_anchoring;
-extern crate exonum_testkit;
-
-extern crate serde_json;
-
-#[macro_use]
-extern crate matches;
-
-extern crate btc_transaction_utils;
-
 use exonum::blockchain::TransactionErrorType;
 use exonum::explorer::BlockWithTransactions;
 use exonum::helpers::Height;
@@ -37,6 +22,8 @@ use exonum_btc_anchoring::{
     test_helpers::testkit::{create_fake_funding_transaction, AnchoringTestKit},
     BTC_ANCHORING_SERVICE_NAME,
 };
+
+use matches::assert_matches;
 
 fn assert_tx_error(block: BlockWithTransactions, e: ErrorCode) {
     assert_eq!(
