@@ -62,10 +62,10 @@ impl TxSignature {
 }
 
 impl Transaction for TxSignature {
-    fn execute(&self, mut context: TransactionContext) -> ExecutionResult {
+    fn execute(&self, context: TransactionContext) -> ExecutionResult {
         // TODO Checks that transaction author is validator.
         let tx = &self.transaction;
-        let mut schema = BtcAnchoringSchema::new(context.fork());
+        let schema = BtcAnchoringSchema::new(context.fork());
         // Checks that the number of signatures is sufficient to spend.
         if schema
             .anchoring_transactions_chain()

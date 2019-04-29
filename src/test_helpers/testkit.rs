@@ -30,7 +30,7 @@ use exonum::{
     helpers::Height,
     messages::{Message, RawTransaction, Signed},
 };
-use exonum_merkledb::{MapProof, ObjectHash};
+use exonum_merkledb::{MapProof};
 use exonum_testkit::{
     ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration, TestNode,
 };

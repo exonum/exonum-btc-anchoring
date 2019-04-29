@@ -98,7 +98,7 @@ impl Service for BtcAnchoringService {
             .last()
             .expect("An attempt to invoke execute during the genesis block initialization.");
 
-        let mut schema = BtcAnchoringSchema::new(fork);
+        let schema = BtcAnchoringSchema::new(fork);
         schema.anchored_blocks().push(block_header_hash);
     }
 

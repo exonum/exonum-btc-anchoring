@@ -17,7 +17,7 @@
 use exonum::blockchain::{Schema, StoredConfiguration};
 use exonum::crypto::Hash;
 use exonum::helpers::Height;
-use exonum_merkledb::{IndexAccess, ObjectHash, ProofListIndex, ProofMapIndex, Snapshot};
+use exonum_merkledb::{IndexAccess, ObjectHash, ProofListIndex, ProofMapIndex};
 
 use btc_transaction_utils::multisig::RedeemScript;
 use log::{error, trace};
