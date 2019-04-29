@@ -16,11 +16,12 @@ use hex::FromHex;
 use exonum::crypto::Hash;
 use exonum::helpers::Height;
 use exonum_bitcoinrpc as bitcoin_rpc;
-use exonum_btc_anchoring::blockchain::BtcAnchoringSchema;
-use exonum_btc_anchoring::btc::Transaction;
-use exonum_btc_anchoring::rpc::TransactionInfo as BtcTransactionInfo;
-use exonum_btc_anchoring::test_helpers::rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest};
-use exonum_btc_anchoring::test_helpers::testkit::AnchoringTestKit;
+use exonum_btc_anchoring::{
+    btc::Transaction,
+    rpc::TransactionInfo as BtcTransactionInfo,
+    test_helpers::rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest},
+    test_helpers::testkit::AnchoringTestKit,
+};
 
 fn funding_tx_request() -> TestRequest {
     (
@@ -54,9 +55,8 @@ fn normal_operation() {
         .create_signature_tx_for_validators(2)
         .unwrap();
 
-    let snapshot = anchoring_testkit.snapshot();
-    let schema = BtcAnchoringSchema::new(&snapshot);
-    let (proposed, _) = schema
+    let (proposed, _) = anchoring_testkit
+        .schema()
         .actual_proposed_anchoring_transaction()
         .unwrap()
         .unwrap();
@@ -79,9 +79,11 @@ fn normal_operation() {
 
     anchoring_testkit.create_blocks_until(Height(2));
 
-    let snapshot = anchoring_testkit.snapshot();
-    let schema = BtcAnchoringSchema::new(&snapshot);
-    let last_tx = schema.anchoring_transactions_chain().last().unwrap();
+    let last_tx = anchoring_testkit
+        .schema()
+        .anchoring_transactions_chain()
+        .last()
+        .unwrap();
 
     // Should retry
     requests.expect(vec![
@@ -137,9 +139,8 @@ fn several_unsynced() {
         .create_signature_tx_for_validators(3)
         .unwrap();
 
-    let snapshot = anchoring_testkit.snapshot();
-    let schema = BtcAnchoringSchema::new(&snapshot);
-    let (proposed_0, _) = schema
+    let (proposed_0, _) = anchoring_testkit
+        .schema()
         .actual_proposed_anchoring_transaction()
         .unwrap()
         .unwrap();
@@ -162,9 +163,11 @@ fn several_unsynced() {
 
     anchoring_testkit.create_blocks_until(Height(2));
 
-    let snapshot = anchoring_testkit.snapshot();
-    let schema = BtcAnchoringSchema::new(&snapshot);
-    let last_tx = schema.anchoring_transactions_chain().last().unwrap();
+    let last_tx = anchoring_testkit
+        .schema()
+        .anchoring_transactions_chain()
+        .last()
+        .unwrap();
 
     // Sync failed
     requests.expect(vec![
@@ -189,9 +192,8 @@ fn several_unsynced() {
         .create_signature_tx_for_validators(3)
         .unwrap();
 
-    let snapshot = anchoring_testkit.snapshot();
-    let schema = BtcAnchoringSchema::new(&snapshot);
-    let (proposed_1, _) = schema
+    let (proposed_1, _) = anchoring_testkit
+        .schema()
         .actual_proposed_anchoring_transaction()
         .unwrap()
         .unwrap();

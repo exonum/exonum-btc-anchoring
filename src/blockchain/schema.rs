@@ -17,7 +17,7 @@
 use exonum::blockchain::{Schema, StoredConfiguration};
 use exonum::crypto::Hash;
 use exonum::helpers::Height;
-use exonum_merkledb::{IndexAccess, ObjectHash, ProofListIndex, ProofMapIndex};
+use exonum_merkledb::{ObjectAccess, ObjectHash, ProofListIndex, ProofMapIndex, RefMut};
 
 use btc_transaction_utils::multisig::RedeemScript;
 use log::{error, trace};
@@ -54,30 +54,30 @@ pub struct BtcAnchoringSchema<T> {
     access: T,
 }
 
-impl<T: IndexAccess> BtcAnchoringSchema<T> {
+impl<T: ObjectAccess> BtcAnchoringSchema<T> {
     /// Constructs schema for the given database `snapshot`.
     pub fn new(access: T) -> Self {
         Self { access }
     }
 
     /// Returns table that contains complete chain of the anchoring transactions.
-    pub fn anchoring_transactions_chain(&self) -> ProofListIndex<T, Transaction> {
-        ProofListIndex::new(TRANSACTIONS_CHAIN, self.access)
+    pub fn anchoring_transactions_chain(&self) -> RefMut<ProofListIndex<T, Transaction>> {
+        self.access.get_object(TRANSACTIONS_CHAIN)
     }
 
     /// Returns the table that contains already spent funding transactions.
-    pub fn spent_funding_transactions(&self) -> ProofMapIndex<T, Hash, Transaction> {
-        ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, self.access)
+    pub fn spent_funding_transactions(&self) -> RefMut<ProofMapIndex<T, Hash, Transaction>> {
+        self.access.get_object(SPENT_FUNDING_TRANSACTIONS)
     }
 
     /// Returns the table that contains signatures for the given transaction input.
-    pub fn transaction_signatures(&self) -> ProofMapIndex<T, TxInputId, InputSignatures> {
-        ProofMapIndex::new(TRANSACTION_SIGNATURES, self.access)
+    pub fn transaction_signatures(&self) -> RefMut<ProofMapIndex<T, TxInputId, InputSignatures>> {
+        self.access.get_object(TRANSACTION_SIGNATURES)
     }
 
     /// Returns a list of hashes of Exonum blocks headers.
-    pub fn anchored_blocks(&self) -> ProofListIndex<T, Hash> {
-        ProofListIndex::new(ANCHORED_BLOCKS, self.access)
+    pub fn anchored_blocks(&self) -> RefMut<ProofListIndex<T, Hash>> {
+        self.access.get_object(ANCHORED_BLOCKS)
     }
 
     /// Returns hashes of the stored tables.
@@ -92,14 +92,14 @@ impl<T: IndexAccess> BtcAnchoringSchema<T> {
 
     /// Returns the actual anchoring configuration.
     pub fn actual_configuration(&self) -> GlobalConfig {
-        let actual_configuration = Schema::new(self.access).actual_configuration();
+        let actual_configuration = Schema::new(self.access.clone()).actual_configuration();
         Self::parse_config(&actual_configuration)
             .expect("Actual BTC anchoring configuration is absent")
     }
 
     /// Returns the nearest following configuration if it exists.
     pub fn following_configuration(&self) -> Option<GlobalConfig> {
-        let following_configuration = Schema::new(self.access).following_configuration()?;
+        let following_configuration = Schema::new(self.access.clone()).following_configuration()?;
         Self::parse_config(&following_configuration)
     }
 
@@ -182,7 +182,7 @@ impl<T: IndexAccess> BtcAnchoringSchema<T> {
         let anchoring_height = actual_state.following_anchoring_height(latest_anchored_height);
 
         let anchoring_block_hash =
-            Schema::new(self.access).block_hash_by_height(anchoring_height)?;
+            Schema::new(self.access.clone()).block_hash_by_height(anchoring_height)?;
 
         builder.payload(anchoring_height, anchoring_block_hash);
         builder.fee(config.transaction_fee);

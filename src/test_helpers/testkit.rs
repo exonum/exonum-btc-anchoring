@@ -30,7 +30,7 @@ use exonum::{
     helpers::Height,
     messages::{Message, RawTransaction, Signed},
 };
-use exonum_merkledb::{MapProof};
+use exonum_merkledb::{MapProof, ObjectAccess};
 use exonum_testkit::{
     ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration, TestNode,
 };
@@ -417,6 +417,11 @@ impl AnchoringTestKit {
             .block_hashes_by_height()
             .get(height.0)
             .unwrap()
+    }
+    
+    /// Returns the current snapshot of the btc anchoring information schema.
+    pub fn schema(&self) -> BtcAnchoringSchema<impl ObjectAccess> {
+        BtcAnchoringSchema::new(Arc::from(self.inner.snapshot()))
     }
 
     fn get_local_cfg(&self, node: &TestNode) -> LocalConfig {

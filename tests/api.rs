@@ -14,7 +14,6 @@
 use exonum::helpers::Height;
 use exonum_btc_anchoring::{
     api::{FindTransactionQuery, HeightQuery, PublicApi},
-    blockchain::BtcAnchoringSchema,
     btc,
     config::GlobalConfig,
     test_helpers::testkit::{AnchoringTestKit, ValidateProof},
@@ -120,8 +119,7 @@ fn find_transaction_regular() {
         anchoring_testkit.create_blocks_until(next_anchoring_height);
     }
 
-    let snapshot = anchoring_testkit.snapshot();
-    let anchoring_schema = BtcAnchoringSchema::new(&snapshot);
+    let anchoring_schema = anchoring_testkit.schema();
     let tx_chain = anchoring_schema.anchoring_transactions_chain();
 
     assert_eq!(
@@ -171,8 +169,7 @@ fn find_transaction_configuration_change() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_block();
 
-    let snapshot = anchoring_testkit.snapshot();
-    let anchoring_schema = BtcAnchoringSchema::new(&snapshot);
+    let anchoring_schema = anchoring_testkit.schema();
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(0))),
         anchoring_schema.anchoring_transactions_chain().get(1)
@@ -194,8 +191,7 @@ fn find_transaction_configuration_change() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_block();
 
-    let snapshot = anchoring_testkit.snapshot();
-    let anchoring_schema = BtcAnchoringSchema::new(&snapshot);
+    let anchoring_schema = anchoring_testkit.schema();
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(0))),
         anchoring_schema.anchoring_transactions_chain().get(1)
@@ -220,8 +216,7 @@ fn find_transaction_configuration_change() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_block();
 
-    let snapshot = anchoring_testkit.snapshot();
-    let anchoring_schema = BtcAnchoringSchema::new(&snapshot);
+    let anchoring_schema = anchoring_testkit.schema();
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(0))),
         anchoring_schema.anchoring_transactions_chain().get(1)
