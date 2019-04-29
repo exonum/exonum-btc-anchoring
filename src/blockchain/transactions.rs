@@ -24,12 +24,11 @@ use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
 use log::{info, trace};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::btc;
-use crate::proto;
+use std::borrow::Cow;
 
-use super::data_layout::TxInputId;
-use super::errors::SignatureError;
-use super::BtcAnchoringSchema;
+use crate::{btc, proto};
+
+use super::{data_layout::TxInputId, errors::SignatureError, BtcAnchoringSchema};
 
 /// Exonum message with the signature for the new anchoring transaction.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert)]
@@ -131,7 +130,7 @@ impl Transaction for TxSignature {
             // Adds signature to schema.
             input_signatures.insert(self.validator, self.input_signature.clone().into());
             schema
-                .transaction_signatures_mut()
+                .transaction_signatures()
                 .put(&input_id, input_signatures);
             // Tries to finalize transaction.
             let mut tx: btc::Transaction = tx.clone();
@@ -161,10 +160,10 @@ impl Transaction for TxSignature {
             trace!("Anchoring txhex: {}", tx.to_string());
 
             // Adds finalized transaction to the tail of anchoring transactions.
-            schema.anchoring_transactions_chain_mut().push(tx);
+            schema.anchoring_transactions_chain().push(tx);
             if let Some(unspent_funding_tx) = schema.unspent_funding_transaction() {
                 schema
-                    .spent_funding_transactions_mut()
+                    .spent_funding_transactions()
                     .put(&unspent_funding_tx.id(), unspent_funding_tx);
             }
         }

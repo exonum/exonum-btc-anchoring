@@ -11,7 +11,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::{helpers::Height, storage::Snapshot};
+use exonum::helpers::Height;
 use exonum_btc_anchoring::{
     api::{FindTransactionQuery, HeightQuery, PublicApi},
     blockchain::BtcAnchoringSchema,
@@ -36,11 +36,6 @@ fn find_transaction(
                 .unwrap()
                 .1
         })
-}
-
-fn btc_anchoring_schema(testkit: &AnchoringTestKit) -> BtcAnchoringSchema<Box<dyn Snapshot>> {
-    let snapshot = testkit.snapshot();
-    BtcAnchoringSchema::new(snapshot)
 }
 
 #[test]
@@ -125,7 +120,8 @@ fn find_transaction_regular() {
         anchoring_testkit.create_blocks_until(next_anchoring_height);
     }
 
-    let anchoring_schema = btc_anchoring_schema(&anchoring_testkit);
+    let snapshot = anchoring_testkit.snapshot();
+    let anchoring_schema = BtcAnchoringSchema::new(&snapshot);
     let tx_chain = anchoring_schema.anchoring_transactions_chain();
 
     assert_eq!(
@@ -175,23 +171,19 @@ fn find_transaction_configuration_change() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_block();
 
+    let snapshot = anchoring_testkit.snapshot();
+    let anchoring_schema = BtcAnchoringSchema::new(&snapshot);
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(0))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(1)
+        anchoring_schema.anchoring_transactions_chain().get(1)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(1))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(1)
+        anchoring_schema.anchoring_transactions_chain().get(1)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, None),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(1)
+        anchoring_schema.anchoring_transactions_chain().get(1)
     );
 
     anchoring_testkit.create_blocks_until(Height(20));
@@ -202,29 +194,23 @@ fn find_transaction_configuration_change() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_block();
 
+    let snapshot = anchoring_testkit.snapshot();
+    let anchoring_schema = BtcAnchoringSchema::new(&snapshot);
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(0))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(1)
+        anchoring_schema.anchoring_transactions_chain().get(1)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(1))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(2)
+        anchoring_schema.anchoring_transactions_chain().get(2)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(10))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(2)
+        anchoring_schema.anchoring_transactions_chain().get(2)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, None),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(2)
+        anchoring_schema.anchoring_transactions_chain().get(2)
     );
 
     // Anchors block on height 20.
@@ -234,35 +220,27 @@ fn find_transaction_configuration_change() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_block();
 
+    let snapshot = anchoring_testkit.snapshot();
+    let anchoring_schema = BtcAnchoringSchema::new(&snapshot);
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(0))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(1)
+        anchoring_schema.anchoring_transactions_chain().get(1)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(1))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(2)
+        anchoring_schema.anchoring_transactions_chain().get(2)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(10))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(2)
+        anchoring_schema.anchoring_transactions_chain().get(2)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(11))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(3)
+        anchoring_schema.anchoring_transactions_chain().get(3)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, None),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(3)
+        anchoring_schema.anchoring_transactions_chain().get(3)
     );
 }
 

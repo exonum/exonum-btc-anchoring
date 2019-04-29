@@ -18,7 +18,7 @@ use exonum::blockchain::{
 };
 use exonum::crypto::Hash;
 use exonum::messages::RawTransaction;
-use exonum::storage::{Fork, Snapshot};
+use exonum_merkledb::{Fork, Snapshot};
 
 use serde_json::json;
 
@@ -87,19 +87,19 @@ impl Service for BtcAnchoringService {
         Ok(tx.into())
     }
 
-    fn initialize(&self, _fork: &mut Fork) -> serde_json::Value {
+    fn initialize(&self, _fork: &Fork) -> serde_json::Value {
         json!(self.global_config)
     }
 
-    fn before_commit(&self, fork: &mut Fork) {
+    fn before_commit(&self, fork: &Fork) {
         // Writes a hash of the latest block to the proof list index.
-        let block_header_hash = CoreSchema::new(&fork)
+        let block_header_hash = CoreSchema::new(fork)
             .block_hashes_by_height()
             .last()
             .expect("An attempt to invoke execute during the genesis block initialization.");
 
         let mut schema = BtcAnchoringSchema::new(fork);
-        schema.anchored_blocks_mut().push(block_header_hash);
+        schema.anchored_blocks().push(block_header_hash);
     }
 
     fn after_commit(&self, context: &ServiceContext) {

@@ -22,8 +22,8 @@ use bitcoin::util::address;
 use btc_transaction_utils;
 use derive_more::{From, Into};
 use hex::{self, FromHex, ToHex};
-
 use rand::Rng;
+
 use std::ops::Deref;
 
 #[macro_use]

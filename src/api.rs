@@ -18,7 +18,7 @@ use exonum::api::{self, ServiceApiBuilder, ServiceApiState};
 use exonum::blockchain::{BlockProof, Schema as CoreSchema};
 use exonum::crypto::Hash;
 use exonum::helpers::Height;
-use exonum::storage::{ListProof, MapProof};
+use exonum_merkledb::{ListProof, MapProof};
 
 use failure::Fail;
 use serde_derive::{Deserialize, Serialize};
@@ -108,13 +108,13 @@ impl PublicApi for ServiceApiState {
 
     fn actual_address(&self, _query: ()) -> Result<btc::Address, Self::Error> {
         let snapshot = self.snapshot();
-        let schema = BtcAnchoringSchema::new(snapshot);
+        let schema = BtcAnchoringSchema::new(&snapshot);
         Ok(schema.actual_configuration().anchoring_address())
     }
 
     fn following_address(&self, _query: ()) -> Result<Option<btc::Address>, Self::Error> {
         let snapshot = self.snapshot();
-        let schema = BtcAnchoringSchema::new(snapshot);
+        let schema = BtcAnchoringSchema::new(&snapshot);
         Ok(schema
             .following_configuration()
             .map(|config| config.anchoring_address()))

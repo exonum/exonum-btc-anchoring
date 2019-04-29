@@ -23,12 +23,14 @@ use log::trace;
 use maplit::hashmap;
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
-use exonum::api;
-use exonum::blockchain::{BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration};
-use exonum::crypto::{CryptoHash, Hash};
-use exonum::helpers::Height;
-use exonum::messages::{Message, RawTransaction, Signed};
-use exonum::storage::MapProof;
+use exonum::{
+    api,
+    blockchain::{BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration},
+    crypto::{CryptoHash, Hash},
+    helpers::Height,
+    messages::{Message, RawTransaction, Signed},
+};
+use exonum_merkledb::{MapProof, ObjectHash};
 use exonum_testkit::{
     ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration, TestNode,
 };
@@ -251,7 +253,8 @@ impl AnchoringTestKit {
 
     /// Updates the private keys pool in testkit for the transition state.
     pub fn renew_address(&mut self) {
-        let schema = BtcAnchoringSchema::new(self.snapshot());
+        let snapshot = self.snapshot();
+        let schema = BtcAnchoringSchema::new(&snapshot);
 
         if let BtcAnchoringState::Transition {
             actual_configuration,
@@ -304,7 +307,7 @@ impl AnchoringTestKit {
     /// Returns the current anchoring global configuration.
     pub fn actual_anchoring_configuration(&self) -> GlobalConfig {
         let snapshot = self.blockchain().snapshot();
-        let schema = BtcAnchoringSchema::new(snapshot);
+        let schema = BtcAnchoringSchema::new(&snapshot);
         schema.actual_configuration()
     }
 
@@ -315,7 +318,8 @@ impl AnchoringTestKit {
 
     /// Returns the latest anchoring transaction.
     pub fn last_anchoring_tx(&self) -> Option<btc::Transaction> {
-        let schema = BtcAnchoringSchema::new(self.snapshot());
+        let snapshot = self.snapshot();
+        let schema = BtcAnchoringSchema::new(&snapshot);
         schema.anchoring_transactions_chain().last()
     }
 
@@ -325,6 +329,8 @@ impl AnchoringTestKit {
         &self,
         validators_num: u16,
     ) -> Result<Vec<Signed<RawTransaction>>, btc::BuilderError> {
+        let snapshot = self.snapshot();
+
         let validators = self
             .network()
             .validators()
@@ -341,7 +347,7 @@ impl AnchoringTestKit {
             let validator_id = validator.validator_id().unwrap();
             let (public_key, private_key) = validator.service_keypair();
 
-            let schema = BtcAnchoringSchema::new(self.snapshot());
+            let schema = BtcAnchoringSchema::new(&snapshot);
 
             if let Some(p) = schema.actual_proposed_anchoring_transaction() {
                 let (proposal, proposal_inputs) = p?;
@@ -473,7 +479,7 @@ fn validate_table_proof(
     // Checks state_hash.
     let checked_table_proof = to_table.check()?;
     ensure!(
-        checked_table_proof.merkle_root() == *latest_authorized_block.block.state_hash(),
+        checked_table_proof.root_hash() == *latest_authorized_block.block.state_hash(),
         "State hash doesn't match"
     );
     let value = checked_table_proof.entries().map(|(a, b)| (*a, *b)).next();

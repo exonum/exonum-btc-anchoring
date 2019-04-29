@@ -12,17 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::{self, CryptoHash, Hash};
+use exonum::crypto::{self, Hash};
 use exonum::helpers::ValidatorId;
-use exonum::storage::StorageValue;
+use exonum_merkledb::{BinaryValue, ObjectHash};
 
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use serde_derive::{Deserialize, Serialize};
 
-use std::borrow::Cow;
-use std::io::{Cursor, Write};
-use std::iter::{FilterMap, IntoIterator};
-use std::vec::IntoIter;
+use std::{
+    borrow::Cow,
+    io::{Cursor, Write},
+    iter::{FilterMap, IntoIterator},
+    vec::IntoIter,
+};
 
 /// A set of signatures for a transaction input ordered by the validators identifiers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -70,8 +72,8 @@ impl IntoIterator for InputSignatures {
     }
 }
 
-impl StorageValue for InputSignatures {
-    fn into_bytes(self) -> Vec<u8> {
+impl BinaryValue for InputSignatures {
+    fn to_bytes(&self) -> Vec<u8> {
         let mut buf = Cursor::new(Vec::new());
         for signature in &self.content {
             let bytes = signature
@@ -83,7 +85,7 @@ impl StorageValue for InputSignatures {
         buf.into_inner()
     }
 
-    fn from_bytes(value: Cow<[u8]>) -> Self {
+    fn from_bytes(value: Cow<[u8]>) -> Result<Self, failure::Error> {
         let mut signatures = Vec::new();
         let mut reader = value.as_ref();
         while !reader.is_empty() {
@@ -98,15 +100,16 @@ impl StorageValue for InputSignatures {
             };
             signatures.push(signature);
         }
-        Self {
+
+        Ok(Self {
             content: signatures,
-        }
+        })
     }
 }
 
-impl CryptoHash for InputSignatures {
-    fn hash(&self) -> Hash {
-        crypto::hash(&self.clone().into_bytes())
+impl ObjectHash for InputSignatures {
+    fn object_hash(&self) -> Hash {
+        crypto::hash(&self.to_bytes())
     }
 }
 
@@ -122,7 +125,7 @@ fn test_input_signatures_storage_value() {
     assert_eq!(signatures.len(), 2);
 
     let bytes = signatures.clone().into_bytes();
-    let signatures2 = InputSignatures::from_bytes(bytes.into());
+    let signatures2 = InputSignatures::from_bytes(bytes.into()).unwrap();
     assert_eq!(signatures, signatures2);
     assert_eq!(signatures2.into_iter().collect::<Vec<_>>(), data);
 }

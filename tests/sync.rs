@@ -54,7 +54,8 @@ fn normal_operation() {
         .create_signature_tx_for_validators(2)
         .unwrap();
 
-    let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
+    let snapshot = anchoring_testkit.snapshot();
+    let schema = BtcAnchoringSchema::new(&snapshot);
     let (proposed, _) = schema
         .actual_proposed_anchoring_transaction()
         .unwrap()
@@ -78,7 +79,8 @@ fn normal_operation() {
 
     anchoring_testkit.create_blocks_until(Height(2));
 
-    let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
+    let snapshot = anchoring_testkit.snapshot();
+    let schema = BtcAnchoringSchema::new(&snapshot);
     let last_tx = schema.anchoring_transactions_chain().last().unwrap();
 
     // Should retry
@@ -135,7 +137,8 @@ fn several_unsynced() {
         .create_signature_tx_for_validators(3)
         .unwrap();
 
-    let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
+    let snapshot = anchoring_testkit.snapshot();
+    let schema = BtcAnchoringSchema::new(&snapshot);
     let (proposed_0, _) = schema
         .actual_proposed_anchoring_transaction()
         .unwrap()
@@ -159,7 +162,8 @@ fn several_unsynced() {
 
     anchoring_testkit.create_blocks_until(Height(2));
 
-    let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
+    let snapshot = anchoring_testkit.snapshot();
+    let schema = BtcAnchoringSchema::new(&snapshot);
     let last_tx = schema.anchoring_transactions_chain().last().unwrap();
 
     // Sync failed
@@ -185,7 +189,8 @@ fn several_unsynced() {
         .create_signature_tx_for_validators(3)
         .unwrap();
 
-    let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
+    let snapshot = anchoring_testkit.snapshot();
+    let schema = BtcAnchoringSchema::new(&snapshot);
     let (proposed_1, _) = schema
         .actual_proposed_anchoring_transaction()
         .unwrap()
