@@ -77,12 +77,6 @@ impl BitcoinRpcClient {
     }
 }
 
-impl From<BitcoinRpcConfig> for BitcoinRpcClient {
-    fn from(cfg: BitcoinRpcConfig) -> Self {
-        Self::new(cfg)
-    }
-}
-
 impl From<BitcoinRpcClient> for Box<dyn BtcRelay> {
     fn from(client: BitcoinRpcClient) -> Self {
         Box::new(client) as Self
