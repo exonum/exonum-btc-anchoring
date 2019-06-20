@@ -67,19 +67,19 @@ pub enum SignatureError {
 /// Error codes for the BTC anchoring transactions.
 #[derive(Debug)]
 pub enum ErrorCode {
-    /// [description](SignatureError.t.html#variant.Unexpected)
+    /// [description](enum.SignatureError.html#variant.Unexpected)
     Unexpected = 1,
-    /// [description](SignatureError.t.html#variant.InTransition)
+    /// [description](enum.SignatureError.html#variant.InTransition)
     InTransition = 2,
-    /// [description](SignatureError.t.html#variant.MissingPublicKey)
+    /// [description](enum.SignatureError.html#variant.MissingPublicKey)
     MissingPublicKey = 3,
-    /// [description](SignatureError.t.html#variant.NoSuchInput)
+    /// [description](enum.SignatureError.html#variant.NoSuchInput)
     NoSuchInput = 4,
-    /// [description](SignatureError.t.html#variant.VerificationFailed)
+    /// [description](enum.SignatureError.html#variant.VerificationFailed)
     VerificationFailed = 5,
-    /// [description](SignatureError.t.html#variant.TxBuilderError)
+    /// [description](enum.SignatureError.html#variant.TxBuilderError)
     TxBuilderError = 6,
-    /// [description](SignatureError.t.html#variant.UnknownError)
+    /// [description](enum.SignatureError.html#variant.UnknownError)
     UnknownError = 255,
 }
 
