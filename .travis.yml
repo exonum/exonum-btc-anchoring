@@ -29,7 +29,7 @@ addons:
 rust:
   # Feel free to bump this version if you need features of newer Rust.
   # Sync with badge in README.md
-  - 1.33.0
+  - 1.35.0
 
 matrix:
   allow_failures:
@@ -46,7 +46,7 @@ dist: trusty
 env:
   global:
   - DEADLINKS_VERS=0.3.0
-  - SODIUM_VERS=1.0.16
+  - SODIUM_VERS=1.0.18
   - RUSTFLAGS="-D warnings"
   - ROCKSDB_LIB_DIR=/usr/lib/x86_64-linux-gnu
   - SNAPPY_LIB_DIR=/usr/lib/x86_64-linux-gnu
