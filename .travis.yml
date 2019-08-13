@@ -3,9 +3,11 @@ language: rust
 addons:
   apt:
     sources:
-    - sourceline: 'ppa:giskou/librocksdb'
+    - sourceline: 'ppa:exonum/rocksdb'
     - sourceline: 'ppa:maarten-fonville/protobuf'
     - sourceline: 'ppa:fsgmhoward/shadowsocks-libev'
+    - sourceline: 'deb [arch=amd64] https://packages.microsoft.com/ubuntu/16.04/prod xenial main'
+      key_url: https://packages.microsoft.com/keys/microsoft.asc
     packages:
     - binutils-dev
     - build-essential
@@ -17,40 +19,37 @@ addons:
     - libelf-dev
     - libiberty-dev
     - libprotobuf-dev
-    - librocksdb
+    - librocksdb5.17
     - libsnappy-dev
     - libsodium-dev
     - libssl-dev
     - pkg-config
+    - powershell
     - protobuf-compiler
     - unzip
     - zlib1g-dev
 
 rust:
-  # Feel free to bump this version if you need features of newer Rust.
-  # Sync with badge in README.md
   - 1.36.0
 
-matrix:
-  allow_failures:
-  - env: FEATURE=non-fatal-checks
-  fast_finish: true
-
 cache:
-  cargo: true
+  npm: true
   directories:
-  - node_modules
+  - $HOME/.local
+  - $HOME/.cargo
+  - $HOME/.kcov
+  - $TRAVIS_BUILD_DIR/target
+  timeout: 900
 
-dist: trusty
+dist: xenial
+sudo: required
 
 env:
   global:
   - DEADLINKS_VERS=0.3.0
-  - SODIUM_VERS=1.0.18
   - RUSTFLAGS="-D warnings"
-  - ROCKSDB_LIB_DIR=/usr/lib/x86_64-linux-gnu
+  - ROCKSDB_LIB_DIR=/usr/lib
   - SNAPPY_LIB_DIR=/usr/lib/x86_64-linux-gnu
-
 jobs:
   include:
   # Formatting & other lints that do not require compilation
@@ -91,3 +90,10 @@ jobs:
     - cargo doc --no-deps
     - cargo deadlinks --dir target/doc
     
+before_cache:
+  - |
+    cd $TRAVIS_BUILD_DIR/target/debug
+    rm -rf incremental examples
+    find . -maxdepth 1 -type f -executable -delete
+    find deps -type f -size +20M -delete
+    du -h -d 1 .
