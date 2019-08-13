@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::Hash;
-use exonum::helpers::Height;
+use exonum::{crypto::Hash, helpers::Height};
 
-use bitcoin::blockdata::opcodes::all::OP_RETURN;
-use bitcoin::blockdata::script::{Builder, Instruction, Script};
+use bitcoin::blockdata::{
+    opcodes::all::OP_RETURN,
+    script::{Builder, Instruction, Script},
+};
 use byteorder::{ByteOrder, LittleEndian};
 use serde_derive::{Deserialize, Serialize};
 

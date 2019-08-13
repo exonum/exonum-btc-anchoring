@@ -14,21 +14,23 @@
 
 //! Information schema for the btc anchoring service.
 
-use exonum::blockchain::{Schema, StoredConfiguration};
-use exonum::crypto::Hash;
-use exonum::helpers::Height;
-use exonum_merkledb::{ObjectAccess, ObjectHash, ProofListIndex, ProofMapIndex, RefMut};
-
 use btc_transaction_utils::multisig::RedeemScript;
+use exonum::{
+    blockchain::{Schema, StoredConfiguration},
+    crypto::Hash,
+    helpers::Height,
+};
+use exonum_merkledb::{ObjectAccess, ObjectHash, ProofListIndex, ProofMapIndex, RefMut};
 use log::{error, trace};
 use serde_json;
 
-use crate::btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
-use crate::config::GlobalConfig;
-use crate::BTC_ANCHORING_SERVICE_NAME;
+use crate::{
+    btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction},
+    config::GlobalConfig,
+    BTC_ANCHORING_SERVICE_NAME,
+};
 
-use super::data_layout::*;
-use super::BtcAnchoringState;
+use super::{data_layout::*, BtcAnchoringState};
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {

@@ -12,11 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::{self, Hash};
-use exonum::helpers::ValidatorId;
-use exonum_merkledb::{BinaryValue, ObjectHash};
-
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use exonum::{
+    crypto::{self, Hash},
+    helpers::ValidatorId,
+};
+use exonum_merkledb::{BinaryValue, ObjectHash};
 use serde_derive::{Deserialize, Serialize};
 
 use std::{

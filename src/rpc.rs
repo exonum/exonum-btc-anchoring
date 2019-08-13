@@ -14,9 +14,8 @@
 
 //! Collections of helpers for synchronization with the Bitcoin network.
 
-use exonum::crypto::Hash;
-
 use bitcoin::util::address::Address;
+use exonum::crypto::Hash;
 use exonum_bitcoinrpc as bitcoin_rpc;
 use failure;
 use hex::FromHex;

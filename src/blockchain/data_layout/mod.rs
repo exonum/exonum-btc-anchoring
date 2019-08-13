@@ -14,8 +14,7 @@
 
 //! Additional data types for the BTC anchoring information schema.
 
-pub use self::input_signatures::InputSignatures;
-pub use self::tx_input_id::TxInputId;
+pub use self::{input_signatures::InputSignatures, tx_input_id::TxInputId};
 
 mod input_signatures;
 mod tx_input_id;

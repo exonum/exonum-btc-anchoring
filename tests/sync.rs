@@ -13,14 +13,15 @@
 
 use hex::FromHex;
 
-use exonum::crypto::Hash;
-use exonum::helpers::Height;
+use exonum::{crypto::Hash, helpers::Height};
 use exonum_bitcoinrpc as bitcoin_rpc;
 use exonum_btc_anchoring::{
     btc::Transaction,
     rpc::TransactionInfo as BtcTransactionInfo,
-    test_helpers::rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest},
-    test_helpers::testkit::AnchoringTestKit,
+    test_helpers::{
+        rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest},
+        testkit::AnchoringTestKit,
+    },
 };
 
 fn funding_tx_request() -> TestRequest {
@@ -69,7 +70,7 @@ fn normal_operation() {
         funding_tx_request(),
         (
             FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id.clone(),
+                id: anchoring_tx_id,
             },
             FakeRelayResponse::TransactionInfo(Err(
                 bitcoin_rpc::Error::Memory(String::new()).into()
@@ -90,7 +91,7 @@ fn normal_operation() {
         funding_tx_request(),
         (
             FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id.clone(),
+                id: anchoring_tx_id,
             },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
@@ -98,7 +99,7 @@ fn normal_operation() {
             FakeRelayRequest::SendTransaction {
                 transaction: last_tx.clone(),
             },
-            FakeRelayResponse::SendTransaction(Ok(anchoring_tx_id.clone())),
+            FakeRelayResponse::SendTransaction(Ok(anchoring_tx_id)),
         ),
     ]);
 
@@ -109,7 +110,7 @@ fn normal_operation() {
         funding_tx_request(),
         (
             FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id.clone(),
+                id: anchoring_tx_id,
             },
             FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
                 content: last_tx.clone(),
@@ -119,7 +120,7 @@ fn normal_operation() {
         funding_tx_request(),
         (
             FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id.clone(),
+                id: anchoring_tx_id,
             },
             FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
                 content: last_tx.clone(),
@@ -152,9 +153,7 @@ fn several_unsynced() {
     requests.expect(vec![
         funding_tx_request(),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Err(
                 bitcoin_rpc::Error::Memory(String::new()).into()
             )),
@@ -173,16 +172,14 @@ fn several_unsynced() {
     requests.expect(vec![
         funding_tx_request(),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         (
             FakeRelayRequest::SendTransaction {
                 transaction: last_tx.clone(),
             },
-            FakeRelayResponse::SendTransaction(Ok(tx_id_0.clone())),
+            FakeRelayResponse::SendTransaction(Ok(tx_id_0)),
         ),
     ]);
 
@@ -202,16 +199,12 @@ fn several_unsynced() {
 
     requests.expect(vec![
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         funding_tx_request(),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         (
@@ -223,16 +216,12 @@ fn several_unsynced() {
             )),
         ),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         funding_tx_request(),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         (
@@ -255,22 +244,16 @@ fn several_unsynced() {
     // Should walk to first uncommitted
     requests.expect(vec![
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_1.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_1 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         funding_tx_request(),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         (

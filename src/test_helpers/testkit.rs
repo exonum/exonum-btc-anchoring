@@ -17,12 +17,6 @@
 use bitcoin::{self, network::constants::Network, util::address::Address};
 use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
-use failure::{ensure, format_err};
-use hex::FromHex;
-use log::trace;
-use maplit::hashmap;
-use rand::{thread_rng, Rng, SeedableRng, StdRng};
-
 use exonum::{
     api,
     blockchain::{BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration},
@@ -34,10 +28,17 @@ use exonum_merkledb::{MapProof, ObjectAccess};
 use exonum_testkit::{
     ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration, TestNode,
 };
+use failure::{ensure, format_err};
+use hex::FromHex;
+use log::trace;
+use maplit::hashmap;
+use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
-use std::ops::{Deref, DerefMut};
-use std::str::FromStr;
-use std::sync::{Arc, RwLock};
+use std::{
+    ops::{Deref, DerefMut},
+    str::FromStr,
+    sync::{Arc, RwLock},
+};
 
 use crate::{
     api::{BlockHeaderProof, FindTransactionQuery, HeightQuery, PublicApi, TransactionProof},
@@ -418,7 +419,7 @@ impl AnchoringTestKit {
             .get(height.0)
             .unwrap()
     }
-    
+
     /// Returns the current snapshot of the btc anchoring information schema.
     pub fn schema(&self) -> BtcAnchoringSchema<impl ObjectAccess> {
         BtcAnchoringSchema::new(Arc::from(self.inner.snapshot()))

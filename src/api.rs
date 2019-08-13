@@ -14,12 +14,13 @@
 
 //! Anchoring HTTP API implementation.
 
-use exonum::api::{self, ServiceApiBuilder, ServiceApiState};
-use exonum::blockchain::{BlockProof, Schema as CoreSchema};
-use exonum::crypto::Hash;
-use exonum::helpers::Height;
+use exonum::{
+    api::{self, ServiceApiBuilder, ServiceApiState},
+    blockchain::{BlockProof, Schema as CoreSchema},
+    crypto::Hash,
+    helpers::Height,
+};
 use exonum_merkledb::{ListProof, MapProof};
-
 use failure::Fail;
 use serde_derive::{Deserialize, Serialize};
 
@@ -28,9 +29,7 @@ use std::cmp::{
     Ordering::{self, Equal, Greater, Less},
 };
 
-use crate::blockchain::BtcAnchoringSchema;
-use crate::btc;
-use crate::BTC_ANCHORING_SERVICE_ID;
+use crate::{blockchain::BtcAnchoringSchema, btc, BTC_ANCHORING_SERVICE_ID};
 
 /// Query parameters for the find transaction request.
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

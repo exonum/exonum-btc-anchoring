@@ -14,17 +14,13 @@
 
 //! Blockchain implementation details for the BTC anchoring service.
 
-pub use self::schema::BtcAnchoringSchema;
-pub use self::transactions::Transactions;
-
-use exonum::helpers::Height;
+pub use self::{schema::BtcAnchoringSchema, transactions::Transactions};
 
 use bitcoin::blockdata::script::Script;
-use btc_transaction_utils::multisig::RedeemScript;
-use btc_transaction_utils::p2wsh;
+use btc_transaction_utils::{multisig::RedeemScript, p2wsh};
+use exonum::helpers::Height;
 
-use crate::btc::Address;
-use crate::config::GlobalConfig;
+use crate::{btc::Address, config::GlobalConfig};
 
 pub mod data_layout;
 pub mod errors;

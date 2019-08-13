@@ -14,14 +14,15 @@
 
 //! Helpers for the bitcoin rpc testing.
 
-use exonum::crypto::Hash;
-
 use bitcoin::util::address::Address;
+use exonum::crypto::Hash;
 use failure;
 use log::trace;
 
-use std::collections::VecDeque;
-use std::sync::{Arc, Mutex};
+use std::{
+    collections::VecDeque,
+    sync::{Arc, Mutex},
+};
 
 use crate::{
     btc,

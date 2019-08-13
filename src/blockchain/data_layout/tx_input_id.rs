@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use exonum::crypto::{self, Hash};
 use exonum_merkledb::{BinaryKey, ObjectHash};
-
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 use std::io::{Cursor, Read, Write};
 

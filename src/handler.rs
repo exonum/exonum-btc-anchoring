@@ -12,22 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::ServiceContext;
-use exonum::helpers::ValidatorId;
+use exonum::{blockchain::ServiceContext, helpers::ValidatorId};
 
-use btc_transaction_utils::p2wsh;
-use btc_transaction_utils::TxInRef;
+use btc_transaction_utils::{p2wsh, TxInRef};
 use failure::format_err;
 use log::trace;
 
-use std::cmp;
-use std::collections::HashMap;
+use std::{cmp, collections::HashMap};
 
-use crate::blockchain::data_layout::TxInputId;
-use crate::blockchain::transactions::TxSignature;
-use crate::blockchain::{BtcAnchoringSchema, BtcAnchoringState};
-use crate::btc::{Address, PrivateKey};
-use crate::rpc::BtcRelay;
+use crate::{
+    blockchain::data_layout::TxInputId,
+    blockchain::transactions::TxSignature,
+    blockchain::{BtcAnchoringSchema, BtcAnchoringState},
+    btc::{Address, PrivateKey},
+    rpc::BtcRelay,
+};
 
 /// The goal of this task is to create anchoring transactions for the corresponding heights.
 pub struct UpdateAnchoringChainTask<'a> {

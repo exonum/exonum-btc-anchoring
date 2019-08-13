@@ -95,21 +95,21 @@ macro_rules! impl_string_conversions_for_hex {
 
 macro_rules! impl_serde_str {
     ($name:ident) => {
-        impl ::serde::Serialize for $name {
-            fn serialize<S>(&self, ser: S) -> ::std::result::Result<S::Ok, S::Error>
+        impl serde::Serialize for $name {
+            fn serialize<S>(&self, ser: S) -> std::result::Result<S::Ok, S::Error>
             where
-                S: ::serde::Serializer,
+                S: serde::Serializer,
             {
-                ::serde_str::serialize(self, ser)
+                serde_str::serialize(self, ser)
             }
         }
 
-        impl<'de> ::serde::Deserialize<'de> for $name {
+        impl<'de> serde::Deserialize<'de> for $name {
             fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
             where
-                D: ::serde::Deserializer<'de>,
+                D: serde::Deserializer<'de>,
             {
-                ::serde_str::deserialize(deserializer)
+                serde_str::deserialize(deserializer)
             }
         }
     };

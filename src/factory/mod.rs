@@ -12,26 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::Service;
-
-use exonum::helpers::fabric::{
-    self, keys, Argument, Command, CommandExtension, CommandName, Context, ServiceFactory,
-};
-use exonum::node::NodeConfig;
-
 use bitcoin::network::constants::Network;
+use exonum::{
+    blockchain::Service,
+    helpers::fabric::{
+        self, keys, Argument, Command, CommandExtension, CommandName, Context, ServiceFactory,
+    },
+    node::NodeConfig,
+};
 use failure::{ensure, format_err};
 use log::info;
 use toml;
 
-use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
-use crate::btc::{gen_keypair, PrivateKey, PublicKey};
-use crate::config::{Config, GlobalConfig, LocalConfig};
-use crate::rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
-use crate::{BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
+use crate::{
+    btc::{gen_keypair, PrivateKey, PublicKey},
+    config::{Config, GlobalConfig, LocalConfig},
+    rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
+    {BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME},
+};
 
 use self::args::{Hash, NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
 

@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::api::ServiceApiBuilder;
-use exonum::blockchain::{
-    Schema as CoreSchema, Service, ServiceContext, Transaction, TransactionSet,
+use exonum::{
+    api::ServiceApiBuilder,
+    blockchain::{Schema as CoreSchema, Service, ServiceContext, Transaction, TransactionSet},
+    crypto::Hash,
+    messages::RawTransaction,
 };
-use exonum::crypto::Hash;
-use exonum::messages::RawTransaction;
 use exonum_merkledb::{Fork, Snapshot};
 
 use serde_json::json;
@@ -26,13 +26,15 @@ use std::sync::{Arc, RwLock};
 
 use std::collections::HashMap;
 
-use crate::api;
-use crate::blockchain::{BtcAnchoringSchema, Transactions};
-use crate::btc::{Address, PrivateKey};
-use crate::config::GlobalConfig;
-use crate::handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask};
-use crate::rpc::BtcRelay;
-use crate::ResultEx;
+use crate::{
+    api,
+    blockchain::{BtcAnchoringSchema, Transactions},
+    btc::{Address, PrivateKey},
+    config::GlobalConfig,
+    handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask},
+    rpc::BtcRelay,
+    ResultEx,
+};
 
 /// Anchoring service id.
 pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;

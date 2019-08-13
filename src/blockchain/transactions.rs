@@ -14,17 +14,14 @@
 
 //! BTC anchoring transactions.
 
+use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
 use exonum::{
     blockchain::{ExecutionResult, Transaction, TransactionContext},
     helpers::ValidatorId,
 };
 use exonum_derive::{ProtobufConvert, TransactionSet};
-
-use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
 use log::{info, trace};
 use serde_derive::{Deserialize, Serialize};
-
-use std::borrow::Cow;
 
 use crate::{btc, proto};
 

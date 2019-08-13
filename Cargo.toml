@@ -23,7 +23,7 @@ byteorder = "1.3"
 clap = "2.32"
 derive_more = "0.14"
 exonum = "0.11.0"
-exonum-merkledb = { git = "https://github.com/alekseysidorov/exonum.git", branch = "merkledb_fixes" }
+exonum-merkledb = { git = "https://github.com/exonum/exonum.git", rev = "33e45eac5c9d710a100ce80b56d2d31a5b1f6dfc" }
 exonum_bitcoinrpc = "0.6"
 exonum-derive = "0.11.0"
 exonum-testkit = "0.11.0"
@@ -52,8 +52,8 @@ proptest = "0.9"
 exonum-build = "0.11.0"
 
 [patch.crates-io]
-exonum = { git = "https://github.com/alekseysidorov/exonum.git", branch = "merkledb_fixes" }
-exonum-derive = { git = "https://github.com/alekseysidorov/exonum.git", branch = "merkledb_fixes" }
-exonum-configuration = { git = "https://github.com/alekseysidorov/exonum.git", branch = "merkledb_fixes" }
-exonum-build = { git = "https://github.com/alekseysidorov/exonum.git", branch = "merkledb_fixes" }
-exonum-testkit = { git = "https://github.com/alekseysidorov/exonum.git", branch = "merkledb_fixes" }
+exonum = { git = "https://github.com/exonum/exonum.git", rev = "33e45eac5c9d710a100ce80b56d2d31a5b1f6dfc" }
+exonum-derive = { git = "https://github.com/exonum/exonum.git", rev = "33e45eac5c9d710a100ce80b56d2d31a5b1f6dfc" }
+exonum-configuration = { git = "https://github.com/exonum/exonum.git", rev = "33e45eac5c9d710a100ce80b56d2d31a5b1f6dfc" }
+exonum-build = { git = "https://github.com/exonum/exonum.git", rev = "33e45eac5c9d710a100ce80b56d2d31a5b1f6dfc" }
+exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "33e45eac5c9d710a100ce80b56d2d31a5b1f6dfc" }

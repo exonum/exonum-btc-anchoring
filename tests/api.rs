@@ -20,8 +20,6 @@ use exonum_btc_anchoring::{
     BTC_ANCHORING_SERVICE_NAME,
 };
 
-const NULL_QUERY: () = ();
-
 fn find_transaction(
     anchoring_testkit: &AnchoringTestKit,
     height: Option<Height>,
@@ -52,7 +50,7 @@ fn actual_address() {
 
     let anchoring_api = anchoring_testkit.api();
     assert_eq!(
-        anchoring_api.actual_address(NULL_QUERY).unwrap(),
+        anchoring_api.actual_address(()).unwrap(),
         anchoring_testkit.anchoring_address()
     );
 }
@@ -60,20 +58,14 @@ fn actual_address() {
 #[test]
 fn following_address() {
     let validators_num = 5;
-    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 150000, 4);
+    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 150_000, 4);
     let signatures = anchoring_testkit
         .create_signature_tx_for_validators(3)
         .unwrap();
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_blocks_until(Height(4));
     // Following address should be none for regular anchoring.
-    assert_eq!(
-        anchoring_testkit
-            .api()
-            .following_address(NULL_QUERY)
-            .unwrap(),
-        None
-    );
+    assert_eq!(anchoring_testkit.api().following_address(()).unwrap(), None);
 
     let signatures = anchoring_testkit
         .create_signature_tx_for_validators(4)
@@ -91,10 +83,7 @@ fn following_address() {
     anchoring_testkit.create_block();
 
     assert_eq!(
-        anchoring_testkit
-            .api()
-            .following_address(NULL_QUERY)
-            .unwrap(),
+        anchoring_testkit.api().following_address(()).unwrap(),
         Some(following_address)
     );
 }
@@ -150,7 +139,7 @@ fn find_transaction_configuration_change() {
     let validators_num = 5;
     let anchoring_frequency = 10;
     let mut anchoring_testkit =
-        AnchoringTestKit::new_without_rpc(validators_num, 150000, anchoring_frequency);
+        AnchoringTestKit::new_without_rpc(validators_num, 150_000, anchoring_frequency);
     let signatures = anchoring_testkit
         .create_signature_tx_for_validators(4)
         .unwrap();

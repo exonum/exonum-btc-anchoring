@@ -14,9 +14,7 @@
 
 //! Error types of the BTC anchoring service.
 
-use exonum::blockchain::ExecutionError;
-use exonum::crypto::Hash;
-use exonum::helpers::ValidatorId;
+use exonum::{blockchain::ExecutionError, crypto::Hash, helpers::ValidatorId};
 
 use failure_derive::Fail;
 

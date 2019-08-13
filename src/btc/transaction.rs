@@ -7,11 +7,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::Hash;
-use exonum::helpers::Height;
+use exonum::{crypto::Hash, helpers::Height};
 
-use bitcoin::blockdata::script::Script;
-use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
+use bitcoin::blockdata::{
+    script::Script,
+    transaction::{self, OutPoint, TxIn, TxOut},
+};
 use btc_transaction_utils::multisig::RedeemScript;
 use derive_more::{From, Into};
 use failure_derive::Fail;
@@ -352,7 +353,7 @@ mod tests {
                         vout,
                     },
                     script_sig: Script::default(),
-                    sequence: 0xFFFFFFFF,
+                    sequence: 0xFFFF_FFFF,
                     witness: Vec::default(),
                 }
             }).collect::<Vec<_>>();
@@ -433,7 +434,7 @@ mod tests {
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ]
         .iter()
-        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .map(|h| PublicKey::from_hex(h).unwrap().0)
         .collect::<Vec<_>>();
 
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)
@@ -504,7 +505,7 @@ mod tests {
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ]
         .iter()
-        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .map(|h| PublicKey::from_hex(h).unwrap().0)
         .collect::<Vec<_>>();
 
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)
@@ -553,7 +554,7 @@ mod tests {
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ]
         .iter()
-        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .map(|h| PublicKey::from_hex(h).unwrap().0)
         .collect::<Vec<_>>();
 
         let prev_tx: Transaction = Transaction::from_hex(
@@ -602,7 +603,7 @@ mod tests {
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ]
         .iter()
-        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .map(|h| PublicKey::from_hex(h).unwrap().0)
         .collect::<Vec<_>>();
 
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)
