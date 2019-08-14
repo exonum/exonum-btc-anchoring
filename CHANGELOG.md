@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## 0.12.0 - 2018-08-14
+
 - Updated to the [Exonum 0.12.0](https://github.com/exonum/exonum/releases/tag/v0.12)
   release (#144).
 
