@@ -62,11 +62,6 @@
     bare_trait_objects
 )]
 
-use log::{error, warn};
-
-mod handler;
-mod proto;
-
 pub use crate::factory::BtcAnchoringFactory as ServiceFactory;
 pub use crate::service::{
     BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME,
@@ -82,12 +77,17 @@ pub mod test_helpers;
 pub(crate) mod factory;
 pub(crate) mod service;
 
+use log::{error, warn};
+
+mod handler;
+mod proto;
+
 pub(crate) trait ResultEx {
     fn log_error(self);
     fn log_warn(self);
 }
 
-impl<T: ::std::fmt::Display> ResultEx for Result<(), T> {
+impl<T: std::fmt::Display> ResultEx for Result<(), T> {
     fn log_error(self) {
         if let Err(e) = self {
             error!("{}", e);

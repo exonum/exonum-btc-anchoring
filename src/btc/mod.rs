@@ -14,16 +14,17 @@
 
 //! Collection of wrappers for the rust-bitcoin crate.
 
-pub use self::payload::Payload;
-pub use self::transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
+pub use self::{
+    payload::Payload,
+    transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transaction},
+};
 
-use bitcoin::network::constants::Network;
-use bitcoin::util::address;
+use bitcoin::{network::constants::Network, util::address};
 use btc_transaction_utils;
 use derive_more::{From, Into};
 use hex::{self, FromHex, ToHex};
-
 use rand::Rng;
+
 use std::ops::Deref;
 
 #[macro_use]

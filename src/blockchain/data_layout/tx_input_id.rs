@@ -12,10 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::{self, CryptoHash, Hash};
-use exonum::storage::{HashedKey, StorageKey};
-
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use exonum::crypto::{self, Hash};
+use exonum_merkledb::{BinaryKey, ObjectHash};
 
 use std::io::{Cursor, Read, Write};
 
@@ -36,7 +35,7 @@ impl TxInputId {
     }
 }
 
-impl StorageKey for TxInputId {
+impl BinaryKey for TxInputId {
     fn size(&self) -> usize {
         self.txid.size() + self.input.size()
     }
@@ -53,22 +52,21 @@ impl StorageKey for TxInputId {
         Self { txid, input }
     }
 
-    fn write(&self, out: &mut [u8]) {
+    fn write(&self, out: &mut [u8]) -> usize {
         let mut writer = Cursor::new(out);
         let _ = writer.write(self.txid.as_ref()).unwrap();
         writer.write_u32::<LittleEndian>(self.input).unwrap();
+        self.size()
     }
 }
 
-impl CryptoHash for TxInputId {
-    fn hash(&self) -> Hash {
+impl ObjectHash for TxInputId {
+    fn object_hash(&self) -> Hash {
         let mut bytes = [0_u8; 36];
         self.write(&mut bytes);
         crypto::hash(bytes.as_ref())
     }
 }
-
-impl HashedKey for TxInputId {}
 
 #[test]
 fn test_tx_input_id_storage_key() {
@@ -84,5 +82,5 @@ fn test_tx_input_id_storage_key() {
     assert_eq!(txout, txout2);
 
     let buf_hash = crypto::hash(&buf);
-    assert_eq!(txout2.hash(), buf_hash);
+    assert_eq!(txout2.object_hash(), buf_hash);
 }

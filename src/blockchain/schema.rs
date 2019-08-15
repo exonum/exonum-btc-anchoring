@@ -14,21 +14,23 @@
 
 //! Information schema for the btc anchoring service.
 
-use exonum::blockchain::{Schema, StoredConfiguration};
-use exonum::crypto::Hash;
-use exonum::helpers::Height;
-use exonum::storage::{Fork, ProofListIndex, ProofMapIndex, Snapshot};
-
 use btc_transaction_utils::multisig::RedeemScript;
+use exonum::{
+    blockchain::{Schema, StoredConfiguration},
+    crypto::Hash,
+    helpers::Height,
+};
+use exonum_merkledb::{ObjectAccess, ObjectHash, ProofListIndex, ProofMapIndex, RefMut};
 use log::{error, trace};
 use serde_json;
 
-use crate::btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction};
-use crate::config::GlobalConfig;
-use crate::BTC_ANCHORING_SERVICE_NAME;
+use crate::{
+    btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction},
+    config::GlobalConfig,
+    BTC_ANCHORING_SERVICE_NAME,
+};
 
-use super::data_layout::*;
-use super::BtcAnchoringState;
+use super::{data_layout::*, BtcAnchoringState};
 
 /// Defines `&str` constants with given name and value.
 macro_rules! define_names {
@@ -51,55 +53,55 @@ define_names!(
 /// Information schema for `exonum-btc-anchoring`.
 #[derive(Debug)]
 pub struct BtcAnchoringSchema<T> {
-    snapshot: T,
+    access: T,
 }
 
-impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
+impl<T: ObjectAccess> BtcAnchoringSchema<T> {
     /// Constructs schema for the given database `snapshot`.
-    pub fn new(snapshot: T) -> Self {
-        Self { snapshot }
+    pub fn new(access: T) -> Self {
+        Self { access }
     }
 
     /// Returns table that contains complete chain of the anchoring transactions.
-    pub fn anchoring_transactions_chain(&self) -> ProofListIndex<&T, Transaction> {
-        ProofListIndex::new(TRANSACTIONS_CHAIN, &self.snapshot)
+    pub fn anchoring_transactions_chain(&self) -> RefMut<ProofListIndex<T, Transaction>> {
+        self.access.get_object(TRANSACTIONS_CHAIN)
     }
 
     /// Returns the table that contains already spent funding transactions.
-    pub fn spent_funding_transactions(&self) -> ProofMapIndex<&T, Hash, Transaction> {
-        ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, &self.snapshot)
+    pub fn spent_funding_transactions(&self) -> RefMut<ProofMapIndex<T, Hash, Transaction>> {
+        self.access.get_object(SPENT_FUNDING_TRANSACTIONS)
     }
 
     /// Returns the table that contains signatures for the given transaction input.
-    pub fn transaction_signatures(&self) -> ProofMapIndex<&T, TxInputId, InputSignatures> {
-        ProofMapIndex::new(TRANSACTION_SIGNATURES, &self.snapshot)
+    pub fn transaction_signatures(&self) -> RefMut<ProofMapIndex<T, TxInputId, InputSignatures>> {
+        self.access.get_object(TRANSACTION_SIGNATURES)
     }
 
     /// Returns a list of hashes of Exonum blocks headers.
-    pub fn anchored_blocks(&self) -> ProofListIndex<&T, Hash> {
-        ProofListIndex::new(ANCHORED_BLOCKS, &self.snapshot)
+    pub fn anchored_blocks(&self) -> RefMut<ProofListIndex<T, Hash>> {
+        self.access.get_object(ANCHORED_BLOCKS)
     }
 
     /// Returns hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
         vec![
-            self.anchoring_transactions_chain().merkle_root(),
-            self.spent_funding_transactions().merkle_root(),
-            self.transaction_signatures().merkle_root(),
-            self.anchored_blocks().merkle_root(),
+            self.anchoring_transactions_chain().object_hash(),
+            self.spent_funding_transactions().object_hash(),
+            self.transaction_signatures().object_hash(),
+            self.anchored_blocks().object_hash(),
         ]
     }
 
     /// Returns the actual anchoring configuration.
     pub fn actual_configuration(&self) -> GlobalConfig {
-        let actual_configuration = Schema::new(&self.snapshot).actual_configuration();
+        let actual_configuration = Schema::new(self.access.clone()).actual_configuration();
         Self::parse_config(&actual_configuration)
             .expect("Actual BTC anchoring configuration is absent")
     }
 
     /// Returns the nearest following configuration if it exists.
     pub fn following_configuration(&self) -> Option<GlobalConfig> {
-        let following_configuration = Schema::new(&self.snapshot).following_configuration()?;
+        let following_configuration = Schema::new(self.access.clone()).following_configuration()?;
         Self::parse_config(&following_configuration)
     }
 
@@ -182,7 +184,7 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
         let anchoring_height = actual_state.following_anchoring_height(latest_anchored_height);
 
         let anchoring_block_hash =
-            Schema::new(&self.snapshot).block_hash_by_height(anchoring_height)?;
+            Schema::new(self.access.clone()).block_hash_by_height(anchoring_height)?;
 
         builder.payload(anchoring_height, anchoring_block_hash);
         builder.fee(config.transaction_fee);
@@ -227,39 +229,5 @@ impl<T: AsRef<dyn Snapshot>> BtcAnchoringSchema<T> {
             .get(BTC_ANCHORING_SERVICE_NAME)
             .cloned()
             .map(|value| serde_json::from_value(value).expect("Unable to parse configuration"))
-    }
-}
-
-impl<'a> BtcAnchoringSchema<&'a mut Fork> {
-    /// Mutable variant of the [`anchoring_transactions_chain`][1] index.
-    ///
-    /// [1]: struct.BtcAnchoringSchema.html#method.anchoring_transactions_chain_mut
-    pub fn anchoring_transactions_chain_mut(&mut self) -> ProofListIndex<&mut Fork, Transaction> {
-        ProofListIndex::new(TRANSACTIONS_CHAIN, &mut self.snapshot)
-    }
-
-    /// Mutable variant of the [`spent_funding_transactions`][1] index.
-    ///
-    /// [1]: struct.BtcAnchoringSchema.html#method.spent_funding_transactions
-    pub fn spent_funding_transactions_mut(
-        &mut self,
-    ) -> ProofMapIndex<&mut Fork, Hash, Transaction> {
-        ProofMapIndex::new(SPENT_FUNDING_TRANSACTIONS, &mut self.snapshot)
-    }
-
-    /// Mutable variant of the [`anchored_blocks`][1] index.
-    ///
-    /// [1]: struct.BtcAnchoringSchema.html#method.anchored_blocks
-    pub fn transaction_signatures_mut(
-        &mut self,
-    ) -> ProofMapIndex<&mut Fork, TxInputId, InputSignatures> {
-        ProofMapIndex::new(TRANSACTION_SIGNATURES, &mut self.snapshot)
-    }
-
-    /// Mutable variant of the [`anchored_blocks`][1] index.
-    ///
-    /// [1]: struct.BtcAnchoringSchema.html#method.anchored_blocks
-    pub fn anchored_blocks_mut(&mut self) -> ProofListIndex<&mut Fork, Hash> {
-        ProofListIndex::new(ANCHORED_BLOCKS, &mut self.snapshot)
     }
 }

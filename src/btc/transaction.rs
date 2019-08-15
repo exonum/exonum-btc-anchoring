@@ -7,11 +7,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::crypto::Hash;
-use exonum::helpers::Height;
+use exonum::{crypto::Hash, helpers::Height};
 
-use bitcoin::blockdata::script::Script;
-use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
+use bitcoin::blockdata::{
+    script::Script,
+    transaction::{self, OutPoint, TxIn, TxOut},
+};
 use btc_transaction_utils::multisig::RedeemScript;
 use derive_more::{From, Into};
 use failure_derive::Fail;
@@ -248,16 +249,20 @@ impl BtcAnchoringTransactionBuilder {
 
 #[cfg(test)]
 mod tests {
-    use exonum::crypto::CryptoHash;
     use exonum::crypto::Hash;
     use exonum::helpers::Height;
-    use exonum::storage::StorageValue;
+    use exonum_merkledb::{BinaryValue, ObjectHash};
 
-    use bitcoin::blockdata::opcodes::all::OP_RETURN;
-    use bitcoin::blockdata::script::{Builder, Script};
-    use bitcoin::blockdata::transaction::{self, OutPoint, TxIn, TxOut};
-    use bitcoin::network::constants::Network;
-    use bitcoin::util::address::Address;
+    use bitcoin::{
+        blockdata::{
+            opcodes::all::OP_RETURN,
+            script::{Builder, Script},
+            transaction::{self, OutPoint, TxIn, TxOut},
+        },
+        network::constants::Network,
+        util::address::Address,
+    };
+
     use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
     use btc_transaction_utils::multisig::RedeemScriptBuilder;
     use hex::FromHex;
@@ -281,7 +286,7 @@ mod tests {
         assert_eq!(tx.to_string(), tx_hex);
 
         let bytes = tx.clone().into_bytes();
-        let tx2 = Transaction::from_bytes(bytes.into());
+        let tx2 = Transaction::from_bytes(bytes.into()).unwrap();
         assert_eq!(tx2, tx);
     }
 
@@ -348,7 +353,7 @@ mod tests {
                         vout,
                     },
                     script_sig: Script::default(),
-                    sequence: 0xFFFFFFFF,
+                    sequence: 0xFFFF_FFFF,
                     witness: Vec::default(),
                 }
             }).collect::<Vec<_>>();
@@ -373,7 +378,7 @@ mod tests {
             let bytes = transaction.clone().into_bytes();
             assert_eq!(
                 transaction,
-                <Transaction as StorageValue>::from_bytes(Cow::Borrowed(&bytes))
+                <Transaction as BinaryValue>::from_bytes(Cow::Borrowed(&bytes)).unwrap()
             );
         }
     }
@@ -391,7 +396,7 @@ mod tests {
                       062c1400";
 
         let tx_raw = Vec::<u8>::from_hex(hex_tx).unwrap();
-        let _ = <Transaction as StorageValue>::from_bytes(Cow::Borrowed(&tx_raw));
+        let _ = <Transaction as BinaryValue>::from_bytes(Cow::Borrowed(&tx_raw)).unwrap();
     }
 
     #[test]
@@ -406,7 +411,7 @@ mod tests {
                       062c1400";
 
         let tx_raw = Vec::<u8>::from_hex(hex_tx).unwrap();
-        let _ = <Transaction as StorageValue>::from_bytes(Cow::Borrowed(&tx_raw));
+        let _ = <Transaction as BinaryValue>::from_bytes(Cow::Borrowed(&tx_raw)).unwrap();
     }
 
     #[test]
@@ -429,7 +434,7 @@ mod tests {
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ]
         .iter()
-        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .map(|h| PublicKey::from_hex(h).unwrap().0)
         .collect::<Vec<_>>();
 
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)
@@ -439,7 +444,7 @@ mod tests {
         let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
         builder.additional_funds(funding_tx.clone()).unwrap();
         builder.fee(1);
-        builder.payload(Height::zero(), funding_tx.hash());
+        builder.payload(Height::zero(), funding_tx.object_hash());
         let (tx, inputs) = builder.create().unwrap();
 
         assert_eq!(funding_tx, inputs[0]);
@@ -500,7 +505,7 @@ mod tests {
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ]
         .iter()
-        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .map(|h| PublicKey::from_hex(h).unwrap().0)
         .collect::<Vec<_>>();
 
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)
@@ -512,7 +517,7 @@ mod tests {
         builder.additional_funds(funding_tx1.clone()).unwrap();
         builder.additional_funds(funding_tx2.clone()).unwrap();
         builder.fee(1);
-        builder.payload(Height::zero(), funding_tx0.hash());
+        builder.payload(Height::zero(), funding_tx0.object_hash());
         let (tx, inputs) = builder.create().unwrap();
 
         assert_eq!(inputs.len(), 3);
@@ -549,7 +554,7 @@ mod tests {
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ]
         .iter()
-        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .map(|h| PublicKey::from_hex(h).unwrap().0)
         .collect::<Vec<_>>();
 
         let prev_tx: Transaction = Transaction::from_hex(
@@ -598,7 +603,7 @@ mod tests {
             "02536d5e1464b961562da57207e4a46edb7dade9b92aa29712ca8309c8aba5be5b",
         ]
         .iter()
-        .map(|h| PublicKey::from_hex(h).unwrap().0.clone())
+        .map(|h| PublicKey::from_hex(h).unwrap().0)
         .collect::<Vec<_>>();
 
         let redeem_script = RedeemScriptBuilder::with_public_keys(keys)

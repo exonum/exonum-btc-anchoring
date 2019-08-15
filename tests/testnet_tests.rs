@@ -117,7 +117,7 @@ fn additional_funding() {
 #[test]
 fn address_changed() {
     let validators_num = 5;
-    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 150000, 4);
+    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 150_000, 4);
     let signatures = anchoring_testkit
         .create_signature_tx_for_validators(3)
         .unwrap();
@@ -183,7 +183,7 @@ fn address_changed() {
 #[test]
 fn address_changed_and_new_funding_tx() {
     let validators_num = 5;
-    let initial_sum = 150000;
+    let initial_sum = 150_000;
     let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, initial_sum, 4);
     let signatures = anchoring_testkit
         .create_signature_tx_for_validators(3)

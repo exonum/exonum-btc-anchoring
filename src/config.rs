@@ -14,21 +14,24 @@
 
 //! BTC anchoring configuration data types.
 
-use exonum::helpers::Height;
-
 use bitcoin::network::constants::Network;
-use btc_transaction_utils::multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError};
-use btc_transaction_utils::p2wsh;
+use btc_transaction_utils::{
+    multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError},
+    p2wsh,
+};
+use exonum::helpers::Height;
 use serde_derive::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 
-use crate::btc::{Address, PrivateKey, PublicKey, Transaction};
-use crate::rpc::BitcoinRpcConfig;
+use crate::{
+    btc::{Address, PrivateKey, PublicKey, Transaction},
+    rpc::BitcoinRpcConfig,
+};
 
 /// Returns sufficient number of keys for the given validators number.
 pub fn byzantine_quorum(total: usize) -> usize {
-    ::exonum::node::state::State::byzantine_majority_count(total)
+    exonum::node::state::State::byzantine_majority_count(total)
 }
 
 /// Consensus parameters in the BTC anchoring.

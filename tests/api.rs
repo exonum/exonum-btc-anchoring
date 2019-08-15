@@ -11,17 +11,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::{helpers::Height, storage::Snapshot};
+use exonum::helpers::Height;
 use exonum_btc_anchoring::{
     api::{FindTransactionQuery, HeightQuery, PublicApi},
-    blockchain::BtcAnchoringSchema,
     btc,
     config::GlobalConfig,
     test_helpers::testkit::{AnchoringTestKit, ValidateProof},
     BTC_ANCHORING_SERVICE_NAME,
 };
-
-const NULL_QUERY: () = ();
 
 fn find_transaction(
     anchoring_testkit: &AnchoringTestKit,
@@ -36,11 +33,6 @@ fn find_transaction(
                 .unwrap()
                 .1
         })
-}
-
-fn btc_anchoring_schema(testkit: &AnchoringTestKit) -> BtcAnchoringSchema<Box<dyn Snapshot>> {
-    let snapshot = testkit.snapshot();
-    BtcAnchoringSchema::new(snapshot)
 }
 
 #[test]
@@ -58,7 +50,7 @@ fn actual_address() {
 
     let anchoring_api = anchoring_testkit.api();
     assert_eq!(
-        anchoring_api.actual_address(NULL_QUERY).unwrap(),
+        anchoring_api.actual_address(()).unwrap(),
         anchoring_testkit.anchoring_address()
     );
 }
@@ -66,20 +58,14 @@ fn actual_address() {
 #[test]
 fn following_address() {
     let validators_num = 5;
-    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 150000, 4);
+    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 150_000, 4);
     let signatures = anchoring_testkit
         .create_signature_tx_for_validators(3)
         .unwrap();
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_blocks_until(Height(4));
     // Following address should be none for regular anchoring.
-    assert_eq!(
-        anchoring_testkit
-            .api()
-            .following_address(NULL_QUERY)
-            .unwrap(),
-        None
-    );
+    assert_eq!(anchoring_testkit.api().following_address(()).unwrap(), None);
 
     let signatures = anchoring_testkit
         .create_signature_tx_for_validators(4)
@@ -97,10 +83,7 @@ fn following_address() {
     anchoring_testkit.create_block();
 
     assert_eq!(
-        anchoring_testkit
-            .api()
-            .following_address(NULL_QUERY)
-            .unwrap(),
+        anchoring_testkit.api().following_address(()).unwrap(),
         Some(following_address)
     );
 }
@@ -125,7 +108,7 @@ fn find_transaction_regular() {
         anchoring_testkit.create_blocks_until(next_anchoring_height);
     }
 
-    let anchoring_schema = btc_anchoring_schema(&anchoring_testkit);
+    let anchoring_schema = anchoring_testkit.schema();
     let tx_chain = anchoring_schema.anchoring_transactions_chain();
 
     assert_eq!(
@@ -156,7 +139,7 @@ fn find_transaction_configuration_change() {
     let validators_num = 5;
     let anchoring_frequency = 10;
     let mut anchoring_testkit =
-        AnchoringTestKit::new_without_rpc(validators_num, 150000, anchoring_frequency);
+        AnchoringTestKit::new_without_rpc(validators_num, 150_000, anchoring_frequency);
     let signatures = anchoring_testkit
         .create_signature_tx_for_validators(4)
         .unwrap();
@@ -175,23 +158,18 @@ fn find_transaction_configuration_change() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_block();
 
+    let anchoring_schema = anchoring_testkit.schema();
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(0))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(1)
+        anchoring_schema.anchoring_transactions_chain().get(1)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(1))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(1)
+        anchoring_schema.anchoring_transactions_chain().get(1)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, None),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(1)
+        anchoring_schema.anchoring_transactions_chain().get(1)
     );
 
     anchoring_testkit.create_blocks_until(Height(20));
@@ -202,29 +180,22 @@ fn find_transaction_configuration_change() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_block();
 
+    let anchoring_schema = anchoring_testkit.schema();
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(0))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(1)
+        anchoring_schema.anchoring_transactions_chain().get(1)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(1))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(2)
+        anchoring_schema.anchoring_transactions_chain().get(2)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(10))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(2)
+        anchoring_schema.anchoring_transactions_chain().get(2)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, None),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(2)
+        anchoring_schema.anchoring_transactions_chain().get(2)
     );
 
     // Anchors block on height 20.
@@ -234,35 +205,26 @@ fn find_transaction_configuration_change() {
     anchoring_testkit.create_block_with_transactions(signatures);
     anchoring_testkit.create_block();
 
+    let anchoring_schema = anchoring_testkit.schema();
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(0))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(1)
+        anchoring_schema.anchoring_transactions_chain().get(1)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(1))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(2)
+        anchoring_schema.anchoring_transactions_chain().get(2)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(10))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(2)
+        anchoring_schema.anchoring_transactions_chain().get(2)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, Some(Height(11))),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(3)
+        anchoring_schema.anchoring_transactions_chain().get(3)
     );
     assert_eq!(
         find_transaction(&anchoring_testkit, None),
-        btc_anchoring_schema(&anchoring_testkit)
-            .anchoring_transactions_chain()
-            .get(3)
+        anchoring_schema.anchoring_transactions_chain().get(3)
     );
 }
 

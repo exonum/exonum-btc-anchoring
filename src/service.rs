@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::api::ServiceApiBuilder;
-use exonum::blockchain::{
-    Schema as CoreSchema, Service, ServiceContext, Transaction, TransactionSet,
+use exonum::{
+    api::ServiceApiBuilder,
+    blockchain::{Schema as CoreSchema, Service, ServiceContext, Transaction, TransactionSet},
+    crypto::Hash,
+    messages::RawTransaction,
 };
-use exonum::crypto::Hash;
-use exonum::messages::RawTransaction;
-use exonum::storage::{Fork, Snapshot};
+use exonum_merkledb::{Fork, Snapshot};
 
 use serde_json::json;
 
@@ -26,13 +26,15 @@ use std::sync::{Arc, RwLock};
 
 use std::collections::HashMap;
 
-use crate::api;
-use crate::blockchain::{BtcAnchoringSchema, Transactions};
-use crate::btc::{Address, PrivateKey};
-use crate::config::GlobalConfig;
-use crate::handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask};
-use crate::rpc::BtcRelay;
-use crate::ResultEx;
+use crate::{
+    api,
+    blockchain::{BtcAnchoringSchema, Transactions},
+    btc::{Address, PrivateKey},
+    config::GlobalConfig,
+    handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask},
+    rpc::BtcRelay,
+    ResultEx,
+};
 
 /// Anchoring service id.
 pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;
@@ -87,19 +89,19 @@ impl Service for BtcAnchoringService {
         Ok(tx.into())
     }
 
-    fn initialize(&self, _fork: &mut Fork) -> serde_json::Value {
+    fn initialize(&self, _fork: &Fork) -> serde_json::Value {
         json!(self.global_config)
     }
 
-    fn before_commit(&self, fork: &mut Fork) {
+    fn before_commit(&self, fork: &Fork) {
         // Writes a hash of the latest block to the proof list index.
-        let block_header_hash = CoreSchema::new(&fork)
+        let block_header_hash = CoreSchema::new(fork)
             .block_hashes_by_height()
             .last()
             .expect("An attempt to invoke execute during the genesis block initialization.");
 
-        let mut schema = BtcAnchoringSchema::new(fork);
-        schema.anchored_blocks_mut().push(block_header_hash);
+        let schema = BtcAnchoringSchema::new(fork);
+        schema.anchored_blocks().push(block_header_hash);
     }
 
     fn after_commit(&self, context: &ServiceContext) {

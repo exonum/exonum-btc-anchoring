@@ -12,26 +12,30 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::blockchain::Service;
-
-use exonum::helpers::fabric::{
-    self, keys, Argument, Command, CommandExtension, CommandName, Context, ServiceFactory,
-};
-use exonum::node::NodeConfig;
-
 use bitcoin::network::constants::Network;
+use exonum::{
+    blockchain::Service,
+    helpers::fabric::{
+        self, keys, Argument, Command, CommandExtension, CommandName, Context, ServiceFactory,
+    },
+    node::NodeConfig,
+};
 use failure::{ensure, format_err};
 use log::info;
 use toml;
 
-use std::collections::{BTreeMap, HashMap};
-use std::path::PathBuf;
-use std::sync::{Arc, RwLock};
+use std::{
+    collections::{BTreeMap, HashMap},
+    path::PathBuf,
+    sync::{Arc, RwLock},
+};
 
-use crate::btc::{gen_keypair, PrivateKey, PublicKey};
-use crate::config::{Config, GlobalConfig, LocalConfig};
-use crate::rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay};
-use crate::{BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME};
+use crate::{
+    btc::{gen_keypair, PrivateKey, PublicKey},
+    config::{Config, GlobalConfig, LocalConfig},
+    rpc::{BitcoinRpcClient, BitcoinRpcConfig, BtcRelay},
+    {BtcAnchoringService, BTC_ANCHORING_SERVICE_NAME},
+};
 
 use self::args::{Hash, NamedArgumentOptional, NamedArgumentRequired, TypedArgument};
 
@@ -262,7 +266,7 @@ impl CommandExtension for Finalize {
         // Creates global configuration.
         let mut global_config = GlobalConfig::with_public_keys(network, public_keys)?;
         // Generates initial funding transaction.
-        let relay = BitcoinRpcClient::from(rpc_config.clone());
+        let relay = BitcoinRpcClient::new(rpc_config.clone());
         let addr = global_config.anchoring_address();
         let funding_tx = if let Some(funding_txid) = funding_txid {
             let info = relay.transaction_info(&funding_txid)?.ok_or_else(|| {
@@ -346,7 +350,7 @@ impl ServiceFactory for BtcAnchoringFactory {
         let btc_relay = btc_anchoring_config
             .local
             .rpc
-            .map(BitcoinRpcClient::from)
+            .map(BitcoinRpcClient::new)
             .map(Box::<dyn BtcRelay>::from);
         let service = BtcAnchoringService::new(
             btc_anchoring_config.global,

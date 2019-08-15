@@ -22,9 +22,8 @@ pub use self::btc_anchoring::TxSignature;
 
 use bitcoin;
 use btc_transaction_utils;
-use failure;
-
 use exonum::proto::ProtobufConvert;
+use failure;
 
 use crate::btc;
 

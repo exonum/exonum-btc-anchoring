@@ -12,19 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::helpers::fabric::{Argument, Context};
-
+use exonum::{
+    crypto,
+    helpers::fabric::{Argument, Context},
+};
 use failure::format_err;
 use hex::{FromHex, FromHexError};
-use serde::de::DeserializeOwned;
-use serde::ser::Serialize;
+use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_derive::{Deserialize, Serialize};
 use toml;
 
 use std::collections::BTreeMap;
 use std::str::FromStr;
-
-use exonum::crypto;
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct Hash(pub crypto::Hash);

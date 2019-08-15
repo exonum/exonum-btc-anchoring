@@ -13,14 +13,16 @@
 
 use hex::FromHex;
 
-use exonum::crypto::Hash;
-use exonum::helpers::Height;
+use exonum::{crypto::Hash, helpers::Height};
 use exonum_bitcoinrpc as bitcoin_rpc;
-use exonum_btc_anchoring::blockchain::BtcAnchoringSchema;
-use exonum_btc_anchoring::btc::Transaction;
-use exonum_btc_anchoring::rpc::TransactionInfo as BtcTransactionInfo;
-use exonum_btc_anchoring::test_helpers::rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest};
-use exonum_btc_anchoring::test_helpers::testkit::AnchoringTestKit;
+use exonum_btc_anchoring::{
+    btc::Transaction,
+    rpc::TransactionInfo as BtcTransactionInfo,
+    test_helpers::{
+        rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest},
+        testkit::AnchoringTestKit,
+    },
+};
 
 fn funding_tx_request() -> TestRequest {
     (
@@ -54,8 +56,8 @@ fn normal_operation() {
         .create_signature_tx_for_validators(2)
         .unwrap();
 
-    let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
-    let (proposed, _) = schema
+    let (proposed, _) = anchoring_testkit
+        .schema()
         .actual_proposed_anchoring_transaction()
         .unwrap()
         .unwrap();
@@ -68,7 +70,7 @@ fn normal_operation() {
         funding_tx_request(),
         (
             FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id.clone(),
+                id: anchoring_tx_id,
             },
             FakeRelayResponse::TransactionInfo(Err(
                 bitcoin_rpc::Error::Memory(String::new()).into()
@@ -78,15 +80,18 @@ fn normal_operation() {
 
     anchoring_testkit.create_blocks_until(Height(2));
 
-    let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
-    let last_tx = schema.anchoring_transactions_chain().last().unwrap();
+    let last_tx = anchoring_testkit
+        .schema()
+        .anchoring_transactions_chain()
+        .last()
+        .unwrap();
 
     // Should retry
     requests.expect(vec![
         funding_tx_request(),
         (
             FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id.clone(),
+                id: anchoring_tx_id,
             },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
@@ -94,7 +99,7 @@ fn normal_operation() {
             FakeRelayRequest::SendTransaction {
                 transaction: last_tx.clone(),
             },
-            FakeRelayResponse::SendTransaction(Ok(anchoring_tx_id.clone())),
+            FakeRelayResponse::SendTransaction(Ok(anchoring_tx_id)),
         ),
     ]);
 
@@ -105,7 +110,7 @@ fn normal_operation() {
         funding_tx_request(),
         (
             FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id.clone(),
+                id: anchoring_tx_id,
             },
             FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
                 content: last_tx.clone(),
@@ -115,7 +120,7 @@ fn normal_operation() {
         funding_tx_request(),
         (
             FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id.clone(),
+                id: anchoring_tx_id,
             },
             FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
                 content: last_tx.clone(),
@@ -135,8 +140,8 @@ fn several_unsynced() {
         .create_signature_tx_for_validators(3)
         .unwrap();
 
-    let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
-    let (proposed_0, _) = schema
+    let (proposed_0, _) = anchoring_testkit
+        .schema()
         .actual_proposed_anchoring_transaction()
         .unwrap()
         .unwrap();
@@ -148,9 +153,7 @@ fn several_unsynced() {
     requests.expect(vec![
         funding_tx_request(),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Err(
                 bitcoin_rpc::Error::Memory(String::new()).into()
             )),
@@ -159,23 +162,24 @@ fn several_unsynced() {
 
     anchoring_testkit.create_blocks_until(Height(2));
 
-    let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
-    let last_tx = schema.anchoring_transactions_chain().last().unwrap();
+    let last_tx = anchoring_testkit
+        .schema()
+        .anchoring_transactions_chain()
+        .last()
+        .unwrap();
 
     // Sync failed
     requests.expect(vec![
         funding_tx_request(),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         (
             FakeRelayRequest::SendTransaction {
                 transaction: last_tx.clone(),
             },
-            FakeRelayResponse::SendTransaction(Ok(tx_id_0.clone())),
+            FakeRelayResponse::SendTransaction(Ok(tx_id_0)),
         ),
     ]);
 
@@ -185,8 +189,8 @@ fn several_unsynced() {
         .create_signature_tx_for_validators(3)
         .unwrap();
 
-    let schema = BtcAnchoringSchema::new(anchoring_testkit.snapshot());
-    let (proposed_1, _) = schema
+    let (proposed_1, _) = anchoring_testkit
+        .schema()
         .actual_proposed_anchoring_transaction()
         .unwrap()
         .unwrap();
@@ -195,16 +199,12 @@ fn several_unsynced() {
 
     requests.expect(vec![
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         funding_tx_request(),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         (
@@ -216,16 +216,12 @@ fn several_unsynced() {
             )),
         ),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         funding_tx_request(),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         (
@@ -248,22 +244,16 @@ fn several_unsynced() {
     // Should walk to first uncommitted
     requests.expect(vec![
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_1.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_1 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         funding_tx_request(),
         (
-            FakeRelayRequest::TransactionInfo {
-                id: tx_id_0.clone(),
-            },
+            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
             FakeRelayResponse::TransactionInfo(Ok(None)),
         ),
         (

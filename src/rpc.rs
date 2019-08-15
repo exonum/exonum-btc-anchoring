@@ -14,9 +14,8 @@
 
 //! Collections of helpers for synchronization with the Bitcoin network.
 
-use exonum::crypto::Hash;
-
 use bitcoin::util::address::Address;
+use exonum::crypto::Hash;
 use exonum_bitcoinrpc as bitcoin_rpc;
 use failure;
 use hex::FromHex;
@@ -74,12 +73,6 @@ impl BitcoinRpcClient {
     pub fn new(config: BitcoinRpcConfig) -> Self {
         let inner = bitcoin_rpc::Client::new(config.host, config.username, config.password);
         BitcoinRpcClient(inner)
-    }
-}
-
-impl From<BitcoinRpcConfig> for BitcoinRpcClient {
-    fn from(cfg: BitcoinRpcConfig) -> Self {
-        Self::new(cfg)
     }
 }
 
