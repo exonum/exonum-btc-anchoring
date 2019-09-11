@@ -21,6 +21,11 @@ sandbox_tests/Cargo.lock
 __pycache__/
 *.py[cod]
 *$py.class
+
 # other
 *.orig
 .python-version
+
+# node
+node_modules
+npm-debug.log
