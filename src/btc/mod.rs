@@ -57,7 +57,7 @@ impl ToString for PrivateKey {
     }
 }
 
-impl ::std::str::FromStr for PrivateKey {
+impl std::str::FromStr for PrivateKey {
     type Err = <bitcoin::PrivateKey as ::std::str::FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -65,7 +65,7 @@ impl ::std::str::FromStr for PrivateKey {
     }
 }
 
-impl ::std::fmt::Debug for PrivateKey {
+impl std::fmt::Debug for PrivateKey {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         f.debug_struct("PrivateKey").finish()
     }
@@ -95,7 +95,7 @@ impl ToHex for PublicKey {
     }
 }
 
-impl ::std::str::FromStr for Address {
+impl std::str::FromStr for Address {
     type Err = <address::Address as ::std::str::FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -104,7 +104,7 @@ impl ::std::str::FromStr for Address {
     }
 }
 
-impl ::std::fmt::Display for Address {
+impl std::fmt::Display for Address {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         write!(f, "{}", self.0.to_string())
     }

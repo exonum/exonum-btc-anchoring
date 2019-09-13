@@ -14,11 +14,7 @@
 
 //! Module of the rust-protobuf generated files.
 
-// For rust-protobuf generated files.
-#![allow(bare_trait_objects)]
-#![allow(renamed_and_removed_lints)]
-
-pub use self::btc_anchoring::TxSignature;
+pub use self::service::TxSignature;
 
 use bitcoin;
 use btc_transaction_utils;
@@ -29,8 +25,23 @@ use crate::btc;
 
 include!(concat!(env!("OUT_DIR"), "/protobuf_mod.rs"));
 
+impl ProtobufConvert for btc::PublicKey {
+    type ProtoStruct = btc_types::PublicKey;
+
+    fn to_pb(&self) -> Self::ProtoStruct {
+        let mut proto_struct = Self::ProtoStruct::default();
+        self.0.write_into(&mut proto_struct.data);
+        proto_struct
+    }
+
+    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
+        let bytes = pb.get_data();
+        Ok(btc::PublicKey(bitcoin::PublicKey::from_slice(bytes)?))
+    }
+}
+
 impl ProtobufConvert for btc::Transaction {
-    type ProtoStruct = btc_anchoring::BtcTransaction;
+    type ProtoStruct = btc_types::Transaction;
 
     fn to_pb(&self) -> Self::ProtoStruct {
         let bytes = bitcoin::consensus::serialize(&self.0);
@@ -46,7 +57,7 @@ impl ProtobufConvert for btc::Transaction {
 }
 
 impl ProtobufConvert for btc::InputSignature {
-    type ProtoStruct = btc_anchoring::InputSignature;
+    type ProtoStruct = btc_types::InputSignature;
 
     fn to_pb(&self) -> Self::ProtoStruct {
         let mut proto_struct = Self::ProtoStruct::default();

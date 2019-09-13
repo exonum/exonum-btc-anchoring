@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,6 +15,14 @@
 syntax = "proto3";
 
 package exonum.service.btc_anchoring;
+
+import "btc_types.proto";
+
+// Bitcoin public key wrapper.
+message BtcPublicKey {
+    // Inner Data.
+    bytes data = 1;
+}
 
 // Bitcoin transaction wrapper.
 message BtcTransaction {
@@ -33,9 +41,22 @@ message TxSignature {
     // Public key index in the anchoring public keys list.
     uint32 validator = 1;
     // Signed transaction.
-    BtcTransaction transaction = 2;
+    exonum.btc.Transaction transaction = 2;
     // Signed input.
     uint32 input = 3;
     // Signature content.
-    InputSignature input_signature = 4;
+    exonum.btc.InputSignature input_signature = 4;
+}
+
+/// Configuration parameters.
+message Config {
+    // Type of the used BTC network.
+    uint32 network = 1;
+    // Bitcoin public keys of validators from from which the current anchoring redeem script can 
+    // be calculated.
+    repeated exonum.btc.PublicKey anchoring_keys = 1;
+    // Interval in blocks between anchored blocks.
+    uint64 anchoring_interval = 2;
+    // Fee per byte in satoshis.
+    uint64 fee = 3;
 }
