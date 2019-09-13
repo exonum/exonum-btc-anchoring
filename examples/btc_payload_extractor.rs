@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate exonum;
-extern crate exonum_btc_anchoring;
-
-extern crate hex;
-extern crate serde_json;
-extern crate structopt;
-#[macro_use]
-extern crate failure;
-
+use failure::format_err;
 use hex::FromHex;
 use structopt::StructOpt;
 
