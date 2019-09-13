@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -29,7 +29,7 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
 
             fn from_bytes(value: ::std::borrow::Cow<[u8]>) -> Result<$name, failure::Error> {
                 let inner = bitcoin::consensus::deserialize(value.as_ref())?;
-                Ok($name(inner))
+                Ok(Self(inner))
             }
         }
 
@@ -46,7 +46,7 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
             fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
                 let bytes = ::hex::decode(hex)?;
                 let inner = ::bitcoin::consensus::deserialize(bytes.as_ref())?;
-                Ok($name(inner))
+                Ok(Self(inner))
             }
         }
 

@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -41,7 +41,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         context: &'a ServiceContext,
         private_keys: &'a HashMap<Address, PrivateKey>,
     ) -> UpdateAnchoringChainTask<'a> {
-        UpdateAnchoringChainTask {
+        Self {
             context,
             anchoring_state: BtcAnchoringSchema::new(context.snapshot()).actual_state(),
             private_keys,

@@ -54,9 +54,9 @@ message Config {
     uint32 network = 1;
     // Bitcoin public keys of validators from from which the current anchoring redeem script can 
     // be calculated.
-    repeated exonum.btc.PublicKey anchoring_keys = 1;
+    repeated exonum.btc.PublicKey anchoring_keys = 2;
     // Interval in blocks between anchored blocks.
-    uint64 anchoring_interval = 2;
+    uint64 anchoring_interval = 3;
     // Fee per byte in satoshis.
-    uint64 fee = 3;
+    uint64 fee = 4;
 }

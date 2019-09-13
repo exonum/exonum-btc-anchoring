@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -249,7 +249,7 @@ mod tests {
     impl HexValue for Script {
         fn from_hex(hex: impl AsRef<[u8]>) -> Self {
             let bytes = hex::decode(hex).unwrap();
-            Script::from(bytes)
+            Self::from(bytes)
         }
 
         fn to_hex(&self) -> String {

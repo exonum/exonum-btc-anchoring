@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,18 +38,14 @@
 //! Create application with anchoring service
 //!
 //! ```rust,no_run
-//! extern crate exonum;
-//! extern crate exonum_btc_anchoring as anchoring;
-//! extern crate exonum_configuration as configuration;
 //! use exonum::helpers::fabric::NodeBuilder;
-//! use exonum::helpers;
 //!
 //! fn main() {
 //!     exonum::crypto::init();
-//!     helpers::init_logger().unwrap();
+//!     exonum::helpers::init_logger().unwrap();
+//!
 //!     let node = NodeBuilder::new()
-//!        .with_service(Box::new(configuration::ServiceFactory))
-//!        .with_service(Box::new(anchoring::ServiceFactory));
+//!         .with_service(Box::new(exonum_btc_anchoring::ServiceFactory));
 //!     node.run();
 //! }
 //! ```

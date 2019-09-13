@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -77,7 +77,7 @@ impl FromHex for PublicKey {
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
         let bytes = hex::decode(hex)?;
         let inner = bitcoin::PublicKey::from_slice(&bytes)?;
-        Ok(PublicKey(inner))
+        Ok(Self(inner))
     }
 }
 
@@ -100,7 +100,7 @@ impl std::str::FromStr for Address {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let inner = address::Address::from_str(s)?;
-        Ok(Address(inner))
+        Ok(Self(inner))
     }
 }
 
@@ -124,7 +124,7 @@ impl FromHex for InputSignature {
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
         let bytes = hex::decode(hex)?;
         let inner = btc_transaction_utils::InputSignature::from_bytes(bytes)?;
-        Ok(InputSignature(inner))
+        Ok(Self(inner))
     }
 }
 

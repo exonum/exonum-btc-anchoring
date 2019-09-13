@@ -119,7 +119,7 @@ pub enum BuilderError {
 impl BtcAnchoringTransactionBuilder {
     /// Creates a new btc anchoring transaction builder for the given redeem script.
     pub fn new(redeem_script: &RedeemScript) -> BtcAnchoringTransactionBuilder {
-        BtcAnchoringTransactionBuilder {
+        Self {
             script_pubkey: redeem_script.as_ref().to_v0_p2wsh(),
             transit_to: None,
             prev_tx: None,
@@ -339,10 +339,10 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_transaction_exonum_field(input_num in 1usize..4,
-                                         vout in 1u32..10,
-                                         output_num in 1usize..4,
-                                         value in 1u64..1_000_000_000,
+        fn test_transaction_exonum_field(input_num in 1_usize..4,
+                                         vout in 1_u32..10,
+                                         output_num in 1_usize..4,
+                                         value in 1_u64..1_000_000_000,
                                          ref s in "\\PC*") {
             let input = (0..input_num).map(|_| {
                 // Just a random hash

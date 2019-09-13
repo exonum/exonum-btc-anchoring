@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -31,7 +31,7 @@ pub struct Hash(pub crypto::Hash);
 impl FromStr for Hash {
     type Err = FromHexError;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        crypto::Hash::from_hex(s).map(Hash)
+        crypto::Hash::from_hex(s).map(Self)
     }
 }
 

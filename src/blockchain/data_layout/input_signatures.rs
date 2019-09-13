@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -59,7 +59,7 @@ impl InputSignatures {
 
     /// Checks that signatures set is not empty.
     pub fn is_empty(&self) -> bool {
-        self.content.iter().any(|x| x.is_some())
+        self.content.iter().any(Option::is_some)
     }
 }
 

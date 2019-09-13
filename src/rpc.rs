@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -72,7 +72,7 @@ impl BitcoinRpcClient {
     /// Creates a new rpc client for the given configuration.
     pub fn new(config: BitcoinRpcConfig) -> Self {
         let inner = bitcoin_rpc::Client::new(config.host, config.username, config.password);
-        BitcoinRpcClient(inner)
+        Self(inner)
     }
 }
 

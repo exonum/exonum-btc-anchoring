@@ -83,7 +83,7 @@ pub struct TestRequests(Arc<Mutex<VecDeque<TestRequest>>>);
 impl TestRequests {
     /// Creates a new shared requests instance.
     pub fn new() -> Self {
-        TestRequests(Arc::new(Mutex::new(VecDeque::new())))
+        Self(Arc::new(Mutex::new(VecDeque::new())))
     }
 
     /// The following requests are expecting

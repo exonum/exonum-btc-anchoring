@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -36,7 +36,7 @@ impl ProtobufConvert for btc::PublicKey {
 
     fn from_pb(pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
         let bytes = pb.get_data();
-        Ok(btc::PublicKey(bitcoin::PublicKey::from_slice(bytes)?))
+        Ok(Self(bitcoin::PublicKey::from_slice(bytes)?))
     }
 }
 
@@ -52,7 +52,7 @@ impl ProtobufConvert for btc::Transaction {
 
     fn from_pb(pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
         let bytes = pb.get_data();
-        Ok(btc::Transaction(bitcoin::consensus::deserialize(bytes)?))
+        Ok(Self(bitcoin::consensus::deserialize(bytes)?))
     }
 }
 
@@ -67,8 +67,8 @@ impl ProtobufConvert for btc::InputSignature {
 
     fn from_pb(pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
         let bytes = pb.get_data().to_vec();
-        Ok(btc::InputSignature(
-            btc_transaction_utils::InputSignature::from_bytes(bytes)?,
-        ))
+        Ok(Self(btc_transaction_utils::InputSignature::from_bytes(
+            bytes,
+        )?))
     }
 }
