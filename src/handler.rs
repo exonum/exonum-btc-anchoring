@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::{blockchain::ServiceContext, helpers::ValidatorId};
+use exonum::{helpers::ValidatorId, runtime::rust::AfterCommitContext};
 
 use btc_transaction_utils::{p2wsh, TxInRef};
 use failure::format_err;
@@ -21,16 +21,18 @@ use log::trace;
 use std::{cmp, collections::HashMap};
 
 use crate::{
-    blockchain::data_layout::TxInputId,
-    blockchain::transactions::TxSignature,
-    blockchain::{BtcAnchoringSchema, BtcAnchoringState},
+    blockchain::{
+        data_layout::TxInputId,
+        transactions::TxSignature,
+        {BtcAnchoringSchema, BtcAnchoringState},
+    },
     btc::{Address, PrivateKey},
     rpc::BtcRelay,
 };
 
 /// The goal of this task is to create anchoring transactions for the corresponding heights.
 pub struct UpdateAnchoringChainTask<'a> {
-    context: &'a ServiceContext,
+    context: &'a AfterCommitContext<'a>,
     anchoring_state: BtcAnchoringState,
     private_keys: &'a HashMap<Address, PrivateKey>,
 }
@@ -38,12 +40,15 @@ pub struct UpdateAnchoringChainTask<'a> {
 impl<'a> UpdateAnchoringChainTask<'a> {
     /// Creates the anchoring chain updater for the given context and private keys.
     pub fn new(
-        context: &'a ServiceContext,
+        context: &'a AfterCommitContext<'a>,
         private_keys: &'a HashMap<Address, PrivateKey>,
     ) -> UpdateAnchoringChainTask<'a> {
+        let anchoring_state =
+            BtcAnchoringSchema::new(context.instance.name, context.snapshot).actual_state();
+
         Self {
             context,
-            anchoring_state: BtcAnchoringSchema::new(context.snapshot()).actual_state(),
+            anchoring_state,
             private_keys,
         }
     }
@@ -70,7 +75,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         validator_id: ValidatorId,
         private_key: &PrivateKey,
     ) -> Result<(), failure::Error> {
-        let schema = BtcAnchoringSchema::new(self.context.snapshot());
+        let schema = BtcAnchoringSchema::new(self.context.instance.name, self.context.snapshot);
         let latest_anchored_height = schema.latest_anchored_height();
         let anchoring_height = self
             .anchoring_state
@@ -143,13 +148,16 @@ impl<'a> UpdateAnchoringChainTask<'a> {
 /// The goal of this task is to push uncommitted anchoring transactions to the Bitcoin blockchain.
 #[derive(Debug)]
 pub struct SyncWithBtcRelayTask<'a> {
-    context: &'a ServiceContext,
+    context: &'a AfterCommitContext<'a>,
     relay: &'a dyn BtcRelay,
 }
 
 impl<'a> SyncWithBtcRelayTask<'a> {
     /// Creates synchronization task instance for the given context and the Bitcoin RPC relay.
-    pub fn new(context: &'a ServiceContext, relay: &'a dyn BtcRelay) -> SyncWithBtcRelayTask<'a> {
+    pub fn new(
+        context: &'a AfterCommitContext<'a>,
+        relay: &'a dyn BtcRelay,
+    ) -> SyncWithBtcRelayTask<'a> {
         SyncWithBtcRelayTask { context, relay }
     }
 
@@ -157,7 +165,7 @@ impl<'a> SyncWithBtcRelayTask<'a> {
     /// That is, it finds the first uncommitted anchoring transaction in the Bitcoin
     /// blockchain and sequentially sends it and the subsequent ones to the Bitcoin mempool.
     pub fn run(self) -> Result<(), failure::Error> {
-        let schema = BtcAnchoringSchema::new(self.context.snapshot());
+        let schema = BtcAnchoringSchema::new(self.context.instance.name, self.context.snapshot);
         let sync_interval = cmp::max(1, schema.actual_configuration().anchoring_interval / 2);
 
         if self.context.height().0 % sync_interval == 0 {
@@ -177,7 +185,7 @@ impl<'a> SyncWithBtcRelayTask<'a> {
     }
 
     fn find_index_of_first_uncommitted_transaction(&self) -> Result<Option<u64>, failure::Error> {
-        let schema = BtcAnchoringSchema::new(self.context.snapshot());
+        let schema = BtcAnchoringSchema::new(self.context.instance.name, self.context.snapshot);
         let anchoring_txs = schema.anchoring_transactions_chain();
 
         let anchoring_txs_len = anchoring_txs.len();

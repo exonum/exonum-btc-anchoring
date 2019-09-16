@@ -13,44 +13,48 @@
 // limitations under the License.
 
 use exonum::{
-    api::ServiceApiBuilder,
-    blockchain::{Schema as CoreSchema, Service, ServiceContext, Transaction, TransactionSet},
+    blockchain::Schema as CoreSchema,
     crypto::Hash,
-    messages::RawTransaction,
+    runtime::{
+        api::ServiceApiBuilder,
+        rust::{AfterCommitContext, BeforeCommitContext, Service},
+        InstanceDescriptor,
+    },
 };
-use exonum_merkledb::{Fork, Snapshot};
+use exonum_derive::ServiceFactory;
+use exonum_merkledb::Snapshot;
 
-use serde_json::json;
-
-use std::sync::{Arc, RwLock};
-
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    sync::{Arc, RwLock},
+};
 
 use crate::{
     api,
     blockchain::{BtcAnchoringSchema, Transactions},
     btc::{Address, PrivateKey},
-    config::GlobalConfig,
     handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask},
+    proto,
     rpc::BtcRelay,
     ResultEx,
 };
 
-/// Anchoring service id.
-pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;
-/// Anchoring service name.
-pub const BTC_ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
 /// Set of bitcoin private keys for corresponding anchoring addresses.
 pub(crate) type KeyPool = Arc<RwLock<HashMap<Address, PrivateKey>>>;
 
 /// Btc anchoring service implementation for the Exonum blockchain.
+#[derive(ServiceFactory)]
+#[exonum(
+    proto_sources = "proto",
+    service_constructor = "Self::create_instance",
+    implements("Transactions")
+)]
 pub struct BtcAnchoringService {
-    global_config: GlobalConfig,
     private_keys: KeyPool,
-    btc_relay: Option<Box<dyn BtcRelay>>,
+    btc_relay: Option<Arc<dyn BtcRelay>>,
 }
 
-impl ::std::fmt::Debug for BtcAnchoringService {
+impl std::fmt::Debug for BtcAnchoringService {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         f.debug_struct("BtcAnchoringService").finish()
     }
@@ -58,59 +62,45 @@ impl ::std::fmt::Debug for BtcAnchoringService {
 
 impl BtcAnchoringService {
     /// Creates a new btc anchoring service instance.
-    pub fn new(
-        global_config: GlobalConfig,
-        private_keys: KeyPool,
-        btc_relay: Option<Box<dyn BtcRelay>>,
-    ) -> Self {
+    pub fn new(private_keys: KeyPool, btc_relay: Option<Arc<dyn BtcRelay>>) -> Self {
         Self {
-            global_config,
             private_keys,
             btc_relay,
         }
     }
+
+    fn create_instance(&self) -> Box<dyn Service> {
+        let instance = Self {
+            private_keys: self.private_keys.clone(),
+            btc_relay: self.btc_relay.clone(),
+        };
+        Box::new(instance)
+    }
 }
 
 impl Service for BtcAnchoringService {
-    fn service_id(&self) -> u16 {
-        BTC_ANCHORING_SERVICE_ID
+    fn state_hash(&self, instance: InstanceDescriptor, snapshot: &dyn Snapshot) -> Vec<Hash> {
+        BtcAnchoringSchema::new(instance.name, snapshot).state_hash()
     }
 
-    fn service_name(&self) -> &'static str {
-        BTC_ANCHORING_SERVICE_NAME
-    }
-
-    fn state_hash(&self, snapshot: &dyn Snapshot) -> Vec<Hash> {
-        BtcAnchoringSchema::new(snapshot).state_hash()
-    }
-
-    fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<dyn Transaction>, failure::Error> {
-        let tx = Transactions::tx_from_raw(raw)?;
-        Ok(tx.into())
-    }
-
-    fn initialize(&self, _fork: &Fork) -> serde_json::Value {
-        json!(self.global_config)
-    }
-
-    fn before_commit(&self, fork: &Fork) {
+    fn before_commit(&self, context: BeforeCommitContext) {
         // Writes a hash of the latest block to the proof list index.
-        let block_header_hash = CoreSchema::new(fork)
+        let block_header_hash = CoreSchema::new(context.fork)
             .block_hashes_by_height()
             .last()
             .expect("An attempt to invoke execute during the genesis block initialization.");
 
-        let schema = BtcAnchoringSchema::new(fork);
+        let schema = BtcAnchoringSchema::new(context.instance.name, context.fork);
         schema.anchored_blocks().push(block_header_hash);
     }
 
-    fn after_commit(&self, context: &ServiceContext) {
+    fn after_commit(&self, context: AfterCommitContext) {
         let keys = &self.private_keys.read().unwrap();
-        let task = UpdateAnchoringChainTask::new(context, keys);
+        let task = UpdateAnchoringChainTask::new(&context, keys);
         task.run().log_error();
         // TODO make this task async via tokio core or something else.
         if let Some(ref relay) = self.btc_relay.as_ref() {
-            let task = SyncWithBtcRelayTask::new(context, relay.as_ref());
+            let task = SyncWithBtcRelayTask::new(&context, relay.as_ref());
             task.run().log_error();
         }
     }

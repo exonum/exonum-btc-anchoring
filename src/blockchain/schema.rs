@@ -16,70 +16,66 @@
 
 use btc_transaction_utils::multisig::RedeemScript;
 use exonum::{
-    blockchain::{Schema, StoredConfiguration},
+    blockchain::Schema,
     crypto::Hash,
     helpers::Height,
+    merkledb::{Entry, ObjectAccess, ObjectHash, ProofListIndex, ProofMapIndex, RefMut},
 };
-use exonum_merkledb::{ObjectAccess, ObjectHash, ProofListIndex, ProofMapIndex, RefMut};
 use log::{error, trace};
-use serde_json;
 
 use crate::{
     btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction},
     config::GlobalConfig,
-    BTC_ANCHORING_SERVICE_NAME,
 };
 
 use super::{data_layout::*, BtcAnchoringState};
 
-/// Defines `&str` constants with given name and value.
-macro_rules! define_names {
-    (
-        $(
-            $name:ident => $value:expr;
-        )+
-    ) => (
-        $(const $name: &str = concat!("btc_anchoring.", $value);)*
-    )
-}
-
-define_names!(
-    TRANSACTIONS_CHAIN => "transactions_chain";
-    TRANSACTION_SIGNATURES => "transaction_signatures";
-    SPENT_FUNDING_TRANSACTIONS => "spent_funding_transactions";
-    ANCHORED_BLOCKS => "anchored_blocks";
-);
-
 /// Information schema for `exonum-btc-anchoring`.
 #[derive(Debug)]
-pub struct BtcAnchoringSchema<T> {
+pub struct BtcAnchoringSchema<'a, T> {
+    instance_name: &'a str,
     access: T,
 }
 
-impl<T: ObjectAccess> BtcAnchoringSchema<T> {
+impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
     /// Constructs schema for the given database `snapshot`.
-    pub fn new(access: T) -> Self {
-        Self { access }
+    pub fn new(instance_name: &'a str, access: T) -> Self {
+        Self {
+            instance_name,
+            access,
+        }
+    }
+
+    fn index_name(&self, suffix: &str) -> String {
+        [self.instance_name, ".", suffix].concat()
     }
 
     /// Returns table that contains complete chain of the anchoring transactions.
     pub fn anchoring_transactions_chain(&self) -> RefMut<ProofListIndex<T, Transaction>> {
-        self.access.get_object(TRANSACTIONS_CHAIN)
+        self.access
+            .get_object(self.index_name("transactions_chain"))
     }
 
     /// Returns the table that contains already spent funding transactions.
     pub fn spent_funding_transactions(&self) -> RefMut<ProofMapIndex<T, Hash, Transaction>> {
-        self.access.get_object(SPENT_FUNDING_TRANSACTIONS)
+        self.access
+            .get_object(self.index_name("spent_funding_transactions"))
     }
 
     /// Returns the table that contains signatures for the given transaction input.
     pub fn transaction_signatures(&self) -> RefMut<ProofMapIndex<T, TxInputId, InputSignatures>> {
-        self.access.get_object(TRANSACTION_SIGNATURES)
+        self.access
+            .get_object(self.index_name("transaction_signatures"))
     }
 
     /// Returns a list of hashes of Exonum blocks headers.
     pub fn anchored_blocks(&self) -> RefMut<ProofListIndex<T, Hash>> {
-        self.access.get_object(ANCHORED_BLOCKS)
+        self.access.get_object(self.index_name("anchored_blocks"))
+    }
+
+    /// Returns an actual anchoring configuration entry.
+    pub fn actual_config_entry(&self) -> RefMut<Entry<T, GlobalConfig>> {
+        unimplemented!()
     }
 
     /// Returns hashes of the stored tables.
@@ -94,15 +90,12 @@ impl<T: ObjectAccess> BtcAnchoringSchema<T> {
 
     /// Returns the actual anchoring configuration.
     pub fn actual_configuration(&self) -> GlobalConfig {
-        let actual_configuration = Schema::new(self.access.clone()).actual_configuration();
-        Self::parse_config(&actual_configuration)
-            .expect("Actual BTC anchoring configuration is absent")
+        unimplemented!()
     }
 
     /// Returns the nearest following configuration if it exists.
     pub fn following_configuration(&self) -> Option<GlobalConfig> {
-        let following_configuration = Schema::new(self.access.clone()).following_configuration()?;
-        Self::parse_config(&following_configuration)
+        unimplemented!()
     }
 
     /// Returns the list of signatures for the given transaction input.
@@ -221,13 +214,5 @@ impl<T: ObjectAccess> BtcAnchoringSchema<T> {
                 .1
                 .block_height,
         )
-    }
-
-    fn parse_config(configuration: &StoredConfiguration) -> Option<GlobalConfig> {
-        configuration
-            .services
-            .get(BTC_ANCHORING_SERVICE_NAME)
-            .cloned()
-            .map(|value| serde_json::from_value(value).expect("Unable to parse configuration"))
     }
 }

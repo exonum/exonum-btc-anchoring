@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::helpers::fabric::NodeBuilder;
+// use exonum::helpers::fabric::NodeBuilder;
 
 fn main() {
-    exonum::crypto::init();
-    exonum::helpers::init_logger().unwrap();
+    // exonum::crypto::init();
+    // exonum::helpers::init_logger().unwrap();
 
-    let node = NodeBuilder::new().with_service(Box::new(exonum_btc_anchoring::ServiceFactory));
-    node.run();
+    // let node = NodeBuilder::new().with_service(Box::new(exonum_btc_anchoring::ServiceFactory));
+    // node.run();
 }

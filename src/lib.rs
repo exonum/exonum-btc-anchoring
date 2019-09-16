@@ -37,7 +37,7 @@
 //!
 //! Create application with anchoring service
 //!
-//! ```rust,no_run
+//! ```rust,no_run,ignore
 //! use exonum::helpers::fabric::NodeBuilder;
 //!
 //! fn main() {
@@ -58,10 +58,7 @@
     bare_trait_objects
 )]
 
-pub use crate::factory::BtcAnchoringFactory as ServiceFactory;
-pub use crate::service::{
-    BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME,
-};
+pub use crate::service::BtcAnchoringService;
 
 pub mod api;
 pub mod blockchain;
@@ -70,7 +67,6 @@ pub mod config;
 pub mod rpc;
 pub mod test_helpers;
 
-pub(crate) mod factory;
 pub(crate) mod service;
 
 use log::{error, warn};

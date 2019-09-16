@@ -16,14 +16,14 @@
 
 use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
 use exonum::{
-    blockchain::{ExecutionResult, Transaction, TransactionContext},
     helpers::ValidatorId,
+    runtime::{rust::TransactionContext, ExecutionError},
 };
-use exonum_derive::{ProtobufConvert, TransactionSet};
+use exonum_derive::{exonum_service, ProtobufConvert};
 use log::{info, trace};
 use serde_derive::{Deserialize, Serialize};
 
-use crate::{btc, proto};
+use crate::{btc, proto, BtcAnchoringService};
 
 use super::{data_layout::TxInputId, errors::SignatureError, BtcAnchoringSchema};
 
@@ -42,10 +42,14 @@ pub struct TxSignature {
 }
 
 /// Exonum BTC anchoring transactions.
-#[derive(Serialize, Deserialize, Clone, Debug, TransactionSet)]
-pub enum Transactions {
+#[exonum_service]
+pub trait Transactions {
     /// Exonum message with the signature for the new anchoring transaction.
-    Signature(TxSignature),
+    fn sign_input(
+        &self,
+        context: TransactionContext,
+        arg: TxSignature,
+    ) -> Result<(), ExecutionError>;
 }
 
 impl TxSignature {
@@ -58,11 +62,15 @@ impl TxSignature {
     }
 }
 
-impl Transaction for TxSignature {
-    fn execute(&self, context: TransactionContext) -> ExecutionResult {
+impl Transactions for BtcAnchoringService {
+    fn sign_input(
+        &self,
+        context: TransactionContext,
+        arg: TxSignature,
+    ) -> Result<(), ExecutionError> {
         // TODO Checks that transaction author is validator.
-        let tx = &self.transaction;
-        let schema = BtcAnchoringSchema::new(context.fork());
+        let tx = &arg.transaction;
+        let schema = BtcAnchoringSchema::new(context.instance.name, context.fork());
         // Checks that the number of signatures is sufficient to spend.
         if schema
             .anchoring_transactions_chain()
@@ -90,12 +98,12 @@ impl Transaction for TxSignature {
         let redeem_script_content = redeem_script.content();
         let public_key = if let Some(pk) = redeem_script_content
             .public_keys
-            .get(self.validator.0 as usize)
+            .get(arg.validator.0 as usize)
         {
             pk
         } else {
             return Err(SignatureError::MissingPublicKey {
-                validator_id: self.validator,
+                validator_id: arg.validator,
             }
             .into());
         };
@@ -103,15 +111,15 @@ impl Transaction for TxSignature {
         let input_signer = InputSigner::new(redeem_script.clone());
 
         // Checks signature content.
-        let input_signature_ref = self.input_signature.as_ref();
-        let input_idx = self.input as usize;
+        let input_signature_ref = arg.input_signature.as_ref();
+        let input_idx = arg.input as usize;
         let input_tx = match expected_inputs.get(input_idx) {
             Some(input_tx) => input_tx,
             _ => return Err(SignatureError::NoSuchInput { idx: input_idx }.into()),
         };
 
         let verification_result = input_signer.verify_input(
-            TxInRef::new(tx.as_ref(), self.input as usize),
+            TxInRef::new(tx.as_ref(), arg.input as usize),
             input_tx.as_ref(),
             &public_key,
             input_signature_ref,
@@ -121,18 +129,18 @@ impl Transaction for TxSignature {
             return Err(SignatureError::VerificationFailed.into());
         }
 
-        let input_id = self.input_id();
+        let input_id = arg.input_id();
         let mut input_signatures = schema.input_signatures(&input_id, &redeem_script);
         if input_signatures.len() != redeem_script_content.quorum {
             // Adds signature to schema.
-            input_signatures.insert(self.validator, self.input_signature.clone().into());
+            input_signatures.insert(arg.validator, arg.input_signature.clone().into());
             schema
                 .transaction_signatures()
                 .put(&input_id, input_signatures);
             // Tries to finalize transaction.
             let mut tx: btc::Transaction = tx.clone();
             for index in 0..expected_inputs.len() {
-                let input_id = TxInputId::new(self.transaction.id(), index as u32);
+                let input_id = TxInputId::new(arg.transaction.id(), index as u32);
                 let input_signatures = schema.input_signatures(&input_id, &redeem_script);
 
                 if input_signatures.len() != redeem_script_content.quorum {

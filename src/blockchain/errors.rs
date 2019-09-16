@@ -14,7 +14,7 @@
 
 //! Error types of the BTC anchoring service.
 
-use exonum::{blockchain::ExecutionError, crypto::Hash, helpers::ValidatorId};
+use exonum::{blockchain::ExecutionError, crypto::Hash, helpers::ValidatorId, runtime::ErrorKind};
 
 use failure_derive::Fail;
 
@@ -97,7 +97,11 @@ impl SignatureError {
 
 impl From<SignatureError> for ExecutionError {
     fn from(value: SignatureError) -> Self {
-        let description = format!("{}", value);
-        Self::with_description(value.code() as u8, description)
+        Self::new(
+            ErrorKind::Service {
+                code: value.code() as u8,
+            },
+            value.to_string(),
+        )
     }
 }

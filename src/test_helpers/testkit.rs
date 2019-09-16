@@ -19,10 +19,10 @@ use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use exonum::{
     api,
-    blockchain::{BlockProof, Blockchain, Schema as CoreSchema, StoredConfiguration},
-    crypto::{CryptoHash, Hash},
+    blockchain::{BlockProof, Blockchain, Schema as CoreSchema},
+    crypto::{Hash},
     helpers::Height,
-    messages::{Message, RawTransaction, Signed},
+    messages::{Message, Signed},
 };
 use exonum_merkledb::{MapProof, ObjectAccess};
 use exonum_testkit::{

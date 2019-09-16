@@ -39,7 +39,7 @@ serde = "1.0"
 serde_derive = "1.0"
 serde_json = "1.0"
 serde_str = "0.1"
-structopt = "0.2"
+structopt = "0.3"
 toml = "0.5"
 
 [dev-dependencies]
@@ -48,3 +48,11 @@ proptest = "0.9"
 
 [build-dependencies]
 exonum-build = "0.12.0"
+
+[patch.crates-io]
+exonum = { git = "https://github.com/exonum/exonum.git", rev = "08e83b209ef891b37bb4a9ba9307ed86eacd5bda" }
+exonum-merkledb = { git = "https://github.com/exonum/exonum.git", rev = "08e83b209ef891b37bb4a9ba9307ed86eacd5bda" }
+exonum-derive = { git = "https://github.com/exonum/exonum.git", rev = "08e83b209ef891b37bb4a9ba9307ed86eacd5bda" }
+exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "08e83b209ef891b37bb4a9ba9307ed86eacd5bda" }
+exonum-build = { git = "https://github.com/exonum/exonum.git", rev = "08e83b209ef891b37bb4a9ba9307ed86eacd5bda" }
+
