@@ -12,58 +12,58 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// use exonum::blockchain::TransactionErrorType;
-// use exonum::explorer::BlockWithTransactions;
-// use exonum::helpers::Height;
-// use exonum_btc_anchoring::{
-//     blockchain::errors::ErrorCode,
-//     btc::BuilderError,
-//     config::GlobalConfig,
-//     test_helpers::testkit::{create_fake_funding_transaction, AnchoringTestKit},
-//     BTC_ANCHORING_SERVICE_NAME,
-// };
+use exonum::helpers::Height;
+use exonum::{explorer::BlockWithTransactions, runtime::ErrorKind};
+use exonum_btc_anchoring::{
+    blockchain::errors::ErrorCode,
+    btc::BuilderError,
+    config::GlobalConfig,
+    test_helpers::testkit::{
+        create_fake_funding_transaction, AnchoringTestKit, ANCHORING_INSTANCE_NAME,
+    },
+};
 
-// use matches::assert_matches;
+use matches::assert_matches;
 
-// fn assert_tx_error(block: BlockWithTransactions, e: ErrorCode) {
-//     assert_eq!(
-//         block[0].status().unwrap_err().error_type(),
-//         TransactionErrorType::Code(e as u8),
-//     );
-// }
+fn assert_tx_error(block: BlockWithTransactions, e: ErrorCode) {
+    assert_eq!(
+        block[0].status().unwrap_err().kind,
+        ErrorKind::Service { code: e as u8 },
+    );
+}
 
-// #[test]
-// fn simple() {
-//     let validators_num = 4;
-//     let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
+#[test]
+fn simple() {
+    let validators_num = 4;
+    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
 
-//     assert!(anchoring_testkit.last_anchoring_tx().is_none());
+    assert!(anchoring_testkit.last_anchoring_tx().is_none());
 
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(2)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(4));
+    let signatures = anchoring_testkit
+        .create_signature_tx_for_validators(2)
+        .unwrap();
+    anchoring_testkit.create_block_with_transactions(signatures);
+    anchoring_testkit.create_blocks_until(Height(4));
 
-//     let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
-//     let tx0_meta = tx0.anchoring_metadata().unwrap();
-//     assert!(tx0_meta.1.block_height == Height(0));
+    let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
+    let tx0_meta = tx0.anchoring_metadata().unwrap();
+    assert!(tx0_meta.1.block_height == Height(0));
 
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(2)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(8));
+    let signatures = anchoring_testkit
+        .create_signature_tx_for_validators(2)
+        .unwrap();
+    anchoring_testkit.create_block_with_transactions(signatures);
+    anchoring_testkit.create_blocks_until(Height(8));
 
-//     let tx1 = anchoring_testkit.last_anchoring_tx().unwrap();
-//     let tx1_meta = tx1.anchoring_metadata().unwrap();
+    let tx1 = anchoring_testkit.last_anchoring_tx().unwrap();
+    let tx1_meta = tx1.anchoring_metadata().unwrap();
 
-//     assert!(tx0.id() == tx1.prev_tx_id());
+    assert!(tx0.id() == tx1.prev_tx_id());
 
-//     // script_pubkey should be the same
-//     assert!(tx0_meta.0 == tx1_meta.0);
-//     assert!(tx1_meta.1.block_height == Height(4));
-// }
+    // script_pubkey should be the same
+    assert!(tx0_meta.0 == tx1_meta.0);
+    assert!(tx1_meta.1.block_height == Height(4));
+}
 
 // #[test]
 // fn additional_funding() {

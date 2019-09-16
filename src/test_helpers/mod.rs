@@ -16,4 +16,4 @@
 
 #[macro_use]
 pub mod rpc;
-// pub mod testkit;
+pub mod testkit;

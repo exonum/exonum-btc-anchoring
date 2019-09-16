@@ -75,7 +75,12 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
 
     /// Returns an actual anchoring configuration entry.
     pub fn actual_config_entry(&self) -> RefMut<Entry<T, GlobalConfig>> {
-        unimplemented!()
+        self.access.get_object(self.index_name("actual_config"))
+    }
+
+    /// Returns a following anchoring configuration entry.
+    pub fn following_config_entry(&self) -> RefMut<Entry<T, GlobalConfig>> {
+        self.access.get_object(self.index_name("following_config"))
     }
 
     /// Returns hashes of the stored tables.
@@ -90,12 +95,12 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
 
     /// Returns the actual anchoring configuration.
     pub fn actual_configuration(&self) -> GlobalConfig {
-        unimplemented!()
+        self.actual_config_entry().get().unwrap()
     }
 
     /// Returns the nearest following configuration if it exists.
     pub fn following_configuration(&self) -> Option<GlobalConfig> {
-        unimplemented!()
+        self.following_config_entry().get()
     }
 
     /// Returns the list of signatures for the given transaction input.

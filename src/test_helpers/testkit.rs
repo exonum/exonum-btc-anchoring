@@ -19,14 +19,18 @@ use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use exonum::{
     api,
-    blockchain::{BlockProof, Blockchain, Schema as CoreSchema},
-    crypto::{Hash},
+    blockchain::{
+        BlockProof, Blockchain, ConsensusConfig, IndexCoordinates, IndexOwner, Schema as CoreSchema,
+    },
+    crypto::Hash,
     helpers::Height,
-    messages::{Message, Signed},
+    messages::{AnyTx, Message, Verified},
+    runtime::{rust::Transaction, InstanceId},
 };
-use exonum_merkledb::{MapProof, ObjectAccess};
+use exonum_merkledb::{MapProof, ObjectAccess, ObjectHash, Snapshot};
 use exonum_testkit::{
-    ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration, TestNode,
+    ApiKind, InstanceCollection, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration,
+    TestNode,
 };
 use failure::{ensure, format_err};
 use hex::FromHex;
@@ -48,8 +52,11 @@ use crate::{
     rpc::BtcRelay,
     service::KeyPool,
     test_helpers::rpc::*,
-    BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME,
+    BtcAnchoringService,
 };
+
+pub const ANCHORING_INSTANCE_ID: InstanceId = 14;
+pub const ANCHORING_INSTANCE_NAME: &str = "btc_anchoring";
 
 /// Generates a fake funding transaction.
 pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -> btc::Transaction {
@@ -151,7 +158,7 @@ impl DerefMut for AnchoringTestKit {
 impl AnchoringTestKit {
     /// Creates a new testkit instance with the extensions for anchoring.
     fn new<R: Rng>(
-        rpc: Option<Box<dyn BtcRelay>>,
+        rpc: Option<Arc<dyn BtcRelay>>,
         validators_num: u16,
         total_funds: u64,
         anchoring_interval: u64,
@@ -170,10 +177,14 @@ impl AnchoringTestKit {
 
         let local = locals[0].clone();
         let private_keys = Arc::new(RwLock::new(local.private_keys));
-        let service = BtcAnchoringService::new(global.clone(), Arc::clone(&private_keys), rpc);
+        let service = BtcAnchoringService::new(private_keys.clone(), rpc);
 
         let testkit = TestKitBuilder::validator()
-            .with_service(service)
+            .with_service(InstanceCollection::new(service).with_instance(
+                ANCHORING_INSTANCE_ID,
+                ANCHORING_INSTANCE_NAME,
+                global,
+            ))
             .with_validators(validators_num)
             .with_logger()
             .create();
@@ -228,7 +239,7 @@ impl AnchoringTestKit {
         ]);
 
         Self::new(
-            Some(Box::from(fake_relay)),
+            Some(Arc::new(fake_relay)),
             validators_num,
             total_funds,
             anchoring_interval,
@@ -255,7 +266,7 @@ impl AnchoringTestKit {
     /// Updates the private keys pool in testkit for the transition state.
     pub fn renew_address(&mut self) {
         let snapshot = self.snapshot();
-        let schema = BtcAnchoringSchema::new(&snapshot);
+        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
 
         if let BtcAnchoringState::Transition {
             actual_configuration,
@@ -308,7 +319,7 @@ impl AnchoringTestKit {
     /// Returns the current anchoring global configuration.
     pub fn actual_anchoring_configuration(&self) -> GlobalConfig {
         let snapshot = self.blockchain().snapshot();
-        let schema = BtcAnchoringSchema::new(&snapshot);
+        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
         schema.actual_configuration()
     }
 
@@ -320,7 +331,7 @@ impl AnchoringTestKit {
     /// Returns the latest anchoring transaction.
     pub fn last_anchoring_tx(&self) -> Option<btc::Transaction> {
         let snapshot = self.snapshot();
-        let schema = BtcAnchoringSchema::new(&snapshot);
+        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
         schema.anchoring_transactions_chain().last()
     }
 
@@ -329,7 +340,7 @@ impl AnchoringTestKit {
     pub fn create_signature_tx_for_validators(
         &self,
         validators_num: u16,
-    ) -> Result<Vec<Signed<RawTransaction>>, btc::BuilderError> {
+    ) -> Result<Vec<Verified<AnyTx>>, btc::BuilderError> {
         let snapshot = self.snapshot();
 
         let validators = self
@@ -348,7 +359,7 @@ impl AnchoringTestKit {
             let validator_id = validator.validator_id().unwrap();
             let (public_key, private_key) = validator.service_keypair();
 
-            let schema = BtcAnchoringSchema::new(&snapshot);
+            let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
 
             if let Some(p) = schema.actual_proposed_anchoring_transaction() {
                 let (proposal, proposal_inputs) = p?;
@@ -366,18 +377,19 @@ impl AnchoringTestKit {
                         )
                         .unwrap();
 
-                    let tx = Message::sign_transaction(
+                    signatures.push(
                         TxSignature {
                             validator: validator_id,
                             transaction: proposal.clone(),
                             input: index as u32,
                             input_signature: signature.into(),
-                        },
-                        BTC_ANCHORING_SERVICE_ID,
-                        *public_key,
-                        &private_key,
+                        }
+                        .sign(
+                            ANCHORING_INSTANCE_ID,
+                            public_key,
+                            &private_key,
+                        ),
                     );
-                    signatures.push(tx);
                 }
             }
         }
@@ -393,7 +405,7 @@ impl AnchoringTestKit {
         validators.pop();
         proposal.set_validators(validators);
 
-        let config: GlobalConfig = proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
+        let config: GlobalConfig = proposal.service_config(ANCHORING_INSTANCE_NAME);
 
         let mut keys = config.public_keys.clone();
 
@@ -403,7 +415,7 @@ impl AnchoringTestKit {
             public_keys: keys,
             ..config
         };
-        proposal.set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
+        proposal.set_service_config(ANCHORING_INSTANCE_NAME, service_configuration);
         proposal
     }
 
@@ -421,9 +433,10 @@ impl AnchoringTestKit {
     }
 
     /// Returns the current snapshot of the btc anchoring information schema.
-    pub fn schema(&self) -> BtcAnchoringSchema<impl ObjectAccess> {
-        BtcAnchoringSchema::new(Arc::from(self.inner.snapshot()))
-    }
+    // pub fn schema(&self) -> BtcAnchoringSchema<Arc<Box<dyn Snapshot>>> {
+    //     let snapshot = Arc::new(self.inner.snapshot());
+    //     BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, snapshot)
+    // }
 
     fn get_local_cfg(&self, node: &TestNode) -> LocalConfig {
         self.node_configs[node.validator_id().unwrap().0 as usize].clone()
@@ -433,40 +446,40 @@ impl AnchoringTestKit {
 impl PublicApi for TestKitApi {
     type Error = api::Error;
 
-    fn actual_address(&self, _query: ()) -> Result<btc::Address, Self::Error> {
-        self.public(ApiKind::Service(BTC_ANCHORING_SERVICE_NAME))
+    fn actual_address(&self) -> Result<btc::Address, Self::Error> {
+        self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("v1/address/actual")
     }
 
-    fn following_address(&self, _query: ()) -> Result<Option<btc::Address>, Self::Error> {
-        self.public(ApiKind::Service(BTC_ANCHORING_SERVICE_NAME))
+    fn following_address(&self) -> Result<Option<btc::Address>, Self::Error> {
+        self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("v1/address/following")
     }
 
     fn find_transaction(
         &self,
-        query: FindTransactionQuery,
+        height: Option<Height>,
     ) -> Result<Option<TransactionProof>, Self::Error> {
-        self.public(ApiKind::Service(BTC_ANCHORING_SERVICE_NAME))
-            .query(&query)
+        self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .query(&FindTransactionQuery { height })
             .get("v1/transaction")
     }
 
-    fn block_header_proof(&self, query: HeightQuery) -> Result<BlockHeaderProof, Self::Error> {
-        self.public(ApiKind::Service(BTC_ANCHORING_SERVICE_NAME))
-            .query(&query)
+    fn block_header_proof(&self, height: Height) -> Result<BlockHeaderProof, Self::Error> {
+        self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .query(&HeightQuery { height })
             .get("v1/block_header_proof")
     }
 }
 
 fn validate_table_proof(
-    actual_config: &StoredConfiguration,
+    actual_config: &ConsensusConfig,
     latest_authorized_block: &BlockProof,
-    to_table: MapProof<Hash, Hash>,
-) -> Result<(Hash, Hash), failure::Error> {
+    to_table: MapProof<IndexCoordinates, Hash>,
+) -> Result<(IndexCoordinates, Hash), failure::Error> {
     // Checks precommits.
     for precommit in &latest_authorized_block.precommits {
-        let validator_id = precommit.validator().0 as usize;
+        let validator_id = precommit.as_ref().validator.0 as usize;
         let _validator_keys = actual_config
             .validator_keys
             .get(validator_id)
@@ -477,7 +490,7 @@ fn validate_table_proof(
                 )
             })?;
         ensure!(
-            precommit.block_hash() == &latest_authorized_block.block.hash(),
+            precommit.as_ref().block_hash() == &latest_authorized_block.block.object_hash(),
             "Block hash doesn't match"
         );
     }
@@ -497,21 +510,22 @@ pub trait ValidateProof {
     /// Output value.
     type Output;
     /// Perform the proof validation procedure with the given exonum blockchain configuration.
-    fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error>;
+    fn validate(self, actual_config: &ConsensusConfig) -> Result<Self::Output, failure::Error>;
 }
 
 impl ValidateProof for TransactionProof {
     type Output = (u64, btc::Transaction);
 
-    fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error> {
+    fn validate(self, actual_config: &ConsensusConfig) -> Result<Self::Output, failure::Error> {
         let proof_entry =
             validate_table_proof(actual_config, &self.latest_authorized_block, self.to_table)?;
-        let table_location = Blockchain::service_table_unique_key(BTC_ANCHORING_SERVICE_ID, 0);
+        let table_location = IndexCoordinates::new(IndexOwner::Service(ANCHORING_INSTANCE_ID), 0);
+
         ensure!(proof_entry.0 == table_location, "Invalid table location");
         // Validates value.
         let values = self
             .to_transaction
-            .validate(proof_entry.1, self.transactions_count)
+            .validate(proof_entry.1)
             .map_err(|e| format_err!("An error occurred {:?}", e))?;
         ensure!(values.len() == 1, "Invalid values count");
 
@@ -522,17 +536,17 @@ impl ValidateProof for TransactionProof {
 impl ValidateProof for BlockHeaderProof {
     type Output = (u64, Hash);
 
-    fn validate(self, actual_config: &StoredConfiguration) -> Result<Self::Output, failure::Error> {
+    fn validate(self, actual_config: &ConsensusConfig) -> Result<Self::Output, failure::Error> {
         let proof_entry =
             validate_table_proof(actual_config, &self.latest_authorized_block, self.to_table)?;
-        let table_location = Blockchain::service_table_unique_key(BTC_ANCHORING_SERVICE_ID, 3);
+        let table_location = IndexCoordinates::new(IndexOwner::Service(ANCHORING_INSTANCE_ID), 3);
         ensure!(proof_entry.0 == table_location, "Invalid table location");
         // Validates value.
         let values = self
             .to_block_header
-            .validate(proof_entry.1, self.latest_authorized_block.block.height().0)
+            .validate(proof_entry.1)
             .map_err(|e| format_err!("An error occurred {:?}", e))?;
         ensure!(values.len() == 1, "Invalid values count");
-        Ok((values[0].0, *values[0].1))
+        Ok((values[0].0, values[0].1))
     }
 }

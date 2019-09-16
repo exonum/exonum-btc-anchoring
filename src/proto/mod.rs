@@ -14,11 +14,15 @@
 
 //! Module of the rust-protobuf generated files.
 
-pub use self::service::TxSignature;
+pub use self::service::{Config, TxSignature};
 
 use bitcoin;
 use btc_transaction_utils;
-use exonum::proto::ProtobufConvert;
+use exonum::{
+    crypto::Hash,
+    merkledb::{BinaryValue, ObjectHash},
+    proto::ProtobufConvert,
+};
 use failure;
 
 use crate::btc;
@@ -70,5 +74,80 @@ impl ProtobufConvert for btc::InputSignature {
         Ok(Self(btc_transaction_utils::InputSignature::from_bytes(
             bytes,
         )?))
+    }
+}
+
+impl ProtobufConvert for crate::config::GlobalConfig {
+    type ProtoStruct = Config;
+
+    fn to_pb(&self) -> Self::ProtoStruct {
+        let mut proto_struct = Self::ProtoStruct::default();
+
+        proto_struct.set_network(self.network.magic());
+        proto_struct.set_anchoring_keys(self.public_keys.to_pb().into());
+        proto_struct.set_anchoring_interval(self.anchoring_interval.to_pb());
+        proto_struct.set_transaction_fee(self.transaction_fee.to_pb());
+        if let Some(tx) = self.funding_transaction.as_ref() {
+            proto_struct.set_funding_transaction(tx.to_pb())
+        }
+
+        proto_struct
+    }
+
+    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
+        let network = bitcoin::Network::from_magic(pb.get_network())
+            .ok_or_else(|| failure::format_err!("Unknown Bitcoin network"))?;
+        let funding_transaction = {
+            let tx = pb.get_funding_transaction().to_owned();
+            if tx.get_data().is_empty() {
+                None
+            } else {
+                Some(btc::Transaction::from_pb(tx)?)
+            }
+        };
+
+        Ok(Self {
+            network,
+            funding_transaction,
+            public_keys: ProtobufConvert::from_pb(pb.get_anchoring_keys().to_owned())?,
+            anchoring_interval: ProtobufConvert::from_pb(pb.get_anchoring_interval())?,
+            transaction_fee: ProtobufConvert::from_pb(pb.get_transaction_fee())?,
+        })
+    }
+}
+
+impl From<crate::config::GlobalConfig> for exonum::proto::Any {
+    fn from(v: crate::config::GlobalConfig) -> Self {
+        Self::new(v)
+    }
+}
+
+impl std::convert::TryFrom<exonum::proto::Any> for crate::config::GlobalConfig {
+    type Error = failure::Error;
+
+    fn try_from(v: exonum::proto::Any) -> Result<Self, Self::Error> {
+        v.try_into()
+    }
+}
+
+impl BinaryValue for crate::config::GlobalConfig {
+    fn to_bytes(&self) -> Vec<u8> {
+        use protobuf::Message;
+        self.to_pb()
+            .write_to_bytes()
+            .expect("Error while serializing value")
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
+        use protobuf::Message;
+        let mut pb = <Self as ProtobufConvert>::ProtoStruct::new();
+        pb.merge_from_bytes(bytes.as_ref())?;
+        Self::from_pb(pb)
+    }
+}
+
+impl ObjectHash for crate::config::GlobalConfig {
+    fn object_hash(&self) -> Hash {
+        self.to_bytes().object_hash()
     }
 }

@@ -15,10 +15,12 @@
 use exonum::{
     blockchain::Schema as CoreSchema,
     crypto::Hash,
+    merkledb::Fork,
+    proto::Any,
     runtime::{
         api::ServiceApiBuilder,
         rust::{AfterCommitContext, BeforeCommitContext, Service},
-        InstanceDescriptor,
+        ExecutionError, InstanceDescriptor,
     },
 };
 use exonum_derive::ServiceFactory;
@@ -26,6 +28,7 @@ use exonum_merkledb::Snapshot;
 
 use std::{
     collections::HashMap,
+    convert::TryFrom,
     sync::{Arc, RwLock},
 };
 
@@ -33,6 +36,7 @@ use crate::{
     api,
     blockchain::{BtcAnchoringSchema, Transactions},
     btc::{Address, PrivateKey},
+    config::GlobalConfig,
     handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask},
     proto,
     rpc::BtcRelay,
@@ -79,6 +83,18 @@ impl BtcAnchoringService {
 }
 
 impl Service for BtcAnchoringService {
+    fn configure(
+        &self,
+        instance: InstanceDescriptor,
+        fork: &Fork,
+        params: Any,
+    ) -> Result<(), ExecutionError> {
+        BtcAnchoringSchema::new(instance.name, fork)
+            .actual_config_entry()
+            .set(GlobalConfig::try_from(params).expect("Invalid anchoring config"));
+        Ok(())
+    }
+
     fn state_hash(&self, instance: InstanceDescriptor, snapshot: &dyn Snapshot) -> Vec<Hash> {
         BtcAnchoringSchema::new(instance.name, snapshot).state_hash()
     }
