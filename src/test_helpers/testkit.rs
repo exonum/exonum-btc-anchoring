@@ -19,19 +19,14 @@ use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use exonum::{
     api,
-    blockchain::{
-        BlockProof, Blockchain, ConsensusConfig, IndexCoordinates, IndexOwner, Schema as CoreSchema,
-    },
+    blockchain::{BlockProof, ConsensusConfig, IndexCoordinates, IndexOwner, Schema as CoreSchema},
     crypto::Hash,
     helpers::Height,
     messages::{AnyTx, Message, Verified},
     runtime::{rust::Transaction, InstanceId},
 };
-use exonum_merkledb::{MapProof, ObjectAccess, ObjectHash, Snapshot};
-use exonum_testkit::{
-    ApiKind, InstanceCollection, TestKit, TestKitApi, TestKitBuilder, TestNetworkConfiguration,
-    TestNode,
-};
+use exonum_merkledb::{MapProof, ObjectHash};
+use exonum_testkit::{ApiKind, InstanceCollection, TestKit, TestKitApi, TestKitBuilder, TestNode};
 use failure::{ensure, format_err};
 use hex::FromHex;
 use log::trace;
@@ -298,7 +293,7 @@ impl AnchoringTestKit {
     /// its local anchoring configuration.
     pub fn anchoring_us(&self) -> (TestNode, LocalConfig) {
         let node = self.inner.us();
-        let cfg = self.get_local_cfg(node);
+        let cfg = self.get_local_cfg(&node);
         (node.clone(), cfg)
     }
 
@@ -346,7 +341,7 @@ impl AnchoringTestKit {
         let validators = self
             .network()
             .validators()
-            .iter()
+            .into_iter()
             .filter(|v| v != &self.us())
             .take(validators_num as usize);
 
@@ -398,25 +393,26 @@ impl AnchoringTestKit {
 
     /// Creates a configuration change proposal which excludes
     /// one of validators from the consensus.
-    pub fn drop_validator_proposal(&mut self) -> TestNetworkConfiguration {
-        let mut proposal = self.configuration_change_proposal();
-        let mut validators = proposal.validators().to_vec();
+    pub fn drop_validator_proposal(&mut self) {
+        unimplemented!()
+        // let mut proposal = self.configuration_change_proposal();
+        // let mut validators = proposal.validators().to_vec();
 
-        validators.pop();
-        proposal.set_validators(validators);
+        // validators.pop();
+        // proposal.set_validators(validators);
 
-        let config: GlobalConfig = proposal.service_config(ANCHORING_INSTANCE_NAME);
+        // let config: GlobalConfig = proposal.service_config(ANCHORING_INSTANCE_NAME);
 
-        let mut keys = config.public_keys.clone();
+        // let mut keys = config.public_keys.clone();
 
-        keys.pop();
+        // keys.pop();
 
-        let service_configuration = GlobalConfig {
-            public_keys: keys,
-            ..config
-        };
-        proposal.set_service_config(ANCHORING_INSTANCE_NAME, service_configuration);
-        proposal
+        // let service_configuration = GlobalConfig {
+        //     public_keys: keys,
+        //     ..config
+        // };
+        // proposal.set_service_config(ANCHORING_INSTANCE_NAME, service_configuration);
+        // proposal
     }
 
     /// Returns the list of expected requests to the fake rpc.

@@ -116,20 +116,6 @@ impl ProtobufConvert for crate::config::GlobalConfig {
     }
 }
 
-impl From<crate::config::GlobalConfig> for exonum::proto::Any {
-    fn from(v: crate::config::GlobalConfig) -> Self {
-        Self::new(v)
-    }
-}
-
-impl std::convert::TryFrom<exonum::proto::Any> for crate::config::GlobalConfig {
-    type Error = failure::Error;
-
-    fn try_from(v: exonum::proto::Any) -> Result<Self, Self::Error> {
-        v.try_into()
-    }
-}
-
 impl BinaryValue for crate::config::GlobalConfig {
     fn to_bytes(&self) -> Vec<u8> {
         use protobuf::Message;

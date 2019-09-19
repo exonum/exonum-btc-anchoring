@@ -15,12 +15,11 @@
 use exonum::{
     blockchain::Schema as CoreSchema,
     crypto::Hash,
-    merkledb::Fork,
-    proto::Any,
+    merkledb::{BinaryValue, Fork},
     runtime::{
         api::ServiceApiBuilder,
         rust::{AfterCommitContext, BeforeCommitContext, Service},
-        ExecutionError, InstanceDescriptor,
+        DispatcherError, ExecutionError, InstanceDescriptor,
     },
 };
 use exonum_derive::ServiceFactory;
@@ -28,7 +27,6 @@ use exonum_merkledb::Snapshot;
 
 use std::{
     collections::HashMap,
-    convert::TryFrom,
     sync::{Arc, RwLock},
 };
 
@@ -83,15 +81,18 @@ impl BtcAnchoringService {
 }
 
 impl Service for BtcAnchoringService {
-    fn configure(
+    fn initialize(
         &self,
         instance: InstanceDescriptor,
         fork: &Fork,
-        params: Any,
+        params: Vec<u8>,
     ) -> Result<(), ExecutionError> {
+        let config = GlobalConfig::from_bytes(params.into())
+            .map_err(DispatcherError::malformed_arguments)?;
+
         BtcAnchoringSchema::new(instance.name, fork)
             .actual_config_entry()
-            .set(GlobalConfig::try_from(params).expect("Invalid anchoring config"));
+            .set(config);
         Ok(())
     }
 
