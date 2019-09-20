@@ -16,30 +16,19 @@ syntax = "proto3";
 
 package exonum.service.btc_anchoring;
 
+import "helpers.proto";
 import "btc_types.proto";
 
-// Bitcoin public key wrapper.
-message BtcPublicKey {
-    // Inner Data.
-    bytes data = 1;
-}
-
-// Bitcoin transaction wrapper.
-message BtcTransaction {
-    // Inner data.
-    bytes data = 1;
-}
-
-// Bitcoin transaction input signature wrapper.
-message InputSignature {
-    // Inner data.    
-    bytes data = 1;
+// Public keys of an anchoring node.
+message AnchoringKeys {
+    // Service key is used to authorize service transactions.
+    exonum.PublicKey service_key = 1;
+    // The Bitcoin public key is used to calculate the corresponding redeem script.
+    exonum.btc.PublicKey bitcoin_key = 2;
 }
 
 // Exonum message with the signature for the new anchoring transaction.
 message TxSignature {
-    // Public key index in the anchoring public keys list.
-    uint32 validator = 1;
     // Signed transaction.
     exonum.btc.Transaction transaction = 2;
     // Signed input.
@@ -52,9 +41,9 @@ message TxSignature {
 message Config {
     // Type of the used BTC network.
     uint32 network = 1;
-    // Bitcoin public keys of validators from from which the current anchoring redeem script can 
+    // Bitcoin public keys of nodes from from which the current anchoring redeem script can 
     // be calculated.
-    repeated exonum.btc.PublicKey anchoring_keys = 2;
+    repeated AnchoringKeys anchoring_keys = 2;
     // Interval in blocks between anchored blocks.
     uint64 anchoring_interval = 3;
     // Fee per byte in satoshis.

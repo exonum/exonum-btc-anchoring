@@ -14,18 +14,21 @@
 
 //! BTC anchoring configuration data types.
 
+pub use crate::proto::Config as GlobalConfig;
+
 use bitcoin::network::constants::Network;
 use btc_transaction_utils::{
     multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError},
     p2wsh,
 };
-use exonum::helpers::Height;
+use exonum::{crypto::PublicKey, helpers::Height};
 use serde_derive::{Deserialize, Serialize};
 
 use std::collections::HashMap;
 
 use crate::{
-    btc::{Address, PrivateKey, PublicKey, Transaction},
+    btc::{self, Address, PrivateKey},
+    proto::AnchoringKeys,
     rpc::BitcoinRpcConfig,
 };
 
@@ -34,26 +37,11 @@ pub fn byzantine_quorum(total: usize) -> usize {
     exonum::node::state::State::byzantine_majority_count(total)
 }
 
-/// Consensus parameters in the BTC anchoring.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct GlobalConfig {
-    /// Type of the used BTC network.
-    pub network: Network,
-    /// Bitcoin public keys of validators from from which the current anchoring redeem script can be calculated.
-    pub public_keys: Vec<PublicKey>,
-    /// Interval in blocks between anchored blocks.
-    pub anchoring_interval: u64,
-    /// Fee per byte in satoshis.
-    pub transaction_fee: u64,
-    /// Funding transaction.
-    pub funding_transaction: Option<Transaction>,
-}
-
 impl Default for GlobalConfig {
     fn default() -> Self {
         Self {
             network: Network::Testnet,
-            public_keys: vec![],
+            anchoring_keys: vec![],
             anchoring_interval: 5_000,
             transaction_fee: 10,
             funding_transaction: None,
@@ -61,22 +49,35 @@ impl Default for GlobalConfig {
     }
 }
 
+// TODO implement ValidateInput.
+
 impl GlobalConfig {
     /// Creates global configuration instance with default parameters for the
     /// given Bitcoin network and public keys of participants.
     pub fn with_public_keys(
         network: Network,
-        keys: impl IntoIterator<Item = PublicKey>,
+        keys: impl IntoIterator<Item = AnchoringKeys>,
     ) -> Result<Self, RedeemScriptError> {
-        let public_keys = keys.into_iter().collect::<Vec<_>>();
-        if public_keys.is_empty() {
+        let anchoring_keys = keys.into_iter().collect::<Vec<_>>();
+        if anchoring_keys.is_empty() {
             Err(RedeemScriptError::NotEnoughPublicKeys)?;
         }
 
         Ok(Self {
             network,
-            public_keys,
+            anchoring_keys,
             ..Self::default()
+        })
+    }
+
+    /// Try to find bitcoin public key corresponding with the given service key.
+    pub fn find_bitcoin_key(&self, service_key: &PublicKey) -> Option<(usize, btc::PublicKey)> {
+        self.anchoring_keys.iter().enumerate().find_map(|(n, x)| {
+            if &x.service_key == service_key {
+                Some((n, x.bitcoin_key))
+            } else {
+                None
+            }
         })
     }
 
@@ -87,8 +88,8 @@ impl GlobalConfig {
 
     /// Returns the corresponding redeem script.
     pub fn redeem_script(&self) -> RedeemScript {
-        let quorum = byzantine_quorum(self.public_keys.len());
-        RedeemScriptBuilder::with_public_keys(self.public_keys.iter().map(|x| x.0))
+        let quorum = byzantine_quorum(self.anchoring_keys.len());
+        RedeemScriptBuilder::with_public_keys(self.anchoring_keys.iter().map(|x| x.bitcoin_key.0))
             .quorum(quorum)
             .to_script()
             .unwrap()
@@ -177,18 +178,21 @@ mod flatten_keypairs {
 
 #[cfg(test)]
 mod tests {
-    use exonum::helpers::Height;
+    use exonum::{crypto, helpers::Height};
 
     use bitcoin::network::constants::Network;
     use btc_transaction_utils::test_data::secp_gen_keypair;
 
     use super::{GlobalConfig, LocalConfig};
-    use crate::rpc::BitcoinRpcConfig;
+    use crate::{proto::AnchoringKeys, rpc::BitcoinRpcConfig};
 
     #[test]
     fn test_global_config() {
         let public_keys = (0..4)
-            .map(|_| secp_gen_keypair(Network::Bitcoin).0.into())
+            .map(|_| AnchoringKeys {
+                bitcoin_key: secp_gen_keypair(Network::Bitcoin).0.into(),
+                service_key: crypto::gen_keypair().0,
+            })
             .collect::<Vec<_>>();
 
         let config = GlobalConfig::with_public_keys(Network::Bitcoin, public_keys).unwrap();
@@ -224,7 +228,10 @@ mod tests {
     #[test]
     fn test_global_config_anchoring_height() {
         let public_keys = (0..4)
-            .map(|_| secp_gen_keypair(Network::Bitcoin).0.into())
+            .map(|_| AnchoringKeys {
+                bitcoin_key: secp_gen_keypair(Network::Bitcoin).0.into(),
+                service_key: crypto::gen_keypair().0,
+            })
             .collect::<Vec<_>>();
 
         let mut config = GlobalConfig::with_public_keys(Network::Bitcoin, public_keys).unwrap();

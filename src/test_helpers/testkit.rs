@@ -20,9 +20,10 @@ use btc_transaction_utils::{multisig::RedeemScript, p2wsh, TxInRef};
 use exonum::{
     api,
     blockchain::{BlockProof, ConsensusConfig, IndexCoordinates, IndexOwner, Schema as CoreSchema},
-    crypto::Hash,
+    crypto::{self, Hash, PublicKey},
     helpers::Height,
-    messages::{AnyTx, Message, Verified},
+    keys::Keys,
+    messages::{AnyTx, Verified},
     runtime::{rust::Transaction, InstanceId},
 };
 use exonum_merkledb::{MapProof, ObjectHash};
@@ -44,6 +45,7 @@ use crate::{
     blockchain::{transactions::TxSignature, BtcAnchoringSchema, BtcAnchoringState},
     btc,
     config::{GlobalConfig, LocalConfig},
+    proto::AnchoringKeys,
     rpc::BtcRelay,
     service::KeyPool,
     test_helpers::rpc::*,
@@ -84,19 +86,28 @@ pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -
 pub fn gen_anchoring_config<R: Rng>(
     rpc: Option<&dyn BtcRelay>,
     network: Network,
-    count: u16,
+    service_keys: impl IntoIterator<Item = PublicKey>,
     total_funds: u64,
     anchoring_interval: u64,
     rng: &mut R,
 ) -> (GlobalConfig, Vec<LocalConfig>) {
-    let count = count as usize;
-    let (public_keys, private_keys): (Vec<_>, Vec<_>) = (0..count)
-        .map(|_| btc::gen_keypair_with_rng(rng, network))
+    let (anchoring_keys, private_keys): (Vec<_>, Vec<_>) = service_keys
+        .into_iter()
+        .map(|service_key| {
+            let btc_keypair = btc::gen_keypair_with_rng(rng, network);
+            (
+                AnchoringKeys {
+                    bitcoin_key: btc_keypair.0,
+                    service_key,
+                },
+                (btc_keypair.1),
+            )
+        })
         .unzip();
 
     let mut global = GlobalConfig {
         network,
-        public_keys,
+        anchoring_keys,
         funding_transaction: None,
         anchoring_interval,
         ..GlobalConfig::default()
@@ -161,10 +172,25 @@ impl AnchoringTestKit {
         requests: Option<TestRequests>,
     ) -> Self {
         let network = Network::Testnet;
+
+        let validator_keys = (0..validators_num)
+            .map(|_| {
+                // TODO Make decision about rng.
+                let consensus_keypair = crypto::gen_keypair();
+                let service_keypair = crypto::gen_keypair();
+                Keys::from_keys(
+                    consensus_keypair.0,
+                    consensus_keypair.1,
+                    service_keypair.0,
+                    service_keypair.1,
+                )
+            })
+            .collect::<Vec<_>>();
+
         let (global, locals) = gen_anchoring_config(
             rpc.as_ref().map(|rpc| &**rpc),
             network,
-            validators_num,
+            validator_keys.iter().map(Keys::service_pk),
             total_funds,
             anchoring_interval,
             &mut rng,
@@ -180,7 +206,7 @@ impl AnchoringTestKit {
                 ANCHORING_INSTANCE_NAME,
                 global,
             ))
-            .with_validators(validators_num)
+            .with_keys(validator_keys)
             .with_logger()
             .create();
 
@@ -374,7 +400,6 @@ impl AnchoringTestKit {
 
                     signatures.push(
                         TxSignature {
-                            validator: validator_id,
                             transaction: proposal.clone(),
                             input: index as u32,
                             input_signature: signature.into(),

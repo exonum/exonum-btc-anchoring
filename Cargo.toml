@@ -50,9 +50,9 @@ proptest = "0.9"
 exonum-build = "0.12.0"
 
 [patch.crates-io]
-exonum = { git = "https://github.com/alekseysidorov/exonum.git", rev = "0f581c7202e4bb32568acb8fc046a46b742abf76" }
-exonum-merkledb = { git = "https://github.com/alekseysidorov/exonum.git", rev = "0f581c7202e4bb32568acb8fc046a46b742abf76" }
-exonum-derive = { git = "https://github.com/alekseysidorov/exonum.git", rev = "0f581c7202e4bb32568acb8fc046a46b742abf76" }
-exonum-testkit = { git = "https://github.com/alekseysidorov/exonum.git", rev = "0f581c7202e4bb32568acb8fc046a46b742abf76" }
-exonum-build = { git = "https://github.com/alekseysidorov/exonum.git", rev = "0f581c7202e4bb32568acb8fc046a46b742abf76" }
+exonum = { git = "https://github.com/alekseysidorov/exonum.git", rev = "f367dfaef4e1c6917ffeccf3eabd58b5fb4205c5" }
+exonum-merkledb = { git = "https://github.com/alekseysidorov/exonum.git", rev = "f367dfaef4e1c6917ffeccf3eabd58b5fb4205c5" }
+exonum-derive = { git = "https://github.com/alekseysidorov/exonum.git", rev = "f367dfaef4e1c6917ffeccf3eabd58b5fb4205c5" }
+exonum-testkit = { git = "https://github.com/alekseysidorov/exonum.git", rev = "f367dfaef4e1c6917ffeccf3eabd58b5fb4205c5" }
+exonum-build = { git = "https://github.com/alekseysidorov/exonum.git", rev = "f367dfaef4e1c6917ffeccf3eabd58b5fb4205c5" }
 

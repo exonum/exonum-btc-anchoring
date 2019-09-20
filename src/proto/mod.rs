@@ -14,16 +14,16 @@
 
 //! Module of the rust-protobuf generated files.
 
-pub use self::service::{Config, TxSignature};
-
 use bitcoin;
 use btc_transaction_utils;
 use exonum::{
-    crypto::Hash,
+    crypto::{Hash, PublicKey},
     merkledb::{BinaryValue, ObjectHash},
-    proto::ProtobufConvert,
+    proto::{schema::helpers, ProtobufConvert},
 };
+use exonum_derive::ProtobufConvert;
 use failure;
+use serde_derive::{Deserialize, Serialize};
 
 use crate::btc;
 
@@ -77,14 +77,51 @@ impl ProtobufConvert for btc::InputSignature {
     }
 }
 
-impl ProtobufConvert for crate::config::GlobalConfig {
-    type ProtoStruct = Config;
+// Public keys of an anchoring node.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert)]
+#[exonum(pb = "self::service::AnchoringKeys")]
+pub struct AnchoringKeys {
+    // Service key is used to authorize transactions.
+    pub service_key: PublicKey,
+    // The Bitcoin public key is used to calculate the corresponding redeem script.
+    pub bitcoin_key: btc::PublicKey,
+}
+
+/// Exonum message with the signature for the new anchoring transaction.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert)]
+#[exonum(pb = "self::service::TxSignature")]
+pub struct TxSignature {
+    /// Signed Bitcoin anchoring transaction.
+    pub transaction: btc::Transaction,
+    /// Signed input.
+    pub input: u32,
+    /// Signature content.
+    pub input_signature: btc::InputSignature,
+}
+
+/// Consensus parameters in the BTC anchoring.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct Config {
+    /// Type of the used BTC network.
+    pub network: bitcoin::Network,
+    /// Bitcoin public keys of nodes from from which the current anchoring redeem script can be calculated.
+    pub anchoring_keys: Vec<AnchoringKeys>,
+    /// Interval in blocks between anchored blocks.
+    pub anchoring_interval: u64,
+    /// Fee per byte in satoshis.
+    pub transaction_fee: u64,
+    /// Funding transaction.
+    pub funding_transaction: Option<btc::Transaction>,
+}
+
+impl ProtobufConvert for Config {
+    type ProtoStruct = self::service::Config;
 
     fn to_pb(&self) -> Self::ProtoStruct {
         let mut proto_struct = Self::ProtoStruct::default();
 
         proto_struct.set_network(self.network.magic());
-        proto_struct.set_anchoring_keys(self.public_keys.to_pb().into());
+        proto_struct.set_anchoring_keys(self.anchoring_keys.to_pb().into());
         proto_struct.set_anchoring_interval(self.anchoring_interval.to_pb());
         proto_struct.set_transaction_fee(self.transaction_fee.to_pb());
         if let Some(tx) = self.funding_transaction.as_ref() {
@@ -109,14 +146,14 @@ impl ProtobufConvert for crate::config::GlobalConfig {
         Ok(Self {
             network,
             funding_transaction,
-            public_keys: ProtobufConvert::from_pb(pb.get_anchoring_keys().to_owned())?,
+            anchoring_keys: ProtobufConvert::from_pb(pb.get_anchoring_keys().to_owned())?,
             anchoring_interval: ProtobufConvert::from_pb(pb.get_anchoring_interval())?,
             transaction_fee: ProtobufConvert::from_pb(pb.get_transaction_fee())?,
         })
     }
 }
 
-impl BinaryValue for crate::config::GlobalConfig {
+impl BinaryValue for Config {
     fn to_bytes(&self) -> Vec<u8> {
         use protobuf::Message;
         self.to_pb()
@@ -132,7 +169,7 @@ impl BinaryValue for crate::config::GlobalConfig {
     }
 }
 
-impl ObjectHash for crate::config::GlobalConfig {
+impl ObjectHash for Config {
     fn object_hash(&self) -> Hash {
         self.to_bytes().object_hash()
     }

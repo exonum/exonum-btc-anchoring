@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::{helpers::ValidatorId, runtime::rust::AfterCommitContext};
+use exonum::runtime::rust::AfterCommitContext;
 
 use btc_transaction_utils::{p2wsh, TxInRef};
 use failure::format_err;
@@ -56,7 +56,11 @@ impl<'a> UpdateAnchoringChainTask<'a> {
     /// For validators this method creates an Exonum transaction with the signature for
     /// the corresponding anchoring transaction if there is such a need.
     pub fn run(self) -> Result<(), failure::Error> {
-        if let Some(validator_id) = self.context.validator_id() {
+        if let Some((anchoring_node_id, _)) = self
+            .anchoring_state
+            .actual_configuration()
+            .find_bitcoin_key(&self.context.service_keypair.0)
+        {
             let address = self.anchoring_state.output_address();
 
             let private_key = self
@@ -64,7 +68,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                 .get(&address)
                 .ok_or_else(|| format_err!("Private key for the address {} is absent.", address))?;
 
-            self.handle_as_validator(validator_id, &private_key)
+            self.handle_as_validator(anchoring_node_id, &private_key)
         } else {
             self.handle_as_auditor()
         }
@@ -72,7 +76,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
 
     fn handle_as_validator(
         self,
-        validator_id: ValidatorId,
+        anchoring_node_id: usize,
         private_key: &PrivateKey,
     ) -> Result<(), failure::Error> {
         let schema = BtcAnchoringSchema::new(self.context.instance.name, self.context.snapshot);
@@ -96,18 +100,18 @@ impl<'a> UpdateAnchoringChainTask<'a> {
         let config = self.anchoring_state.actual_configuration();
         let redeem_script = config.redeem_script();
         // Creates `Signature` transactions.
-        let pubkey = redeem_script.content().public_keys[validator_id.0 as usize];
+        let pubkey = redeem_script.content().public_keys[anchoring_node_id];
         let mut signer = p2wsh::InputSigner::new(redeem_script);
 
         for (index, proposal_input) in proposal_inputs.iter().enumerate() {
             let input_id = TxInputId::new(proposal.id(), index as u32);
 
             if let Some(input_signatures) = schema.transaction_signatures().get(&input_id) {
-                if input_signatures.contains(validator_id) {
+                if input_signatures.contains(anchoring_node_id) {
                     trace!(
                         " {:?} is already signed by validator {}",
                         input_id,
-                        validator_id
+                        anchoring_node_id
                     );
                     continue;
                 }
@@ -129,7 +133,6 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                 .unwrap();
 
             self.context.broadcast_transaction(TxSignature {
-                validator: validator_id,
                 transaction: proposal.clone(),
                 input: index as u32,
                 input_signature: signature.into(),

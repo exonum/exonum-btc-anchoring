@@ -14,11 +14,17 @@
 
 //! Error types of the BTC anchoring service.
 
-use exonum::{blockchain::ExecutionError, crypto::Hash, helpers::ValidatorId, runtime::ErrorKind};
+use exonum::{
+    blockchain::ExecutionError,
+    crypto::{Hash, PublicKey},
+    runtime::ErrorKind,
+};
 
 use failure_derive::Fail;
 
 use crate::btc;
+
+// TODO Rewrite with the IntoExecutionError.
 
 /// Possible errors during execution of the `Signature` transaction.
 #[derive(Debug, Fail)]
@@ -39,11 +45,14 @@ pub enum SignatureError {
         display = "Received signature for anchoring transaction while the node is in transition state."
     )]
     InTransition,
-    /// Public key of validator with the given identifier is missing.
-    #[fail(display = "Public key of validator {} is missing.", _0)]
+    /// Bitcoin public key of node with the given identifier is missing.
+    #[fail(
+        display = "Bitcoin public key of node with service key {} is missing.",
+        _0
+    )]
     MissingPublicKey {
         /// Validator identifier.
-        validator_id: ValidatorId,
+        service_key: PublicKey,
     },
     /// Input with the given index does not exist.
     #[fail(display = "Input with index {} does not exist.", _0)]

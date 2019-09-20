@@ -13,10 +13,7 @@
 // limitations under the License.
 
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use exonum::{
-    crypto::{self, Hash},
-    helpers::ValidatorId,
-};
+use exonum::crypto::{self, Hash};
 use exonum_merkledb::{BinaryValue, ObjectHash};
 use serde_derive::{Deserialize, Serialize};
 
@@ -27,6 +24,8 @@ use std::{
     vec::IntoIter,
 };
 
+/// TODO Rewrite on top of BinarySet.
+
 /// A set of signatures for a transaction input ordered by the validators identifiers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct InputSignatures {
@@ -35,20 +34,18 @@ pub struct InputSignatures {
 
 impl InputSignatures {
     /// Creates an empty signatures set for the given validators count.
-    pub fn new(validators_count: usize) -> Self {
-        let content = vec![None; validators_count as usize];
+    pub fn new(nodes_count: usize) -> Self {
+        let content = vec![None; nodes_count as usize];
         Self { content }
     }
 
     /// Inserts a signature from the validator with the given identifier.
-    pub fn insert(&mut self, id: ValidatorId, signature: Vec<u8>) {
-        let index = id.0 as usize;
+    pub fn insert(&mut self, index: usize, signature: Vec<u8>) {
         self.content[index] = Some(signature);
     }
 
     /// Checks the existence of a signature from the validator with the given identifier.
-    pub fn contains(&self, id: ValidatorId) -> bool {
-        let index = id.0 as usize;
+    pub fn contains(&self, index: usize) -> bool {
         self.content[index].is_some()
     }
 
@@ -121,8 +118,8 @@ fn test_input_signatures_storage_value() {
         b"abacaba1224634abcfdfdfca353".to_vec(),
         b"abacaba1224634abcfdfdfca353ee2224774".to_vec(),
     ];
-    signatures.insert(ValidatorId(3), data[1].clone());
-    signatures.insert(ValidatorId(1), data[0].clone());
+    signatures.insert(3, data[1].clone());
+    signatures.insert(1, data[0].clone());
     assert_eq!(signatures.len(), 2);
 
     let bytes = signatures.clone().into_bytes();

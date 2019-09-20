@@ -14,31 +14,25 @@
 
 //! BTC anchoring transactions.
 
-use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
-use exonum::{
-    helpers::ValidatorId,
-    runtime::{rust::TransactionContext, ExecutionError},
-};
-use exonum_derive::{exonum_service, ProtobufConvert};
-use log::{info, trace};
-use serde_derive::{Deserialize, Serialize};
+pub use crate::proto::TxSignature;
 
-use crate::{btc, proto, BtcAnchoringService};
+use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
+use exonum::runtime::{rust::TransactionContext, Caller, DispatcherError, ExecutionError};
+use exonum_derive::exonum_service;
+use log::{info, trace};
+
+use crate::{btc, BtcAnchoringService};
 
 use super::{data_layout::TxInputId, errors::SignatureError, BtcAnchoringSchema};
 
-/// Exonum message with the signature for the new anchoring transaction.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert)]
-#[exonum(pb = "proto::TxSignature")]
-pub struct TxSignature {
-    /// Public key index in the anchoring public keys list.
-    pub validator: ValidatorId,
-    /// Signed Bitcoin anchoring transaction.
-    pub transaction: btc::Transaction,
-    /// Signed input.
-    pub input: u32,
-    /// Signature content.
-    pub input_signature: btc::InputSignature,
+impl TxSignature {
+    /// Returns identifier of the signed transaction input.
+    pub fn input_id(&self) -> TxInputId {
+        TxInputId {
+            txid: self.transaction.id(),
+            input: self.input,
+        }
+    }
 }
 
 /// Exonum BTC anchoring transactions.
@@ -52,25 +46,18 @@ pub trait Transactions {
     ) -> Result<(), ExecutionError>;
 }
 
-impl TxSignature {
-    /// Returns identifier of the signed transaction input.
-    pub fn input_id(&self) -> TxInputId {
-        TxInputId {
-            txid: self.transaction.id(),
-            input: self.input,
-        }
-    }
-}
-
 impl Transactions for BtcAnchoringService {
     fn sign_input(
         &self,
         context: TransactionContext,
         arg: TxSignature,
     ) -> Result<(), ExecutionError> {
-        // TODO Checks that transaction author is validator.
+        let (author, fork) = context
+            .verify_caller(Caller::author)
+            .ok_or(DispatcherError::UnauthorizedCaller)?;
+
         let tx = &arg.transaction;
-        let schema = BtcAnchoringSchema::new(context.instance.name, context.fork());
+        let schema = BtcAnchoringSchema::new(context.instance.name, fork);
         // Checks that the number of signatures is sufficient to spend.
         if schema
             .anchoring_transactions_chain()
@@ -94,22 +81,17 @@ impl Transactions for BtcAnchoringService {
             .into());
         }
 
-        let redeem_script = schema.actual_state().actual_configuration().redeem_script();
+        let actual_state = schema.actual_state();
+        let (anchoring_node_id, public_key) = actual_state
+            .actual_configuration()
+            .find_bitcoin_key(&author)
+            .ok_or_else(|| SignatureError::MissingPublicKey {
+                service_key: author,
+            })?;
+        let redeem_script = actual_state.actual_configuration().redeem_script();
         let redeem_script_content = redeem_script.content();
-        let public_key = if let Some(pk) = redeem_script_content
-            .public_keys
-            .get(arg.validator.0 as usize)
-        {
-            pk
-        } else {
-            return Err(SignatureError::MissingPublicKey {
-                validator_id: arg.validator,
-            }
-            .into());
-        };
 
         let input_signer = InputSigner::new(redeem_script.clone());
-
         // Checks signature content.
         let input_signature_ref = arg.input_signature.as_ref();
         let input_idx = arg.input as usize;
@@ -121,7 +103,7 @@ impl Transactions for BtcAnchoringService {
         let verification_result = input_signer.verify_input(
             TxInRef::new(tx.as_ref(), arg.input as usize),
             input_tx.as_ref(),
-            &public_key,
+            &public_key.0,
             input_signature_ref,
         );
 
@@ -133,7 +115,7 @@ impl Transactions for BtcAnchoringService {
         let mut input_signatures = schema.input_signatures(&input_id, &redeem_script);
         if input_signatures.len() != redeem_script_content.quorum {
             // Adds signature to schema.
-            input_signatures.insert(arg.validator, arg.input_signature.clone().into());
+            input_signatures.insert(anchoring_node_id, arg.input_signature.clone().into());
             schema
                 .transaction_signatures()
                 .put(&input_id, input_signatures);
