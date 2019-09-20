@@ -114,7 +114,7 @@ pub struct LocalConfig {
     pub rpc: Option<BitcoinRpcConfig>,
     /// Set of private keys for each anchoring address.
     #[serde(with = "flatten_keypairs")]
-    pub private_keys: HashMap<Address, PrivateKey>,
+    pub private_keys: HashMap<btc::PublicKey, PrivateKey>,
 }
 
 /// BTC anchoring configuration.
@@ -127,24 +127,24 @@ pub struct Config {
 }
 
 mod flatten_keypairs {
-    use crate::btc::{Address, PrivateKey};
+    use crate::btc::{PrivateKey, PublicKey};
 
     use serde_derive::{Deserialize, Serialize};
 
     use std::collections::HashMap;
 
-    /// The structure for storing the anchoring address and the private key.
+    /// The structure for storing the bitcoin keypair.
     /// It is required for reading data from the .toml file into memory.
     #[derive(Deserialize, Serialize)]
     struct BitcoinKeypair {
-        /// Bitcoin address.
-        address: Address,
+        /// Bitcoin public key.
+        public_key: PublicKey,
         /// Corresponding private key.
         private_key: PrivateKey,
     }
 
     pub fn serialize<S>(
-        keys: &HashMap<Address, PrivateKey>,
+        keys: &HashMap<PublicKey, PrivateKey>,
         ser: S,
     ) -> ::std::result::Result<S::Ok, S::Error>
     where
@@ -154,15 +154,15 @@ mod flatten_keypairs {
 
         let keypairs = keys
             .iter()
-            .map(|(address, private_key)| BitcoinKeypair {
-                address: address.clone(),
+            .map(|(public_key, private_key)| BitcoinKeypair {
+                public_key: public_key.clone(),
                 private_key: private_key.clone(),
             })
             .collect::<Vec<_>>();
         keypairs.serialize(ser)
     }
 
-    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<Address, PrivateKey>, D::Error>
+    pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<PublicKey, PrivateKey>, D::Error>
     where
         D: ::serde::Deserializer<'de>,
     {
@@ -170,7 +170,7 @@ mod flatten_keypairs {
         Vec::<BitcoinKeypair>::deserialize(deserializer).map(|keypairs| {
             keypairs
                 .into_iter()
-                .map(|keypair| (keypair.address, keypair.private_key))
+                .map(|keypair| (keypair.public_key, keypair.private_key))
                 .collect()
         })
     }
@@ -198,7 +198,7 @@ mod tests {
         let config = GlobalConfig::with_public_keys(Network::Bitcoin, public_keys).unwrap();
         assert_eq!(config.redeem_script().content().quorum, 3);
 
-        let json = ::serde_json::to_value(&config).unwrap();
+        let json = serde_json::to_value(&config).unwrap();
         let config2: GlobalConfig = ::serde_json::from_value(json).unwrap();
         assert_eq!(config2, config);
     }
@@ -209,7 +209,7 @@ mod tests {
             [rpc]
             host = "http://localhost"
             [[private_keys]]
-            address = 'bc1qxfhtyn4l3hztytwvd4h6l9ah8qgz3ycfa86mq85qnqdff5kdzg2sdv6e82'
+            public_key = '03c1e6b6c221b4794df136c26def65b084455bbd2f3b3b80f8aae8629acbdf5cde'
             private_key = 'L58cq7TgbA6RpJ1KGsj9h5sfXuAeY6GqA197Qrpepw3boRdXqYBS'
         "#;
 

@@ -30,7 +30,6 @@ use exonum_merkledb::{MapProof, ObjectHash};
 use exonum_testkit::{ApiKind, InstanceCollection, TestKit, TestKitApi, TestKitBuilder, TestNode};
 use failure::{ensure, format_err};
 use hex::FromHex;
-use log::trace;
 use maplit::hashmap;
 use rand::{thread_rng, Rng, SeedableRng, StdRng};
 
@@ -42,7 +41,7 @@ use std::{
 
 use crate::{
     api::{BlockHeaderProof, FindTransactionQuery, HeightQuery, PublicApi, TransactionProof},
-    blockchain::{transactions::TxSignature, BtcAnchoringSchema, BtcAnchoringState},
+    blockchain::{transactions::TxSignature, BtcAnchoringSchema},
     btc,
     config::{GlobalConfig, LocalConfig},
     proto::AnchoringKeys,
@@ -91,7 +90,7 @@ pub fn gen_anchoring_config<R: Rng>(
     anchoring_interval: u64,
     rng: &mut R,
 ) -> (GlobalConfig, Vec<LocalConfig>) {
-    let (anchoring_keys, private_keys): (Vec<_>, Vec<_>) = service_keys
+    let (anchoring_keys, bitcoin_keys): (Vec<_>, Vec<_>) = service_keys
         .into_iter()
         .map(|service_key| {
             let btc_keypair = btc::gen_keypair_with_rng(rng, network);
@@ -100,7 +99,7 @@ pub fn gen_anchoring_config<R: Rng>(
                     bitcoin_key: btc_keypair.0,
                     service_key,
                 },
-                (btc_keypair.1),
+                btc_keypair,
             )
         })
         .unzip();
@@ -114,11 +113,11 @@ pub fn gen_anchoring_config<R: Rng>(
     };
 
     let address = global.anchoring_address();
-    let local_cfgs = private_keys
+    let local_cfgs = bitcoin_keys
         .iter()
-        .map(|sk| LocalConfig {
+        .map(|(pk, sk)| LocalConfig {
             rpc: rpc.map(BtcRelay::config),
-            private_keys: hashmap! { address.clone() => sk.clone() },
+            private_keys: hashmap! { pk.clone() => sk.clone() },
         })
         .collect();
 
@@ -286,33 +285,35 @@ impl AnchoringTestKit {
 
     /// Updates the private keys pool in testkit for the transition state.
     pub fn renew_address(&mut self) {
-        let snapshot = self.snapshot();
-        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+        unimplemented!()
 
-        if let BtcAnchoringState::Transition {
-            actual_configuration,
-            following_configuration,
-        } = schema.actual_state()
-        {
-            let old_addr = actual_configuration.anchoring_address();
-            let new_addr = following_configuration.anchoring_address();
+        // let snapshot = self.snapshot();
+        // let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
 
-            let pk = {
-                let private_keys = self.local_private_keys.read().unwrap();
-                private_keys.get(&old_addr).unwrap().clone()
-            };
+        // if let BtcAnchoringState::Transition {
+        //     actual_configuration,
+        //     following_configuration,
+        // } = schema.actual_state()
+        // {
+        //     let old_addr = actual_configuration.anchoring_address();
+        //     let new_addr = following_configuration.anchoring_address();
 
-            if old_addr != new_addr {
-                trace!("Setting new pkey for addr {:?} ", new_addr);
-                let mut private_keys = self.local_private_keys.write().unwrap();
-                private_keys.insert(new_addr.clone(), pk.clone());
+        //     let pk = {
+        //         let private_keys = self.local_private_keys.read().unwrap();
+        //         private_keys.get(&old_addr).unwrap().clone()
+        //     };
 
-                for local_cfg in &mut self.node_configs.iter_mut() {
-                    let pk = local_cfg.private_keys[&old_addr].clone();
-                    local_cfg.private_keys.insert(new_addr.clone(), pk);
-                }
-            }
-        }
+        //     if old_addr != new_addr {
+        //         trace!("Setting new pkey for addr {:?} ", new_addr);
+        //         let mut private_keys = self.local_private_keys.write().unwrap();
+        //         private_keys.insert(new_addr.clone(), pk.clone());
+
+        //         for local_cfg in &mut self.node_configs.iter_mut() {
+        //             let pk = local_cfg.private_keys[&old_addr].clone();
+        //             local_cfg.private_keys.insert(new_addr.clone(), pk);
+        //         }
+        //     }
+        // }
     }
 
     /// Returns the node in the emulated network, from whose perspective the testkit operates and
@@ -385,9 +386,12 @@ impl AnchoringTestKit {
             if let Some(p) = schema.actual_proposed_anchoring_transaction() {
                 let (proposal, proposal_inputs) = p?;
 
-                let address = schema.actual_state().output_address();
-                let btc_private_key =
-                    &self.node_configs[validator_id.0 as usize].private_keys[&address];
+                let (anchoring_id, bitcoin_key) = schema
+                    .actual_state()
+                    .actual_configuration()
+                    .find_bitcoin_key(&public_key)
+                    .unwrap();
+                let btc_private_key = &self.node_configs[anchoring_id].private_keys[&bitcoin_key];
 
                 for (index, proposal_input) in proposal_inputs.iter().enumerate() {
                     let signature = signer

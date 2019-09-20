@@ -40,7 +40,7 @@ pub(crate) mod transaction;
 pub struct PrivateKey(pub bitcoin::PrivateKey);
 
 /// Secp256k1 public key wrapper, used for verification of signatures.
-#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct PublicKey(pub bitcoin::PublicKey);
 
 /// Bitcoin address wrapper.

@@ -33,7 +33,7 @@ use std::{
 use crate::{
     api,
     blockchain::{BtcAnchoringSchema, Transactions},
-    btc::{Address, PrivateKey},
+    btc::{PrivateKey, PublicKey},
     config::GlobalConfig,
     handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask},
     proto,
@@ -41,8 +41,8 @@ use crate::{
     ResultEx,
 };
 
-/// Set of bitcoin private keys for corresponding anchoring addresses.
-pub(crate) type KeyPool = Arc<RwLock<HashMap<Address, PrivateKey>>>;
+/// Set of bitcoin private keys for corresponding public keys.
+pub(crate) type KeyPool = Arc<RwLock<HashMap<PublicKey, PrivateKey>>>;
 
 /// Btc anchoring service implementation for the Exonum blockchain.
 #[derive(ServiceFactory)]

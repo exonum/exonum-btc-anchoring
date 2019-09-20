@@ -26,7 +26,7 @@ use crate::{
         transactions::TxSignature,
         {BtcAnchoringSchema, BtcAnchoringState},
     },
-    btc::{Address, PrivateKey},
+    btc::{PrivateKey, PublicKey},
     rpc::BtcRelay,
 };
 
@@ -34,14 +34,14 @@ use crate::{
 pub struct UpdateAnchoringChainTask<'a> {
     context: &'a AfterCommitContext<'a>,
     anchoring_state: BtcAnchoringState,
-    private_keys: &'a HashMap<Address, PrivateKey>,
+    private_keys: &'a HashMap<PublicKey, PrivateKey>,
 }
 
 impl<'a> UpdateAnchoringChainTask<'a> {
     /// Creates the anchoring chain updater for the given context and private keys.
     pub fn new(
         context: &'a AfterCommitContext<'a>,
-        private_keys: &'a HashMap<Address, PrivateKey>,
+        private_keys: &'a HashMap<PublicKey, PrivateKey>,
     ) -> UpdateAnchoringChainTask<'a> {
         let anchoring_state =
             BtcAnchoringSchema::new(context.instance.name, context.snapshot).actual_state();
@@ -56,7 +56,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
     /// For validators this method creates an Exonum transaction with the signature for
     /// the corresponding anchoring transaction if there is such a need.
     pub fn run(self) -> Result<(), failure::Error> {
-        if let Some((anchoring_node_id, _)) = self
+        if let Some((anchoring_node_id, public_key)) = self
             .anchoring_state
             .actual_configuration()
             .find_bitcoin_key(&self.context.service_keypair.0)
@@ -65,7 +65,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
 
             let private_key = self
                 .private_keys
-                .get(&address)
+                .get(&public_key)
                 .ok_or_else(|| format_err!("Private key for the address {} is absent.", address))?;
 
             self.handle_as_validator(anchoring_node_id, &private_key)
