@@ -17,10 +17,10 @@ use exonum::{explorer::BlockWithTransactions, runtime::ErrorKind};
 use exonum_btc_anchoring::{
     blockchain::{errors::Error, BtcAnchoringSchema},
     btc::BuilderError,
-    config::GlobalConfig,
+    config::Config,
     test_helpers::testkit::{
-        create_fake_funding_transaction, AnchoringTestKit, AnchoringTestKit2,
-        ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME,
+        create_fake_funding_transaction, AnchoringTestKit, ANCHORING_INSTANCE_ID,
+        ANCHORING_INSTANCE_NAME,
     },
 };
 use exonum_testkit::simple_supervisor::ConfigPropose;
@@ -36,9 +36,9 @@ fn assert_tx_error(block: BlockWithTransactions, e: Error) {
 
 fn test_anchoring_config_change<F>(mut config_change_predicate: F)
 where
-    F: FnMut(&mut AnchoringTestKit2, &mut GlobalConfig),
+    F: FnMut(&mut AnchoringTestKit, &mut Config),
 {
-    let mut anchoring_testkit = AnchoringTestKit2::default();
+    let mut anchoring_testkit = AnchoringTestKit::default();
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
         .anchoring_interval;
@@ -129,7 +129,7 @@ where
 
 #[test]
 fn simple() {
-    let mut anchoring_testkit = AnchoringTestKit2::default();
+    let mut anchoring_testkit = AnchoringTestKit::default();
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
         .anchoring_interval;
@@ -186,7 +186,7 @@ fn simple() {
 
 #[test]
 fn additional_funding() {
-    let mut anchoring_testkit = AnchoringTestKit2::default();
+    let mut anchoring_testkit = AnchoringTestKit::default();
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
         .anchoring_interval;
@@ -244,6 +244,7 @@ fn additional_funding() {
 fn add_anchoring_node() {
     test_anchoring_config_change(|anchoring_testkit, cfg| {
         cfg.anchoring_keys.push(anchoring_testkit.add_node());
+        cfg.funding_transaction = None;
     })
 }
 
@@ -251,6 +252,7 @@ fn add_anchoring_node() {
 fn remove_anchoring_node() {
     test_anchoring_config_change(|_anchoring_testkit, cfg| {
         cfg.anchoring_keys.pop();
+        cfg.funding_transaction = None;
     })
 }
 
@@ -258,6 +260,7 @@ fn remove_anchoring_node() {
 fn change_anchoring_node() {
     test_anchoring_config_change(|anchoring_testkit, cfg| {
         cfg.anchoring_keys[0].bitcoin_key = anchoring_testkit.gen_bitcoin_key();
+        cfg.funding_transaction = None;
     })
 }
 

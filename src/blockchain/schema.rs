@@ -25,7 +25,7 @@ use log::{error, trace};
 
 use crate::{
     btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction},
-    config::GlobalConfig,
+    config::Config,
 };
 
 use super::{data_layout::*, BtcAnchoringState};
@@ -74,12 +74,12 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
     }
 
     /// Returns an actual anchoring configuration entry.
-    pub fn actual_config_entry(&self) -> RefMut<Entry<T, GlobalConfig>> {
+    pub fn actual_config_entry(&self) -> RefMut<Entry<T, Config>> {
         self.access.get_object(self.index_name("actual_config"))
     }
 
     /// Returns a following anchoring configuration entry.
-    pub fn following_config_entry(&self) -> RefMut<Entry<T, GlobalConfig>> {
+    pub fn following_config_entry(&self) -> RefMut<Entry<T, Config>> {
         self.access.get_object(self.index_name("following_config"))
     }
 
@@ -100,12 +100,12 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
     }
 
     /// Returns the actual anchoring configuration.
-    pub fn actual_configuration(&self) -> GlobalConfig {
+    pub fn actual_configuration(&self) -> Config {
         self.actual_config_entry().get().unwrap()
     }
 
     /// Returns the nearest following configuration if it exists.
-    pub fn following_configuration(&self) -> Option<GlobalConfig> {
+    pub fn following_configuration(&self) -> Option<Config> {
         self.following_config_entry().get()
     }
 
@@ -220,7 +220,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
     pub fn push_anchoring_transaction(&self, tx: Transaction) {
         // An unspent funding transaction is always unconditionally added to the anchoring
         // transaction proposal, so we can simply move it to the list of spent.
-        if let Some(tx) = self.unspent_funding_transaction_entry().get() {
+        if let Some(tx) = self.unspent_funding_transaction_entry().take() {
             self.spent_funding_transactions().put(&tx.id(), tx);
         }
         // Special case if we have an active following configuration.

@@ -38,18 +38,15 @@ use crate::{
     api,
     blockchain::{BtcAnchoringSchema, Transactions},
     btc::{PrivateKey, PublicKey},
-    config::GlobalConfig,
+    config::Config,
     proto,
 };
-
-/// Set of bitcoin private keys for corresponding public keys.
-pub(crate) type KeyPool = Arc<RwLock<HashMap<PublicKey, PrivateKey>>>;
 
 /// Btc anchoring service implementation for the Exonum blockchain.
 #[derive(ServiceFactory)]
 #[exonum(
     proto_sources = "proto",
-    implements("Transactions", "Configure<Params = GlobalConfig>")
+    implements("Transactions", "Configure<Params = Config>")
 )]
 pub struct BtcAnchoringService;
 
@@ -66,8 +63,8 @@ impl Service for BtcAnchoringService {
         fork: &Fork,
         params: Vec<u8>,
     ) -> Result<(), ExecutionError> {
-        let config = GlobalConfig::from_bytes(params.into())
-            .and_then(GlobalConfig::into_validated)
+        let config = Config::from_bytes(params.into())
+            .and_then(ValidateInput::into_validated)
             .map_err(DispatcherError::malformed_arguments)?;
 
         let schema = BtcAnchoringSchema::new(instance.name, fork);
@@ -100,7 +97,7 @@ impl Service for BtcAnchoringService {
 }
 
 impl Configure for BtcAnchoringService {
-    type Params = GlobalConfig;
+    type Params = Config;
 
     fn verify_config(
         &self,
@@ -110,7 +107,7 @@ impl Configure for BtcAnchoringService {
         context
             .verify_caller(verify_caller_is_supervisor)
             .ok_or(DispatcherError::UnauthorizedCaller)?;
-            
+
         params
             .validate()
             .map_err(DispatcherError::malformed_arguments)

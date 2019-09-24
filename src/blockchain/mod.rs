@@ -20,7 +20,7 @@ use bitcoin::blockdata::script::Script;
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh};
 use exonum::helpers::Height;
 
-use crate::{btc::Address, config::GlobalConfig};
+use crate::{btc::Address, config::Config};
 
 pub mod data_layout;
 pub mod errors;
@@ -33,14 +33,14 @@ pub enum BtcAnchoringState {
     /// The usual anchoring workflow.
     Regular {
         /// Current anchoring configuration.
-        actual_configuration: GlobalConfig,
+        actual_configuration: Config,
     },
     /// The transition from the current anchoring address to the following one.
     Transition {
         /// Current anchoring configuration.
-        actual_configuration: GlobalConfig,
+        actual_configuration: Config,
         /// Following anchoring configuration.
-        following_configuration: GlobalConfig,
+        following_configuration: Config,
     },
 }
 
@@ -88,7 +88,7 @@ impl BtcAnchoringState {
     }
 
     /// Returns the actual anchoring configuration.
-    pub fn actual_configuration(&self) -> &GlobalConfig {
+    pub fn actual_configuration(&self) -> &Config {
         match self {
             BtcAnchoringState::Regular {
                 ref actual_configuration,
@@ -101,7 +101,7 @@ impl BtcAnchoringState {
     }
 
     /// Returns the following anchoring configuration if anchoring is in transition state.
-    pub fn following_configuration(&self) -> Option<&GlobalConfig> {
+    pub fn following_configuration(&self) -> Option<&Config> {
         match self {
             BtcAnchoringState::Regular { .. } => None,
             BtcAnchoringState::Transition {

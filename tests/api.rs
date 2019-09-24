@@ -13,17 +13,14 @@
 
 use exonum::helpers::Height;
 use exonum_btc_anchoring::{
-    api::{HeightQuery, PublicApi},
+    api::PublicApi,
     blockchain::BtcAnchoringSchema,
     btc,
-    config::GlobalConfig,
-    test_helpers::testkit::{
-        AnchoringTestKit, AnchoringTestKit2, ValidateProof, ANCHORING_INSTANCE_NAME,
-    },
+    test_helpers::testkit::{AnchoringTestKit, ValidateProof, ANCHORING_INSTANCE_NAME},
 };
 
 fn find_transaction(
-    anchoring_testkit: &AnchoringTestKit2,
+    anchoring_testkit: &AnchoringTestKit,
     height: Option<Height>,
 ) -> Option<btc::Transaction> {
     let api = anchoring_testkit.inner.api();
@@ -37,7 +34,7 @@ fn find_transaction(
 
 #[test]
 fn actual_address() {
-    let mut anchoring_testkit = AnchoringTestKit2::default();
+    let mut anchoring_testkit = AnchoringTestKit::default();
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
         .anchoring_interval;
@@ -99,7 +96,7 @@ fn actual_address() {
 #[test]
 fn find_transaction_regular() {
     let anchoring_interval = 4;
-    let mut anchoring_testkit = AnchoringTestKit2::new(4, 70_000, anchoring_interval);
+    let mut anchoring_testkit = AnchoringTestKit::new(4, 70_000, anchoring_interval);
     // Create a several anchoring transactions
     for i in 1..=5 {
         anchoring_testkit.inner.create_block_with_transactions(
@@ -234,11 +231,11 @@ fn find_transaction_regular() {
 //     );
 // }
 
-// Tries to get a proof of existence for an anchored block.
+// Try to get a proof of existence for an anchored block.
 #[test]
 fn block_header_proof() {
     let anchoring_interval = 4;
-    let mut anchoring_testkit = AnchoringTestKit2::new(4, 70_000, anchoring_interval);
+    let mut anchoring_testkit = AnchoringTestKit::new(4, 70_000, anchoring_interval);
     // Create a several anchoring transactions
     for i in 1..=5 {
         anchoring_testkit.inner.create_block_with_transactions(
@@ -254,12 +251,12 @@ fn block_header_proof() {
 
     let api = anchoring_testkit.inner.api();
     let cfg = anchoring_testkit.inner.consensus_config();
-    // Checks proof for the genesis block.
+    // Check proof for the genesis block.
     let genesis_block_proof = api.block_header_proof(Height(0)).unwrap();
     let value = genesis_block_proof.validate(&cfg).unwrap();
     assert_eq!(value.0, 0);
     assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(0)));
-    // Checks proof for the second block.
+    // Check proof for the second block.
     let second_block_proof = api.block_header_proof(Height(4)).unwrap();
     let value = second_block_proof.validate(&cfg).unwrap();
     assert_eq!(value.0, 4);

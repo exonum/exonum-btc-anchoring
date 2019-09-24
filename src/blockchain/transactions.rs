@@ -17,16 +17,11 @@
 pub use crate::proto::TxSignature;
 
 use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
-use exonum::runtime::{
-    rust::{
-        TransactionContext,
-    },
-    Caller, DispatcherError, ExecutionError,
-};
+use exonum::runtime::{rust::TransactionContext, Caller, DispatcherError, ExecutionError};
 use exonum_derive::exonum_service;
 use log::{info, trace};
 
-use crate::{btc, config::GlobalConfig, BtcAnchoringService};
+use crate::{btc, BtcAnchoringService};
 
 use super::{data_layout::TxInputId, errors::Error, BtcAnchoringSchema};
 

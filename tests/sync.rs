@@ -21,7 +21,7 @@ use exonum_btc_anchoring::{
     rpc::TransactionInfo as BtcTransactionInfo,
     test_helpers::{
         rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest},
-        testkit::{AnchoringTestKit, ANCHORING_INSTANCE_NAME},
+        testkit::ANCHORING_INSTANCE_NAME,
     },
 };
 

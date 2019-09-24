@@ -14,7 +14,7 @@
 
 //! BTC anchoring configuration data types.
 
-pub use crate::proto::Config as GlobalConfig;
+pub use crate::proto::Config;
 
 use bitcoin::network::constants::Network;
 use btc_transaction_utils::{
@@ -25,14 +25,10 @@ use exonum::{
     crypto::PublicKey,
     helpers::{Height, ValidateInput},
 };
-use serde_derive::{Deserialize, Serialize};
-
-use std::collections::HashMap;
 
 use crate::{
-    btc::{self, Address, PrivateKey},
+    btc::{self, Address},
     proto::AnchoringKeys,
-    rpc::BitcoinRpcConfig,
 };
 
 /// Returns sufficient number of keys for the given validators number.
@@ -40,7 +36,7 @@ pub fn byzantine_quorum(total: usize) -> usize {
     exonum::node::state::State::byzantine_majority_count(total)
 }
 
-impl Default for GlobalConfig {
+impl Default for Config {
     fn default() -> Self {
         Self {
             network: Network::Testnet,
@@ -52,8 +48,8 @@ impl Default for GlobalConfig {
     }
 }
 
-impl GlobalConfig {
-    /// Creates global configuration instance with default parameters for the
+impl Config {
+    /// Create Bitcoin anchoring config instance with default parameters for the
     /// given Bitcoin network and public keys of participants.
     pub fn with_public_keys(
         network: Network,
@@ -112,7 +108,7 @@ impl GlobalConfig {
     }
 }
 
-impl ValidateInput for GlobalConfig {
+impl ValidateInput for Config {
     type Error = failure::Error;
 
     fn validate(&self) -> Result<(), Self::Error> {
@@ -132,26 +128,6 @@ impl ValidateInput for GlobalConfig {
         }
         Ok(())
     }
-}
-
-/// Local part of anchoring service configuration stored on the local machine.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct LocalConfig {
-    /// Bitcoin RPC client configuration, which used to send an anchoring transactions
-    /// to the Bitcoin network.
-    pub rpc: Option<BitcoinRpcConfig>,
-    /// Set of private keys for each anchoring address.
-    #[serde(with = "flatten_keypairs")]
-    pub private_keys: HashMap<btc::PublicKey, PrivateKey>,
-}
-
-/// BTC anchoring configuration.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct Config {
-    /// Public part of the configuration stored in the blockchain.
-    pub global: GlobalConfig,
-    /// Local part of the configuration stored on the local machine.
-    pub local: LocalConfig,
 }
 
 mod flatten_keypairs {
@@ -211,11 +187,12 @@ mod tests {
     use bitcoin::network::constants::Network;
     use btc_transaction_utils::test_data::secp_gen_keypair;
 
-    use super::{GlobalConfig, LocalConfig};
-    use crate::{proto::AnchoringKeys, rpc::BitcoinRpcConfig};
+    use crate::proto::AnchoringKeys;
+
+    use super::Config;
 
     #[test]
-    fn test_global_config() {
+    fn test_config_serde() {
         let public_keys = (0..4)
             .map(|_| AnchoringKeys {
                 bitcoin_key: secp_gen_keypair(Network::Bitcoin).0.into(),
@@ -223,38 +200,16 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        let config = GlobalConfig::with_public_keys(Network::Bitcoin, public_keys).unwrap();
+        let config = Config::with_public_keys(Network::Bitcoin, public_keys).unwrap();
         assert_eq!(config.redeem_script().content().quorum, 3);
 
         let json = serde_json::to_value(&config).unwrap();
-        let config2: GlobalConfig = ::serde_json::from_value(json).unwrap();
+        let config2: Config = serde_json::from_value(json).unwrap();
         assert_eq!(config2, config);
     }
 
     #[test]
-    fn test_local_config() {
-        let cfg_str = r#"
-            [rpc]
-            host = "http://localhost"
-            [[private_keys]]
-            public_key = '03c1e6b6c221b4794df136c26def65b084455bbd2f3b3b80f8aae8629acbdf5cde'
-            private_key = 'L58cq7TgbA6RpJ1KGsj9h5sfXuAeY6GqA197Qrpepw3boRdXqYBS'
-        "#;
-
-        let local_config: LocalConfig = ::toml::from_str(cfg_str).unwrap();
-        assert_eq!(
-            local_config.rpc.unwrap(),
-            BitcoinRpcConfig {
-                host: String::from("http://localhost"),
-                username: None,
-                password: None,
-            }
-        );
-        assert!(local_config.private_keys.len() == 1);
-    }
-
-    #[test]
-    fn test_global_config_anchoring_height() {
+    fn test_config_anchoring_height() {
         let public_keys = (0..4)
             .map(|_| AnchoringKeys {
                 bitcoin_key: secp_gen_keypair(Network::Bitcoin).0.into(),
@@ -262,7 +217,7 @@ mod tests {
             })
             .collect::<Vec<_>>();
 
-        let mut config = GlobalConfig::with_public_keys(Network::Bitcoin, public_keys).unwrap();
+        let mut config = Config::with_public_keys(Network::Bitcoin, public_keys).unwrap();
         config.anchoring_interval = 1000;
 
         assert_eq!(config.previous_anchoring_height(Height(0)), Height(0));
@@ -282,5 +237,5 @@ mod tests {
         );
     }
 
-    // TODO test validation of the global config
+    // TODO test validation of the Bitcoin anchoring config
 }
