@@ -212,10 +212,9 @@ impl AnchoringTestKit {
 
         let local = locals[0].clone();
         let private_keys = Arc::new(RwLock::new(local.private_keys));
-        let service = BtcAnchoringService::new(private_keys.clone(), rpc);
 
         let testkit = TestKitBuilder::validator()
-            .with_service(InstanceCollection::new(service).with_instance(
+            .with_service(InstanceCollection::new(BtcAnchoringService).with_instance(
                 ANCHORING_INSTANCE_ID,
                 ANCHORING_INSTANCE_NAME,
                 global,
@@ -657,12 +656,11 @@ impl AnchoringTestKit2 {
             total_funds,
         ));
 
-        let anchoring_service = BtcAnchoringService::new(anchoring_nodes.key_pool.clone(), None);
         let inner = TestKitBuilder::validator()
             .with_keys(validator_keys)
             .with_logger()
             .with_service(SimpleSupervisor)
-            .with_service(InstanceCollection::new(anchoring_service).with_instance(
+            .with_service(InstanceCollection::new(BtcAnchoringService).with_instance(
                 ANCHORING_INSTANCE_ID,
                 ANCHORING_INSTANCE_NAME,
                 anchoring_config,

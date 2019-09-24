@@ -36,7 +36,6 @@ use crate::{
     btc::{PrivateKey, PublicKey},
     config::GlobalConfig,
     proto,
-    rpc::BtcRelay,
 };
 
 /// Set of bitcoin private keys for corresponding public keys.
@@ -46,35 +45,13 @@ pub(crate) type KeyPool = Arc<RwLock<HashMap<PublicKey, PrivateKey>>>;
 #[derive(ServiceFactory)]
 #[exonum(
     proto_sources = "proto",
-    service_constructor = "Self::create_instance",
     implements("Transactions", "Configure<Params = GlobalConfig>")
 )]
-pub struct BtcAnchoringService {
-    private_keys: KeyPool,
-    btc_relay: Option<Arc<dyn BtcRelay>>,
-}
+pub struct BtcAnchoringService;
 
 impl std::fmt::Debug for BtcAnchoringService {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         f.debug_struct("BtcAnchoringService").finish()
-    }
-}
-
-impl BtcAnchoringService {
-    /// Creates a new btc anchoring service instance.
-    pub fn new(private_keys: KeyPool, btc_relay: Option<Arc<dyn BtcRelay>>) -> Self {
-        Self {
-            private_keys,
-            btc_relay,
-        }
-    }
-
-    fn create_instance(&self) -> Box<dyn Service> {
-        let instance = Self {
-            private_keys: self.private_keys.clone(),
-            btc_relay: self.btc_relay.clone(),
-        };
-        Box::new(instance)
     }
 }
 
