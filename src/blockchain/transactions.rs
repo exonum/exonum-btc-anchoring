@@ -19,7 +19,6 @@ pub use crate::proto::TxSignature;
 use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
 use exonum::runtime::{
     rust::{
-        interfaces::{verify_caller_is_supervisor, Configure},
         TransactionContext,
     },
     Caller, DispatcherError, ExecutionError,
@@ -62,14 +61,14 @@ impl Transactions for BtcAnchoringService {
             .verify_caller(Caller::author)
             .ok_or(DispatcherError::UnauthorizedCaller)?;
 
-        let tx = &arg.transaction;
+        let proposed_tx = &arg.transaction;
         let schema = BtcAnchoringSchema::new(context.instance.name, fork);
-        // Checks that the number of signatures is sufficient to spend.
+        // Check that the number of signatures is sufficient to spend.
         if schema
             .anchoring_transactions_chain()
             .last()
             .map(|tx| tx.id())
-            == Some(tx.id())
+            == Some(proposed_tx.id())
         {
             return Ok(());
         }
@@ -79,7 +78,7 @@ impl Transactions for BtcAnchoringService {
             .ok_or(Error::AnchoringUnnecessary)?
             .map_err(Error::anchoring_builder_error)?;
 
-        if expected_transaction.id() != tx.id() {
+        if expected_transaction.id() != proposed_tx.id() {
             return Err(Error::UnexpectedAnchoringProposal).map_err(From::from);
         }
 
@@ -93,13 +92,13 @@ impl Transactions for BtcAnchoringService {
         let redeem_script_content = redeem_script.content();
 
         let input_signer = InputSigner::new(redeem_script.clone());
-        // Checks signature content.
+        // Check signature content.
         let input_signature_ref = arg.input_signature.as_ref();
         let input_idx = arg.input as usize;
         let input_tx = expected_inputs.get(input_idx).ok_or(Error::NoSuchInput)?;
 
         let verification_result = input_signer.verify_input(
-            TxInRef::new(tx.as_ref(), arg.input as usize),
+            TxInRef::new(proposed_tx.as_ref(), arg.input as usize),
             input_tx.as_ref(),
             &public_key.0,
             input_signature_ref,
@@ -112,13 +111,13 @@ impl Transactions for BtcAnchoringService {
         let input_id = arg.input_id();
         let mut input_signatures = schema.input_signatures(&input_id, &redeem_script);
         if input_signatures.len() != redeem_script_content.quorum {
-            // Adds signature to schema.
+            // Add signature to schema.
             input_signatures.insert(anchoring_node_id, arg.input_signature.clone().into());
             schema
                 .transaction_signatures()
                 .put(&input_id, input_signatures);
-            // Tries to finalize transaction.
-            let mut tx: btc::Transaction = tx.clone();
+            // Try to finalize transaction.
+            let mut finalized_tx: btc::Transaction = proposed_tx.clone();
             for index in 0..expected_inputs.len() {
                 let input_id = TxInputId::new(arg.transaction.id(), index as u32);
                 let input_signatures = schema.input_signatures(&input_id, &redeem_script);
@@ -128,68 +127,23 @@ impl Transactions for BtcAnchoringService {
                 }
 
                 input_signer.spend_input(
-                    &mut tx.0.input[index],
+                    &mut finalized_tx.0.input[index],
                     input_signatures
                         .into_iter()
                         .map(|bytes| InputSignature::from_bytes(bytes).unwrap()),
                 );
             }
 
-            let payload = tx.anchoring_metadata().unwrap().1;
+            let payload = finalized_tx.anchoring_metadata().unwrap().1;
 
             info!("====== ANCHORING ======");
-            info!("txid: {}", tx.id().to_hex());
+            info!("txid: {}", finalized_tx.id().to_hex());
             info!("height: {}", payload.block_height);
             info!("hash: {}", payload.block_hash.to_hex());
-            info!("balance: {}", tx.0.output[0].value);
-            trace!("Anchoring txhex: {}", tx.to_string());
-
-            // TODO Rewrite in a simpler way to understand.
-            if let Some(unspent_funding_tx) = schema.unspent_funding_transaction() {
-                schema
-                    .spent_funding_transactions()
-                    .put(&unspent_funding_tx.id(), unspent_funding_tx);
-            }
+            info!("balance: {}", finalized_tx.0.output[0].value);
+            trace!("Anchoring txhex: {}", finalized_tx.to_string());
             // Add finalized transaction to the tail of anchoring transactions.
-            schema.push_anchoring_transaction(tx);
-        }
-        Ok(())
-    }
-}
-
-impl Configure for BtcAnchoringService {
-    type Params = GlobalConfig;
-
-    fn verify_config(
-        &self,
-        context: TransactionContext,
-        _params: Self::Params,
-    ) -> Result<(), ExecutionError> {
-        context
-            .verify_caller(verify_caller_is_supervisor)
-            .ok_or(DispatcherError::UnauthorizedCaller)?;
-        // TODO Implement reasonable parameters verification.
-        Ok(())
-    }
-
-    fn apply_config(
-        &self,
-        context: TransactionContext,
-        params: Self::Params,
-    ) -> Result<(), ExecutionError> {
-        let (_, fork) = context
-            .verify_caller(verify_caller_is_supervisor)
-            .ok_or(DispatcherError::UnauthorizedCaller)?;
-
-        let schema = BtcAnchoringSchema::new(context.instance.name, fork);
-        if schema.actual_configuration().anchoring_address() == params.anchoring_address() {
-            // There are no changes in the anchoring address, so we just apply the config
-            // immediately.
-            schema.actual_config_entry().set(params);
-        } else {
-            // Set the config as the next one, which will become an actual after the transition
-            // of the anchoring chain to the following address.
-            schema.following_config_entry().set(params);
+            schema.push_anchoring_transaction(finalized_tx);
         }
         Ok(())
     }

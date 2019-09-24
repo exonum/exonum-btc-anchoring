@@ -110,6 +110,7 @@ pub struct Config {
     pub anchoring_interval: u64,
     /// Fee per byte in satoshis.
     pub transaction_fee: u64,
+    // TODO remove funding transaction from the config.
     /// Funding transaction.
     pub funding_transaction: Option<btc::Transaction>,
 }

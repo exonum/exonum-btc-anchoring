@@ -83,6 +83,12 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         self.access.get_object(self.index_name("following_config"))
     }
 
+    /// May contain unspent funding transaction for the actual configuration.
+    pub fn unspent_funding_transaction_entry(&self) -> RefMut<Entry<T, Transaction>> {
+        self.access
+            .get_object(self.index_name("unspent_funding_transaction"))
+    }
+
     /// Returns hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
         vec![
@@ -138,7 +144,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
     ) -> Option<Result<(Transaction, Vec<Transaction>), BuilderError>> {
         let config = actual_state.actual_configuration();
         let unspent_anchoring_transaction = self.anchoring_transactions_chain().last();
-        let unspent_funding_transaction = self.unspent_funding_transaction();
+        let unspent_funding_transaction = self.unspent_funding_transaction_entry().get();
 
         let mut builder = BtcAnchoringTransactionBuilder::new(&config.redeem_script());
         // First anchoring transaction doesn't have previous.
@@ -199,17 +205,6 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         self.proposed_anchoring_transaction(&actual_state)
     }
 
-    /// Returns the unspent funding transaction if it is exist.
-    pub fn unspent_funding_transaction(&self) -> Option<Transaction> {
-        let tx_candidate = self.actual_configuration().funding_transaction?;
-        let txid = tx_candidate.id();
-        if self.spent_funding_transactions().contains(&txid) {
-            None
-        } else {
-            Some(tx_candidate)
-        }
-    }
-
     /// Returns the height of the latest anchored block.
     pub fn latest_anchored_height(&self) -> Option<Height> {
         let tx = self.anchoring_transactions_chain().last()?;
@@ -223,6 +218,11 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
 
     /// Add a finalized transaction to the tail of the anchoring transactions.
     pub fn push_anchoring_transaction(&self, tx: Transaction) {
+        // An unspent funding transaction is always unconditionally added to the anchoring
+        // transaction proposal, so we can simply move it to the list of spent.
+        if let Some(tx) = self.unspent_funding_transaction_entry().get() {
+            self.spent_funding_transactions().put(&tx.id(), tx);
+        }
         // Special case if we have an active following configuration.
         if let Some(config) = self.following_configuration() {
             // Check that the anchoring transaction is correct.

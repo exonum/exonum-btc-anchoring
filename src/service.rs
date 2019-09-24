@@ -15,10 +15,14 @@
 use exonum::{
     blockchain::Schema as CoreSchema,
     crypto::Hash,
+    helpers::ValidateInput,
     merkledb::{BinaryValue, Fork},
     runtime::{
         api::ServiceApiBuilder,
-        rust::{BeforeCommitContext, Configure, Service},
+        rust::{
+            interfaces::{verify_caller_is_supervisor, Configure},
+            BeforeCommitContext, Service, TransactionContext,
+        },
         DispatcherError, ExecutionError, InstanceDescriptor,
     },
 };
@@ -63,11 +67,15 @@ impl Service for BtcAnchoringService {
         params: Vec<u8>,
     ) -> Result<(), ExecutionError> {
         let config = GlobalConfig::from_bytes(params.into())
+            .and_then(GlobalConfig::into_validated)
             .map_err(DispatcherError::malformed_arguments)?;
 
-        BtcAnchoringSchema::new(instance.name, fork)
-            .actual_config_entry()
-            .set(config);
+        let schema = BtcAnchoringSchema::new(instance.name, fork);
+        // TODO remove this special case.
+        if let Some(ref tx) = config.funding_transaction {
+            schema.unspent_funding_transaction_entry().set(tx.clone());
+        }
+        schema.actual_config_entry().set(config);
         Ok(())
     }
 
@@ -88,5 +96,50 @@ impl Service for BtcAnchoringService {
 
     fn wire_api(&self, builder: &mut ServiceApiBuilder) {
         api::wire(builder);
+    }
+}
+
+impl Configure for BtcAnchoringService {
+    type Params = GlobalConfig;
+
+    fn verify_config(
+        &self,
+        context: TransactionContext,
+        params: Self::Params,
+    ) -> Result<(), ExecutionError> {
+        context
+            .verify_caller(verify_caller_is_supervisor)
+            .ok_or(DispatcherError::UnauthorizedCaller)?;
+            
+        params
+            .validate()
+            .map_err(DispatcherError::malformed_arguments)
+    }
+
+    fn apply_config(
+        &self,
+        context: TransactionContext,
+        params: Self::Params,
+    ) -> Result<(), ExecutionError> {
+        let (_, fork) = context
+            .verify_caller(verify_caller_is_supervisor)
+            .ok_or(DispatcherError::UnauthorizedCaller)?;
+
+        let schema = BtcAnchoringSchema::new(context.instance.name, fork);
+        // TODO remove this special case.
+        if let Some(ref tx) = params.funding_transaction {
+            schema.unspent_funding_transaction_entry().set(tx.clone());
+        }
+
+        if schema.actual_configuration().anchoring_address() == params.anchoring_address() {
+            // There are no changes in the anchoring address, so we just apply the config
+            // immediately.
+            schema.actual_config_entry().set(params);
+        } else {
+            // Set the config as the next one, which will become an actual after the transition
+            // of the anchoring chain to the following address.
+            schema.following_config_entry().set(params);
+        }
+        Ok(())
     }
 }

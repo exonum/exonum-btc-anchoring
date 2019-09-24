@@ -21,7 +21,10 @@ use btc_transaction_utils::{
     multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError},
     p2wsh,
 };
-use exonum::{crypto::PublicKey, helpers::Height};
+use exonum::{
+    crypto::PublicKey,
+    helpers::{Height, ValidateInput},
+};
 use serde_derive::{Deserialize, Serialize};
 
 use std::collections::HashMap;
@@ -48,8 +51,6 @@ impl Default for GlobalConfig {
         }
     }
 }
-
-// TODO implement ValidateInput.
 
 impl GlobalConfig {
     /// Creates global configuration instance with default parameters for the
@@ -108,6 +109,28 @@ impl GlobalConfig {
     /// Returns the nearest height above the given height which must be anchored.
     pub fn following_anchoring_height(&self, current_height: Height) -> Height {
         Height(self.previous_anchoring_height(current_height).0 + self.anchoring_interval)
+    }
+}
+
+impl ValidateInput for GlobalConfig {
+    type Error = failure::Error;
+
+    fn validate(&self) -> Result<(), Self::Error> {
+        // Verify that the redeem script is suitable.
+        let quorum = byzantine_quorum(self.anchoring_keys.len());
+        let redeem_script = RedeemScriptBuilder::with_public_keys(
+            self.anchoring_keys.iter().map(|x| x.bitcoin_key.0),
+        )
+        .quorum(quorum)
+        .to_script()?;
+        // TODO Validate other parameters.
+
+        // TODO remove funding transaction from the config.
+        if let Some(tx) = self.funding_transaction.as_ref() {
+            tx.find_out(&redeem_script.as_ref().to_v0_p2wsh())
+                .ok_or_else(|| failure::format_err!("Funding transaction is unsuitable."))?;
+        }
+        Ok(())
     }
 }
 
@@ -258,4 +281,6 @@ mod tests {
             Height(2000)
         );
     }
+
+    // TODO test validation of the global config
 }
