@@ -18,7 +18,7 @@ use exonum::{
     merkledb::{BinaryValue, Fork},
     runtime::{
         api::ServiceApiBuilder,
-        rust::{AfterCommitContext, BeforeCommitContext, Service},
+        rust::{BeforeCommitContext, Configure, Service},
         DispatcherError, ExecutionError, InstanceDescriptor,
     },
 };
@@ -35,10 +35,8 @@ use crate::{
     blockchain::{BtcAnchoringSchema, Transactions},
     btc::{PrivateKey, PublicKey},
     config::GlobalConfig,
-    handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask},
     proto,
     rpc::BtcRelay,
-    ResultEx,
 };
 
 /// Set of bitcoin private keys for corresponding public keys.
@@ -49,7 +47,7 @@ pub(crate) type KeyPool = Arc<RwLock<HashMap<PublicKey, PrivateKey>>>;
 #[exonum(
     proto_sources = "proto",
     service_constructor = "Self::create_instance",
-    implements("Transactions")
+    implements("Transactions", "Configure<Params = GlobalConfig>")
 )]
 pub struct BtcAnchoringService {
     private_keys: KeyPool,
@@ -109,17 +107,6 @@ impl Service for BtcAnchoringService {
 
         let schema = BtcAnchoringSchema::new(context.instance.name, context.fork);
         schema.anchored_blocks().push(block_header_hash);
-    }
-
-    fn after_commit(&self, context: AfterCommitContext) {
-        let keys = &self.private_keys.read().unwrap();
-        let task = UpdateAnchoringChainTask::new(&context, keys);
-        task.run().log_error();
-        // TODO make this task async via tokio core or something else.
-        if let Some(ref relay) = self.btc_relay.as_ref() {
-            let task = SyncWithBtcRelayTask::new(&context, relay.as_ref());
-            task.run().log_error();
-        }
     }
 
     fn wire_api(&self, builder: &mut ServiceApiBuilder) {

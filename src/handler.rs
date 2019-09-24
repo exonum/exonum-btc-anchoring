@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::runtime::rust::AfterCommitContext;
+use exonum::{
+    merkledb::ObjectHash,
+    runtime::rust::{AfterCommitContext, Transaction},
+};
 
 use btc_transaction_utils::{p2wsh, TxInRef};
 use failure::format_err;
@@ -132,11 +135,22 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                 )
                 .unwrap();
 
-            self.context.broadcast_transaction(TxSignature {
+            log::debug!("Broadcast tx: {:#?} by id {}", proposal, anchoring_node_id);
+
+            let tx = TxSignature {
                 transaction: proposal.clone(),
                 input: index as u32,
                 input_signature: signature.into(),
-            });
+            }
+            .sign(
+                self.context.instance.id,
+                self.context.service_keypair.0,
+                &self.context.service_keypair.1,
+            );
+
+            log::debug!("txid {}", tx.object_hash());
+
+            self.context.broadcast_signed_transaction(tx);
         }
 
         Ok(())

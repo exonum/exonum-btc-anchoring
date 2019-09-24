@@ -14,103 +14,31 @@
 
 //! Error types of the BTC anchoring service.
 
-use exonum::{
-    blockchain::ExecutionError,
-    crypto::{Hash, PublicKey},
-    runtime::ErrorKind,
-};
-
-use failure_derive::Fail;
+use exonum::runtime::ExecutionError;
+use exonum_derive::IntoExecutionError;
 
 use crate::btc;
 
-// TODO Rewrite with the IntoExecutionError.
-
-/// Possible errors during execution of the `Signature` transaction.
-#[derive(Debug, Fail)]
-pub enum SignatureError {
+/// Possible errors during execution of the `sign_input` method.
+#[derive(Debug, IntoExecutionError)]
+pub enum Error {
     /// Received signature is for the incorrect anchoring transaction.
-    #[fail(
-        display = "Received signature is for the incorrect anchoring transaction. Expected: {}. Received: {}.",
-        expected_id, received_id
-    )]
-    Unexpected {
-        /// Expected identifier of the anchoring transaction.
-        expected_id: Hash,
-        /// Actually received identifier of the anchoring transaction.
-        received_id: Hash,
-    },
-    /// Received signature for anchoring transaction while the node is in transition state.
-    #[fail(
-        display = "Received signature for anchoring transaction while the node is in transition state."
-    )]
-    InTransition,
-    /// Bitcoin public key of node with the given identifier is missing.
-    #[fail(
-        display = "Bitcoin public key of node with service key {} is missing.",
-        _0
-    )]
-    MissingPublicKey {
-        /// Validator identifier.
-        service_key: PublicKey,
-    },
-    /// Input with the given index does not exist.
-    #[fail(display = "Input with index {} does not exist.", _0)]
-    NoSuchInput {
-        /// Input index.
-        idx: usize,
-    },
-    /// Signature verification failed.
-    #[fail(display = "Signature verification failed.")]
-    VerificationFailed,
-    /// An error in transaction builder occurred.
-    #[fail(display = "{}", _0)]
-    TxBuilderError(btc::BuilderError),
-    /// An unknown error occurred.
-    #[fail(display = "Unknown error")]
-    UnknownError,
+    UnexpectedAnchoringProposal = 0,
+    /// There is no anchoring transaction proposal for the current blockchain height.
+    AnchoringUnnecessary = 1,
+    /// Transaction author is not authorized to sign anchoring transactions.
+    MissingAnchoringPublicKey = 2,
+    /// Transaction input with the specified index is absent in the anchoring proposal.
+    NoSuchInput = 3,
+    /// The transaction input signature is invalid.
+    InputVerificationFailed = 4,
+    /// An error occurred while creating of the anchoring transaction proposal.
+    AnchoringBuilderError = 5,
 }
 
-/// Error codes for the BTC anchoring transactions.
-#[derive(Debug)]
-pub enum ErrorCode {
-    /// [description](enum.SignatureError.html#variant.Unexpected)
-    Unexpected = 1,
-    /// [description](enum.SignatureError.html#variant.InTransition)
-    InTransition = 2,
-    /// [description](enum.SignatureError.html#variant.MissingPublicKey)
-    MissingPublicKey = 3,
-    /// [description](enum.SignatureError.html#variant.NoSuchInput)
-    NoSuchInput = 4,
-    /// [description](enum.SignatureError.html#variant.VerificationFailed)
-    VerificationFailed = 5,
-    /// [description](enum.SignatureError.html#variant.TxBuilderError)
-    TxBuilderError = 6,
-    /// [description](enum.SignatureError.html#variant.UnknownError)
-    UnknownError = 255,
-}
-
-impl SignatureError {
-    fn code(&self) -> ErrorCode {
-        match self {
-            SignatureError::Unexpected { .. } => ErrorCode::Unexpected,
-            SignatureError::InTransition => ErrorCode::InTransition,
-            SignatureError::MissingPublicKey { .. } => ErrorCode::MissingPublicKey,
-            SignatureError::NoSuchInput { .. } => ErrorCode::NoSuchInput,
-            SignatureError::VerificationFailed => ErrorCode::VerificationFailed,
-            SignatureError::TxBuilderError(..) => ErrorCode::TxBuilderError,
-            _ => ErrorCode::UnknownError,
-        }
-    }
-}
-
-impl From<SignatureError> for ExecutionError {
-    fn from(value: SignatureError) -> Self {
-        Self::new(
-            ErrorKind::Service {
-                code: value.code() as u8,
-            },
-            value.to_string(),
-        )
+impl Error {
+    /// Create an error instance from the anchoring transaction builder error.
+    pub fn anchoring_builder_error(error: btc::BuilderError) -> ExecutionError {
+        (Self::AnchoringBuilderError, error).into()
     }
 }

@@ -15,45 +15,164 @@
 use exonum::helpers::Height;
 use exonum::{explorer::BlockWithTransactions, runtime::ErrorKind};
 use exonum_btc_anchoring::{
-    blockchain::errors::ErrorCode,
+    blockchain::{errors::Error, BtcAnchoringSchema},
     btc::BuilderError,
     config::GlobalConfig,
     test_helpers::testkit::{
-        create_fake_funding_transaction, AnchoringTestKit, ANCHORING_INSTANCE_NAME,
+        create_fake_funding_transaction, AnchoringTestKit, AnchoringTestKit2,
+        ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME,
     },
 };
+use exonum_testkit::simple_supervisor::ConfigPropose;
 
 use matches::assert_matches;
 
-fn assert_tx_error(block: BlockWithTransactions, e: ErrorCode) {
+fn assert_tx_error(block: BlockWithTransactions, e: Error) {
     assert_eq!(
         block[0].status().unwrap_err().kind,
         ErrorKind::Service { code: e as u8 },
     );
 }
 
+fn test_anchoring_config_change<F>(mut config_change_predicate: F)
+where
+    F: FnMut(&mut AnchoringTestKit2, &mut GlobalConfig),
+{
+    let mut anchoring_testkit = AnchoringTestKit2::default();
+    let anchoring_interval = anchoring_testkit
+        .actual_anchoring_config()
+        .anchoring_interval;
+
+    assert!(anchoring_testkit.last_anchoring_tx().is_none());
+    // Establish anchoring transactions chain.
+    anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit
+            .create_signature_txs()
+            .into_iter()
+            .flatten(),
+    );
+
+    // Skip the next anchoring height.
+    anchoring_testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval * 2));
+
+    let last_anchoring_tx = anchoring_testkit.last_anchoring_tx().unwrap();
+    // Remove one of anchoring nodes.
+    let mut new_cfg = anchoring_testkit.actual_anchoring_config();
+    let old_cfg = new_cfg.clone();
+    config_change_predicate(&mut anchoring_testkit, &mut new_cfg);
+
+    // Commit configuration with without last anchoring node.
+    anchoring_testkit.inner.create_block_with_transaction(
+        ConfigPropose::actual_from(anchoring_testkit.inner.height().next())
+            .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone())
+            .into_tx(),
+    );
+
+    // Ensure that the anchoring proposal has input with the our funding transaction.
+    let (anchoring_tx_proposal, previous_anchoring_tx) = anchoring_testkit
+        .anchoring_transaction_proposal()
+        .map(|(tx, inputs)| (tx, inputs[0].clone()))
+        .unwrap();
+
+    // Verify anchoring transaction proposal.
+    {
+        assert_eq!(last_anchoring_tx, previous_anchoring_tx);
+
+        let snapshot = anchoring_testkit.inner.snapshot();
+        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+        assert_eq!(schema.following_configuration().unwrap(), new_cfg);
+        assert_eq!(schema.actual_configuration(), old_cfg);
+
+        let (out_script, payload) = anchoring_tx_proposal.anchoring_metadata().unwrap();
+        // Height for the transition anchoring transaction should be same as in the latest
+        // anchoring transaction.
+        assert_eq!(payload.block_height, Height(0));
+        assert_eq!(&new_cfg.anchoring_out_script(), out_script);
+    }
+
+    // Finalize transition transaction
+    anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit
+            .create_signature_txs()
+            .into_iter()
+            .flatten(),
+    );
+
+    // Verify that the following configuration becomes an actual.
+    let snapshot = anchoring_testkit.inner.snapshot();
+    let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+    assert!(schema.following_configuration().is_none());
+    assert_eq!(schema.actual_configuration(), new_cfg);
+
+    assert_eq!(
+        anchoring_tx_proposal.id(),
+        anchoring_testkit.last_anchoring_tx().unwrap().id()
+    );
+
+    // Verify that we have an anchoring transaction proposal.
+    let anchoring_tx_proposal = anchoring_testkit
+        .anchoring_transaction_proposal()
+        .unwrap()
+        .0;
+    // Verify anchoring transaction metadata
+    let tx_meta = anchoring_tx_proposal.anchoring_metadata().unwrap();
+    assert_eq!(tx_meta.1.block_height, Height(anchoring_interval));
+    assert_eq!(
+        anchoring_testkit
+            .actual_anchoring_config()
+            .anchoring_out_script(),
+        *tx_meta.0
+    );
+}
+
 #[test]
 fn simple() {
-    let validators_num = 4;
-    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
+    let mut anchoring_testkit = AnchoringTestKit2::default();
+    let anchoring_interval = anchoring_testkit
+        .actual_anchoring_config()
+        .anchoring_interval;
 
     assert!(anchoring_testkit.last_anchoring_tx().is_none());
 
     let signatures = anchoring_testkit
-        .create_signature_tx_for_validators(2)
-        .unwrap();
-    anchoring_testkit.create_block_with_transactions(signatures);
-    anchoring_testkit.create_blocks_until(Height(4));
+        .create_signature_txs()
+        .into_iter()
+        .flatten();
+
+    anchoring_testkit
+        .inner
+        .create_block_with_transactions(signatures);
 
     let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
     let tx0_meta = tx0.anchoring_metadata().unwrap();
     assert!(tx0_meta.1.block_height == Height(0));
 
+    anchoring_testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval));
+
+    // Ensure that the anchoring proposal has expected height.
+    assert_eq!(
+        anchoring_testkit
+            .anchoring_transaction_proposal()
+            .unwrap()
+            .0
+            .anchoring_payload()
+            .unwrap()
+            .block_height,
+        Height(anchoring_interval)
+    );
+
     let signatures = anchoring_testkit
-        .create_signature_tx_for_validators(2)
-        .unwrap();
-    anchoring_testkit.create_block_with_transactions(signatures);
-    anchoring_testkit.create_blocks_until(Height(8));
+        .create_signature_txs()
+        .into_iter()
+        .take(3)
+        .flatten();
+    anchoring_testkit
+        .inner
+        .create_block_with_transactions(signatures);
 
     let tx1 = anchoring_testkit.last_anchoring_tx().unwrap();
     let tx1_meta = tx1.anchoring_metadata().unwrap();
@@ -62,123 +181,85 @@ fn simple() {
 
     // script_pubkey should be the same
     assert!(tx0_meta.0 == tx1_meta.0);
-    assert!(tx1_meta.1.block_height == Height(4));
+    assert!(tx1_meta.1.block_height == Height(anchoring_interval));
 }
 
-// #[test]
-// fn additional_funding() {
-//     let validators_num = 4;
-//     let initial_sum = 50000;
-//     let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, initial_sum, 4);
+#[test]
+fn additional_funding() {
+    let mut anchoring_testkit = AnchoringTestKit2::default();
+    let anchoring_interval = anchoring_testkit
+        .actual_anchoring_config()
+        .anchoring_interval;
 
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(2)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(4));
+    assert!(anchoring_testkit.last_anchoring_tx().is_none());
+    // Establish anchoring transactions chain with the initial funding transaction.
+    anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit
+            .create_signature_txs()
+            .into_iter()
+            .flatten(),
+    );
 
-//     let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
-//     let output_val0 = tx0.unspent_value().unwrap();
+    // Add another funding transaction.
+    let mut new_cfg = anchoring_testkit.actual_anchoring_config();
+    let new_funding_tx = create_fake_funding_transaction(&new_cfg.anchoring_address(), 150_000);
+    new_cfg.funding_transaction = Some(new_funding_tx.clone());
+    // Commit configuration with funds.
+    anchoring_testkit.inner.create_block_with_transaction(
+        ConfigPropose::actual_from(anchoring_testkit.inner.height().next())
+            .service_config(ANCHORING_INSTANCE_ID, new_cfg)
+            .into_tx(),
+    );
 
-//     assert!(tx0.0.input.len() == 1);
-//     assert!(output_val0 < initial_sum);
+    // Reach the next anchoring height.
+    anchoring_testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval));
 
-//     //creating new funding tx
-//     let address = anchoring_testkit.anchoring_address();
-//     let new_funding_tx = create_fake_funding_transaction(&address, initial_sum);
+    // Ensure that the anchoring proposal has input with the our funding transaction.
+    assert_eq!(
+        anchoring_testkit
+            .anchoring_transaction_proposal()
+            .unwrap()
+            .1[1],
+        new_funding_tx
+    );
 
-//     let mut proposal = anchoring_testkit.configuration_change_proposal();
-//     let service_configuration = GlobalConfig {
-//         funding_transaction: Some(new_funding_tx),
-//         ..proposal.service_config(BTC_ANCHORING_SERVICE_NAME)
-//     };
+    anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit
+            .create_signature_txs()
+            .into_iter()
+            .take(3)
+            .flatten(),
+    );
 
-//     proposal.set_service_config(BTC_ANCHORING_SERVICE_NAME, service_configuration);
-//     proposal.set_actual_from(Height(6));
-//     anchoring_testkit.commit_configuration_change(proposal);
-//     anchoring_testkit.create_blocks_until(Height(6));
+    let tx1 = anchoring_testkit.last_anchoring_tx().unwrap();
+    let tx1_meta = tx1.anchoring_metadata().unwrap();
 
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(2)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
+    assert!(tx1_meta.1.block_height == Height(anchoring_interval));
+    assert_eq!(tx1.0.input[1].previous_output.txid, new_funding_tx.0.txid());
+}
 
-//     let tx1 = anchoring_testkit.last_anchoring_tx().unwrap();
-//     let output_val1 = tx1.unspent_value().unwrap();
-//     let tx1_meta = tx1.anchoring_metadata().unwrap();
-//     assert!(tx1_meta.1.block_height == Height(4));
+#[test]
+fn add_anchoring_node() {
+    test_anchoring_config_change(|anchoring_testkit, cfg| {
+        cfg.anchoring_keys.push(anchoring_testkit.add_node());
+    })
+}
 
-//     assert!(tx1.0.input.len() == 2);
+#[test]
+fn remove_anchoring_node() {
+    test_anchoring_config_change(|_anchoring_testkit, cfg| {
+        cfg.anchoring_keys.pop();
+    })
+}
 
-//     assert!(output_val1 > output_val0);
-//     assert!(output_val1 > initial_sum);
-// }
-
-// #[test]
-// fn address_changed() {
-//     let validators_num = 5;
-//     let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 150_000, 4);
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(4));
-
-//     let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
-//     let tx0_meta = tx0.anchoring_metadata().unwrap();
-
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(4)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(6));
-
-//     // removing one of validators
-//     let mut proposal = anchoring_testkit.drop_validator_proposal();
-//     proposal.set_actual_from(Height(16));
-//     anchoring_testkit.commit_configuration_change(proposal);
-//     anchoring_testkit.create_blocks_until(Height(7));
-//     anchoring_testkit.renew_address();
-
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(10));
-
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(12));
-
-//     let tx_transition = anchoring_testkit.last_anchoring_tx().unwrap();
-
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(16));
-
-//     let tx_same = anchoring_testkit.last_anchoring_tx().unwrap();
-//     // anchoring is paused till new config
-//     assert!(tx_transition == tx_same);
-
-//     anchoring_testkit.create_blocks_until(Height(17));
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(20));
-
-//     let tx_changed = anchoring_testkit.last_anchoring_tx().unwrap();
-//     let tx_changed_meta = tx_changed.anchoring_metadata().unwrap();
-
-//     assert!(tx_transition != tx_changed);
-//     // script_pubkey should *not* be the same
-//     assert!(tx0_meta.0 != tx_changed_meta.0);
-// }
+#[test]
+fn change_anchoring_node() {
+    test_anchoring_config_change(|anchoring_testkit, cfg| {
+        cfg.anchoring_keys[0].bitcoin_key = anchoring_testkit.gen_bitcoin_key();
+    })
+}
 
 // #[test]
 // fn address_changed_and_new_funding_tx() {

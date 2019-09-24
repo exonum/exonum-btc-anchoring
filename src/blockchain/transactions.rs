@@ -17,13 +17,19 @@
 pub use crate::proto::TxSignature;
 
 use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
-use exonum::runtime::{rust::TransactionContext, Caller, DispatcherError, ExecutionError};
+use exonum::runtime::{
+    rust::{
+        interfaces::{verify_caller_is_supervisor, Configure},
+        TransactionContext,
+    },
+    Caller, DispatcherError, ExecutionError,
+};
 use exonum_derive::exonum_service;
 use log::{info, trace};
 
-use crate::{btc, BtcAnchoringService};
+use crate::{btc, config::GlobalConfig, BtcAnchoringService};
 
-use super::{data_layout::TxInputId, errors::SignatureError, BtcAnchoringSchema};
+use super::{data_layout::TxInputId, errors::Error, BtcAnchoringSchema};
 
 impl TxSignature {
     /// Returns identifier of the signed transaction input.
@@ -70,24 +76,19 @@ impl Transactions for BtcAnchoringService {
 
         let (expected_transaction, expected_inputs) = schema
             .actual_proposed_anchoring_transaction()
-            .ok_or(SignatureError::InTransition)?
-            .map_err(SignatureError::TxBuilderError)?;
+            .ok_or(Error::AnchoringUnnecessary)?
+            .map_err(Error::anchoring_builder_error)?;
 
         if expected_transaction.id() != tx.id() {
-            return Err(SignatureError::Unexpected {
-                expected_id: expected_transaction.id(),
-                received_id: tx.id(),
-            }
-            .into());
+            return Err(Error::UnexpectedAnchoringProposal).map_err(From::from);
         }
 
         let actual_state = schema.actual_state();
         let (anchoring_node_id, public_key) = actual_state
             .actual_configuration()
             .find_bitcoin_key(&author)
-            .ok_or_else(|| SignatureError::MissingPublicKey {
-                service_key: author,
-            })?;
+            .ok_or(Error::MissingAnchoringPublicKey)?;
+
         let redeem_script = actual_state.actual_configuration().redeem_script();
         let redeem_script_content = redeem_script.content();
 
@@ -95,10 +96,7 @@ impl Transactions for BtcAnchoringService {
         // Checks signature content.
         let input_signature_ref = arg.input_signature.as_ref();
         let input_idx = arg.input as usize;
-        let input_tx = match expected_inputs.get(input_idx) {
-            Some(input_tx) => input_tx,
-            _ => return Err(SignatureError::NoSuchInput { idx: input_idx }.into()),
-        };
+        let input_tx = expected_inputs.get(input_idx).ok_or(Error::NoSuchInput)?;
 
         let verification_result = input_signer.verify_input(
             TxInRef::new(tx.as_ref(), arg.input as usize),
@@ -108,7 +106,7 @@ impl Transactions for BtcAnchoringService {
         );
 
         if verification_result.is_err() {
-            return Err(SignatureError::VerificationFailed.into());
+            return Err(Error::InputVerificationFailed).map_err(From::from);
         }
 
         let input_id = arg.input_id();
@@ -146,13 +144,52 @@ impl Transactions for BtcAnchoringService {
             info!("balance: {}", tx.0.output[0].value);
             trace!("Anchoring txhex: {}", tx.to_string());
 
-            // Adds finalized transaction to the tail of anchoring transactions.
-            schema.anchoring_transactions_chain().push(tx);
+            // TODO Rewrite in a simpler way to understand.
             if let Some(unspent_funding_tx) = schema.unspent_funding_transaction() {
                 schema
                     .spent_funding_transactions()
                     .put(&unspent_funding_tx.id(), unspent_funding_tx);
             }
+            // Add finalized transaction to the tail of anchoring transactions.
+            schema.push_anchoring_transaction(tx);
+        }
+        Ok(())
+    }
+}
+
+impl Configure for BtcAnchoringService {
+    type Params = GlobalConfig;
+
+    fn verify_config(
+        &self,
+        context: TransactionContext,
+        _params: Self::Params,
+    ) -> Result<(), ExecutionError> {
+        context
+            .verify_caller(verify_caller_is_supervisor)
+            .ok_or(DispatcherError::UnauthorizedCaller)?;
+        // TODO Implement reasonable parameters verification.
+        Ok(())
+    }
+
+    fn apply_config(
+        &self,
+        context: TransactionContext,
+        params: Self::Params,
+    ) -> Result<(), ExecutionError> {
+        let (_, fork) = context
+            .verify_caller(verify_caller_is_supervisor)
+            .ok_or(DispatcherError::UnauthorizedCaller)?;
+
+        let schema = BtcAnchoringSchema::new(context.instance.name, fork);
+        if schema.actual_configuration().anchoring_address() == params.anchoring_address() {
+            // There are no changes in the anchoring address, so we just apply the config
+            // immediately.
+            schema.actual_config_entry().set(params);
+        } else {
+            // Set the config as the next one, which will become an actual after the transition
+            // of the anchoring chain to the following address.
+            schema.following_config_entry().set(params);
         }
         Ok(())
     }

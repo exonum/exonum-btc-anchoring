@@ -150,7 +150,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
                 let current_script_pubkey = &tx.0.output[0].script_pubkey;
                 let outgoing_script_pubkey = &actual_state.script_pubkey();
                 if current_script_pubkey == outgoing_script_pubkey {
-                    trace!("Awaiting for new configuration to become actual.");
+                    trace!("Awaiting for new configuration to become an actual.");
                     return None;
                 } else {
                     trace!(
@@ -191,7 +191,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         Some(builder.create())
     }
 
-    /// Returns the proposal of next anchoring transaction for the actual anchoring state.
+    /// Return the proposal of the next anchoring transaction for the actual anchoring state.
     pub fn actual_proposed_anchoring_transaction(
         &self,
     ) -> Option<Result<(Transaction, Vec<Transaction>), BuilderError>> {
@@ -219,5 +219,27 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
                 .1
                 .block_height,
         )
+    }
+
+    /// Add a finalized transaction to the tail of the anchoring transactions.
+    pub fn push_anchoring_transaction(&self, tx: Transaction) {
+        // Special case if we have an active following configuration.
+        if let Some(config) = self.following_configuration() {
+            // Check that the anchoring transaction is correct.
+            let tx_out_script = tx
+                .anchoring_metadata()
+                .expect("Unable to find metadata in the anchoring transaction.")
+                .0;
+            // If a following config is exist, then the anchoring transaction's output should have
+            // same script as in the following config.
+            assert!(
+                config.anchoring_out_script() == *tx_out_script,
+                "Malformed output address in the anchoring transaction"
+            );
+            // If preconditions are correct, just reassign the config as an actual.
+            self.following_config_entry().remove();
+            self.actual_config_entry().set(config);
+        }
+        self.anchoring_transactions_chain().push(tx);
     }
 }

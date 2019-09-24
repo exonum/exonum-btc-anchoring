@@ -17,17 +17,19 @@ use exonum_btc_anchoring::{
     blockchain::BtcAnchoringSchema,
     btc,
     config::GlobalConfig,
-    test_helpers::testkit::{AnchoringTestKit, ValidateProof, ANCHORING_INSTANCE_NAME},
+    test_helpers::testkit::{
+        AnchoringTestKit, AnchoringTestKit2, ValidateProof, ANCHORING_INSTANCE_NAME,
+    },
 };
 
 fn find_transaction(
-    anchoring_testkit: &AnchoringTestKit,
+    anchoring_testkit: &AnchoringTestKit2,
     height: Option<Height>,
 ) -> Option<btc::Transaction> {
-    let api = anchoring_testkit.api();
+    let api = anchoring_testkit.inner.api();
     api.find_transaction(height).unwrap().map(|proof| {
         proof
-            .validate(&anchoring_testkit.consensus_config())
+            .validate(&anchoring_testkit.inner.consensus_config())
             .unwrap()
             .1
     })
@@ -35,21 +37,29 @@ fn find_transaction(
 
 #[test]
 fn actual_address() {
-    let validators_num = 4;
-    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
+    let mut anchoring_testkit = AnchoringTestKit2::default();
+    let anchoring_interval = anchoring_testkit
+        .actual_anchoring_config()
+        .anchoring_interval;
 
     assert!(anchoring_testkit.last_anchoring_tx().is_none());
 
-    let signatures = anchoring_testkit
-        .create_signature_tx_for_validators(2)
-        .unwrap();
-    anchoring_testkit.create_block_with_transactions(signatures);
-    anchoring_testkit.create_blocks_until(Height(4));
+    anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit
+            .create_signature_txs()
+            .into_iter()
+            .flatten(),
+    );
+    anchoring_testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval));
 
-    let anchoring_api = anchoring_testkit.api();
+    let anchoring_api = anchoring_testkit.inner.api();
     assert_eq!(
         anchoring_api.actual_address().unwrap(),
-        anchoring_testkit.anchoring_address()
+        anchoring_testkit
+            .actual_anchoring_config()
+            .anchoring_address()
     );
 }
 
@@ -88,25 +98,22 @@ fn actual_address() {
 
 #[test]
 fn find_transaction_regular() {
-    let validators_num = 4;
-    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
-
-    assert!(anchoring_testkit.last_anchoring_tx().is_none());
-
-    // Creates a few anchoring transactions
-    for _ in 0..5 {
-        let signatures = anchoring_testkit
-            .create_signature_tx_for_validators(2)
-            .unwrap();
-        anchoring_testkit.create_block_with_transactions(signatures);
-
-        let next_anchoring_height = anchoring_testkit
-            .actual_anchoring_configuration()
-            .following_anchoring_height(anchoring_testkit.height());
-        anchoring_testkit.create_blocks_until(next_anchoring_height);
+    let anchoring_interval = 4;
+    let mut anchoring_testkit = AnchoringTestKit2::new(4, 70_000, anchoring_interval);
+    // Create a several anchoring transactions
+    for i in 1..=5 {
+        anchoring_testkit.inner.create_block_with_transactions(
+            anchoring_testkit
+                .create_signature_txs()
+                .into_iter()
+                .flatten(),
+        );
+        anchoring_testkit
+            .inner
+            .create_blocks_until(Height(anchoring_interval * i));
     }
 
-    let snapshot = anchoring_testkit.snapshot();
+    let snapshot = anchoring_testkit.inner.snapshot();
     let anchoring_schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
     let tx_chain = anchoring_schema.anchoring_transactions_chain();
 
@@ -230,23 +237,23 @@ fn find_transaction_regular() {
 // Tries to get a proof of existence for an anchored block.
 #[test]
 fn block_header_proof() {
-    let validators_num = 4;
-    let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
-    // Creates a few anchoring transactions
-    for _ in 0..5 {
-        let signatures = anchoring_testkit
-            .create_signature_tx_for_validators(2)
-            .unwrap();
-        anchoring_testkit.create_block_with_transactions(signatures);
-
-        let next_anchoring_height = anchoring_testkit
-            .actual_anchoring_configuration()
-            .following_anchoring_height(anchoring_testkit.height());
-        anchoring_testkit.create_blocks_until(next_anchoring_height);
+    let anchoring_interval = 4;
+    let mut anchoring_testkit = AnchoringTestKit2::new(4, 70_000, anchoring_interval);
+    // Create a several anchoring transactions
+    for i in 1..=5 {
+        anchoring_testkit.inner.create_block_with_transactions(
+            anchoring_testkit
+                .create_signature_txs()
+                .into_iter()
+                .flatten(),
+        );
+        anchoring_testkit
+            .inner
+            .create_blocks_until(Height(anchoring_interval * i));
     }
 
-    let api = anchoring_testkit.api();
-    let cfg = anchoring_testkit.consensus_config();
+    let api = anchoring_testkit.inner.api();
+    let cfg = anchoring_testkit.inner.consensus_config();
     // Checks proof for the genesis block.
     let genesis_block_proof = api.block_header_proof(Height(0)).unwrap();
     let value = genesis_block_proof.validate(&cfg).unwrap();

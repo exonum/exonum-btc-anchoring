@@ -64,6 +64,7 @@ pub mod api;
 pub mod blockchain;
 pub mod btc;
 pub mod config;
+pub mod handler;
 pub mod rpc;
 pub mod test_helpers;
 
@@ -71,7 +72,6 @@ pub(crate) mod service;
 
 use log::{error, warn};
 
-mod handler;
 mod proto;
 
 pub(crate) trait ResultEx {

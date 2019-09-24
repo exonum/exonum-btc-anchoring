@@ -95,6 +95,11 @@ impl GlobalConfig {
             .unwrap()
     }
 
+    /// Compute the P2WSH output corresponding to the actual redeem script.
+    pub fn anchoring_out_script(&self) -> bitcoin::Script {
+        self.redeem_script().as_ref().to_v0_p2wsh()
+    }
+
     /// Returns the latest height below the given height which must be anchored.
     pub fn previous_anchoring_height(&self, current_height: Height) -> Height {
         Height(current_height.0 - current_height.0 % self.anchoring_interval)
@@ -154,8 +159,8 @@ mod flatten_keypairs {
 
         let keypairs = keys
             .iter()
-            .map(|(public_key, private_key)| BitcoinKeypair {
-                public_key: public_key.clone(),
+            .map(|(&public_key, private_key)| BitcoinKeypair {
+                public_key,
                 private_key: private_key.clone(),
             })
             .collect::<Vec<_>>();

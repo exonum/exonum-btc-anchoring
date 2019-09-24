@@ -48,223 +48,223 @@ fn funding_tx_request() -> TestRequest {
     )
 }
 
-#[test]
-fn normal_operation() {
-    let mut anchoring_testkit = AnchoringTestKit::new_with_fake_rpc(4);
-    let requests = anchoring_testkit.requests();
+// #[test]
+// fn normal_operation() {
+//     let mut anchoring_testkit = AnchoringTestKit::new_with_fake_rpc(4);
+//     let requests = anchoring_testkit.requests();
 
-    let signatures = anchoring_testkit
-        .create_signature_tx_for_validators(2)
-        .unwrap();
+//     let signatures = anchoring_testkit
+//         .create_signature_tx_for_validators(2)
+//         .unwrap();
 
-    let (proposed, _) =
-        BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
-            .actual_proposed_anchoring_transaction()
-            .unwrap()
-            .unwrap();
+//     let (proposed, _) =
+//         BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
+//             .actual_proposed_anchoring_transaction()
+//             .unwrap()
+//             .unwrap();
 
-    let anchoring_tx_id = proposed.id();
-    anchoring_testkit.create_block_with_transactions(signatures);
+//     let anchoring_tx_id = proposed.id();
+//     anchoring_testkit.create_block_with_transactions(signatures);
 
-    // Error while trying fetch info for anchoring tx first time
-    requests.expect(vec![
-        funding_tx_request(),
-        (
-            FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id,
-            },
-            FakeRelayResponse::TransactionInfo(Err(
-                bitcoin_rpc::Error::Memory(String::new()).into()
-            )),
-        ),
-    ]);
+//     // Error while trying fetch info for anchoring tx first time
+//     requests.expect(vec![
+//         funding_tx_request(),
+//         (
+//             FakeRelayRequest::TransactionInfo {
+//                 id: anchoring_tx_id,
+//             },
+//             FakeRelayResponse::TransactionInfo(Err(
+//                 bitcoin_rpc::Error::Memory(String::new()).into()
+//             )),
+//         ),
+//     ]);
 
-    anchoring_testkit.create_blocks_until(Height(2));
+//     anchoring_testkit.create_blocks_until(Height(2));
 
-    let last_tx = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
-        .anchoring_transactions_chain()
-        .last()
-        .unwrap();
+//     let last_tx = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
+//         .anchoring_transactions_chain()
+//         .last()
+//         .unwrap();
 
-    // Should retry
-    requests.expect(vec![
-        funding_tx_request(),
-        (
-            FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id,
-            },
-            FakeRelayResponse::TransactionInfo(Ok(None)),
-        ),
-        (
-            FakeRelayRequest::SendTransaction {
-                transaction: last_tx.clone(),
-            },
-            FakeRelayResponse::SendTransaction(Ok(anchoring_tx_id)),
-        ),
-    ]);
+//     // Should retry
+//     requests.expect(vec![
+//         funding_tx_request(),
+//         (
+//             FakeRelayRequest::TransactionInfo {
+//                 id: anchoring_tx_id,
+//             },
+//             FakeRelayResponse::TransactionInfo(Ok(None)),
+//         ),
+//         (
+//             FakeRelayRequest::SendTransaction {
+//                 transaction: last_tx.clone(),
+//             },
+//             FakeRelayResponse::SendTransaction(Ok(anchoring_tx_id)),
+//         ),
+//     ]);
 
-    anchoring_testkit.create_blocks_until(Height(4));
+//     anchoring_testkit.create_blocks_until(Height(4));
 
-    // Should ask btc network about last anchoring tx every anchoring_height / 2
-    requests.expect(vec![
-        funding_tx_request(),
-        (
-            FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id,
-            },
-            FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
-                content: last_tx.clone(),
-                confirmations: 6,
-            }))),
-        ),
-        funding_tx_request(),
-        (
-            FakeRelayRequest::TransactionInfo {
-                id: anchoring_tx_id,
-            },
-            FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
-                content: last_tx.clone(),
-                confirmations: 6,
-            }))),
-        ),
-    ]);
-    anchoring_testkit.create_blocks_until(Height(8));
-}
+//     // Should ask btc network about last anchoring tx every anchoring_height / 2
+//     requests.expect(vec![
+//         funding_tx_request(),
+//         (
+//             FakeRelayRequest::TransactionInfo {
+//                 id: anchoring_tx_id,
+//             },
+//             FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
+//                 content: last_tx.clone(),
+//                 confirmations: 6,
+//             }))),
+//         ),
+//         funding_tx_request(),
+//         (
+//             FakeRelayRequest::TransactionInfo {
+//                 id: anchoring_tx_id,
+//             },
+//             FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
+//                 content: last_tx.clone(),
+//                 confirmations: 6,
+//             }))),
+//         ),
+//     ]);
+//     anchoring_testkit.create_blocks_until(Height(8));
+// }
 
-#[test]
-fn several_unsynced() {
-    let mut anchoring_testkit = AnchoringTestKit::new_with_fake_rpc(4);
-    let requests = anchoring_testkit.requests();
+// #[test]
+// fn several_unsynced() {
+//     let mut anchoring_testkit = AnchoringTestKit::new_with_fake_rpc(4);
+//     let requests = anchoring_testkit.requests();
 
-    let signatures = anchoring_testkit
-        .create_signature_tx_for_validators(3)
-        .unwrap();
+//     let signatures = anchoring_testkit
+//         .create_signature_tx_for_validators(3)
+//         .unwrap();
 
-    let (proposed_0, _) =
-        BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
-            .actual_proposed_anchoring_transaction()
-            .unwrap()
-            .unwrap();
+//     let (proposed_0, _) =
+//         BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
+//             .actual_proposed_anchoring_transaction()
+//             .unwrap()
+//             .unwrap();
 
-    let tx_id_0 = proposed_0.id();
-    anchoring_testkit.create_block_with_transactions(signatures);
+//     let tx_id_0 = proposed_0.id();
+//     anchoring_testkit.create_block_with_transactions(signatures);
 
-    // Error while trying fetch info for anchoring tx first time
-    requests.expect(vec![
-        funding_tx_request(),
-        (
-            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-            FakeRelayResponse::TransactionInfo(Err(
-                bitcoin_rpc::Error::Memory(String::new()).into()
-            )),
-        ),
-    ]);
+//     // Error while trying fetch info for anchoring tx first time
+//     requests.expect(vec![
+//         funding_tx_request(),
+//         (
+//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
+//             FakeRelayResponse::TransactionInfo(Err(
+//                 bitcoin_rpc::Error::Memory(String::new()).into()
+//             )),
+//         ),
+//     ]);
 
-    anchoring_testkit.create_blocks_until(Height(2));
+//     anchoring_testkit.create_blocks_until(Height(2));
 
-    let last_tx = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
-        .anchoring_transactions_chain()
-        .last()
-        .unwrap();
+//     let last_tx = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
+//         .anchoring_transactions_chain()
+//         .last()
+//         .unwrap();
 
-    // Sync failed
-    requests.expect(vec![
-        funding_tx_request(),
-        (
-            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-            FakeRelayResponse::TransactionInfo(Ok(None)),
-        ),
-        (
-            FakeRelayRequest::SendTransaction {
-                transaction: last_tx.clone(),
-            },
-            FakeRelayResponse::SendTransaction(Ok(tx_id_0)),
-        ),
-    ]);
+//     // Sync failed
+//     requests.expect(vec![
+//         funding_tx_request(),
+//         (
+//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
+//             FakeRelayResponse::TransactionInfo(Ok(None)),
+//         ),
+//         (
+//             FakeRelayRequest::SendTransaction {
+//                 transaction: last_tx.clone(),
+//             },
+//             FakeRelayResponse::SendTransaction(Ok(tx_id_0)),
+//         ),
+//     ]);
 
-    anchoring_testkit.create_blocks_until(Height(5));
+//     anchoring_testkit.create_blocks_until(Height(5));
 
-    let signatures = anchoring_testkit
-        .create_signature_tx_for_validators(3)
-        .unwrap();
+//     let signatures = anchoring_testkit
+//         .create_signature_tx_for_validators(3)
+//         .unwrap();
 
-    let (proposed_1, _) =
-        BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
-            .actual_proposed_anchoring_transaction()
-            .unwrap()
-            .unwrap();
+//     let (proposed_1, _) =
+//         BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
+//             .actual_proposed_anchoring_transaction()
+//             .unwrap()
+//             .unwrap();
 
-    let tx_id_1 = proposed_1.id();
+//     let tx_id_1 = proposed_1.id();
 
-    requests.expect(vec![
-        (
-            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-            FakeRelayResponse::TransactionInfo(Ok(None)),
-        ),
-        funding_tx_request(),
-        (
-            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-            FakeRelayResponse::TransactionInfo(Ok(None)),
-        ),
-        (
-            FakeRelayRequest::SendTransaction {
-                transaction: last_tx.clone(),
-            },
-            FakeRelayResponse::SendTransaction(Err(
-                bitcoin_rpc::Error::Memory(String::new()).into()
-            )),
-        ),
-        (
-            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-            FakeRelayResponse::TransactionInfo(Ok(None)),
-        ),
-        funding_tx_request(),
-        (
-            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-            FakeRelayResponse::TransactionInfo(Ok(None)),
-        ),
-        (
-            FakeRelayRequest::SendTransaction {
-                transaction: last_tx.clone(),
-            },
-            FakeRelayResponse::SendTransaction(Err(
-                bitcoin_rpc::Error::Memory(String::new()).into()
-            )),
-        ),
-    ]);
+//     requests.expect(vec![
+//         (
+//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
+//             FakeRelayResponse::TransactionInfo(Ok(None)),
+//         ),
+//         funding_tx_request(),
+//         (
+//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
+//             FakeRelayResponse::TransactionInfo(Ok(None)),
+//         ),
+//         (
+//             FakeRelayRequest::SendTransaction {
+//                 transaction: last_tx.clone(),
+//             },
+//             FakeRelayResponse::SendTransaction(Err(
+//                 bitcoin_rpc::Error::Memory(String::new()).into()
+//             )),
+//         ),
+//         (
+//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
+//             FakeRelayResponse::TransactionInfo(Ok(None)),
+//         ),
+//         funding_tx_request(),
+//         (
+//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
+//             FakeRelayResponse::TransactionInfo(Ok(None)),
+//         ),
+//         (
+//             FakeRelayRequest::SendTransaction {
+//                 transaction: last_tx.clone(),
+//             },
+//             FakeRelayResponse::SendTransaction(Err(
+//                 bitcoin_rpc::Error::Memory(String::new()).into()
+//             )),
+//         ),
+//     ]);
 
-    anchoring_testkit.create_block_with_transactions(signatures);
+//     anchoring_testkit.create_block_with_transactions(signatures);
 
-    anchoring_testkit.create_blocks_until(Height(9));
-    let signatures = anchoring_testkit
-        .create_signature_tx_for_validators(3)
-        .unwrap();
+//     anchoring_testkit.create_blocks_until(Height(9));
+//     let signatures = anchoring_testkit
+//         .create_signature_tx_for_validators(3)
+//         .unwrap();
 
-    // Should walk to first uncommitted
-    requests.expect(vec![
-        (
-            FakeRelayRequest::TransactionInfo { id: tx_id_1 },
-            FakeRelayResponse::TransactionInfo(Ok(None)),
-        ),
-        (
-            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-            FakeRelayResponse::TransactionInfo(Ok(None)),
-        ),
-        funding_tx_request(),
-        (
-            FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-            FakeRelayResponse::TransactionInfo(Ok(None)),
-        ),
-        (
-            FakeRelayRequest::SendTransaction {
-                transaction: last_tx.clone(),
-            },
-            FakeRelayResponse::SendTransaction(Err(
-                bitcoin_rpc::Error::Memory(String::new()).into()
-            )),
-        ),
-    ]);
+//     // Should walk to first uncommitted
+//     requests.expect(vec![
+//         (
+//             FakeRelayRequest::TransactionInfo { id: tx_id_1 },
+//             FakeRelayResponse::TransactionInfo(Ok(None)),
+//         ),
+//         (
+//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
+//             FakeRelayResponse::TransactionInfo(Ok(None)),
+//         ),
+//         funding_tx_request(),
+//         (
+//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
+//             FakeRelayResponse::TransactionInfo(Ok(None)),
+//         ),
+//         (
+//             FakeRelayRequest::SendTransaction {
+//                 transaction: last_tx.clone(),
+//             },
+//             FakeRelayResponse::SendTransaction(Err(
+//                 bitcoin_rpc::Error::Memory(String::new()).into()
+//             )),
+//         ),
+//     ]);
 
-    anchoring_testkit.create_block_with_transactions(signatures);
-    anchoring_testkit.create_blocks_until(Height(11));
-}
+//     anchoring_testkit.create_block_with_transactions(signatures);
+//     anchoring_testkit.create_blocks_until(Height(11));
+// }
