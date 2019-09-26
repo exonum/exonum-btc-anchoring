@@ -29,15 +29,12 @@ use exonum::{
 use exonum_derive::ServiceFactory;
 use exonum_merkledb::Snapshot;
 
-use std::{
-    collections::HashMap,
-    sync::{Arc, RwLock},
-};
+use std::sync::{Arc, RwLock};
 
 use crate::{
     api,
     blockchain::{BtcAnchoringSchema, Transactions},
-    btc::{PrivateKey, PublicKey},
+    btc::PublicKey,
     config::Config,
     proto,
 };
@@ -67,12 +64,7 @@ impl Service for BtcAnchoringService {
             .and_then(ValidateInput::into_validated)
             .map_err(DispatcherError::malformed_arguments)?;
 
-        let schema = BtcAnchoringSchema::new(instance.name, fork);
-        // TODO remove this special case.
-        if let Some(ref tx) = config.funding_transaction {
-            schema.unspent_funding_transaction_entry().set(tx.clone());
-        }
-        schema.actual_config_entry().set(config);
+        BtcAnchoringSchema::new(instance.name, fork).set_actual_config(config);
         Ok(())
     }
 
@@ -123,15 +115,10 @@ impl Configure for BtcAnchoringService {
             .ok_or(DispatcherError::UnauthorizedCaller)?;
 
         let schema = BtcAnchoringSchema::new(context.instance.name, fork);
-        // TODO remove this special case.
-        if let Some(ref tx) = params.funding_transaction {
-            schema.unspent_funding_transaction_entry().set(tx.clone());
-        }
-
         if schema.actual_configuration().anchoring_address() == params.anchoring_address() {
             // There are no changes in the anchoring address, so we just apply the config
             // immediately.
-            schema.actual_config_entry().set(params);
+            schema.set_actual_config(params);
         } else {
             // Set the config as the next one, which will become an actual after the transition
             // of the anchoring chain to the following address.

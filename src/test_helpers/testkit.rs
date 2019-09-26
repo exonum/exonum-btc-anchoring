@@ -28,8 +28,8 @@ use exonum::{
 };
 use exonum_merkledb::{MapProof, ObjectHash};
 use exonum_testkit::{
-    simple_supervisor::SimpleSupervisor, ApiKind, InstanceCollection, TestKit, TestKitApi,
-    TestKitBuilder, TestNode,
+    simple_supervisor::{ConfigPropose, SimpleSupervisor},
+    ApiKind, InstanceCollection, TestKit, TestKitApi, TestKitBuilder, TestNode,
 };
 use failure::{ensure, format_err};
 use rand::{thread_rng, Rng};
@@ -248,6 +248,34 @@ impl AnchoringTestKit {
             signatures.push(self.create_signature_tx_for_node(node).unwrap());
         }
         signatures
+    }
+
+    /// Creating confirmation transactions with a funding transaction to the current address
+    /// with a given amount of Satoshi.
+    pub fn create_funding_confirmation_txs(
+        &self,
+        satoshis: u64,
+    ) -> (Vec<Verified<AnyTx>>, btc::Transaction) {
+        let funding_transaction = create_fake_funding_transaction(
+            &self.actual_anchoring_config().anchoring_address(),
+            satoshis,
+        );
+        (
+            self.create_funding_confirmation_txs_with(funding_transaction.clone()),
+            funding_transaction,
+        )
+    }
+
+    /// Creating confirmation transactions with a specified funding transaction.
+    pub fn create_funding_confirmation_txs_with(
+        &self,
+        tx: btc::Transaction,
+    ) -> Vec<Verified<AnyTx>> {
+        let mut new_cfg = self.actual_anchoring_config();
+        new_cfg.funding_transaction = Some(tx);
+        vec![ConfigPropose::actual_from(self.inner.height().next())
+            .service_config(ANCHORING_INSTANCE_ID, new_cfg)
+            .into_tx()]
     }
 
     pub fn add_node(&mut self) -> AnchoringKeys {

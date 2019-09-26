@@ -13,7 +13,7 @@
 // limitations under the License.
 
 use exonum::helpers::Height;
-use exonum::{explorer::BlockWithTransactions, runtime::ErrorKind};
+use exonum::{explorer::CommittedTransaction, runtime::ErrorKind};
 use exonum_btc_anchoring::{
     blockchain::{errors::Error, BtcAnchoringSchema},
     btc::BuilderError,
@@ -25,16 +25,11 @@ use exonum_btc_anchoring::{
 };
 use exonum_testkit::simple_supervisor::ConfigPropose;
 
-use matches::assert_matches;
-
-fn assert_tx_error(block: BlockWithTransactions, e: Error) {
-    assert_eq!(
-        block[0].status().unwrap_err().kind,
-        ErrorKind::Service { code: e as u8 },
-    );
+fn assert_tx_error(tx: &CommittedTransaction, e: impl Into<ErrorKind>) {
+    assert_eq!(tx.status().unwrap_err().kind, e.into(),);
 }
 
-fn test_anchoring_config_change<F>(mut config_change_predicate: F)
+fn test_anchoring_config_change<F>(mut config_change_predicate: F) -> AnchoringTestKit
 where
     F: FnMut(&mut AnchoringTestKit, &mut Config),
 {
@@ -70,7 +65,7 @@ where
             .into_tx(),
     );
 
-    // Ensure that the anchoring proposal has input with the our funding transaction.
+    // Extract a previous anchoring transaction from the proposal.
     let (anchoring_tx_proposal, previous_anchoring_tx) = anchoring_testkit
         .anchoring_transaction_proposal()
         .map(|(tx, inputs)| (tx, inputs[0].clone()))
@@ -125,6 +120,8 @@ where
             .anchoring_out_script(),
         *tx_meta.0
     );
+
+    anchoring_testkit
 }
 
 #[test]
@@ -201,15 +198,8 @@ fn additional_funding() {
     );
 
     // Add another funding transaction.
-    let mut new_cfg = anchoring_testkit.actual_anchoring_config();
-    let new_funding_tx = create_fake_funding_transaction(&new_cfg.anchoring_address(), 150_000);
-    new_cfg.funding_transaction = Some(new_funding_tx.clone());
-    // Commit configuration with funds.
-    anchoring_testkit.inner.create_block_with_transaction(
-        ConfigPropose::actual_from(anchoring_testkit.inner.height().next())
-            .service_config(ANCHORING_INSTANCE_ID, new_cfg)
-            .into_tx(),
-    );
+    let (txs, new_funding_tx) = anchoring_testkit.create_funding_confirmation_txs(150_000);
+    anchoring_testkit.inner.create_block_with_transactions(txs);
 
     // Reach the next anchoring height.
     anchoring_testkit
@@ -241,200 +231,242 @@ fn additional_funding() {
 }
 
 #[test]
+fn spent_funding() {
+    let mut anchoring_testkit = AnchoringTestKit::default();
+    let anchoring_interval = anchoring_testkit
+        .actual_anchoring_config()
+        .anchoring_interval;
+
+    assert!(anchoring_testkit.last_anchoring_tx().is_none());
+    // Establish anchoring transactions chain with the initial funding transaction.
+    anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit
+            .create_signature_txs()
+            .into_iter()
+            .flatten(),
+    );
+
+    // Add spent funding transaction.
+    let spent_funding_transaction = anchoring_testkit
+        .actual_anchoring_config()
+        .funding_transaction
+        .unwrap();
+    anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit.create_funding_confirmation_txs_with(spent_funding_transaction),
+    );
+
+    // Reach the next anchoring height.
+    anchoring_testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval));
+
+    // Ensure that the anchoring proposal has no input with the spent funding transaction.
+    assert_eq!(
+        anchoring_testkit
+            .anchoring_transaction_proposal()
+            .unwrap()
+            .1
+            .len(),
+        1
+    );
+}
+
+#[test]
+fn insufficient_funds() {
+    let mut anchoring_testkit = AnchoringTestKit::new(4, 10, 5);
+
+    {
+        let snapshot = anchoring_testkit.inner.snapshot();
+        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+        let proposal = schema.actual_proposed_anchoring_transaction().unwrap();
+        assert_eq!(
+            proposal,
+            Err(BuilderError::InsufficientFunds {
+                total_fee: 1530,
+                balance: 10
+            })
+        );
+    }
+
+    // Replenish the anchoring wallet by the given amount of satoshis.
+    anchoring_testkit
+        .inner
+        .create_block_with_transactions(anchoring_testkit.create_funding_confirmation_txs(2000).0);
+    anchoring_testkit
+        .anchoring_transaction_proposal()
+        .expect("Anchoring proposal should be correct.");
+}
+
+#[test]
+fn no_anchoring_proposal() {
+    let mut anchoring_testkit = AnchoringTestKit::default();
+    let anchoring_interval = anchoring_testkit
+        .actual_anchoring_config()
+        .anchoring_interval;
+
+    assert!(anchoring_testkit.last_anchoring_tx().is_none());
+
+    let mut signatures = anchoring_testkit.create_signature_txs();
+    let leftover_signatures = signatures.pop().unwrap();
+
+    anchoring_testkit
+        .inner
+        .create_block_with_transactions(signatures.into_iter().flatten());
+
+    // Anchor a next height.
+    anchoring_testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval));
+    let signatures = anchoring_testkit
+        .create_signature_txs()
+        .into_iter()
+        .flatten();
+    anchoring_testkit
+        .inner
+        .create_block_with_transactions(signatures);
+
+    // Very slow node.
+    let block = anchoring_testkit
+        .inner
+        .create_block_with_transactions(leftover_signatures);
+    assert_tx_error(&block[0], Error::AnchoringUnnecessary);
+}
+
+#[test]
+fn unexpected_anchoring_proposal() {
+    let mut anchoring_testkit = AnchoringTestKit::default();
+    let anchoring_interval = anchoring_testkit
+        .actual_anchoring_config()
+        .anchoring_interval;
+
+    assert!(anchoring_testkit.last_anchoring_tx().is_none());
+
+    let mut signatures = anchoring_testkit.create_signature_txs();
+    let leftover_signatures = signatures.pop().unwrap();
+
+    anchoring_testkit
+        .inner
+        .create_block_with_transactions(signatures.into_iter().flatten());
+
+    anchoring_testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval));
+
+    // Anchor a next height.
+    let signatures = anchoring_testkit
+        .create_signature_txs()
+        .into_iter()
+        .flatten();
+    anchoring_testkit
+        .inner
+        .create_block_with_transactions(signatures);
+    // Wait until the next anchoring height becomes an actual.
+    anchoring_testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval * 2));
+
+    // Very slow node
+    let block = anchoring_testkit
+        .inner
+        .create_block_with_transactions(leftover_signatures);
+    assert_tx_error(&block[0], Error::UnexpectedAnchoringProposal);
+}
+
+#[test]
 fn add_anchoring_node() {
     test_anchoring_config_change(|anchoring_testkit, cfg| {
         cfg.anchoring_keys.push(anchoring_testkit.add_node());
         cfg.funding_transaction = None;
-    })
+    });
 }
 
 #[test]
 fn remove_anchoring_node() {
-    test_anchoring_config_change(|_anchoring_testkit, cfg| {
+    test_anchoring_config_change(|_, cfg| {
         cfg.anchoring_keys.pop();
         cfg.funding_transaction = None;
-    })
+    });
 }
 
 #[test]
-fn change_anchoring_node() {
+fn change_anchoring_node_without_funds() {
     test_anchoring_config_change(|anchoring_testkit, cfg| {
         cfg.anchoring_keys[0].bitcoin_key = anchoring_testkit.gen_bitcoin_key();
         cfg.funding_transaction = None;
-    })
+    });
 }
 
-// #[test]
-// fn address_changed_and_new_funding_tx() {
-//     let validators_num = 5;
-//     let initial_sum = 150_000;
-//     let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, initial_sum, 4);
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(4));
+#[test]
+fn change_anchoring_node_with_funds() {
+    test_anchoring_config_change(|anchoring_testkit, cfg| {
+        cfg.anchoring_keys[0].bitcoin_key = anchoring_testkit.gen_bitcoin_key();
+        cfg.funding_transaction = Some(create_fake_funding_transaction(
+            &cfg.anchoring_address(),
+            150_000,
+        ));
+    });
+}
 
-//     let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
-//     let tx0_meta = tx0.anchoring_metadata().unwrap();
-//     let output_val0 = tx0.unspent_value().unwrap();
+#[test]
+fn add_anchoring_node_insufficient_funds() {
+    let mut anchoring_testkit = AnchoringTestKit::new(4, 2_000, 5);
+    let anchoring_interval = anchoring_testkit
+        .actual_anchoring_config()
+        .anchoring_interval;
 
-//     // removing one of validators
-//     let mut proposal = anchoring_testkit.drop_validator_proposal();
-//     let mut service_config: GlobalConfig = proposal.service_config(BTC_ANCHORING_SERVICE_NAME);
+    assert!(anchoring_testkit.last_anchoring_tx().is_none());
+    // Establish anchoring transactions chain.
+    anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit
+            .create_signature_txs()
+            .into_iter()
+            .flatten(),
+    );
 
-//     // additional funding
-//     let new_address = service_config.anchoring_address();
-//     let new_funding_tx = create_fake_funding_transaction(&new_address, initial_sum);
+    // Skip the next anchoring height.
+    anchoring_testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval * 2));
 
-//     service_config.funding_transaction = Some(new_funding_tx);
-//     proposal.set_service_config(BTC_ANCHORING_SERVICE_NAME, service_config);
-//     proposal.set_actual_from(Height(16));
-//     anchoring_testkit.commit_configuration_change(proposal);
+    // Remove one of anchoring nodes.
+    let mut new_cfg = anchoring_testkit.actual_anchoring_config();
+    new_cfg.anchoring_keys.push(anchoring_testkit.add_node());
+    new_cfg.funding_transaction = None;
 
-//     anchoring_testkit.create_blocks_until(Height(7));
+    // Commit configuration with without last anchoring node.
+    anchoring_testkit.inner.create_block_with_transaction(
+        ConfigPropose::actual_from(anchoring_testkit.inner.height().next())
+            .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone())
+            .into_tx(),
+    );
+    anchoring_testkit.inner.create_block();
 
-//     anchoring_testkit.renew_address();
+    // Ensure that the anchoring transaction proposal is unsuitable.
+    {
+        let snapshot = anchoring_testkit.inner.snapshot();
+        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+        let proposal = schema.actual_proposed_anchoring_transaction().unwrap();
+        assert_eq!(
+            proposal,
+            Err(BuilderError::InsufficientFunds {
+                total_fee: 1530,
+                balance: 470
+            })
+        );
+    }
 
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(10));
-
-//     let tx_transition = anchoring_testkit.last_anchoring_tx().unwrap();
-
-//     //new funding transaction should not be consumed during creation of transition tx
-//     assert!(tx_transition.0.input.len() == 1);
-
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(16));
-
-//     anchoring_testkit.create_blocks_until(Height(17));
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(20));
-
-//     let tx_changed = anchoring_testkit.last_anchoring_tx().unwrap();
-//     let tx_changed_meta = tx_changed.anchoring_metadata().unwrap();
-//     let output_changed = tx_changed.unspent_value().unwrap();
-
-//     assert!(tx_transition != tx_changed);
-//     assert!(tx_changed.0.input.len() == 2);
-
-//     // script_pubkey should *not* be the same
-//     assert!(tx0_meta.0 != tx_changed_meta.0);
-
-//     assert!(output_changed > output_val0);
-//     assert!(output_changed > initial_sum);
-// }
-
-// #[test]
-// fn insufficient_funds_during_address_change() {
-//     let validators_num = 5;
-//     // single tx fee is ~ 15000
-//     let initial_sum = 20000;
-//     let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, initial_sum, 4);
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(4));
-
-//     let tx0 = anchoring_testkit.last_anchoring_tx();
-
-//     // removing one of validators
-//     let mut proposal = anchoring_testkit.drop_validator_proposal();
-//     proposal.set_actual_from(Height(16));
-//     anchoring_testkit.commit_configuration_change(proposal);
-//     anchoring_testkit.create_blocks_until(Height(7));
-
-//     anchoring_testkit.renew_address();
-//     anchoring_testkit.create_blocks_until(Height(20));
-
-//     let tx1 = anchoring_testkit.last_anchoring_tx();
-
-//     // no new transactions
-//     assert!(tx0 == tx1);
-
-//     assert_matches!(
-//         anchoring_testkit
-//             .create_signature_tx_for_validators(1)
-//             .unwrap_err(),
-//         BuilderError::UnsuitableOutput
-//     );
-// }
-
-// #[test]
-// fn signature_while_paused_in_transition() {
-//     let validators_num = 5;
-//     let initial_sum = 80000;
-//     let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, initial_sum, 4);
-
-//     let mut signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(4)
-//         .unwrap();
-//     let leftover_signature = signatures.remove(0);
-
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(4));
-
-//     // to be sure if anchoring is started
-//     assert!(anchoring_testkit.last_anchoring_tx().is_some());
-
-//     // removing one of validators
-//     let mut proposal = anchoring_testkit.drop_validator_proposal();
-//     proposal.set_actual_from(Height(16));
-
-//     anchoring_testkit.commit_configuration_change(proposal);
-//     anchoring_testkit.create_blocks_until(Height(7));
-//     anchoring_testkit.renew_address();
-
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(12));
-
-//     let block = anchoring_testkit.create_block_with_transactions(vec![leftover_signature]);
-//     assert_tx_error(block, ErrorCode::InTransition);
-// }
-
-// #[test]
-// fn wrong_signature_tx() {
-//     let validators_num = 4;
-//     let mut anchoring_testkit = AnchoringTestKit::new_without_rpc(validators_num, 70000, 4);
-
-//     assert!(anchoring_testkit.last_anchoring_tx().is_none());
-
-//     let mut signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-//     let leftover_signature = signatures.pop().unwrap();
-
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(4));
-
-//     let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
-//     let tx0_meta = tx0.anchoring_metadata().unwrap();
-//     assert!(tx0_meta.1.block_height == Height(0));
-
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(2)
-//         .unwrap();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(8));
-
-//     // very slow node
-//     let block = anchoring_testkit.create_block_with_transactions(vec![leftover_signature]);
-//     assert_tx_error(block, ErrorCode::Unexpected);
-// }
+    // Add funds.
+    let (txs, funding_tx) = anchoring_testkit.create_funding_confirmation_txs(2000);
+    anchoring_testkit.inner.create_block_with_transactions(txs);
+    // Ensure that we have a suitable transition anchoring transaction proposal.
+    assert_eq!(
+        anchoring_testkit
+            .anchoring_transaction_proposal()
+            .unwrap()
+            .1[1],
+        funding_tx
+    );
+}
 
 // #[test]
 // fn broken_anchoring_recovery() {

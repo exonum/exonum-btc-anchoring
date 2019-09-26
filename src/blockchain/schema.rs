@@ -238,8 +238,21 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
             );
             // If preconditions are correct, just reassign the config as an actual.
             self.following_config_entry().remove();
-            self.actual_config_entry().set(config);
+            self.set_actual_config(config);
         }
         self.anchoring_transactions_chain().push(tx);
+    }
+
+    /// Set a new anchoring configuration parameters.
+    pub fn set_actual_config(&self, config: Config) {
+        // TODO remove this special case.
+        if let Some(tx) = config
+            .funding_transaction
+            .clone()
+            .filter(|tx| !self.spent_funding_transactions().contains(&tx.id()))
+        {
+            self.unspent_funding_transaction_entry().set(tx);
+        }
+        self.actual_config_entry().set(config);
     }
 }

@@ -25,6 +25,7 @@ use exonum::{
     crypto::PublicKey,
     helpers::{Height, ValidateInput},
 };
+use failure::ensure;
 
 use crate::{
     btc::{self, Address},
@@ -49,6 +50,9 @@ impl Default for Config {
 }
 
 impl Config {
+    /// The current limit on the number of keys in a redeem script on the Bitcoin network.
+    const MAX_NODES_COUNT: usize = 20;
+
     /// Create Bitcoin anchoring config instance with default parameters for the
     /// given Bitcoin network and public keys of participants.
     pub fn with_public_keys(
@@ -112,6 +116,13 @@ impl ValidateInput for Config {
     type Error = failure::Error;
 
     fn validate(&self) -> Result<(), Self::Error> {
+        ensure!(
+            self.anchoring_keys.len() <= Self::MAX_NODES_COUNT,
+            "Too many anchoring nodes: amount of anchoring nodes should be lesser than the {}.",
+            Self::MAX_NODES_COUNT
+        );
+        // TODO Validate other parameters.
+
         // Verify that the redeem script is suitable.
         let quorum = byzantine_quorum(self.anchoring_keys.len());
         let redeem_script = RedeemScriptBuilder::with_public_keys(
@@ -119,7 +130,6 @@ impl ValidateInput for Config {
         )
         .quorum(quorum)
         .to_script()?;
-        // TODO Validate other parameters.
 
         // TODO remove funding transaction from the config.
         if let Some(tx) = self.funding_transaction.as_ref() {
