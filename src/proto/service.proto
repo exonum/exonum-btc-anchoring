@@ -27,8 +27,8 @@ message AnchoringKeys {
     exonum.btc.PublicKey bitcoin_key = 2;
 }
 
-// Exonum message with the signature for the new anchoring transaction.
-message TxSignature {
+// Exonum message with a signature for one of the inputs of a new anchoring transaction.
+message SignInput {
     // Signed transaction.
     exonum.btc.Transaction transaction = 2;
     // Signed input.
@@ -51,3 +51,5 @@ message Config {
     // Funding transaction.
     exonum.btc.Transaction funding_transaction = 5;
 }
+
+// TODO Create separate constructor.

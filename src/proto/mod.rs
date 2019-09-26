@@ -18,6 +18,7 @@ use bitcoin;
 use btc_transaction_utils;
 use exonum::{
     crypto::{Hash, PublicKey},
+    impl_serde_hex_for_binary_value,
     merkledb::{BinaryValue, ObjectHash},
     proto::{schema::helpers, ProtobufConvert},
 };
@@ -87,10 +88,10 @@ pub struct AnchoringKeys {
     pub bitcoin_key: btc::PublicKey,
 }
 
-/// Exonum message with the signature for the new anchoring transaction.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert)]
-#[exonum(pb = "self::service::TxSignature")]
-pub struct TxSignature {
+/// Exonum message with a signature for one of the inputs of a new anchoring transaction.
+#[derive(Debug, Clone, PartialEq, ProtobufConvert)]
+#[exonum(pb = "self::service::SignInput")]
+pub struct SignInput {
     /// Signed Bitcoin anchoring transaction.
     pub transaction: btc::Transaction,
     /// Signed input.
@@ -175,3 +176,5 @@ impl ObjectHash for Config {
         self.to_bytes().object_hash()
     }
 }
+
+impl_serde_hex_for_binary_value! { SignInput }

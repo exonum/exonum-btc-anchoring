@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// TODO Remove me!
+
 use exonum::{
     merkledb::ObjectHash,
     runtime::rust::{AfterCommitContext, Transaction},
@@ -26,7 +28,7 @@ use std::{cmp, collections::HashMap};
 use crate::{
     blockchain::{
         data_layout::TxInputId,
-        transactions::TxSignature,
+        transactions::SignInput,
         {BtcAnchoringSchema, BtcAnchoringState},
     },
     btc::{PrivateKey, PublicKey},
@@ -137,7 +139,7 @@ impl<'a> UpdateAnchoringChainTask<'a> {
 
             log::debug!("Broadcast tx: {:#?} by id {}", proposal, anchoring_node_id);
 
-            let tx = TxSignature {
+            let tx = SignInput {
                 transaction: proposal.clone(),
                 input: index as u32,
                 input_signature: signature.into(),

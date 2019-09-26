@@ -14,7 +14,7 @@
 
 //! BTC anchoring transactions.
 
-pub use crate::proto::TxSignature;
+pub use crate::proto::SignInput;
 
 use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
 use exonum::runtime::{rust::TransactionContext, Caller, DispatcherError, ExecutionError};
@@ -25,7 +25,7 @@ use crate::{btc, BtcAnchoringService};
 
 use super::{data_layout::TxInputId, errors::Error, BtcAnchoringSchema};
 
-impl TxSignature {
+impl SignInput {
     /// Returns identifier of the signed transaction input.
     pub fn input_id(&self) -> TxInputId {
         TxInputId {
@@ -38,19 +38,16 @@ impl TxSignature {
 /// Exonum BTC anchoring transactions.
 #[exonum_service]
 pub trait Transactions {
-    /// Exonum message with the signature for the new anchoring transaction.
-    fn sign_input(
-        &self,
-        context: TransactionContext,
-        arg: TxSignature,
-    ) -> Result<(), ExecutionError>;
+    /// Sign a single input of the anchoring transaction proposal.
+    fn sign_input(&self, context: TransactionContext, arg: SignInput)
+        -> Result<(), ExecutionError>;
 }
 
 impl Transactions for BtcAnchoringService {
     fn sign_input(
         &self,
         context: TransactionContext,
-        arg: TxSignature,
+        arg: SignInput,
     ) -> Result<(), ExecutionError> {
         let (author, fork) = context
             .verify_caller(Caller::author)

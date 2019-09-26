@@ -37,24 +37,29 @@ use rand::{thread_rng, Rng};
 use std::collections::BTreeMap;
 
 use crate::{
-    api::{BlockHeaderProof, FindTransactionQuery, HeightQuery, PublicApi, TransactionProof},
-    blockchain::{transactions::TxSignature, BtcAnchoringSchema},
+    api::{
+        AsyncResult, BlockHeaderProof, FindTransactionQuery, HeightQuery, IntoAsyncResult,
+        PrivateApi, PublicApi, TransactionProof,
+    },
+    blockchain::{transactions::SignInput, BtcAnchoringSchema},
     btc,
     config::Config,
     proto::AnchoringKeys,
     BtcAnchoringService,
 };
 
+/// Default anchoring instance ID.
 pub const ANCHORING_INSTANCE_ID: InstanceId = 14;
+/// Default anchoring instance name.
 pub const ANCHORING_INSTANCE_NAME: &str = "btc_anchoring";
 
-/// Generates a fake funding transaction.
+/// Generate a fake funding transaction.
 pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -> btc::Transaction {
-    // Generates random transaction id
+    // Generate random transaction id.
     let mut rng = thread_rng();
     let mut data = [0_u8; 32];
     rng.fill_bytes(&mut data);
-    // Creates fake funding transaction
+    // Create fake funding transaction.
     bitcoin::Transaction {
         version: 2,
         lock_time: 0,
@@ -123,13 +128,18 @@ impl AnchoringNodes {
     }
 }
 
+/// Convenient wrapper around testkit with the built-in bitcoin key pool for the each
+/// anchoring node.
 #[derive(Debug)]
 pub struct AnchoringTestKit {
+    /// Underlying testkit instance.
     pub inner: TestKit,
     anchoring_nodes: AnchoringNodes,
 }
 
 impl AnchoringTestKit {
+    /// Create an anchoring testkit instance for the specified number of anchoring nodes,
+    /// total funds in satoshis and interval between anchors.
     pub fn new(nodes_num: u16, total_funds: u64, anchoring_interval: u64) -> Self {
         let validator_keys = (0..nodes_num)
             .map(|_| gen_validator_keys())
@@ -166,6 +176,7 @@ impl AnchoringTestKit {
         }
     }
 
+    /// Return the actual anchoring configuration.
     pub fn actual_anchoring_config(&self) -> Config {
         let snapshot = self.inner.snapshot();
         let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
@@ -190,6 +201,8 @@ impl AnchoringTestKit {
             .map(Result::unwrap)
     }
 
+    /// Create signatures for each input of the proposed anchoring transaction signed by the
+    /// specified node.
     pub fn create_signature_tx_for_node(
         &self,
         node: &TestNode,
@@ -221,7 +234,7 @@ impl AnchoringTestKit {
                     .unwrap();
 
                 signatures.push(
-                    TxSignature {
+                    SignInput {
                         transaction: proposal.clone(),
                         input: index as u32,
                         input_signature: signature.into(),
@@ -237,6 +250,8 @@ impl AnchoringTestKit {
         Ok(signatures)
     }
 
+    /// Create signatures for each input of the proposed anchoring transaction signed by all of
+    /// anchoring nodes.
     pub fn create_signature_txs(&self) -> Vec<Vec<Verified<AnyTx>>> {
         let mut signatures = Vec::new();
 
@@ -250,7 +265,7 @@ impl AnchoringTestKit {
         signatures
     }
 
-    /// Creating confirmation transactions with a funding transaction to the current address
+    /// Create the confirmation transactions with a funding transaction to the current address
     /// with a given amount of Satoshi.
     pub fn create_funding_confirmation_txs(
         &self,
@@ -266,7 +281,7 @@ impl AnchoringTestKit {
         )
     }
 
-    /// Creating confirmation transactions with a specified funding transaction.
+    /// Create the confirmation transactions with a specified funding transaction.
     pub fn create_funding_confirmation_txs_with(
         &self,
         tx: btc::Transaction,
@@ -278,6 +293,7 @@ impl AnchoringTestKit {
             .into_tx()]
     }
 
+    /// Add new auditor node to the testkit network and create Bitcoin keypair for it.
     pub fn add_node(&mut self) -> AnchoringKeys {
         let service_key = self.inner.network_mut().add_node().service_keypair().0;
         let bitcoin_key = self
@@ -290,6 +306,12 @@ impl AnchoringTestKit {
         }
     }
 
+    /// Return a corresponding private Bitcoin key.
+    pub fn node_private_key(&self, public_key: &btc::PublicKey) -> btc::PrivateKey {
+        self.anchoring_nodes.private_key(public_key)
+    }
+
+    /// Generate bitcoin keypair and add them to the key pool.
     pub fn gen_bitcoin_key(&mut self) -> btc::PublicKey {
         let keypair = btc::gen_keypair(self.actual_anchoring_config().network);
         self.anchoring_nodes.key_pool.insert(keypair.0, keypair.1);
@@ -320,12 +342,12 @@ impl PublicApi for TestKitApi {
 
     fn actual_address(&self) -> Result<btc::Address, Self::Error> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
-            .get("v1/address/actual")
+            .get("address/actual")
     }
 
     fn following_address(&self) -> Result<Option<btc::Address>, Self::Error> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
-            .get("v1/address/following")
+            .get("address/following")
     }
 
     fn find_transaction(
@@ -334,13 +356,41 @@ impl PublicApi for TestKitApi {
     ) -> Result<Option<TransactionProof>, Self::Error> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .query(&FindTransactionQuery { height })
-            .get("v1/transaction")
+            .get("find-transaction")
     }
 
     fn block_header_proof(&self, height: Height) -> Result<BlockHeaderProof, Self::Error> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .query(&HeightQuery { height })
-            .get("v1/block_header_proof")
+            .get("block-header-proof")
+    }
+
+    fn config(&self) -> AsyncResult<Config, Self::Error> {
+        self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .get("config")
+            .into_async()
+    }
+}
+
+impl PrivateApi for TestKitApi {
+    type Error = api::Error;
+
+    fn sign_input(&self, sign_input: SignInput) -> AsyncResult<Hash, Self::Error> {
+        self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .query(&sign_input)
+            .post("sign-input")
+            .into_async()
+    }
+    fn anchoring_proposal(&self) -> AsyncResult<Option<btc::Transaction>, Self::Error> {
+        self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .get("anchoring-proposal")
+            .into_async()
+    }
+
+    fn config(&self) -> AsyncResult<Config, Self::Error> {
+        self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .get("config")
+            .into_async()
     }
 }
 
@@ -394,7 +444,7 @@ impl ValidateProof for TransactionProof {
         let table_location = IndexCoordinates::new(IndexOwner::Service(ANCHORING_INSTANCE_ID), 0);
 
         ensure!(proof_entry.0 == table_location, "Invalid table location");
-        // Validates value.
+        // Validate value.
         let values = self
             .to_transaction
             .validate(proof_entry.1)
@@ -413,7 +463,7 @@ impl ValidateProof for BlockHeaderProof {
             validate_table_proof(actual_config, &self.latest_authorized_block, self.to_table)?;
         let table_location = IndexCoordinates::new(IndexOwner::Service(ANCHORING_INSTANCE_ID), 3);
         ensure!(proof_entry.0 == table_location, "Invalid table location");
-        // Validates value.
+        // Validate value.
         let values = self
             .to_block_header
             .validate(proof_entry.1)

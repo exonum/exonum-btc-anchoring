@@ -11,42 +11,42 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use hex::FromHex;
+// use hex::FromHex;
 
-use exonum::{crypto::Hash, helpers::Height};
-use exonum_bitcoinrpc as bitcoin_rpc;
-use exonum_btc_anchoring::{
-    blockchain::BtcAnchoringSchema,
-    btc::Transaction,
-    rpc::TransactionInfo as BtcTransactionInfo,
-    test_helpers::{
-        rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest},
-        testkit::ANCHORING_INSTANCE_NAME,
-    },
-};
+// use exonum::{crypto::Hash, helpers::Height};
+// use exonum_bitcoinrpc as bitcoin_rpc;
+// use exonum_btc_anchoring::{
+//     blockchain::BtcAnchoringSchema,
+//     btc::Transaction,
+//     rpc::TransactionInfo as BtcTransactionInfo,
+//     test_helpers::{
+//         rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest},
+//         testkit::ANCHORING_INSTANCE_NAME,
+//     },
+// };
 
-fn funding_tx_request() -> TestRequest {
-    (
-        FakeRelayRequest::TransactionInfo {
-            id: Hash::from_hex("69ef1d6847712089783bf861342568625e1e4a499993f27e10d9bb5f259d0894")
-                .unwrap(),
-        },
-        FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
-            content: Transaction::from_hex(
-                "02000000000101140b3f5da041f173d938b8fe778d39cb2ef801f75f294\
-                 6e490e34d6bb47bb9ce0000000000feffffff0230025400000000001600\
-                 14169fa44a9159f281122bb7f3d43d88d56dfa937e70110100000000002\
-                 200203abcf8339d06564a151942c35e4a59eee2581e3880bceb84a324e2\
-                 237f19ceb502483045022100e91d46b565f26641b353591d0c403a05ada\
-                 5735875fb0f055538bf9df4986165022044b5336772de8c5f6cbf83bcc7\
-                 099e31d7dce22ba1f3d1badc2fdd7f8013a12201210254053f15b44b825\
-                 bc5dabfe88f8b94cd217372f3f297d2696a32835b43497397358d1400",
-            )
-            .unwrap(),
-            confirmations: 6,
-        }))),
-    )
-}
+// fn funding_tx_request() -> TestRequest {
+//     (
+//         FakeRelayRequest::TransactionInfo {
+//             id: Hash::from_hex("69ef1d6847712089783bf861342568625e1e4a499993f27e10d9bb5f259d0894")
+//                 .unwrap(),
+//         },
+//         FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
+//             content: Transaction::from_hex(
+//                 "02000000000101140b3f5da041f173d938b8fe778d39cb2ef801f75f294\
+//                  6e490e34d6bb47bb9ce0000000000feffffff0230025400000000001600\
+//                  14169fa44a9159f281122bb7f3d43d88d56dfa937e70110100000000002\
+//                  200203abcf8339d06564a151942c35e4a59eee2581e3880bceb84a324e2\
+//                  237f19ceb502483045022100e91d46b565f26641b353591d0c403a05ada\
+//                  5735875fb0f055538bf9df4986165022044b5336772de8c5f6cbf83bcc7\
+//                  099e31d7dce22ba1f3d1badc2fdd7f8013a12201210254053f15b44b825\
+//                  bc5dabfe88f8b94cd217372f3f297d2696a32835b43497397358d1400",
+//             )
+//             .unwrap(),
+//             confirmations: 6,
+//         }))),
+//     )
+// }
 
 // #[test]
 // fn normal_operation() {

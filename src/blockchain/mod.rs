@@ -15,6 +15,7 @@
 //! Blockchain implementation details for the BTC anchoring service.
 
 pub use self::{schema::BtcAnchoringSchema, transactions::Transactions};
+pub use crate::proto::SignInput;
 
 use bitcoin::blockdata::script::Script;
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh};

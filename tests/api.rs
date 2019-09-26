@@ -11,13 +11,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::helpers::Height;
 use exonum_btc_anchoring::{
-    api::PublicApi,
-    blockchain::BtcAnchoringSchema,
+    api::{PrivateApi, PublicApi},
+    blockchain::{BtcAnchoringSchema, SignInput},
     btc,
     test_helpers::testkit::{AnchoringTestKit, ValidateProof, ANCHORING_INSTANCE_NAME},
 };
+use futures::Future;
 
 fn find_transaction(
     anchoring_testkit: &AnchoringTestKit,
@@ -261,4 +263,90 @@ fn block_header_proof() {
     let value = second_block_proof.validate(&cfg).unwrap();
     assert_eq!(value.0, 4);
     assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(4)));
+}
+
+#[test]
+fn actual_config() {
+    let anchoring_testkit = AnchoringTestKit::default();
+    let cfg = anchoring_testkit.actual_anchoring_config();
+
+    let api = anchoring_testkit.inner.api();
+    assert_eq!(PublicApi::config(&api).wait().unwrap(), cfg);
+    assert_eq!(PrivateApi::config(&api).wait().unwrap(), cfg);
+}
+
+#[test]
+fn anchoring_proposal_ok() {
+    let anchoring_testkit = AnchoringTestKit::default();
+    let proposal = anchoring_testkit
+        .anchoring_transaction_proposal()
+        .unwrap()
+        .0;
+
+    let api = anchoring_testkit.inner.api();
+    assert_eq!(api.anchoring_proposal().wait().unwrap(), Some(proposal));
+}
+
+#[test]
+fn anchoring_proposal_none() {
+    let mut anchoring_testkit = AnchoringTestKit::default();
+
+    // Establish anchoring transactions chain.
+    anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit
+            .create_signature_txs()
+            .into_iter()
+            .flatten(),
+    );
+
+    let api = anchoring_testkit.inner.api();
+    assert!(api.anchoring_proposal().wait().unwrap().is_none());
+}
+
+#[test]
+fn anchoring_proposal_err_insufficient_funds() {
+    let anchoring_testkit = AnchoringTestKit::new(4, 100, 5);
+
+    let api = anchoring_testkit.inner.api();
+    let e = api.anchoring_proposal().wait().unwrap_err();
+    assert!(e.to_string().contains("Insufficient funds"));
+}
+
+#[test]
+fn anchoring_sign_input() {
+    let mut anchoring_testkit = AnchoringTestKit::new(1, 10_000, 5);
+
+    let config = anchoring_testkit.actual_anchoring_config();
+    let bitcoin_public_key = config.anchoring_keys[0].bitcoin_key;
+    let bitcoin_private_key = anchoring_testkit.node_private_key(&bitcoin_public_key);
+    // Create sign input transaction
+    let redeem_script = config.redeem_script();
+
+    let (proposal, proposal_inputs) = anchoring_testkit.anchoring_transaction_proposal().unwrap();
+    let proposal_input = &proposal_inputs[0];
+
+    let signature = p2wsh::InputSigner::new(redeem_script)
+        .sign_input(
+            TxInRef::new(proposal.as_ref(), 0),
+            proposal_input.as_ref(),
+            &bitcoin_private_key.0.key,
+        )
+        .unwrap();
+
+    let tx_hash = anchoring_testkit
+        .inner
+        .api()
+        .sign_input(SignInput {
+            transaction: proposal,
+            input: 0,
+            input_signature: signature.into(),
+        })
+        .wait()
+        .unwrap();
+
+    anchoring_testkit
+        .inner
+        .create_block_with_tx_hashes(&[tx_hash])[0]
+        .status()
+        .expect("Transaction should be successful");
 }
