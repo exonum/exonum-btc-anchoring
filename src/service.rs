@@ -29,12 +29,9 @@ use exonum::{
 use exonum_derive::ServiceFactory;
 use exonum_merkledb::Snapshot;
 
-use std::sync::{Arc, RwLock};
-
 use crate::{
     api,
     blockchain::{BtcAnchoringSchema, Transactions},
-    btc::PublicKey,
     config::Config,
     proto,
 };
@@ -60,6 +57,7 @@ impl Service for BtcAnchoringService {
         fork: &Fork,
         params: Vec<u8>,
     ) -> Result<(), ExecutionError> {
+        // TODO Use a special type for constructor.
         let config = Config::from_bytes(params.into())
             .and_then(ValidateInput::into_validated)
             .map_err(DispatcherError::malformed_arguments)?;

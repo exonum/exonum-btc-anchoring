@@ -168,6 +168,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
                 }
             }
 
+            // TODO Re-implement recovery business logic [ECR-3581]
             if let Err(e) = builder.prev_tx(tx) {
                 if unspent_funding_transaction.is_none() {
                     return Some(Err(e));
