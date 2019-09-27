@@ -65,6 +65,7 @@ pub mod blockchain;
 pub mod btc;
 pub mod config;
 pub mod rpc;
+pub mod sync;
 pub mod test_helpers;
 
 pub(crate) mod service;

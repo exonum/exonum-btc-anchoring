@@ -102,7 +102,7 @@ impl BtcRelay for BitcoinRpcClient {
         let txinfo = match self.0.getrawtransaction_verbose(&txid) {
             Ok(info) => info,
             Err(bitcoin_rpc::Error::NoInformation(_)) => return Ok(None),
-            Err(e) => Err(e)?,
+            Err(e) => return Err(e.into()),
         };
 
         let tx_hex = txinfo

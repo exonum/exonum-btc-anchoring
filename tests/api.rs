@@ -284,7 +284,13 @@ fn anchoring_proposal_ok() {
         .0;
 
     let api = anchoring_testkit.inner.api();
-    assert_eq!(api.anchoring_proposal().wait().unwrap(), Some(proposal));
+    assert_eq!(
+        api.anchoring_proposal()
+            .wait()
+            .unwrap()
+            .map(|x| x.transaction),
+        Some(proposal)
+    );
 }
 
 #[test]

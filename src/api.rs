@@ -24,7 +24,6 @@ use exonum::{
         rust::Transaction,
     },
 };
-use failure::Fail;
 use futures::{Future, IntoFuture, Sink};
 use serde_derive::{Deserialize, Serialize};
 
@@ -56,10 +55,43 @@ where
     }
 }
 
+/// A proof of existence for an anchoring transaction at the given height.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct TransactionProof {
+    /// Latest authorized block in the blockchain.
+    pub latest_authorized_block: BlockProof,
+    /// Proof for the whole database table.
+    pub to_table: MapProof<IndexCoordinates, Hash>,
+    /// Proof for the specific transaction in this table.
+    pub to_transaction: ListProof<btc::Transaction>,
+    /// Anchoring transactions total count.
+    pub transactions_count: u64,
+}
+
+/// A proof of existence for an anchored or a non-anchored Exonum block at the given height.
+#[derive(Debug, Serialize, Deserialize)]
+pub struct BlockHeaderProof {
+    /// Latest authorized block in the blockchain.
+    pub latest_authorized_block: BlockProof,
+    /// Proof for the whole database table.
+    pub to_table: MapProof<IndexCoordinates, Hash>,
+    /// Proof for the specific header in this table.
+    pub to_block_header: ListProof<Hash>,
+}
+
+/// Next anchoring transaction proposal.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AnchoringTransactionProposal {
+    /// Proposal content.
+    pub transaction: btc::Transaction,
+    /// Input transactions.
+    pub inputs: Vec<btc::Transaction>,
+}
+
 /// Public API specification for the Exonum Bitcoin anchoring service.
 pub trait PublicApi {
     /// Error type for the current public API implementation.
-    type Error: Fail;
+    type Error;
     /// Returns actual anchoring address.
     ///
     /// `GET /{api_prefix}/address/actual`
@@ -92,7 +124,7 @@ pub trait PublicApi {
 /// Private API specification for the Exonum Bitcoin anchoring service.
 pub trait PrivateApi {
     /// Error type for the current public API implementation.
-    type Error: Fail;
+    type Error;
     /// Create and broadcast the `TxSignature` transaction, which is signed
     /// by the current node, and returns its hash.
     ///
@@ -102,7 +134,7 @@ pub trait PrivateApi {
     /// If there is not enough satoshis to create a proposal an error is returned.
     ///
     /// `GET /{api_prefix}/anchoring-proposal`
-    fn anchoring_proposal(&self) -> AsyncResult<Option<btc::Transaction>, Self::Error>;
+    fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error>;
     /// Return an actual anchoring configuration.
     ///
     /// `GET /{api_prefix}/config`
@@ -255,10 +287,13 @@ impl<'a> PrivateApi for ApiImpl<'a> {
         Box::new(self.broadcast_transaction(sign_input).map_err(From::from))
     }
 
-    fn anchoring_proposal(&self) -> AsyncResult<Option<btc::Transaction>, Self::Error> {
+    fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error> {
         let schema = BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot());
         match schema.actual_proposed_anchoring_transaction() {
-            Some(Ok(proposal)) => Ok(Some(proposal.0)),
+            Some(Ok(proposal)) => Ok(Some(AnchoringTransactionProposal {
+                transaction: proposal.0,
+                inputs: proposal.1,
+            })),
             // TODO Find idiomatic way.
             Some(Err(e)) => Err(api::Error::InternalError(e.into())),
             None => Ok(None),
@@ -283,30 +318,6 @@ pub struct FindTransactionQuery {
 pub struct HeightQuery {
     /// Exonum block height.
     pub height: Height,
-}
-
-/// A proof of existence for an anchoring transaction at the given height.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct TransactionProof {
-    /// Latest authorized block in the blockchain.
-    pub latest_authorized_block: BlockProof,
-    /// Proof for the whole database table.
-    pub to_table: MapProof<IndexCoordinates, Hash>,
-    /// Proof for the specific transaction in this table.
-    pub to_transaction: ListProof<btc::Transaction>,
-    /// Anchoring transactions total count.
-    pub transactions_count: u64,
-}
-
-/// A proof of existence for an anchored or a non-anchored Exonum block at the given height.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BlockHeaderProof {
-    /// Latest authorized block in the blockchain.
-    pub latest_authorized_block: BlockProof,
-    /// Proof for the whole database table.
-    pub to_table: MapProof<IndexCoordinates, Hash>,
-    /// Proof for the specific header in this table.
-    pub to_block_header: ListProof<Hash>,
 }
 
 pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
@@ -338,4 +349,16 @@ pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
         .endpoint("config", |state, _query: ()| {
             PrivateApi::config(&ApiImpl(state))
         });
+}
+
+impl<T> std::fmt::Debug for dyn PublicApi<Error = T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PublicApi").finish()
+    }
+}
+
+impl<T> std::fmt::Debug for dyn PrivateApi<Error = T> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("PrivateApi").finish()
+    }
 }

@@ -61,7 +61,7 @@ impl Config {
     ) -> Result<Self, RedeemScriptError> {
         let anchoring_keys = keys.into_iter().collect::<Vec<_>>();
         if anchoring_keys.is_empty() {
-            Err(RedeemScriptError::NotEnoughPublicKeys)?;
+            return Err(RedeemScriptError::NotEnoughPublicKeys);
         }
 
         Ok(Self {
