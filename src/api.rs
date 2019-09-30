@@ -39,7 +39,7 @@ use crate::{
 };
 
 /// Type alias for the asynchronous result that will be ready in the future.
-pub type AsyncResult<I, E> = Box<dyn Future<Item = I, Error = E>>;
+pub type AsyncResult<I, E> = Box<dyn Future<Item = I, Error = E> + Send>;
 
 pub(crate) trait IntoAsyncResult<I, E> {
     fn into_async(self) -> AsyncResult<I, E>;
@@ -47,8 +47,8 @@ pub(crate) trait IntoAsyncResult<I, E> {
 
 impl<I, E> IntoAsyncResult<I, E> for Result<I, E>
 where
-    I: 'static,
-    E: 'static,
+    I: Send + 'static,
+    E: Send + 'static,
 {
     fn into_async(self) -> AsyncResult<I, E> {
         Box::new(self.into_future())

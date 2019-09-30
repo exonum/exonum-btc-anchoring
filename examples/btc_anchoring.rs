@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// use exonum::helpers::fabric::NodeBuilder;
+use exonum_cli::NodeBuilder;
+use exonum::runtime::rust::ServiceFactory;
 
-fn main() {
-    // exonum::crypto::init();
-    // exonum::helpers::init_logger().unwrap();
+fn main() -> Result<(), failure::Error> {
+    println!("{}", exonum_btc_anchoring::BtcAnchoringService.artifact_id());
 
-    // let node = NodeBuilder::new().with_service(Box::new(exonum_btc_anchoring::ServiceFactory));
-    // node.run();
+    exonum::helpers::init_logger()?;
+    NodeBuilder::new()
+        .with_service(exonum_btc_anchoring::BtcAnchoringService)
+        .run()
 }

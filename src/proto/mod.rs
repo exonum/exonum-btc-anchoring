@@ -78,13 +78,13 @@ impl ProtobufConvert for btc::InputSignature {
     }
 }
 
-// Public keys of an anchoring node.
+/// Public keys of an anchoring node.
 #[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert)]
 #[exonum(pb = "self::service::AnchoringKeys")]
 pub struct AnchoringKeys {
-    // Service key is used to authorize transactions.
+    /// Service key is used to authorize transactions.
     pub service_key: PublicKey,
-    // The Bitcoin public key is used to calculate the corresponding redeem script.
+    /// The Bitcoin public key is used to calculate the corresponding redeem script.
     pub bitcoin_key: btc::PublicKey,
 }
 

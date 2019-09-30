@@ -14,7 +14,7 @@
 
 //! BTC anchoring configuration data types.
 
-pub use crate::proto::Config;
+pub use crate::proto::{AnchoringKeys, Config};
 
 use bitcoin::network::constants::Network;
 use btc_transaction_utils::{
@@ -27,10 +27,7 @@ use exonum::{
 };
 use failure::ensure;
 
-use crate::{
-    btc::{self, Address},
-    proto::AnchoringKeys,
-};
+use crate::btc::{self, Address};
 
 /// Returns sufficient number of keys for the given validators number.
 pub fn byzantine_quorum(total: usize) -> usize {
@@ -131,6 +128,18 @@ impl ValidateInput for Config {
         .quorum(quorum)
         .to_script()?;
 
+        log::debug!("{:#?}", redeem_script);
+        log::debug!("self {:#?}", self.redeem_script());
+        log::debug!("{:#?}", self);
+        log::debug!("{}", self.anchoring_address());
+        log::debug!(
+            "{:?}",
+            self.anchoring_keys
+                .iter()
+                .map(|x| x.bitcoin_key.to_string())
+                .collect::<Vec<_>>()
+        );
+
         // TODO remove funding transaction from the config.
         if let Some(tx) = self.funding_transaction.as_ref() {
             tx.find_out(&redeem_script.as_ref().to_v0_p2wsh())
@@ -139,58 +148,6 @@ impl ValidateInput for Config {
         Ok(())
     }
 }
-
-// TODO Move to utils
-
-// mod flatten_keypairs {
-//     use crate::btc::{PrivateKey, PublicKey};
-
-//     use serde_derive::{Deserialize, Serialize};
-
-//     use std::collections::HashMap;
-
-//     /// The structure for storing the bitcoin keypair.
-//     /// It is required for reading data from the .toml file into memory.
-//     #[derive(Deserialize, Serialize)]
-//     struct BitcoinKeypair {
-//         /// Bitcoin public key.
-//         public_key: PublicKey,
-//         /// Corresponding private key.
-//         private_key: PrivateKey,
-//     }
-
-//     fn serialize<S>(
-//         keys: &HashMap<PublicKey, PrivateKey>,
-//         ser: S,
-//     ) -> ::std::result::Result<S::Ok, S::Error>
-//     where
-//         S: ::serde::Serializer,
-//     {
-//         use serde::Serialize;
-
-//         let keypairs = keys
-//             .iter()
-//             .map(|(&public_key, private_key)| BitcoinKeypair {
-//                 public_key,
-//                 private_key: private_key.clone(),
-//             })
-//             .collect::<Vec<_>>();
-//         keypairs.serialize(ser)
-//     }
-
-//     fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<PublicKey, PrivateKey>, D::Error>
-//     where
-//         D: ::serde::Deserializer<'de>,
-//     {
-//         use serde::Deserialize;
-//         Vec::<BitcoinKeypair>::deserialize(deserializer).map(|keypairs| {
-//             keypairs
-//                 .into_iter()
-//                 .map(|keypair| (keypair.public_key, keypair.private_key))
-//                 .collect()
-//         })
-//     }
-// }
 
 #[cfg(test)]
 mod tests {

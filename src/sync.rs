@@ -71,7 +71,7 @@ impl PrivateApiClient {
 }
 
 impl PrivateApi for PrivateApiClient {
-    type Error = failure::Error;
+    type Error = String;
 
     fn sign_input(&self, sign_input: SignInput) -> AsyncResult<Hash, Self::Error> {
         Box::new(
@@ -80,17 +80,25 @@ impl PrivateApi for PrivateApiClient {
                 .json(&sign_input)
                 .send()
                 .and_then(|mut request| request.json())
-                .map_err(From::from),
+                .map_err(|e| e.to_string()),
         )
     }
 
     fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error> {
+        log::debug!(
+            "Get anchoring proposal: {}",
+            self.endpoint("anchoring-proposal")
+        );
+        
         Box::new(
             self.client
                 .get(&self.endpoint("anchoring-proposal"))
                 .send()
-                .and_then(|mut request| request.json())
-                .map_err(From::from),
+                .and_then(|mut request| {
+                    log::debug!("{:?}", request);
+                    request.json()
+                })
+                .map_err(|e| e.to_string()),
         )
     }
 
@@ -100,7 +108,7 @@ impl PrivateApi for PrivateApiClient {
                 .get(&self.endpoint("config"))
                 .send()
                 .and_then(|mut request| request.json())
-                .map_err(From::from),
+                .map_err(|e| e.to_string()),
         )
     }
 }
@@ -110,7 +118,7 @@ impl PrivateApi for PrivateApiClient {
 #[derive(Debug, Clone)]
 pub struct AnchoringChainUpdater<T>
 where
-    T: PrivateApi<Error = failure::Error> + Clone + 'static,
+    T: PrivateApi<Error = String> + Send + Clone + 'static,
 {
     key_pool: KeyPool,
     api_relay: T,
@@ -118,7 +126,7 @@ where
 
 impl<T> AnchoringChainUpdater<T>
 where
-    T: PrivateApi<Error = failure::Error> + Clone + 'static,
+    T: PrivateApi<Error = String>  + Send + Clone + 'static,
 {
     /// Create a new anchoring chain updater instance.
     pub fn new(
@@ -132,7 +140,8 @@ where
     }
 
     /// Perform a one attempt to sign an anchoring proposal, if any.
-    pub fn process(self) -> impl Future<Item = ()> {
+    pub fn process(self) -> impl Future<Item = (), Error = String> {
+        log::debug!("Perform anchoring chain updater");
         self.clone()
             .api_relay
             .anchoring_proposal()
@@ -151,7 +160,8 @@ where
         self,
         config: Config,
         proposal: AnchoringTransactionProposal,
-    ) -> impl Future<Item = (), Error = failure::Error> {
+    ) -> impl Future<Item = (), Error = String> {
+        log::debug!("Got proposal: {:?}", proposal);
         // Find among the keys one from which we have a private part.
         // TODO What we have to do if we find more than one key? [ECR-3222]
         let keypair = some_or_return!(
@@ -162,7 +172,7 @@ where
         let block_height = match proposal.transaction.anchoring_payload() {
             Some(payload) => payload.block_height,
             None => {
-                return Err(failure::format_err!(
+                return Err(format!(
                     "Incorrect anchoring proposal found: {:?}",
                     proposal.transaction
                 ))
@@ -204,7 +214,7 @@ where
 
         let sign_input_messages = match sign_input_messages {
             Ok(messages) => messages,
-            Err(e) => return Err(e).into_async(),
+            Err(e) => return Err(e.to_string()).into_async(),
         };
 
         let api_relay = self.api_relay.clone();

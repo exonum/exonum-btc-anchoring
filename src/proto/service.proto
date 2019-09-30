@@ -40,6 +40,12 @@ message SignInput {
 /// Configuration parameters.
 message Config {
     // Type of the used BTC network.
+    //
+    // Possible values:
+    //
+    // Bitcoin - 3652501241(0xD9B4BEF9)
+    // Testnet - 118034699(0x0709110B)
+    // Regtest - 3669344250(0xDAB5BFFA)
     uint32 network = 1;
     // Bitcoin public keys of nodes from from which the current anchoring redeem script can 
     // be calculated.
