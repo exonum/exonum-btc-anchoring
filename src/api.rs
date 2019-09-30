@@ -19,7 +19,7 @@ use exonum::{
     blockchain::{BlockProof, IndexCoordinates, IndexOwner, Schema as CoreSchema},
     crypto::Hash,
     helpers::Height,
-    merkledb::{ListProof, MapProof, ObjectHash},
+    merkledb::{ListProof, MapProof, ObjectHash, Snapshot},
     runtime::{
         api::{self, ServiceApiBuilder, ServiceApiState},
         rust::Transaction,
@@ -120,6 +120,13 @@ pub trait PublicApi {
     ///
     /// `GET /{api_prefix}/config`
     fn config(&self) -> AsyncResult<Config, Self::Error>;
+    /// Return an anchoring transaction with the specified index in anchoring transactions chain.
+    ///
+    /// `GET /{api_prefix}/transaction?index={index}`
+    fn transaction_with_index(
+        &self,
+        index: u64,
+    ) -> AsyncResult<Option<btc::Transaction>, Self::Error>;
 }
 
 /// Private API specification for the Exonum Bitcoin anchoring service.
@@ -145,6 +152,10 @@ pub trait PrivateApi {
 struct ApiImpl<'a>(&'a ServiceApiState<'a>);
 
 impl<'a> ApiImpl<'a> {
+    fn anchoring_schema(&self) -> BtcAnchoringSchema<&'a dyn Snapshot> {
+        BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
+    }
+
     fn broadcast_transaction(
         &self,
         transaction: impl Transaction,
@@ -170,10 +181,11 @@ impl<'a> ApiImpl<'a> {
     }
 
     fn verify_sign_input(&self, sign_input: &SignInput) -> Result<(), failure::Error> {
-        let schema = BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot());
+        let schema = self.anchoring_schema();
         let (proposal, inputs) = schema
             .actual_proposed_anchoring_transaction()
             .ok_or_else(|| failure::format_err!("Anchoring transaction proposal is absent."))??;
+
         // Verify transaction content.
         let input = inputs.get(sign_input.input as usize).ok_or_else(|| {
             failure::format_err!("Missing input with index: {}", sign_input.input)
@@ -182,12 +194,14 @@ impl<'a> ApiImpl<'a> {
             proposal == sign_input.transaction,
             "Invalid anchoring proposal"
         );
+
         // Find corresponding Bitcoin key.
         let config = schema.actual_configuration();
         let bitcoin_key = config
             .find_bitcoin_key(&self.0.service_keypair.0)
             .ok_or_else(|| failure::format_err!("This node is not an anchoring node."))?
             .1;
+
         // Verify input signature.
         p2wsh::InputSigner::new(config.redeem_script())
             .verify_input(
@@ -198,21 +212,44 @@ impl<'a> ApiImpl<'a> {
             )
             .map_err(|e| failure::format_err!("Input signature verification failed: {}", e))
     }
+
+    fn transaction_proof(&self, tx_index: u64) -> TransactionProof {
+        let blockchain_schema = CoreSchema::new(self.0.snapshot());
+        let max_height = blockchain_schema.block_hashes_by_height().len() - 1;
+        let latest_authorized_block = blockchain_schema
+            .block_and_precommits(Height(max_height))
+            .unwrap();
+
+        let tx_chain = self.anchoring_schema().anchoring_transactions_chain();
+
+        let to_table = blockchain_schema
+            .state_hash_aggregator()
+            .get_proof(IndexOwner::Service(self.0.instance.id).coordinate_for(0));
+
+        let to_transaction = tx_chain.get_proof(tx_index);
+
+        TransactionProof {
+            latest_authorized_block,
+            to_table,
+            to_transaction,
+            transactions_count: tx_chain.len(),
+        }
+    }
 }
 
 impl<'a> PublicApi for ApiImpl<'a> {
     type Error = api::Error;
 
     fn actual_address(&self) -> Result<btc::Address, Self::Error> {
-        let snapshot = self.0.snapshot();
-        let schema = BtcAnchoringSchema::new(self.0.instance.name, snapshot);
-        Ok(schema.actual_configuration().anchoring_address())
+        Ok(self
+            .anchoring_schema()
+            .actual_configuration()
+            .anchoring_address())
     }
 
     fn following_address(&self) -> Result<Option<btc::Address>, Self::Error> {
-        let snapshot = self.0.snapshot();
-        let schema = BtcAnchoringSchema::new(self.0.instance.name, snapshot);
-        Ok(schema
+        Ok(self
+            .anchoring_schema()
             .following_configuration()
             .map(|config| config.anchoring_address()))
     }
@@ -264,29 +301,13 @@ impl<'a> PublicApi for ApiImpl<'a> {
             tx_chain.len() - 1
         };
 
-        let blockchain_schema = CoreSchema::new(snapshot);
-        let max_height = blockchain_schema.block_hashes_by_height().len() - 1;
-        let latest_authorized_block = blockchain_schema
-            .block_and_precommits(Height(max_height))
-            .unwrap();
-
-        let to_table = blockchain_schema
-            .state_hash_aggregator()
-            .get_proof(IndexOwner::Service(self.0.instance.id).coordinate_for(0));
-        let to_transaction = tx_chain.get_proof(tx_index);
-
-        Ok(Some(TransactionProof {
-            latest_authorized_block,
-            to_table,
-            to_transaction,
-            transactions_count: tx_chain.len(),
-        }))
+        Ok(Some(self.transaction_proof(tx_index)))
     }
 
     fn block_header_proof(&self, height: Height) -> Result<BlockHeaderProof, Self::Error> {
-        let view = self.0.snapshot();
-        let blockchain_schema = CoreSchema::new(view);
-        let anchoring_schema = BtcAnchoringSchema::new(self.0.instance.name, view);
+        let snapshot = self.0.snapshot();
+        let blockchain_schema = CoreSchema::new(snapshot);
+        let anchoring_schema = BtcAnchoringSchema::new(self.0.instance.name, snapshot);
 
         let max_height = blockchain_schema.block_hashes_by_height().len() - 1;
 
@@ -308,6 +329,18 @@ impl<'a> PublicApi for ApiImpl<'a> {
     fn config(&self) -> AsyncResult<Config, Self::Error> {
         self.actual_config().map_err(From::from).into_async()
     }
+
+    fn transaction_with_index(
+        &self,
+        index: u64,
+    ) -> AsyncResult<Option<btc::Transaction>, Self::Error> {
+        Ok(
+            BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
+                .anchoring_transactions_chain()
+                .get(index),
+        )
+        .into_async()
+    }
 }
 
 impl<'a> PrivateApi for ApiImpl<'a> {
@@ -322,7 +355,7 @@ impl<'a> PrivateApi for ApiImpl<'a> {
     }
 
     fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error> {
-        BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
+        self.anchoring_schema()
             .actual_proposed_anchoring_transaction()
             .transpose()
             .map(|x| x.map(AnchoringTransactionProposal::from))
@@ -349,6 +382,13 @@ pub struct HeightQuery {
     pub height: Height,
 }
 
+/// Query parameters for the anchoring transaction request.
+#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
+pub struct IndexQuery {
+    /// Index of the anchoring transaction.
+    pub index: u64,
+}
+
 pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
     builder
         .public_scope()
@@ -366,6 +406,9 @@ pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
         })
         .endpoint("config", |state, _query: ()| {
             PublicApi::config(&ApiImpl(state))
+        })
+        .endpoint("transaction", |state, query: IndexQuery| {
+            ApiImpl(state).transaction_with_index(query.index)
         });
     builder
         .private_scope()

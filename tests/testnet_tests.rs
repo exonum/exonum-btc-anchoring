@@ -53,7 +53,7 @@ where
         .create_blocks_until(Height(anchoring_interval * 2));
 
     let last_anchoring_tx = anchoring_testkit.last_anchoring_tx().unwrap();
-    // Remove one of anchoring nodes.
+    // Modify anchoring configuration.
     let mut new_cfg = anchoring_testkit.actual_anchoring_config();
     let old_cfg = new_cfg.clone();
     config_change_predicate(&mut anchoring_testkit, &mut new_cfg);
@@ -428,7 +428,7 @@ fn add_anchoring_node_insufficient_funds() {
         .inner
         .create_blocks_until(Height(anchoring_interval * 2));
 
-    // Remove one of anchoring nodes.
+    // Add an anchoring node.
     let mut new_cfg = anchoring_testkit.actual_anchoring_config();
     new_cfg.anchoring_keys.push(anchoring_testkit.add_node());
     new_cfg.funding_transaction = None;

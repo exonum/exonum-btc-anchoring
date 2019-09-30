@@ -39,7 +39,7 @@ use std::collections::BTreeMap;
 use crate::{
     api::{
         AnchoringTransactionProposal, AsyncResult, BlockHeaderProof, FindTransactionQuery,
-        HeightQuery, IntoAsyncResult, PrivateApi, PublicApi, TransactionProof,
+        HeightQuery, IndexQuery, IntoAsyncResult, PrivateApi, PublicApi, TransactionProof,
     },
     blockchain::{transactions::SignInput, BtcAnchoringSchema},
     btc,
@@ -368,6 +368,16 @@ impl PublicApi for TestKitApi {
     fn config(&self) -> AsyncResult<Config, Self::Error> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("config")
+            .into_async()
+    }
+
+    fn transaction_with_index(
+        &self,
+        index: u64,
+    ) -> AsyncResult<Option<btc::Transaction>, Self::Error> {
+        self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .query(&IndexQuery { index })
+            .get("transaction")
             .into_async()
     }
 }
