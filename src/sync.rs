@@ -85,19 +85,11 @@ impl PrivateApi for PrivateApiClient {
     }
 
     fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error> {
-        log::debug!(
-            "Get anchoring proposal: {}",
-            self.endpoint("anchoring-proposal")
-        );
-        
         Box::new(
             self.client
                 .get(&self.endpoint("anchoring-proposal"))
                 .send()
-                .and_then(|mut request| {
-                    log::debug!("{:?}", request);
-                    request.json()
-                })
+                .and_then(|mut request| request.json())
                 .map_err(|e| e.to_string()),
         )
     }
@@ -126,7 +118,7 @@ where
 
 impl<T> AnchoringChainUpdater<T>
 where
-    T: PrivateApi<Error = String>  + Send + Clone + 'static,
+    T: PrivateApi<Error = String> + Send + Clone + 'static,
 {
     /// Create a new anchoring chain updater instance.
     pub fn new(
@@ -141,7 +133,7 @@ where
 
     /// Perform a one attempt to sign an anchoring proposal, if any.
     pub fn process(self) -> impl Future<Item = (), Error = String> {
-        log::debug!("Perform anchoring chain updater");
+        log::trace!("Perform an anchoring chain update");
         self.clone()
             .api_relay
             .anchoring_proposal()
@@ -161,7 +153,7 @@ where
         config: Config,
         proposal: AnchoringTransactionProposal,
     ) -> impl Future<Item = (), Error = String> {
-        log::debug!("Got proposal: {:?}", proposal);
+        log::trace!("Got an anchoring proposal: {:?}", proposal);
         // Find among the keys one from which we have a private part.
         // TODO What we have to do if we find more than one key? [ECR-3222]
         let keypair = some_or_return!(
@@ -217,6 +209,7 @@ where
             Err(e) => return Err(e.to_string()).into_async(),
         };
 
+        // Send sign input transactions to the Exonum node.
         let api_relay = self.api_relay.clone();
         Box::new(
             futures_unordered(
@@ -227,10 +220,11 @@ where
             .collect()
             .map(move |_| {
                 log::info!(
-                    "Successfully sent signatures for the proposal with id: {} for height: {}",
-                    proposal.transaction.id(),
+                    "Successfully sent signatures for the proposal with id: {} for height: {}.",
+                    proposal.transaction.id().to_hex(),
                     block_height,
                 );
+                log::info!("Balance: {}", proposal.transaction.0.output[0].value)
             }),
         )
     }

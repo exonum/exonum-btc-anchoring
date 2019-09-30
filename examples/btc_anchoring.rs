@@ -12,11 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum_cli::NodeBuilder;
 use exonum::runtime::rust::ServiceFactory;
+use exonum_cli::NodeBuilder;
 
 fn main() -> Result<(), failure::Error> {
-    println!("{}", exonum_btc_anchoring::BtcAnchoringService.artifact_id());
+    println!(
+        "{}",
+        exonum_btc_anchoring::BtcAnchoringService.artifact_id()
+    );
 
     exonum::helpers::init_logger()?;
     NodeBuilder::new()

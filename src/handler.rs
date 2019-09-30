@@ -137,8 +137,6 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                 )
                 .unwrap();
 
-            log::debug!("Broadcast tx: {:#?} by id {}", proposal, anchoring_node_id);
-
             let tx = SignInput {
                 transaction: proposal.clone(),
                 input: index as u32,
@@ -149,9 +147,6 @@ impl<'a> UpdateAnchoringChainTask<'a> {
                 self.context.service_keypair.0,
                 &self.context.service_keypair.1,
             );
-
-            log::debug!("txid {}", tx.object_hash());
-
             self.context.broadcast_signed_transaction(tx);
         }
 

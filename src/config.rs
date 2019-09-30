@@ -128,18 +128,6 @@ impl ValidateInput for Config {
         .quorum(quorum)
         .to_script()?;
 
-        log::debug!("{:#?}", redeem_script);
-        log::debug!("self {:#?}", self.redeem_script());
-        log::debug!("{:#?}", self);
-        log::debug!("{}", self.anchoring_address());
-        log::debug!(
-            "{:?}",
-            self.anchoring_keys
-                .iter()
-                .map(|x| x.bitcoin_key.to_string())
-                .collect::<Vec<_>>()
-        );
-
         // TODO remove funding transaction from the config.
         if let Some(tx) = self.funding_transaction.as_ref() {
             tx.find_out(&redeem_script.as_ref().to_v0_p2wsh())

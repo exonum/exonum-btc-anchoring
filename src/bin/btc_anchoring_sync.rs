@@ -22,8 +22,13 @@ use exonum_cli::io::{load_config_file, save_config_file};
 use futures::Future;
 use serde_derive::{Deserialize, Serialize};
 use structopt::StructOpt;
+use tokio::timer::Delay;
 
-use std::{collections::HashMap, path::PathBuf};
+use std::{
+    collections::HashMap,
+    path::PathBuf,
+    time::{Duration, Instant},
+};
 
 /// Generate initial configuration for the btc anchoring sync utility.
 #[derive(Debug, StructOpt)]
@@ -79,6 +84,10 @@ struct SyncConfig {
     bitcoin_key_pool: HashMap<btc::PublicKey, btc::PrivateKey>,
 }
 
+fn socket_to_http_address(addr: std::net::SocketAddr) -> String {
+    format!("http://{}", addr)
+}
+
 impl GenerateConfig {
     fn run(self) -> Result<(), failure::Error> {
         let bitcoin_keypair = btc::gen_keypair(self.bitcoin_network);
@@ -89,14 +98,14 @@ impl GenerateConfig {
             public_api_address: node_config
                 .api
                 .public_api_address
-                .map(|x| x.to_string())
+                .map(socket_to_http_address)
                 .ok_or_else(|| {
                     failure::format_err!("Public API address should be exist in the node config")
                 })?,
             private_api_address: node_config
                 .api
                 .private_api_address
-                .map(|x| x.to_string())
+                .map(socket_to_http_address)
                 .ok_or_else(|| {
                     failure::format_err!("Public API address should be exist in the node config")
                 })?,
@@ -118,14 +127,24 @@ impl Run {
     fn run(self) -> Result<(), failure::Error> {
         let sync_config: SyncConfig = load_config_file(self.config)?;
 
-        let client =
-            PrivateApiClient::new(sync_config.private_api_address, sync_config.instance_name);
-        let updater = AnchoringChainUpdater::new(sync_config.bitcoin_key_pool, client);
-        // TODO Rewrite on top of Tokio.
-        loop {
-            tokio::run(updater.clone().process().map_err(|e| log::error!("{}", e)));
-            std::thread::sleep(std::time::Duration::from_secs(30));
-        }
+        let anchoring_chain_update_task = {
+            let client =
+                PrivateApiClient::new(sync_config.private_api_address, sync_config.instance_name);
+            let updater = AnchoringChainUpdater::new(sync_config.bitcoin_key_pool, client);
+            futures::future::loop_fn(updater, |updater| {
+                updater
+                    .clone()
+                    .process()
+                    .and_then(|_| {
+                        let when = Instant::now() + Duration::from_secs(1);
+                        Delay::new(when).map_err(|e| e.to_string())
+                    })
+                    .and_then(|_| Ok(futures::future::Loop::Continue(updater)))
+            })
+        };
+
+        tokio::run(anchoring_chain_update_task.map_err(|e| log::error!("{}", e)));
+        Ok(())
     }
 }
 

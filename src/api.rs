@@ -14,6 +14,7 @@
 
 //! Anchoring HTTP API implementation.
 
+use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
     blockchain::{BlockProof, IndexCoordinates, IndexOwner, Schema as CoreSchema},
     crypto::Hash,
@@ -167,6 +168,36 @@ impl<'a> ApiImpl<'a> {
     fn actual_config(&self) -> Result<Config, failure::Error> {
         Ok(BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot()).actual_configuration())
     }
+
+    fn verify_sign_input(&self, sign_input: &SignInput) -> Result<(), failure::Error> {
+        let schema = BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot());
+        let (proposal, inputs) = schema
+            .actual_proposed_anchoring_transaction()
+            .ok_or_else(|| failure::format_err!("Anchoring transaction proposal is absent."))??;
+        // Verify transaction content.
+        let input = inputs.get(sign_input.input as usize).ok_or_else(|| {
+            failure::format_err!("Missing input with index: {}", sign_input.input)
+        })?;
+        failure::ensure!(
+            proposal == sign_input.transaction,
+            "Invalid anchoring proposal"
+        );
+        // Find corresponding Bitcoin key.
+        let config = schema.actual_configuration();
+        let bitcoin_key = config
+            .find_bitcoin_key(&self.0.service_keypair.0)
+            .ok_or_else(|| failure::format_err!("This node is not an anchoring node."))?
+            .1;
+        // Verify input signature.
+        p2wsh::InputSigner::new(config.redeem_script())
+            .verify_input(
+                TxInRef::new(sign_input.transaction.as_ref(), sign_input.input as usize),
+                input.as_ref(),
+                &bitcoin_key.0,
+                sign_input.input_signature.as_ref(),
+            )
+            .map_err(|e| failure::format_err!("Input signature verification failed: {}", e))
+    }
 }
 
 impl<'a> PublicApi for ApiImpl<'a> {
@@ -283,22 +314,20 @@ impl<'a> PrivateApi for ApiImpl<'a> {
     type Error = api::Error;
 
     fn sign_input(&self, sign_input: SignInput) -> AsyncResult<Hash, Self::Error> {
-        // TODO Verify input.
+        // Verify Bitcoin signature.
+        if let Err(e) = self.verify_sign_input(&sign_input) {
+            return Err(api::Error::BadRequest(e.to_string())).into_async();
+        }
         Box::new(self.broadcast_transaction(sign_input).map_err(From::from))
     }
 
     fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error> {
-        let schema = BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot());
-        match schema.actual_proposed_anchoring_transaction() {
-            Some(Ok(proposal)) => Ok(Some(AnchoringTransactionProposal {
-                transaction: proposal.0,
-                inputs: proposal.1,
-            })),
-            // TODO Find idiomatic way.
-            Some(Err(e)) => Err(api::Error::InternalError(e.into())),
-            None => Ok(None),
-        }
-        .into_async()
+        BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
+            .actual_proposed_anchoring_transaction()
+            .transpose()
+            .map(|x| x.map(AnchoringTransactionProposal::from))
+            .map_err(Self::Error::from)
+            .into_async()
     }
 
     fn config(&self) -> AsyncResult<Config, Self::Error> {
@@ -360,5 +389,21 @@ impl<T> std::fmt::Debug for dyn PublicApi<Error = T> {
 impl<T> std::fmt::Debug for dyn PrivateApi<Error = T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PrivateApi").finish()
+    }
+}
+
+impl From<btc::BuilderError> for api::Error {
+    fn from(inner: btc::BuilderError) -> Self {
+        // TODO Find more idiomatic error code.
+        api::Error::BadRequest(inner.to_string())
+    }
+}
+
+impl From<(btc::Transaction, Vec<btc::Transaction>)> for AnchoringTransactionProposal {
+    fn from((transaction, inputs): (btc::Transaction, Vec<btc::Transaction>)) -> Self {
+        Self {
+            transaction,
+            inputs,
+        }
     }
 }
