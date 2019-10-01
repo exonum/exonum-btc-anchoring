@@ -45,7 +45,6 @@ fn transaction_with_index(
         .inner
         .api()
         .transaction_with_index(index)
-        .wait()
         .unwrap()
 }
 

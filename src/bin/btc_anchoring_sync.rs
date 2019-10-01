@@ -14,14 +14,10 @@
 
 use exonum::{
     crypto::{self, Hash},
-    helpers::Height,
     node::NodeConfig,
 };
 use exonum_btc_anchoring::{
-    api::{
-        AnchoringTransactionProposal, AsyncResult, BlockHeaderProof, FindTransactionQuery,
-        HeightQuery, IndexQuery, PrivateApi, PublicApi, TransactionProof,
-    },
+    api::{AnchoringTransactionProposal, AsyncResult, IndexQuery, PrivateApi},
     blockchain::SignInput,
     btc,
     config::{AnchoringKeys, Config as AnchoringConfig},
@@ -114,41 +110,13 @@ impl PrivateApi for ApiClient {
     fn config(&self) -> AsyncResult<AnchoringConfig, Self::Error> {
         self.get_json("config", EMPTY_QUERY)
     }
-}
 
-impl PublicApi for ApiClient {
-    type Error = String;
-
-    fn actual_address(&self) -> Result<btc::Address, Self::Error> {
-        self.get_json("address/actual", EMPTY_QUERY).wait()
+    fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
+        self.get_json("transaction", &IndexQuery { index }).wait()
     }
 
-    fn following_address(&self) -> Result<Option<btc::Address>, Self::Error> {
-        self.get_json("address/following", EMPTY_QUERY).wait()
-    }
-
-    fn find_transaction(
-        &self,
-        height: Option<Height>,
-    ) -> Result<Option<TransactionProof>, Self::Error> {
-        self.get_json("find-transaction", &FindTransactionQuery { height })
-            .wait()
-    }
-
-    fn block_header_proof(&self, height: Height) -> Result<BlockHeaderProof, Self::Error> {
-        self.get_json("block-header-proof", &HeightQuery { height })
-            .wait()
-    }
-
-    fn config(&self) -> AsyncResult<AnchoringConfig, Self::Error> {
-        self.get_json("config", EMPTY_QUERY)
-    }
-
-    fn transaction_with_index(
-        &self,
-        index: u64,
-    ) -> AsyncResult<Option<btc::Transaction>, Self::Error> {
-        self.get_json("transaction", &IndexQuery { index })
+    fn transactions_count(&self) -> Result<u64, Self::Error> {
+        self.get_json("transactions-count", EMPTY_QUERY).wait()
     }
 }
 
@@ -199,7 +167,6 @@ enum Commands {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SyncConfig {
-    public_api_address: String,
     private_api_address: String,
     instance_name: String,
     #[serde(with = "flatten_keypairs")]
@@ -217,13 +184,6 @@ impl GenerateConfig {
 
         let node_config: NodeConfig = load_config_file(self.node_config)?;
         let sync_config = SyncConfig {
-            public_api_address: node_config
-                .api
-                .public_api_address
-                .map(socket_to_http_address)
-                .ok_or_else(|| {
-                    failure::format_err!("Public API address should be exist in the node config")
-                })?,
             private_api_address: node_config
                 .api
                 .private_api_address

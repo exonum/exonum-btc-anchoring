@@ -370,16 +370,6 @@ impl PublicApi for TestKitApi {
             .get("config")
             .into_async()
     }
-
-    fn transaction_with_index(
-        &self,
-        index: u64,
-    ) -> AsyncResult<Option<btc::Transaction>, Self::Error> {
-        self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
-            .query(&IndexQuery { index })
-            .get("transaction")
-            .into_async()
-    }
 }
 
 impl PrivateApi for TestKitApi {
@@ -401,6 +391,17 @@ impl PrivateApi for TestKitApi {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("config")
             .into_async()
+    }
+
+    fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
+        self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .query(&IndexQuery { index })
+            .get("transaction")
+    }
+
+    fn transactions_count(&self) -> Result<u64, Self::Error> {
+        self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .get("transactions-count")
     }
 }
 

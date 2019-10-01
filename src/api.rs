@@ -120,13 +120,6 @@ pub trait PublicApi {
     ///
     /// `GET /{api_prefix}/config`
     fn config(&self) -> AsyncResult<Config, Self::Error>;
-    /// Return an anchoring transaction with the specified index in anchoring transactions chain.
-    ///
-    /// `GET /{api_prefix}/transaction?index={index}`
-    fn transaction_with_index(
-        &self,
-        index: u64,
-    ) -> AsyncResult<Option<btc::Transaction>, Self::Error>;
 }
 
 /// Private API specification for the Exonum Bitcoin anchoring service.
@@ -147,6 +140,14 @@ pub trait PrivateApi {
     ///
     /// `GET /{api_prefix}/config`
     fn config(&self) -> AsyncResult<Config, Self::Error>;
+    /// Return an anchoring transaction with the specified index in anchoring transactions chain.
+    ///
+    /// `GET /{api_prefix}/transaction?index={index}`
+    fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error>;
+    /// Return a total number of anchoring transactions in the chain.
+    ///
+    /// `GET /{api_prefix}/transactions-count`
+    fn transactions_count(&self) -> Result<u64, Self::Error>;
 }
 
 struct ApiImpl<'a>(&'a ServiceApiState<'a>);
@@ -329,18 +330,6 @@ impl<'a> PublicApi for ApiImpl<'a> {
     fn config(&self) -> AsyncResult<Config, Self::Error> {
         self.actual_config().map_err(From::from).into_async()
     }
-
-    fn transaction_with_index(
-        &self,
-        index: u64,
-    ) -> AsyncResult<Option<btc::Transaction>, Self::Error> {
-        Ok(
-            BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
-                .anchoring_transactions_chain()
-                .get(index),
-        )
-        .into_async()
-    }
 }
 
 impl<'a> PrivateApi for ApiImpl<'a> {
@@ -365,6 +354,22 @@ impl<'a> PrivateApi for ApiImpl<'a> {
 
     fn config(&self) -> AsyncResult<Config, Self::Error> {
         self.actual_config().map_err(From::from).into_async()
+    }
+
+    fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
+        Ok(
+            BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
+                .anchoring_transactions_chain()
+                .get(index),
+        )
+    }
+
+    fn transactions_count(&self) -> Result<u64, Self::Error> {
+        Ok(
+            BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
+                .anchoring_transactions_chain()
+                .len(),
+        )
     }
 }
 
@@ -406,9 +411,6 @@ pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
         })
         .endpoint("config", |state, _query: ()| {
             PublicApi::config(&ApiImpl(state))
-        })
-        .endpoint("transaction", |state, query: IndexQuery| {
-            ApiImpl(state).transaction_with_index(query.index)
         });
     builder
         .private_scope()
@@ -420,6 +422,12 @@ pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
         })
         .endpoint("config", |state, _query: ()| {
             PrivateApi::config(&ApiImpl(state))
+        })
+        .endpoint("transaction", |state, query: IndexQuery| {
+            ApiImpl(state).transaction_with_index(query.index)
+        })
+        .endpoint("transactions-count", |state, _query: ()| {
+            ApiImpl(state).transactions_count()
         });
 }
 

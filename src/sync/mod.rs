@@ -14,7 +14,10 @@
 
 //! Building blocks of the anchoring sync utility.
 
+// TODO Rewrite with the async/await syntax when it is ready. [ECR-3222]
+
 use btc_transaction_utils::{p2wsh, TxInRef};
+use exonum::crypto::Hash;
 use futures::{
     future::Future,
     stream::{futures_unordered, Stream},
@@ -23,7 +26,7 @@ use futures::{
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    api::{AnchoringTransactionProposal, IntoAsyncResult, PrivateApi, PublicApi},
+    api::{AnchoringTransactionProposal, IntoAsyncResult, PrivateApi},
     blockchain::SignInput,
     btc,
     config::Config,
@@ -186,8 +189,8 @@ where
 #[derive(Debug, Clone)]
 pub struct SyncWithBitcoinTask<T, R>
 where
-    T: PublicApi<Error = String> + Send + Clone + 'static,
-    R: BtcRelay,
+    T: PrivateApi<Error = String> + Send + Clone + 'static,
+    R: BtcRelay + Send + Clone + 'static,
 {
     btc_relay: R,
     api_client: T,
@@ -195,8 +198,8 @@ where
 
 impl<T, R> SyncWithBitcoinTask<T, R>
 where
-    T: PublicApi<Error = String> + Send + Clone + 'static,
-    R: BtcRelay,
+    T: PrivateApi<Error = String> + Send + Clone + 'static,
+    R: BtcRelay + Send + Clone + 'static,
 {
     /// Create a new sync with Bitcoin task instance.
     pub fn new(api_client: T, btc_relay: R) -> Self {
@@ -204,5 +207,89 @@ where
             api_client,
             btc_relay,
         }
+    }
+
+    /// Perform a one attempt to send the first uncommitted anchoring transaction into the Bitcoin network, if any.
+    /// sign an anchoring proposal, if any. Return an index of the first committed transaction.
+    pub fn process(self, latest_committed_tx_index: Option<u64>) -> Result<Option<u64>, String> {
+        let (index, tx) = {
+            if let Some(index) = latest_committed_tx_index {
+                // Check that the latest committed transaction was really committed into
+                // the Bitcoin network.
+                let tx = self.get_transaction(index)?;
+                if self.transaction_is_committed(&tx.id())? {
+                    let chain_len = self.api_client.transactions_count()?;
+                    let index = index + 1;
+
+                    if index == chain_len {
+                        return Ok(Some(index));
+                    }
+                    (index, self.get_transaction(index)?)
+                } else {
+                    (index, tx)
+                }
+            }
+            // Perform to find the actual uncommitted transaction.
+            else if let Some((tx, index)) = self.find_index_of_first_uncommitted_transaction()? {
+                (index, tx)
+            } else {
+                return Ok(None);
+            }
+        };
+        // Send an actual uncommitted transaction into the Bitcoin network.
+        self.btc_relay
+            .send_transaction(&tx)
+            .map_err(|e| e.to_string())?;
+        Ok(Some(index))
+    }
+
+    /// Find the first anchoring transaction and its index, which was not committed into
+    /// the Bitcoin blockchain.
+    pub fn find_index_of_first_uncommitted_transaction(
+        &self,
+    ) -> Result<Option<(btc::Transaction, u64)>, String> {
+        let index = {
+            let count = self.api_client.transactions_count()?;
+            if count == 0 {
+                return Ok(None);
+            }
+            count - 1
+        };
+        // Check that the tail of anchoring chain is committed to the Bitcoin.
+        let transaction = self.get_transaction(index)?;
+        if self.transaction_is_committed(&transaction.id())? {
+            return Ok(None);
+        }
+        // Or this transaction is ready to be committed into the Bitcoin network.
+        if self.transaction_is_committed(&transaction.prev_tx_id())? {
+            return Ok(Some((transaction, index)));
+        }
+        // Try to find the first of uncommitted transactions.
+        for index in (0..index).rev() {
+            let transaction = self.get_transaction(index)?;
+            if self.transaction_is_committed(&transaction.prev_tx_id())? {
+                return Ok(Some((transaction, index)));
+            }
+        }
+        Ok(None)
+    }
+
+    fn get_transaction(&self, index: u64) -> Result<btc::Transaction, String> {
+        self.api_client
+            .transaction_with_index(index)?
+            .ok_or_else(|| {
+                format!(
+                    "Transaction with index {} is absent in the anchoring chain",
+                    index
+                )
+            })
+    }
+
+    fn transaction_is_committed(&self, txid: &Hash) -> Result<bool, String> {
+        let info = self
+            .btc_relay
+            .transaction_info(txid)
+            .map_err(|e| e.to_string())?;
+        Ok(info.is_some())
     }
 }
