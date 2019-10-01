@@ -15,8 +15,8 @@
 //! Collections of helpers for synchronization with the Bitcoin network.
 
 use bitcoin::util::address::Address;
+use bitcoincore_rpc::{Auth, Error as RpcError, RawTx, RpcApi};
 use exonum::crypto::Hash;
-use exonum_bitcoinrpc as bitcoin_rpc;
 use failure;
 use hex::FromHex;
 use serde_derive::{Deserialize, Serialize};
@@ -27,13 +27,13 @@ use crate::btc::Transaction;
 #[derive(Debug, Clone, PartialEq)]
 pub struct TransactionInfo {
     /// Transaction content.
-    pub content: Transaction,
+    // pub content: Transaction,
     /// Number of confirmations.
-    pub confirmations: u64,
+    pub confirmations: u32,
 }
 
 /// Information provider about the Bitcoin network.
-pub trait BtcRelay: Send + Sync + ::std::fmt::Debug {
+pub trait BtcRelay: Send + Sync + std::fmt::Debug {
     /// Sends funds to the given address.
     fn send_to_address(&self, addr: &Address, satoshis: u64)
         -> Result<Transaction, failure::Error>;
@@ -66,12 +66,19 @@ const SATOSHI_DIVISOR: f64 = 100_000_000.0;
 
 /// Client for the `Bitcoind` rpc api.
 #[derive(Debug)]
-pub struct BitcoinRpcClient(bitcoin_rpc::Client);
+pub struct BitcoinRpcClient(bitcoincore_rpc::Client);
 
 impl BitcoinRpcClient {
     /// Creates a new rpc client for the given configuration.
     pub fn new(config: BitcoinRpcConfig) -> Self {
-        let inner = bitcoin_rpc::Client::new(config.host, config.username, config.password);
+        let inner = bitcoincore_rpc::Client::new(
+            config.host,
+            Auth::UserPass(
+                config.username.unwrap_or_default(),
+                config.password.unwrap_or_default(),
+            ),
+        )
+        .unwrap();
         Self(inner)
     }
 }
@@ -88,53 +95,46 @@ impl BtcRelay for BitcoinRpcClient {
         addr: &Address,
         satoshis: u64,
     ) -> Result<Transaction, failure::Error> {
-        let amount = satoshis as f64 / SATOSHI_DIVISOR;
-        let txid = self
-            .0
-            .sendtoaddress(&addr.to_string(), &amount.to_string())?;
-        let tx_hex = self.0.getrawtransaction(&txid)?;
-
-        Transaction::from_hex(tx_hex).map_err(From::from)
+        unimplemented!();
     }
 
     fn transaction_info(&self, id: &Hash) -> Result<Option<TransactionInfo>, failure::Error> {
-        let txid = id.to_hex();
-        let txinfo = match self.0.getrawtransaction_verbose(&txid) {
-            Ok(info) => info,
-            Err(bitcoin_rpc::Error::NoInformation(_)) => return Ok(None),
-            Err(e) => return Err(e.into()),
+        let blockchain_info = self.0.get_blockchain_info()?;
+        // TODO Rewrite proper or use Sha256d directly.
+        let txid = {
+            use bitcoin_hashes::Hash;
+            let mut bytes = [0_u8; 32];
+            bytes.copy_from_slice(id.as_ref());
+            bytes.reverse();
+            bitcoin_hashes::sha256d::Hash::from_slice(&bytes).unwrap()
         };
 
-        let tx_hex = txinfo
-            .hex
-            .ok_or_else(|| bitcoin_rpc::Error::NoInformation(txid))?;
-        let content = Transaction::from_hex(tx_hex)?;
+        let result = self.0.get_raw_transaction_verbose(&txid, None);
+        let result = match result {
+            Ok(result) => result,
+            Err(RpcError::JsonRpc(_)) => return Ok(None),
+            Err(e) => return Err(e.into()),
+        };
+        // let content = Transaction::from_hex(result.hex)?;
         // TODO Check attentively documentation of `getrawtransaction` rpc call.
-        let confirmations = txinfo.confirmations.unwrap_or_default();
-
+        let confirmations = result.confirmations.unwrap_or_default();
         Ok(Some(TransactionInfo {
-            content,
+            // content,
             confirmations,
         }))
     }
 
     fn send_transaction(&self, transaction: &Transaction) -> Result<Hash, failure::Error> {
         let txid = transaction.id();
-        self.0.sendrawtransaction(&transaction.to_string())?;
+        self.0.send_raw_transaction(transaction.to_string())?;
         Ok(txid)
     }
 
     fn watch_address(&self, addr: &Address, rescan: bool) -> Result<(), failure::Error> {
-        self.0
-            .importaddress(&addr.to_string(), "multisig", false, rescan)
-            .map_err(From::from)
+        unimplemented!();
     }
 
     fn config(&self) -> BitcoinRpcConfig {
-        BitcoinRpcConfig {
-            host: self.0.url().to_string(),
-            username: self.0.username().clone(),
-            password: self.0.password().clone(),
-        }
+        unimplemented!();
     }
 }

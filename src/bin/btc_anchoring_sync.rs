@@ -17,7 +17,7 @@ use exonum::{
     node::NodeConfig,
 };
 use exonum_btc_anchoring::{
-    api::{AnchoringChainLength, AnchoringTransactionProposal, IndexQuery, PrivateApi},
+    api::{AnchoringChainLength, AnchoringProposalState, IndexQuery, PrivateApi},
     blockchain::SignInput,
     btc,
     config::{AnchoringKeys, Config as AnchoringConfig},
@@ -109,7 +109,7 @@ impl PrivateApi for ApiClient {
         Box::new(self.post("sign-input", &sign_input).into_future())
     }
 
-    fn anchoring_proposal(&self) -> Result<Option<AnchoringTransactionProposal>, Self::Error> {
+    fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
         self.get("anchoring-proposal")
     }
 

@@ -28,9 +28,12 @@ use exonum::{
 use futures::{Future, IntoFuture, Sink};
 use serde_derive::{Deserialize, Serialize};
 
-use std::cmp::{
-    self,
-    Ordering::{self, Equal, Greater, Less},
+use std::{
+    cmp::{
+        self,
+        Ordering::{self, Equal, Greater, Less},
+    },
+    convert::{TryFrom, TryInto},
 };
 
 use crate::{
@@ -63,13 +66,47 @@ pub struct BlockHeaderProof {
     pub to_block_header: ListProof<Hash>,
 }
 
-/// Next anchoring transaction proposal.
+/// State of the next anchoring transaction proposal.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
-pub struct AnchoringTransactionProposal {
-    /// Proposal content.
-    pub transaction: btc::Transaction,
-    /// Input transactions.
-    pub inputs: Vec<btc::Transaction>,
+pub enum AnchoringProposalState {
+    /// There is no anchoring transaction proposal at the time.
+    None,
+    /// There is a non-finalized anchoring transaction.
+    Available {
+        /// Proposal content.
+        transaction: btc::Transaction,
+        /// Input transactions.
+        inputs: Vec<btc::Transaction>,
+    },
+    /// Insufficient funds to create an anchoring transaction proposal. Please fill up an anchoring wallet.
+    InsufficientFunds {
+        /// Total transaction fee.
+        total_fee: u64,
+        /// Available balance.
+        balance: u64,
+    },
+}
+
+impl TryFrom<Option<Result<(btc::Transaction, Vec<btc::Transaction>), btc::BuilderError>>>
+    for AnchoringProposalState
+{
+    type Error = api::Error;
+
+    fn try_from(
+        value: Option<Result<(btc::Transaction, Vec<btc::Transaction>), btc::BuilderError>>,
+    ) -> Result<Self, Self::Error> {
+        match value {
+            None => Ok(AnchoringProposalState::None),
+            Some(Ok((transaction, inputs))) => Ok(AnchoringProposalState::Available {
+                transaction,
+                inputs,
+            }),
+            Some(Err(btc::BuilderError::InsufficientFunds { total_fee, balance })) => {
+                Ok(AnchoringProposalState::InsufficientFunds { total_fee, balance })
+            }
+            Some(Err(e)) => Err(api::Error::InternalError(e.into())),
+        }
+    }
 }
 
 /// Total length of anchoring transaction chain.
@@ -134,7 +171,7 @@ pub trait PrivateApi {
     /// If there is not enough satoshis to create a proposal an error is returned.
     ///
     /// `GET /{api_prefix}/anchoring-proposal`
-    fn anchoring_proposal(&self) -> Result<Option<AnchoringTransactionProposal>, Self::Error>;
+    fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error>;
     /// Return an actual anchoring configuration.
     ///
     /// `GET /{api_prefix}/config`
@@ -345,12 +382,10 @@ impl<'a> PrivateApi for ApiImpl<'a> {
         Box::new(self.broadcast_transaction(sign_input).map_err(From::from))
     }
 
-    fn anchoring_proposal(&self) -> Result<Option<AnchoringTransactionProposal>, Self::Error> {
+    fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
         self.anchoring_schema()
             .actual_proposed_anchoring_transaction()
-            .transpose()
-            .map(|x| x.map(AnchoringTransactionProposal::from))
-            .map_err(Self::Error::from)
+            .try_into()
     }
 
     fn config(&self) -> Result<Config, Self::Error> {
@@ -442,21 +477,5 @@ impl<T> std::fmt::Debug for dyn PublicApi<Error = T> {
 impl<T> std::fmt::Debug for dyn PrivateApi<Error = T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("PrivateApi").finish()
-    }
-}
-
-impl From<btc::BuilderError> for api::Error {
-    fn from(inner: btc::BuilderError) -> Self {
-        // TODO Find more idiomatic error code.
-        api::Error::BadRequest(inner.to_string())
-    }
-}
-
-impl From<(btc::Transaction, Vec<btc::Transaction>)> for AnchoringTransactionProposal {
-    fn from((transaction, inputs): (btc::Transaction, Vec<btc::Transaction>)) -> Self {
-        Self {
-            transaction,
-            inputs,
-        }
     }
 }

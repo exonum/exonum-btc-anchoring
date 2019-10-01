@@ -14,7 +14,7 @@
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::helpers::Height;
 use exonum_btc_anchoring::{
-    api::{PrivateApi, PublicApi},
+    api::{AnchoringProposalState, PrivateApi, PublicApi},
     blockchain::{BtcAnchoringSchema, SignInput},
     btc,
     test_helpers::testkit::{
@@ -333,15 +333,15 @@ fn actual_config() {
 #[test]
 fn anchoring_proposal_ok() {
     let anchoring_testkit = AnchoringTestKit::default();
-    let proposal = anchoring_testkit
-        .anchoring_transaction_proposal()
-        .unwrap()
-        .0;
+    let proposal = anchoring_testkit.anchoring_transaction_proposal().unwrap();
 
     let api = anchoring_testkit.inner.api();
     assert_eq!(
-        api.anchoring_proposal().unwrap().map(|x| x.transaction),
-        Some(proposal)
+        api.anchoring_proposal().unwrap(),
+        AnchoringProposalState::Available {
+            transaction: proposal.0,
+            inputs: proposal.1,
+        }
     );
 }
 
@@ -358,7 +358,10 @@ fn anchoring_proposal_none() {
     );
 
     let api = anchoring_testkit.inner.api();
-    assert!(api.anchoring_proposal().unwrap().is_none());
+    assert_eq!(
+        api.anchoring_proposal().unwrap(),
+        AnchoringProposalState::None
+    );
 }
 
 #[test]

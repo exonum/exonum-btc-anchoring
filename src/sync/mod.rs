@@ -23,7 +23,7 @@ use futures::future::Future;
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    api::{AnchoringTransactionProposal, PrivateApi},
+    api::{AnchoringProposalState, PrivateApi},
     blockchain::SignInput,
     btc,
     config::Config,
@@ -75,18 +75,32 @@ where
     pub fn process(self) -> Result<(), String> {
         log::trace!("Perform an anchoring chain update");
 
-        if let Some(proposal) = self.api_client.anchoring_proposal()? {
-            let config = self.api_client.config()?;
-            self.handle_proposal(config, proposal)
-        } else {
-            Ok(())
+        match self.api_client.anchoring_proposal()? {
+            AnchoringProposalState::None => Ok(()),
+            AnchoringProposalState::Available {
+                transaction,
+                inputs,
+            } => {
+                let config = self.api_client.config()?;
+                self.handle_proposal(config, transaction, inputs)
+            }
+            AnchoringProposalState::InsufficientFunds { balance, total_fee } => {
+                log::warn!(
+                    "Insufficient funds to construct a new anchoring transaction, \
+                     total fee is {}, total balance is {}",
+                    total_fee,
+                    balance
+                );
+                Ok(())
+            }
         }
     }
 
     fn handle_proposal(
         self,
         config: Config,
-        proposal: AnchoringTransactionProposal,
+        proposal: btc::Transaction,
+        inputs: Vec<btc::Transaction>,
     ) -> Result<(), String> {
         log::trace!("Got an anchoring proposal: {:?}", proposal);
         // Find among the keys one from which we have a private part.
@@ -96,12 +110,12 @@ where
         );
         // Create `SignInput` transactions
         let redeem_script = config.redeem_script();
-        let block_height = match proposal.transaction.anchoring_payload() {
+        let block_height = match proposal.anchoring_payload() {
             Some(payload) => payload.block_height,
             None => {
                 return Err(format!(
                     "Incorrect anchoring proposal found: {:?}",
-                    proposal.transaction
+                    proposal
                 ))
             }
         };
@@ -112,26 +126,25 @@ where
         );
 
         let mut signer = p2wsh::InputSigner::new(redeem_script);
-        let sign_input_messages = proposal
-            .inputs
+        let sign_input_messages = inputs
             .iter()
             .enumerate()
             .map(|(index, proposal_input)| {
                 let signature = signer.sign_input(
-                    TxInRef::new(proposal.transaction.as_ref(), index),
-                    proposal.inputs[index].as_ref(),
+                    TxInRef::new(proposal.as_ref(), index),
+                    inputs[index].as_ref(),
                     &(keypair.1).0.key,
                 )?;
 
                 signer.verify_input(
-                    TxInRef::new(proposal.transaction.as_ref(), index),
+                    TxInRef::new(proposal.as_ref(), index),
                     proposal_input.as_ref(),
                     &(keypair.0).0,
                     &signature,
                 )?;
 
                 Ok(SignInput {
-                    transaction: proposal.transaction.clone(),
+                    transaction: proposal.clone(),
                     input: index as u32,
                     input_signature: signature.into(),
                 })
@@ -185,6 +198,8 @@ where
     /// Perform a one attempt to send the first uncommitted anchoring transaction into the Bitcoin network, if any.
     /// sign an anchoring proposal, if any. Return an index of the first committed transaction.
     pub fn process(&self, latest_committed_tx_index: Option<u64>) -> Result<Option<u64>, String> {
+        log::trace!("Perform syncing with the Bitcoin network");
+
         let (index, tx) = {
             if let Some(index) = latest_committed_tx_index {
                 // Check that the latest committed transaction was really committed into
@@ -192,11 +207,10 @@ where
                 let tx = self.get_transaction(index)?;
                 if self.transaction_is_committed(&tx.id())? {
                     let chain_len = self.api_client.transactions_count()?.value;
-                    let index = index + 1;
-
-                    if index == chain_len {
+                    if index + 1 == chain_len {
                         return Ok(Some(index));
                     }
+                    let index = index + 1;
                     (index, self.get_transaction(index)?)
                 } else {
                     (index, tx)
@@ -213,6 +227,10 @@ where
         self.btc_relay
             .send_transaction(&tx)
             .map_err(|e| e.to_string())?;
+        log::info!(
+            "Sent transaction to the Bitcoin network: {}",
+            tx.id().to_hex()
+        );
         Ok(Some(index))
     }
 
@@ -240,7 +258,13 @@ where
         // Try to find the first of uncommitted transactions.
         for index in (0..index).rev() {
             let transaction = self.get_transaction(index)?;
+            log::trace!(
+                "Checking for transaction with index {} and id {}",
+                index,
+                transaction.id().to_hex()
+            );
             if self.transaction_is_committed(&transaction.prev_tx_id())? {
+                log::trace!("Found committed transaction");
                 return Ok(Some((transaction, index)));
             }
         }

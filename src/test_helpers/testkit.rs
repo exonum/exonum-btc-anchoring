@@ -39,7 +39,7 @@ use std::collections::BTreeMap;
 
 use crate::{
     api::{
-        AnchoringChainLength, AnchoringTransactionProposal, BlockHeaderProof, FindTransactionQuery,
+        AnchoringChainLength, AnchoringProposalState, BlockHeaderProof, FindTransactionQuery,
         HeightQuery, IndexQuery, PrivateApi, PublicApi, TransactionProof,
     },
     blockchain::{transactions::SignInput, BtcAnchoringSchema},
@@ -387,7 +387,7 @@ impl PrivateApi for TestKitApi {
         )
     }
 
-    fn anchoring_proposal(&self) -> Result<Option<AnchoringTransactionProposal>, Self::Error> {
+    fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("anchoring-proposal")
     }
