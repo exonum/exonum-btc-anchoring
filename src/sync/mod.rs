@@ -15,7 +15,6 @@
 //! Building blocks of the anchoring sync utility.
 
 use btc_transaction_utils::{p2wsh, TxInRef};
-use exonum::crypto::Hash;
 use futures::{
     future::Future,
     stream::{futures_unordered, Stream},
@@ -24,11 +23,15 @@ use futures::{
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    api::{AnchoringTransactionProposal, AsyncResult, IntoAsyncResult, PrivateApi},
+    api::{AnchoringTransactionProposal, IntoAsyncResult, PrivateApi, PublicApi},
     blockchain::SignInput,
     btc,
     config::Config,
 };
+
+use self::bitcoin_relay::BtcRelay;
+
+pub mod bitcoin_relay;
 
 type KeyPool = Arc<HashMap<btc::PublicKey, btc::PrivateKey>>;
 
@@ -42,69 +45,6 @@ macro_rules! some_or_return {
     };
 }
 
-/// Client implementation for the private API of the anchoring service instance.
-#[derive(Debug, Clone)]
-pub struct PrivateApiClient {
-    /// Complete prefix with the port and the anchoring instance name.
-    prefix: String,
-    /// Underlying HTTP client.
-    client: reqwest::r#async::Client,
-}
-
-impl PrivateApiClient {
-    /// Create a new anchoring private API relay with the specified host and name of instance.
-    /// Hostname should be in form `{http|https}://{address}:{port}`.
-    pub fn new(hostname: impl AsRef<str>, instance_name: impl AsRef<str>) -> Self {
-        Self {
-            prefix: format!(
-                "{}/api/services/{}",
-                hostname.as_ref(),
-                instance_name.as_ref()
-            ),
-            client: reqwest::r#async::Client::new(),
-        }
-    }
-
-    fn endpoint(&self, name: impl AsRef<str>) -> String {
-        format!("{}/{}", self.prefix, name.as_ref())
-    }
-}
-
-impl PrivateApi for PrivateApiClient {
-    type Error = String;
-
-    fn sign_input(&self, sign_input: SignInput) -> AsyncResult<Hash, Self::Error> {
-        Box::new(
-            self.client
-                .post(&self.endpoint("sign-input"))
-                .json(&sign_input)
-                .send()
-                .and_then(|mut request| request.json())
-                .map_err(|e| e.to_string()),
-        )
-    }
-
-    fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error> {
-        Box::new(
-            self.client
-                .get(&self.endpoint("anchoring-proposal"))
-                .send()
-                .and_then(|mut request| request.json())
-                .map_err(|e| e.to_string()),
-        )
-    }
-
-    fn config(&self) -> AsyncResult<Config, Self::Error> {
-        Box::new(
-            self.client
-                .get(&self.endpoint("config"))
-                .send()
-                .and_then(|mut request| request.json())
-                .map_err(|e| e.to_string()),
-        )
-    }
-}
-
 /// Signs the inputs of the anchoring transaction proposal by the corresponding
 /// Bitcoin private keys.
 #[derive(Debug, Clone)]
@@ -113,7 +53,7 @@ where
     T: PrivateApi<Error = String> + Send + Clone + 'static,
 {
     key_pool: KeyPool,
-    api_relay: T,
+    api_client: T,
 }
 
 impl<T> AnchoringChainUpdater<T>
@@ -123,11 +63,11 @@ where
     /// Create a new anchoring chain updater instance.
     pub fn new(
         keys: impl IntoIterator<Item = (btc::PublicKey, btc::PrivateKey)>,
-        api_relay: T,
+        api_client: T,
     ) -> Self {
         Self {
             key_pool: Arc::new(keys.into_iter().collect()),
-            api_relay,
+            api_client,
         }
     }
 
@@ -135,13 +75,13 @@ where
     pub fn process(self) -> impl Future<Item = (), Error = String> {
         log::trace!("Perform an anchoring chain update");
         self.clone()
-            .api_relay
+            .api_client
             .anchoring_proposal()
             .and_then(move |proposal| {
                 let proposal = some_or_return!(proposal);
                 Box::new(
                     self.clone()
-                        .api_relay
+                        .api_client
                         .config()
                         .and_then(move |config| self.clone().handle_proposal(config, proposal)),
                 )
@@ -210,12 +150,12 @@ where
         };
 
         // Send sign input transactions to the Exonum node.
-        let api_relay = self.api_relay.clone();
+        let api_client = self.api_client.clone();
         Box::new(
             futures_unordered(
                 sign_input_messages
                     .into_iter()
-                    .map(move |sign_input| api_relay.clone().sign_input(sign_input)),
+                    .map(move |sign_input| api_client.clone().sign_input(sign_input)),
             )
             .collect()
             .map(move |_| {
@@ -239,5 +179,30 @@ where
                 .cloned()
                 .map(|private_key| (public_key, private_key))
         })
+    }
+}
+
+/// Pushes anchoring transactions to the Bitcoin blockchain.
+#[derive(Debug, Clone)]
+pub struct SyncWithBitcoinTask<T, R>
+where
+    T: PublicApi<Error = String> + Send + Clone + 'static,
+    R: BtcRelay,
+{
+    btc_relay: R,
+    api_client: T,
+}
+
+impl<T, R> SyncWithBitcoinTask<T, R>
+where
+    T: PublicApi<Error = String> + Send + Clone + 'static,
+    R: BtcRelay,
+{
+    /// Create a new sync with Bitcoin task instance.
+    pub fn new(api_client: T, btc_relay: R) -> Self {
+        Self {
+            api_client,
+            btc_relay,
+        }
     }
 }

@@ -14,6 +14,8 @@
 
 //! Collection of wrappers for the rust-bitcoin crate.
 
+pub use btc_transaction_utils::test_data::{secp_gen_keypair, secp_gen_keypair_with_rng};
+
 pub use self::{
     payload::Payload,
     transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transaction},
@@ -29,8 +31,6 @@ use std::ops::Deref;
 
 #[macro_use]
 mod macros;
-
-pub use btc_transaction_utils::test_data::{secp_gen_keypair, secp_gen_keypair_with_rng};
 
 pub(crate) mod payload;
 pub(crate) mod transaction;

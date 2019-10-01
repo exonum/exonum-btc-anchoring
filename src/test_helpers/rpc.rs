@@ -26,7 +26,7 @@ use std::{
 
 use crate::{
     btc,
-    rpc::{BitcoinRpcConfig, BtcRelay, TransactionInfo as BtcTransactionInfo},
+    sync::bitcoin_relay::{BitcoinRpcConfig, BtcRelay, TransactionInfo as BtcTransactionInfo},
 };
 
 const UNEXPECTED_RESPONSE: &str = "Unexpected response. Error in test data.";

@@ -12,14 +12,24 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::{crypto, node::NodeConfig};
+use exonum::{
+    crypto::{self, Hash},
+    helpers::Height,
+    node::NodeConfig,
+};
 use exonum_btc_anchoring::{
+    api::{
+        AnchoringTransactionProposal, AsyncResult, BlockHeaderProof, FindTransactionQuery,
+        HeightQuery, IndexQuery, PrivateApi, PublicApi, TransactionProof,
+    },
+    blockchain::SignInput,
     btc,
     config::{AnchoringKeys, Config as AnchoringConfig},
-    sync::{AnchoringChainUpdater, PrivateApiClient},
+    sync::AnchoringChainUpdater,
 };
 use exonum_cli::io::{load_config_file, save_config_file};
 use futures::Future;
+use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_derive::{Deserialize, Serialize};
 use structopt::StructOpt;
 use tokio::timer::Delay;
@@ -29,6 +39,118 @@ use std::{
     path::PathBuf,
     time::{Duration, Instant},
 };
+
+const EMPTY_QUERY: &() = &();
+
+/// Client implementation for the API of the anchoring service instance.
+#[derive(Debug, Clone)]
+pub struct ApiClient {
+    /// Complete prefix with the port and the anchoring instance name.
+    prefix: String,
+    /// Underlying HTTP client.
+    client: reqwest::r#async::Client,
+}
+
+impl ApiClient {
+    /// Create a new anchoring API relay with the specified host and name of instance.
+    /// Hostname should be in form `{http|https}://{address}:{port}`.
+    pub fn new(hostname: impl AsRef<str>, instance_name: impl AsRef<str>) -> Self {
+        Self {
+            prefix: format!(
+                "{}/api/services/{}",
+                hostname.as_ref(),
+                instance_name.as_ref()
+            ),
+            client: reqwest::r#async::Client::new(),
+        }
+    }
+
+    fn endpoint(&self, name: impl AsRef<str>) -> String {
+        format!("{}/{}", self.prefix, name.as_ref())
+    }
+
+    fn get_json<Q, R>(&self, endpoint: &str, query: &Q) -> AsyncResult<R, String>
+    where
+        Q: Serialize,
+        R: DeserializeOwned + Send + 'static,
+    {
+        Box::new(
+            self.client
+                .get(&self.endpoint(endpoint))
+                .query(query)
+                .send()
+                .and_then(|mut request| request.json())
+                .map_err(|e| e.to_string()),
+        )
+    }
+
+    fn post_json<Q, R>(&self, endpoint: &str, body: &Q) -> AsyncResult<R, String>
+    where
+        Q: Serialize,
+        R: DeserializeOwned + Send + 'static,
+    {
+        Box::new(
+            self.client
+                .post(&self.endpoint(endpoint))
+                .json(&body)
+                .send()
+                .and_then(|mut request| request.json())
+                .map_err(|e| e.to_string()),
+        )
+    }
+}
+
+impl PrivateApi for ApiClient {
+    type Error = String;
+
+    fn sign_input(&self, sign_input: SignInput) -> AsyncResult<Hash, Self::Error> {
+        self.post_json("sign-input", &sign_input)
+    }
+
+    fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error> {
+        self.get_json("anchoring-interval", EMPTY_QUERY)
+    }
+
+    fn config(&self) -> AsyncResult<AnchoringConfig, Self::Error> {
+        self.get_json("config", EMPTY_QUERY)
+    }
+}
+
+impl PublicApi for ApiClient {
+    type Error = String;
+
+    fn actual_address(&self) -> Result<btc::Address, Self::Error> {
+        self.get_json("address/actual", EMPTY_QUERY).wait()
+    }
+
+    fn following_address(&self) -> Result<Option<btc::Address>, Self::Error> {
+        self.get_json("address/following", EMPTY_QUERY).wait()
+    }
+
+    fn find_transaction(
+        &self,
+        height: Option<Height>,
+    ) -> Result<Option<TransactionProof>, Self::Error> {
+        self.get_json("find-transaction", &FindTransactionQuery { height })
+            .wait()
+    }
+
+    fn block_header_proof(&self, height: Height) -> Result<BlockHeaderProof, Self::Error> {
+        self.get_json("block-header-proof", &HeightQuery { height })
+            .wait()
+    }
+
+    fn config(&self) -> AsyncResult<AnchoringConfig, Self::Error> {
+        self.get_json("config", EMPTY_QUERY)
+    }
+
+    fn transaction_with_index(
+        &self,
+        index: u64,
+    ) -> AsyncResult<Option<btc::Transaction>, Self::Error> {
+        self.get_json("transaction", &IndexQuery { index })
+    }
+}
 
 /// Generate initial configuration for the btc anchoring sync utility.
 #[derive(Debug, StructOpt)]
@@ -128,8 +250,7 @@ impl Run {
         let sync_config: SyncConfig = load_config_file(self.config)?;
 
         let anchoring_chain_update_task = {
-            let client =
-                PrivateApiClient::new(sync_config.private_api_address, sync_config.instance_name);
+            let client = ApiClient::new(sync_config.private_api_address, sync_config.instance_name);
             let updater = AnchoringChainUpdater::new(sync_config.bitcoin_key_pool, client);
             futures::future::loop_fn(updater, |updater| {
                 updater
