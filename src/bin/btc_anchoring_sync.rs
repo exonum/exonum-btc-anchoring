@@ -17,26 +17,22 @@ use exonum::{
     node::NodeConfig,
 };
 use exonum_btc_anchoring::{
-    api::{AnchoringTransactionProposal, AsyncResult, IndexQuery, PrivateApi},
+    api::{AnchoringChainLength, AnchoringTransactionProposal, IndexQuery, PrivateApi},
     blockchain::SignInput,
     btc,
     config::{AnchoringKeys, Config as AnchoringConfig},
-    sync::AnchoringChainUpdater,
+    sync::{
+        bitcoin_relay::{BitcoinRpcClient, BitcoinRpcConfig},
+        AnchoringChainUpdater, SyncWithBitcoinTask,
+    },
 };
 use exonum_cli::io::{load_config_file, save_config_file};
-use futures::Future;
+use futures::{Future, IntoFuture};
 use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_derive::{Deserialize, Serialize};
 use structopt::StructOpt;
-use tokio::timer::Delay;
 
-use std::{
-    collections::HashMap,
-    path::PathBuf,
-    time::{Duration, Instant},
-};
-
-const EMPTY_QUERY: &() = &();
+use std::{collections::HashMap, path::PathBuf, time::Duration};
 
 /// Client implementation for the API of the anchoring service instance.
 #[derive(Debug, Clone)]
@@ -44,7 +40,7 @@ pub struct ApiClient {
     /// Complete prefix with the port and the anchoring instance name.
     prefix: String,
     /// Underlying HTTP client.
-    client: reqwest::r#async::Client,
+    client: reqwest::Client,
 }
 
 impl ApiClient {
@@ -57,7 +53,7 @@ impl ApiClient {
                 hostname.as_ref(),
                 instance_name.as_ref()
             ),
-            client: reqwest::r#async::Client::new(),
+            client: reqwest::Client::new(),
         }
     }
 
@@ -65,64 +61,74 @@ impl ApiClient {
         format!("{}/{}", self.prefix, name.as_ref())
     }
 
-    fn get_json<Q, R>(&self, endpoint: &str, query: &Q) -> AsyncResult<R, String>
+    fn get<R>(&self, endpoint: &str) -> Result<R, String>
     where
-        Q: Serialize,
         R: DeserializeOwned + Send + 'static,
     {
-        Box::new(
-            self.client
-                .get(&self.endpoint(endpoint))
-                .query(query)
-                .send()
-                .and_then(|mut request| request.json())
-                .map_err(|e| e.to_string()),
-        )
+        self.client
+            .get(&self.endpoint(endpoint))
+            .send()
+            .and_then(|mut request| request.json())
+            .map_err(|e| e.to_string())
     }
 
-    fn post_json<Q, R>(&self, endpoint: &str, body: &Q) -> AsyncResult<R, String>
+    fn get_query<Q, R>(&self, endpoint: &str, query: &Q) -> Result<R, String>
     where
         Q: Serialize,
         R: DeserializeOwned + Send + 'static,
     {
-        Box::new(
-            self.client
-                .post(&self.endpoint(endpoint))
-                .json(&body)
-                .send()
-                .and_then(|mut request| request.json())
-                .map_err(|e| e.to_string()),
-        )
+        self.client
+            .get(&self.endpoint(endpoint))
+            .query(query)
+            .send()
+            .and_then(|mut request| request.json())
+            .map_err(|e| e.to_string())
+    }
+
+    fn post<Q, R>(&self, endpoint: &str, body: &Q) -> Result<R, String>
+    where
+        Q: Serialize,
+        R: DeserializeOwned + Send + 'static,
+    {
+        self.client
+            .post(&self.endpoint(endpoint))
+            .json(&body)
+            .send()
+            .and_then(|mut request| request.json())
+            .map_err(|e| e.to_string())
     }
 }
 
 impl PrivateApi for ApiClient {
     type Error = String;
 
-    fn sign_input(&self, sign_input: SignInput) -> AsyncResult<Hash, Self::Error> {
-        self.post_json("sign-input", &sign_input)
+    fn sign_input(
+        &self,
+        sign_input: SignInput,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
+        Box::new(self.post("sign-input", &sign_input).into_future())
     }
 
-    fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error> {
-        self.get_json("anchoring-interval", EMPTY_QUERY)
+    fn anchoring_proposal(&self) -> Result<Option<AnchoringTransactionProposal>, Self::Error> {
+        self.get("anchoring-proposal")
     }
 
-    fn config(&self) -> AsyncResult<AnchoringConfig, Self::Error> {
-        self.get_json("config", EMPTY_QUERY)
+    fn config(&self) -> Result<AnchoringConfig, Self::Error> {
+        self.get("config")
     }
 
     fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
-        self.get_json("transaction", &IndexQuery { index }).wait()
+        self.get_query("transaction", &IndexQuery { index })
     }
 
-    fn transactions_count(&self) -> Result<u64, Self::Error> {
-        self.get_json("transactions-count", EMPTY_QUERY).wait()
+    fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error> {
+        self.get("transactions-count")
     }
 }
 
 /// Generate initial configuration for the btc anchoring sync utility.
 #[derive(Debug, StructOpt)]
-struct GenerateConfig {
+struct GenerateConfigCommand {
     /// Path to a node configuration file.
     #[structopt(long, short = "c")]
     node_config: PathBuf,
@@ -136,10 +142,19 @@ struct GenerateConfig {
     /// Anchoring instance name.
     #[structopt(long, short = "i")]
     instance_name: String,
+    /// Bitcoin RPC url.
+    #[structopt(long)]
+    bitcoin_rpc_host: Option<String>,
+    /// Bitcoin RPC username.
+    #[structopt(long)]
+    bitcoin_rpc_user: Option<String>,
+    /// Bitcoin RPC password.
+    #[structopt(long)]
+    bitcoin_rpc_password: Option<String>,
 }
 
 #[derive(Debug, StructOpt)]
-struct Run {
+struct RunCommand {
     /// Path to a sync utility configuration file.
     #[structopt(long, short = "c")]
     config: PathBuf,
@@ -147,7 +162,7 @@ struct Run {
 
 /// Helper command to compute bitcoin address for the specified bitcoin keys and network.
 #[derive(Debug, StructOpt)]
-struct AnchoringAddress {
+struct AnchoringAddressCommand {
     /// Bitcoin network type.
     #[structopt(long, short = "n")]
     bitcoin_network: bitcoin::Network,
@@ -158,11 +173,11 @@ struct AnchoringAddress {
 #[derive(Debug, StructOpt)]
 enum Commands {
     /// Generate initial configuration for the btc anchoring sync utility.
-    GenerateConfig(GenerateConfig),
+    GenerateConfig(GenerateConfigCommand),
     /// Run btc anchoring sync utility.
-    Run(Run),
+    Run(RunCommand),
     /// Helper command to compute bitcoin address for the specified bitcoin keys and network.
-    AnchoringAddress(AnchoringAddress),
+    AnchoringAddress(AnchoringAddressCommand),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -171,17 +186,19 @@ struct SyncConfig {
     instance_name: String,
     #[serde(with = "flatten_keypairs")]
     bitcoin_key_pool: HashMap<btc::PublicKey, btc::PrivateKey>,
+    bitcoin_rpc_config: Option<BitcoinRpcConfig>,
 }
 
 fn socket_to_http_address(addr: std::net::SocketAddr) -> String {
     format!("http://{}", addr)
 }
 
-impl GenerateConfig {
+impl GenerateConfigCommand {
     fn run(self) -> Result<(), failure::Error> {
         let bitcoin_keypair = btc::gen_keypair(self.bitcoin_network);
         println!("{}", bitcoin_keypair.0);
 
+        let bitcoin_rpc_config = self.bitcoin_rpc_config();
         let node_config: NodeConfig = load_config_file(self.node_config)?;
         let sync_config = SyncConfig {
             private_api_address: node_config
@@ -193,6 +210,7 @@ impl GenerateConfig {
                 })?,
             bitcoin_key_pool: std::iter::once(bitcoin_keypair.clone()).collect(),
             instance_name: self.instance_name,
+            bitcoin_rpc_config,
         };
 
         save_config_file(&sync_config, self.output)?;
@@ -203,33 +221,46 @@ impl GenerateConfig {
         );
         Ok(())
     }
-}
 
-impl Run {
-    fn run(self) -> Result<(), failure::Error> {
-        let sync_config: SyncConfig = load_config_file(self.config)?;
-
-        let anchoring_chain_update_task = {
-            let client = ApiClient::new(sync_config.private_api_address, sync_config.instance_name);
-            let updater = AnchoringChainUpdater::new(sync_config.bitcoin_key_pool, client);
-            futures::future::loop_fn(updater, |updater| {
-                updater
-                    .clone()
-                    .process()
-                    .and_then(|_| {
-                        let when = Instant::now() + Duration::from_secs(1);
-                        Delay::new(when).map_err(|e| e.to_string())
-                    })
-                    .and_then(|_| Ok(futures::future::Loop::Continue(updater)))
-            })
-        };
-
-        tokio::run(anchoring_chain_update_task.map_err(|e| log::error!("{}", e)));
-        Ok(())
+    fn bitcoin_rpc_config(&self) -> Option<BitcoinRpcConfig> {
+        self.bitcoin_rpc_host.clone().map(|host| BitcoinRpcConfig {
+            host,
+            username: self.bitcoin_rpc_user.clone(),
+            password: self.bitcoin_rpc_password.clone(),
+        })
     }
 }
 
-impl AnchoringAddress {
+impl RunCommand {
+    fn run(self) -> Result<(), failure::Error> {
+        let sync_config: SyncConfig = load_config_file(self.config)?;
+        // TODO rewrite on top of tokio or runtime crate [ECR-3222]
+        let client = ApiClient::new(sync_config.private_api_address, sync_config.instance_name);
+        let chain_updater =
+            AnchoringChainUpdater::new(sync_config.bitcoin_key_pool, client.clone());
+        let bitcoin_relay = sync_config
+            .bitcoin_rpc_config
+            .map(|config| SyncWithBitcoinTask::new(BitcoinRpcClient::new(config), client));
+
+        let mut latest_synced_tx_index: Option<u64> = None;
+        loop {
+            let _ = chain_updater.clone().process().map_err(|e| {
+                log::error!("An error in the anchoring chain updater occurred. {}", e)
+            });
+
+            if let Some(relay) = bitcoin_relay.as_ref() {
+                match relay.process(latest_synced_tx_index) {
+                    Ok(index) => latest_synced_tx_index = index,
+                    Err(e) => log::error!("An error in the sync with bitcoin task occurred. {}", e),
+                }
+            }
+
+            std::thread::sleep(Duration::from_secs(1));
+        }
+    }
+}
+
+impl AnchoringAddressCommand {
     fn run(self) -> Result<(), failure::Error> {
         let fake_config = AnchoringConfig {
             anchoring_keys: self

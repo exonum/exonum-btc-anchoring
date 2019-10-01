@@ -326,8 +326,8 @@ fn actual_config() {
     let cfg = anchoring_testkit.actual_anchoring_config();
 
     let api = anchoring_testkit.inner.api();
-    assert_eq!(PublicApi::config(&api).wait().unwrap(), cfg);
-    assert_eq!(PrivateApi::config(&api).wait().unwrap(), cfg);
+    assert_eq!(PublicApi::config(&api).unwrap(), cfg);
+    assert_eq!(PrivateApi::config(&api).unwrap(), cfg);
 }
 
 #[test]
@@ -340,10 +340,7 @@ fn anchoring_proposal_ok() {
 
     let api = anchoring_testkit.inner.api();
     assert_eq!(
-        api.anchoring_proposal()
-            .wait()
-            .unwrap()
-            .map(|x| x.transaction),
+        api.anchoring_proposal().unwrap().map(|x| x.transaction),
         Some(proposal)
     );
 }
@@ -361,7 +358,7 @@ fn anchoring_proposal_none() {
     );
 
     let api = anchoring_testkit.inner.api();
-    assert!(api.anchoring_proposal().wait().unwrap().is_none());
+    assert!(api.anchoring_proposal().unwrap().is_none());
 }
 
 #[test]
@@ -369,7 +366,7 @@ fn anchoring_proposal_err_insufficient_funds() {
     let anchoring_testkit = AnchoringTestKit::new(4, 100, 5);
 
     let api = anchoring_testkit.inner.api();
-    let e = api.anchoring_proposal().wait().unwrap_err();
+    let e = api.anchoring_proposal().unwrap_err();
     assert!(e.to_string().contains("Insufficient funds"));
 }
 

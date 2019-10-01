@@ -32,14 +32,15 @@ use exonum_testkit::{
     ApiKind, InstanceCollection, TestKit, TestKitApi, TestKitBuilder, TestNode,
 };
 use failure::{ensure, format_err};
+use futures::{Future, IntoFuture};
 use rand::{thread_rng, Rng};
 
 use std::collections::BTreeMap;
 
 use crate::{
     api::{
-        AnchoringTransactionProposal, AsyncResult, BlockHeaderProof, FindTransactionQuery,
-        HeightQuery, IndexQuery, IntoAsyncResult, PrivateApi, PublicApi, TransactionProof,
+        AnchoringChainLength, AnchoringTransactionProposal, BlockHeaderProof, FindTransactionQuery,
+        HeightQuery, IndexQuery, PrivateApi, PublicApi, TransactionProof,
     },
     blockchain::{transactions::SignInput, BtcAnchoringSchema},
     btc,
@@ -365,32 +366,35 @@ impl PublicApi for TestKitApi {
             .get("block-header-proof")
     }
 
-    fn config(&self) -> AsyncResult<Config, Self::Error> {
+    fn config(&self) -> Result<Config, Self::Error> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("config")
-            .into_async()
     }
 }
 
 impl PrivateApi for TestKitApi {
     type Error = api::Error;
 
-    fn sign_input(&self, sign_input: SignInput) -> AsyncResult<Hash, Self::Error> {
-        self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
-            .query(&sign_input)
-            .post("sign-input")
-            .into_async()
-    }
-    fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error> {
-        self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
-            .get("anchoring-proposal")
-            .into_async()
+    fn sign_input(
+        &self,
+        sign_input: SignInput,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
+        Box::new(
+            self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+                .query(&sign_input)
+                .post("sign-input")
+                .into_future(),
+        )
     }
 
-    fn config(&self) -> AsyncResult<Config, Self::Error> {
+    fn anchoring_proposal(&self) -> Result<Option<AnchoringTransactionProposal>, Self::Error> {
+        self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .get("anchoring-proposal")
+    }
+
+    fn config(&self) -> Result<Config, Self::Error> {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("config")
-            .into_async()
     }
 
     fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
@@ -399,7 +403,7 @@ impl PrivateApi for TestKitApi {
             .get("transaction")
     }
 
-    fn transactions_count(&self) -> Result<u64, Self::Error> {
+    fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error> {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("transactions-count")
     }

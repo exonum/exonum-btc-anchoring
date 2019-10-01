@@ -18,15 +18,12 @@
 
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::crypto::Hash;
-use futures::{
-    future::Future,
-    stream::{futures_unordered, Stream},
-};
+use futures::future::Future;
 
 use std::{collections::HashMap, sync::Arc};
 
 use crate::{
-    api::{AnchoringTransactionProposal, IntoAsyncResult, PrivateApi},
+    api::{AnchoringTransactionProposal, PrivateApi},
     blockchain::SignInput,
     btc,
     config::Config,
@@ -43,7 +40,7 @@ macro_rules! some_or_return {
         if let Some(value) = $value_expr {
             value
         } else {
-            return Ok(()).into_async();
+            return Ok(());
         }
     };
 }
@@ -75,27 +72,22 @@ where
     }
 
     /// Perform a one attempt to sign an anchoring proposal, if any.
-    pub fn process(self) -> impl Future<Item = (), Error = String> {
+    pub fn process(self) -> Result<(), String> {
         log::trace!("Perform an anchoring chain update");
-        self.clone()
-            .api_client
-            .anchoring_proposal()
-            .and_then(move |proposal| {
-                let proposal = some_or_return!(proposal);
-                Box::new(
-                    self.clone()
-                        .api_client
-                        .config()
-                        .and_then(move |config| self.clone().handle_proposal(config, proposal)),
-                )
-            })
+
+        if let Some(proposal) = self.api_client.anchoring_proposal()? {
+            let config = self.api_client.config()?;
+            self.handle_proposal(config, proposal)
+        } else {
+            Ok(())
+        }
     }
 
     fn handle_proposal(
         self,
         config: Config,
         proposal: AnchoringTransactionProposal,
-    ) -> impl Future<Item = (), Error = String> {
+    ) -> Result<(), String> {
         log::trace!("Got an anchoring proposal: {:?}", proposal);
         // Find among the keys one from which we have a private part.
         // TODO What we have to do if we find more than one key? [ECR-3222]
@@ -111,7 +103,6 @@ where
                     "Incorrect anchoring proposal found: {:?}",
                     proposal.transaction
                 ))
-                .into_async()
             }
         };
 
@@ -145,31 +136,13 @@ where
                     input_signature: signature.into(),
                 })
             })
-            .collect::<Result<Vec<_>, failure::Error>>();
-
-        let sign_input_messages = match sign_input_messages {
-            Ok(messages) => messages,
-            Err(e) => return Err(e.to_string()).into_async(),
-        };
-
+            .collect::<Result<Vec<_>, failure::Error>>()
+            .map_err(|e| e.to_string())?;
         // Send sign input transactions to the Exonum node.
-        let api_client = self.api_client.clone();
-        Box::new(
-            futures_unordered(
-                sign_input_messages
-                    .into_iter()
-                    .map(move |sign_input| api_client.clone().sign_input(sign_input)),
-            )
-            .collect()
-            .map(move |_| {
-                log::info!(
-                    "Successfully sent signatures for the proposal with id: {} for height: {}.",
-                    proposal.transaction.id().to_hex(),
-                    block_height,
-                );
-                log::info!("Balance: {}", proposal.transaction.0.output[0].value)
-            }),
-        )
+        for sign_input in sign_input_messages {
+            self.api_client.sign_input(sign_input).wait()?;
+        }
+        Ok(())
     }
 
     fn find_private_key(
@@ -186,11 +159,11 @@ where
 }
 
 /// Pushes anchoring transactions to the Bitcoin blockchain.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct SyncWithBitcoinTask<T, R>
 where
-    T: PrivateApi<Error = String> + Send + Clone + 'static,
-    R: BtcRelay + Send + Clone + 'static,
+    T: PrivateApi<Error = String> + Send + 'static,
+    R: BtcRelay + Send + 'static,
 {
     btc_relay: R,
     api_client: T,
@@ -198,11 +171,11 @@ where
 
 impl<T, R> SyncWithBitcoinTask<T, R>
 where
-    T: PrivateApi<Error = String> + Send + Clone + 'static,
-    R: BtcRelay + Send + Clone + 'static,
+    T: PrivateApi<Error = String> + Send + 'static,
+    R: BtcRelay + Send + 'static,
 {
     /// Create a new sync with Bitcoin task instance.
-    pub fn new(api_client: T, btc_relay: R) -> Self {
+    pub fn new(btc_relay: R, api_client: T) -> Self {
         Self {
             api_client,
             btc_relay,
@@ -211,14 +184,14 @@ where
 
     /// Perform a one attempt to send the first uncommitted anchoring transaction into the Bitcoin network, if any.
     /// sign an anchoring proposal, if any. Return an index of the first committed transaction.
-    pub fn process(self, latest_committed_tx_index: Option<u64>) -> Result<Option<u64>, String> {
+    pub fn process(&self, latest_committed_tx_index: Option<u64>) -> Result<Option<u64>, String> {
         let (index, tx) = {
             if let Some(index) = latest_committed_tx_index {
                 // Check that the latest committed transaction was really committed into
                 // the Bitcoin network.
                 let tx = self.get_transaction(index)?;
                 if self.transaction_is_committed(&tx.id())? {
-                    let chain_len = self.api_client.transactions_count()?;
+                    let chain_len = self.api_client.transactions_count()?.value;
                     let index = index + 1;
 
                     if index == chain_len {
@@ -249,7 +222,7 @@ where
         &self,
     ) -> Result<Option<(btc::Transaction, u64)>, String> {
         let index = {
-            let count = self.api_client.transactions_count()?;
+            let count = self.api_client.transactions_count()?.value;
             if count == 0 {
                 return Ok(None);
             }

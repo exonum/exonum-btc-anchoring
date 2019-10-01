@@ -39,23 +39,6 @@ use crate::{
     config::Config,
 };
 
-/// Type alias for the asynchronous result that will be ready in the future.
-pub type AsyncResult<I, E> = Box<dyn Future<Item = I, Error = E> + Send>;
-
-pub(crate) trait IntoAsyncResult<I, E> {
-    fn into_async(self) -> AsyncResult<I, E>;
-}
-
-impl<I, E> IntoAsyncResult<I, E> for Result<I, E>
-where
-    I: Send + 'static,
-    E: Send + 'static,
-{
-    fn into_async(self) -> AsyncResult<I, E> {
-        Box::new(self.into_future())
-    }
-}
-
 /// A proof of existence for an anchoring transaction at the given height.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionProof {
@@ -89,6 +72,19 @@ pub struct AnchoringTransactionProposal {
     pub inputs: Vec<btc::Transaction>,
 }
 
+/// Total length of anchoring transaction chain.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct AnchoringChainLength {
+    /// Length value.
+    pub value: u64,
+}
+
+impl From<u64> for AnchoringChainLength {
+    fn from(value: u64) -> Self {
+        Self { value }
+    }
+}
+
 /// Public API specification for the Exonum Bitcoin anchoring service.
 pub trait PublicApi {
     /// Error type for the current public API implementation.
@@ -119,7 +115,7 @@ pub trait PublicApi {
     /// Return an actual anchoring configuration.
     ///
     /// `GET /{api_prefix}/config`
-    fn config(&self) -> AsyncResult<Config, Self::Error>;
+    fn config(&self) -> Result<Config, Self::Error>;
 }
 
 /// Private API specification for the Exonum Bitcoin anchoring service.
@@ -130,16 +126,19 @@ pub trait PrivateApi {
     /// by the current node, and returns its hash.
     ///
     /// `POST /{api_prefix}/sign-input`
-    fn sign_input(&self, sign_input: SignInput) -> AsyncResult<Hash, Self::Error>;
+    fn sign_input(
+        &self,
+        sign_input: SignInput,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>>;
     /// Return a proposal for the next anchoring transaction, if it makes sense.
     /// If there is not enough satoshis to create a proposal an error is returned.
     ///
     /// `GET /{api_prefix}/anchoring-proposal`
-    fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error>;
+    fn anchoring_proposal(&self) -> Result<Option<AnchoringTransactionProposal>, Self::Error>;
     /// Return an actual anchoring configuration.
     ///
     /// `GET /{api_prefix}/config`
-    fn config(&self) -> AsyncResult<Config, Self::Error>;
+    fn config(&self) -> Result<Config, Self::Error>;
     /// Return an anchoring transaction with the specified index in anchoring transactions chain.
     ///
     /// `GET /{api_prefix}/transaction?index={index}`
@@ -147,7 +146,7 @@ pub trait PrivateApi {
     /// Return a total number of anchoring transactions in the chain.
     ///
     /// `GET /{api_prefix}/transactions-count`
-    fn transactions_count(&self) -> Result<u64, Self::Error>;
+    fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error>;
 }
 
 struct ApiImpl<'a>(&'a ServiceApiState<'a>);
@@ -327,33 +326,35 @@ impl<'a> PublicApi for ApiImpl<'a> {
         })
     }
 
-    fn config(&self) -> AsyncResult<Config, Self::Error> {
-        self.actual_config().map_err(From::from).into_async()
+    fn config(&self) -> Result<Config, Self::Error> {
+        self.actual_config().map_err(From::from)
     }
 }
 
 impl<'a> PrivateApi for ApiImpl<'a> {
     type Error = api::Error;
 
-    fn sign_input(&self, sign_input: SignInput) -> AsyncResult<Hash, Self::Error> {
+    fn sign_input(
+        &self,
+        sign_input: SignInput,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
         // Verify Bitcoin signature.
         if let Err(e) = self.verify_sign_input(&sign_input) {
-            return Err(api::Error::BadRequest(e.to_string())).into_async();
+            return Box::new(Err(api::Error::BadRequest(e.to_string())).into_future());
         }
         Box::new(self.broadcast_transaction(sign_input).map_err(From::from))
     }
 
-    fn anchoring_proposal(&self) -> AsyncResult<Option<AnchoringTransactionProposal>, Self::Error> {
+    fn anchoring_proposal(&self) -> Result<Option<AnchoringTransactionProposal>, Self::Error> {
         self.anchoring_schema()
             .actual_proposed_anchoring_transaction()
             .transpose()
             .map(|x| x.map(AnchoringTransactionProposal::from))
             .map_err(Self::Error::from)
-            .into_async()
     }
 
-    fn config(&self) -> AsyncResult<Config, Self::Error> {
-        self.actual_config().map_err(From::from).into_async()
+    fn config(&self) -> Result<Config, Self::Error> {
+        self.actual_config().map_err(From::from)
     }
 
     fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
@@ -364,11 +365,12 @@ impl<'a> PrivateApi for ApiImpl<'a> {
         )
     }
 
-    fn transactions_count(&self) -> Result<u64, Self::Error> {
+    fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error> {
         Ok(
             BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
                 .anchoring_transactions_chain()
-                .len(),
+                .len()
+                .into(),
         )
     }
 }

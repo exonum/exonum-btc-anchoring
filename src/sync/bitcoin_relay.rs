@@ -50,11 +50,11 @@ pub trait BtcRelay: Send + Sync + ::std::fmt::Debug {
 /// `Bitcoind` rpc configuration.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
 pub struct BitcoinRpcConfig {
-    /// Rpc url.
+    /// Bitcoin RPC url.
     pub host: String,
-    /// Rpc username.
+    /// Bitcoin RPC username.
     pub username: Option<String>,
-    /// Rpc password.
+    /// Bitcoin RPC password.
     pub password: Option<String>,
 }
 
