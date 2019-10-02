@@ -29,7 +29,7 @@ use failure::ensure;
 
 use crate::btc::{self, Address};
 
-/// Returns sufficient number of keys for the given validators number.
+/// Return the sufficient number of keys for the given validators number.
 pub fn byzantine_quorum(total: usize) -> usize {
     exonum::node::state::State::byzantine_majority_count(total)
 }
@@ -47,7 +47,7 @@ impl Default for Config {
 }
 
 impl Config {
-    /// The current limit on the number of keys in a redeem script on the Bitcoin network.
+    /// Current limit on the number of keys in a redeem script on the Bitcoin network.
     const MAX_NODES_COUNT: usize = 20;
 
     /// Create Bitcoin anchoring config instance with default parameters for the
@@ -79,12 +79,12 @@ impl Config {
         })
     }
 
-    /// Returns the corresponding Bitcoin address.
+    /// Return the corresponding Bitcoin address.
     pub fn anchoring_address(&self) -> Address {
         p2wsh::address(&self.redeem_script(), self.network).into()
     }
 
-    /// Returns the corresponding redeem script.
+    /// Return the corresponding redeem script.
     pub fn redeem_script(&self) -> RedeemScript {
         let quorum = byzantine_quorum(self.anchoring_keys.len());
         RedeemScriptBuilder::with_public_keys(self.anchoring_keys.iter().map(|x| x.bitcoin_key.0))
@@ -98,12 +98,12 @@ impl Config {
         self.redeem_script().as_ref().to_v0_p2wsh()
     }
 
-    /// Returns the latest height below the given height which must be anchored.
+    /// Return the latest height below the given height which must be anchored.
     pub fn previous_anchoring_height(&self, current_height: Height) -> Height {
         Height(current_height.0 - current_height.0 % self.anchoring_interval)
     }
 
-    /// Returns the nearest height above the given height which must be anchored.
+    /// Return the nearest height above the given height which must be anchored.
     pub fn following_anchoring_height(&self, current_height: Height) -> Height {
         Height(self.previous_anchoring_height(current_height).0 + self.anchoring_interval)
     }

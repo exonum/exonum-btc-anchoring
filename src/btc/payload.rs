@@ -181,7 +181,7 @@ impl PayloadV1Builder {
 }
 
 impl Payload {
-    /// Tries to extract payload from given `Script`
+    /// Try to extract payload from given `Script`.
     pub fn from_script(script: &Script) -> Option<Self> {
         let mut instructions = script.iter(true);
         instructions

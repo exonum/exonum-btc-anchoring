@@ -32,7 +32,7 @@ impl AsRef<transaction::Transaction> for Transaction {
 }
 
 impl Transaction {
-    /// Returns the bitcoin transaction identifier.
+    /// Return the Bitcoin transaction identifier.
     pub fn id(&self) -> Hash {
         let mut bytes = [0_u8; 32];
         bytes.copy_from_slice(&self.0.txid()[..]);
@@ -40,7 +40,7 @@ impl Transaction {
         Hash::new(bytes)
     }
 
-    /// Returns the previous anchoring transaction identifier.
+    /// Return the previous anchoring transaction identifier.
     pub fn prev_tx_id(&self) -> Hash {
         let mut bytes = [0_u8; 32];
         bytes.copy_from_slice(&self.0.input[0].previous_output.txid[..]);
@@ -57,13 +57,13 @@ impl Transaction {
             .find(|out| &out.1.script_pubkey == script_pubkey)
     }
 
-    /// Returns the anchoring payload for the transaction if it is the anchoring transaction.
+    /// Return the anchoring payload for the transaction if it is the anchoring transaction.
     pub fn anchoring_payload(&self) -> Option<Payload> {
         let out = self.0.output.get(1)?;
         Payload::from_script(&out.script_pubkey)
     }
 
-    /// Returns the complete meta information for the transaction
+    /// Return the complete meta information for the transaction
     /// if it is the anchoring transaction.
     pub fn anchoring_metadata(&self) -> Option<(&Script, Payload)> {
         let payload = self.anchoring_payload()?;
@@ -71,7 +71,7 @@ impl Transaction {
         Some((script_pubkey, payload))
     }
 
-    /// Returns the total available amount for the transaction
+    /// Return the total available amount for the transaction
     /// if it is the anchoring transaction.
     pub fn unspent_value(&self) -> Option<u64> {
         self.0.output.get(0).map(|out| out.value)
@@ -117,7 +117,7 @@ pub enum BuilderError {
 }
 
 impl BtcAnchoringTransactionBuilder {
-    /// Creates a new btc anchoring transaction builder for the given redeem script.
+    /// Create a new btc anchoring transaction builder for the given redeem script.
     pub fn new(redeem_script: &RedeemScript) -> BtcAnchoringTransactionBuilder {
         Self {
             script_pubkey: redeem_script.as_ref().to_v0_p2wsh(),
@@ -130,13 +130,13 @@ impl BtcAnchoringTransactionBuilder {
         }
     }
 
-    /// Marks anchoring transaction as transition to the given address.
+    /// Mark an anchoring transaction as the transition to the given address.
     pub fn transit_to(&mut self, script: Script) {
         self.transit_to = Some(script);
     }
 
-    /// Sets an transaction which corresponding unspent output will use
-    /// as input for the following anchoring transaction.
+    /// Set an transaction which corresponding unspent output will use
+    /// as an input for the following anchoring transaction.
     pub fn prev_tx(&mut self, tx: Transaction) -> Result<(), BuilderError> {
         if tx.anchoring_metadata().unwrap().0 != &self.script_pubkey {
             Err(BuilderError::UnsuitableOutput)
@@ -163,18 +163,18 @@ impl BtcAnchoringTransactionBuilder {
         Ok(())
     }
 
-    /// Sets the fee per byte value.
+    /// Set the fee per byte value.
     pub fn fee(&mut self, fee: u64) {
         self.fee = Some(fee);
     }
 
-    /// Sets the anchoring transaction payload.
+    /// Set the anchoring transaction payload.
     pub fn payload(&mut self, block_height: Height, block_hash: Hash) {
         self.payload = Some((block_height, block_hash));
     }
 
-    /// Finalizes the anchoring transaction and returns
-    /// it and also the list of input transactions.
+    /// Finalize the anchoring transaction and return
+    /// it with the list of input transactions.
     pub fn create(mut self) -> Result<(Transaction, Vec<Transaction>), BuilderError> {
         // Creates transaction inputs.
         let (input, input_transactions, balance) = {
@@ -203,7 +203,7 @@ impl BtcAnchoringTransactionBuilder {
             }
             (input, input_transactions, balance)
         };
-        // Computes payload script.
+        // Compute payload script.
         let (block_height, block_hash) = self.payload.take().expect("Payload isn't set.");
         let payload_script = PayloadBuilder::new()
             .block_hash(block_hash)
@@ -215,7 +215,7 @@ impl BtcAnchoringTransactionBuilder {
             _ => self.script_pubkey,
         };
 
-        // Creates unsigned transaction.
+        // Create unsigned transaction.
         let mut transaction = Transaction::from(transaction::Transaction {
             version: 2,
             lock_time: 0,
@@ -232,7 +232,7 @@ impl BtcAnchoringTransactionBuilder {
             ],
         });
 
-        // Computes a total fee value.
+        // Compute a total fee value.
         let size_in_bytes = {
             let bytes = ::bitcoin::consensus::serialize(&transaction.0);
             bytes.len() as u64
@@ -241,7 +241,7 @@ impl BtcAnchoringTransactionBuilder {
         if total_fee > balance {
             return Err(BuilderError::InsufficientFunds { total_fee, balance });
         }
-        // Sets the corresponding fee.
+        // Set the corresponding fee.
         transaction.0.output[0].value -= total_fee;
         Ok((transaction, input_transactions))
     }

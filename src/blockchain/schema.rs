@@ -38,7 +38,7 @@ pub struct BtcAnchoringSchema<'a, T> {
 }
 
 impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
-    /// Constructs schema for the given database `snapshot`.
+    /// Construct schema for the given database `snapshot`.
     pub fn new(instance_name: &'a str, access: T) -> Self {
         Self {
             instance_name,
@@ -50,46 +50,47 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         [self.instance_name, ".", suffix].concat()
     }
 
-    /// Returns table that contains complete chain of the anchoring transactions.
+    /// Return a table that contains complete chain of the anchoring transactions.
     pub fn anchoring_transactions_chain(&self) -> RefMut<ProofListIndex<T, Transaction>> {
         self.access
             .get_object(self.index_name("transactions_chain"))
     }
 
-    /// Returns the table that contains already spent funding transactions.
+    /// Return a table that contains already spent funding transactions.
     pub fn spent_funding_transactions(&self) -> RefMut<ProofMapIndex<T, Hash, Transaction>> {
         self.access
             .get_object(self.index_name("spent_funding_transactions"))
     }
 
-    /// Returns the table that contains signatures for the given transaction input.
+    /// Return a table that contains signatures for the given transaction input.
     pub fn transaction_signatures(&self) -> RefMut<ProofMapIndex<T, TxInputId, InputSignatures>> {
         self.access
             .get_object(self.index_name("transaction_signatures"))
     }
 
-    /// Returns a list of hashes of Exonum blocks headers.
+    /// Return a list of hashes of Exonum blocks headers.
     pub fn anchored_blocks(&self) -> RefMut<ProofListIndex<T, Hash>> {
         self.access.get_object(self.index_name("anchored_blocks"))
     }
 
-    /// Returns an actual anchoring configuration entry.
+    /// Return an actual anchoring configuration entry.
     pub fn actual_config_entry(&self) -> RefMut<Entry<T, Config>> {
         self.access.get_object(self.index_name("actual_config"))
     }
 
-    /// Returns a following anchoring configuration entry.
+    /// Return a following anchoring configuration entry.
     pub fn following_config_entry(&self) -> RefMut<Entry<T, Config>> {
         self.access.get_object(self.index_name("following_config"))
     }
 
-    /// May contain unspent funding transaction for the actual configuration.
+    /// Return an entry that may contain an unspent funding transaction for the
+    /// actual configuration.
     pub fn unspent_funding_transaction_entry(&self) -> RefMut<Entry<T, Transaction>> {
         self.access
             .get_object(self.index_name("unspent_funding_transaction"))
     }
 
-    /// Returns hashes of the stored tables.
+    /// Return object hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
         vec![
             self.anchoring_transactions_chain().object_hash(),
@@ -99,17 +100,17 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         ]
     }
 
-    /// Returns the actual anchoring configuration.
+    /// Return an actual anchoring configuration.
     pub fn actual_configuration(&self) -> Config {
         self.actual_config_entry().get().unwrap()
     }
 
-    /// Returns the nearest following configuration if it exists.
+    /// Return the nearest following configuration if it exists.
     pub fn following_configuration(&self) -> Option<Config> {
         self.following_config_entry().get()
     }
 
-    /// Returns the list of signatures for the given transaction input.
+    /// Return the list of signatures for the given transaction input.
     pub fn input_signatures(
         &self,
         input: &TxInputId,
@@ -120,7 +121,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
             .unwrap_or_else(|| InputSignatures::new(redeem_script.content().public_keys.len()))
     }
 
-    /// Returns the actual state of anchoring.
+    /// Return an actual state of anchoring.
     pub fn actual_state(&self) -> BtcAnchoringState {
         let actual_configuration = self.actual_configuration();
         if let Some(following_configuration) = self.following_configuration() {
@@ -137,7 +138,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         }
     }
 
-    /// Returns the proposal of next anchoring transaction for the given anchoring state.
+    /// Return the proposal of the next anchoring transaction for the given anchoring state.
     pub fn proposed_anchoring_transaction(
         &self,
         actual_state: &BtcAnchoringState,
@@ -151,7 +152,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         if let Some(tx) = unspent_anchoring_transaction {
             let tx_id = tx.id();
 
-            // Checks that latest anchoring transaction isn't a transition.
+            // Check that latest anchoring transaction isn't a transition.
             if actual_state.is_transition() {
                 let current_script_pubkey = &tx.0.output[0].script_pubkey;
                 let outgoing_script_pubkey = &actual_state.script_pubkey();
@@ -184,7 +185,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
             }
         }
 
-        // Adds corresponding payload.
+        // Add corresponding payload.
         let latest_anchored_height = self.latest_anchored_height();
         let anchoring_height = actual_state.following_anchoring_height(latest_anchored_height);
 
@@ -194,7 +195,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         builder.payload(anchoring_height, anchoring_block_hash);
         builder.fee(config.transaction_fee);
 
-        // Creates anchoring proposal.
+        // Create anchoring proposal.
         Some(builder.create())
     }
 
@@ -206,7 +207,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         self.proposed_anchoring_transaction(&actual_state)
     }
 
-    /// Returns the height of the latest anchored block.
+    /// Return the height of the latest anchored block.
     pub fn latest_anchored_height(&self) -> Option<Height> {
         let tx = self.anchoring_transactions_chain().last()?;
         Some(

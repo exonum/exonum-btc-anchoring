@@ -26,7 +26,7 @@ use crate::{btc, BtcAnchoringService};
 use super::{data_layout::TxInputId, errors::Error, BtcAnchoringSchema};
 
 impl SignInput {
-    /// Returns identifier of the signed transaction input.
+    /// Return identifier of the signed transaction input.
     pub fn input_id(&self) -> TxInputId {
         TxInputId {
             txid: self.transaction.id(),

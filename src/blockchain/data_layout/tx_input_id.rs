@@ -29,7 +29,7 @@ pub struct TxInputId {
 }
 
 impl TxInputId {
-    /// Creates a new identifier.
+    /// Create a new identifier.
     pub fn new(txid: Hash, input: u32) -> Self {
         Self { txid, input }
     }

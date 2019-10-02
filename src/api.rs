@@ -126,7 +126,7 @@ impl From<u64> for AnchoringChainLength {
 pub trait PublicApi {
     /// Error type for the current public API implementation.
     type Error;
-    /// Returns actual anchoring address.
+    /// Return an actual anchoring address.
     ///
     /// `GET /{api_prefix}/address/actual`
     fn actual_address(&self) -> Result<btc::Address, Self::Error>;
@@ -134,8 +134,8 @@ pub trait PublicApi {
     ///
     /// `GET /{api_prefix}/address/following`
     fn following_address(&self) -> Result<Option<btc::Address>, Self::Error>;
-    /// Returns the latest anchoring transaction if the height is not specified,
-    /// otherwise, returns the anchoring transaction with the height that is greater or equal
+    /// Return the latest anchoring transaction if the height is not specified,
+    /// otherwise, return the anchoring transaction with the height that is greater or equal
     /// to the given one.
     ///
     /// `GET /{api_prefix}/find-transaction`

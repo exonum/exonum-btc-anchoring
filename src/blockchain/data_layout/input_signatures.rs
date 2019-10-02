@@ -33,28 +33,28 @@ pub struct InputSignatures {
 }
 
 impl InputSignatures {
-    /// Creates an empty signatures set for the given validators count.
+    /// Create an empty signatures set for the given validators count.
     pub fn new(nodes_count: usize) -> Self {
         let content = vec![None; nodes_count as usize];
         Self { content }
     }
 
-    /// Inserts a signature from the validator with the given identifier.
+    /// Insert a signature from the validator with the given identifier.
     pub fn insert(&mut self, index: usize, signature: Vec<u8>) {
         self.content[index] = Some(signature);
     }
 
-    /// Checks the existence of a signature from the validator with the given identifier.
+    /// Check the existence of a signature from the validator with the given identifier.
     pub fn contains(&self, index: usize) -> bool {
         self.content[index].is_some()
     }
 
-    /// Returns the total count of signatures.
+    /// Return the total count of signatures.
     pub fn len(&self) -> usize {
         self.content.iter().filter(|x| x.is_some()).count()
     }
 
-    /// Checks that signatures set is not empty.
+    /// Check that signatures set is not empty.
     pub fn is_empty(&self) -> bool {
         self.content.iter().any(Option::is_some)
     }
