@@ -73,12 +73,17 @@ use log::{error, warn};
 
 mod proto;
 
-pub(crate) trait ResultEx {
+pub(crate) trait ResultEx<T> {
+    fn err_to_string(self) -> Result<T, String>;
     fn log_error(self);
     fn log_warn(self);
 }
 
-impl<T: std::fmt::Display> ResultEx for Result<(), T> {
+impl<T, E: std::fmt::Display> ResultEx<T> for Result<T, E> {
+    fn err_to_string(self) -> Result<T, String> {
+        self.map_err(|e| e.to_string())
+    }
+
     fn log_error(self) {
         if let Err(e) = self {
             error!("{}", e);

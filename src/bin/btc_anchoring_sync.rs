@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use bitcoincore_rpc::{Auth as BitcoinRpcAuth, Client as BitcoinRpcClient};
 use exonum::{
     crypto::{self, Hash},
     node::NodeConfig,
@@ -21,10 +22,7 @@ use exonum_btc_anchoring::{
     blockchain::SignInput,
     btc,
     config::{AnchoringKeys, Config as AnchoringConfig},
-    sync::{
-        bitcoin_relay::{BitcoinRpcClient, BitcoinRpcConfig},
-        AnchoringChainUpdater, SyncWithBitcoinTask,
-    },
+    sync::{AnchoringChainUpdater, SyncWithBitcoinTask},
 };
 use exonum_cli::io::{load_config_file, save_config_file};
 use futures::{Future, IntoFuture};
@@ -32,7 +30,7 @@ use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_derive::{Deserialize, Serialize};
 use structopt::StructOpt;
 
-use std::{collections::HashMap, path::PathBuf, time::Duration};
+use std::{collections::HashMap, convert::TryFrom, path::PathBuf, time::Duration};
 
 /// Client implementation for the API of the anchoring service instance.
 #[derive(Debug, Clone)]
@@ -189,6 +187,29 @@ struct SyncConfig {
     bitcoin_rpc_config: Option<BitcoinRpcConfig>,
 }
 
+/// `Bitcoind` rpc configuration.
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Default)]
+struct BitcoinRpcConfig {
+    /// Bitcoin RPC url.
+    host: String,
+    /// Bitcoin RPC username.
+    user: Option<String>,
+    /// Bitcoin RPC password.
+    password: Option<String>,
+}
+
+impl TryFrom<BitcoinRpcConfig> for BitcoinRpcClient {
+    type Error = bitcoincore_rpc::Error;
+
+    fn try_from(value: BitcoinRpcConfig) -> Result<Self, Self::Error> {
+        let auth = BitcoinRpcAuth::UserPass(
+            value.user.unwrap_or_default(),
+            value.password.unwrap_or_default(),
+        );
+        Self::new(value.host, auth)
+    }
+}
+
 fn socket_to_http_address(addr: std::net::SocketAddr) -> String {
     format!("http://{}", addr)
 }
@@ -225,7 +246,7 @@ impl GenerateConfigCommand {
     fn bitcoin_rpc_config(&self) -> Option<BitcoinRpcConfig> {
         self.bitcoin_rpc_host.clone().map(|host| BitcoinRpcConfig {
             host,
-            username: self.bitcoin_rpc_user.clone(),
+            user: self.bitcoin_rpc_user.clone(),
             password: self.bitcoin_rpc_password.clone(),
         })
     }
@@ -240,7 +261,9 @@ impl RunCommand {
             AnchoringChainUpdater::new(sync_config.bitcoin_key_pool, client.clone());
         let bitcoin_relay = sync_config
             .bitcoin_rpc_config
-            .map(|config| SyncWithBitcoinTask::new(BitcoinRpcClient::new(config), client));
+            .map(BitcoinRpcClient::try_from)
+            .transpose()?
+            .map(|relay| SyncWithBitcoinTask::new(relay, client.clone()));
 
         let mut latest_synced_tx_index: Option<u64> = None;
         loop {

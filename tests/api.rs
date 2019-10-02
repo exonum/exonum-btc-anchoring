@@ -369,8 +369,14 @@ fn anchoring_proposal_err_insufficient_funds() {
     let anchoring_testkit = AnchoringTestKit::new(4, 100, 5);
 
     let api = anchoring_testkit.inner.api();
-    let e = api.anchoring_proposal().unwrap_err();
-    assert!(e.to_string().contains("Insufficient funds"));
+    let state = api.anchoring_proposal().unwrap();
+    assert_eq!(
+        state,
+        AnchoringProposalState::InsufficientFunds {
+            total_fee: 1530,
+            balance: 100
+        }
+    );
 }
 
 #[test]

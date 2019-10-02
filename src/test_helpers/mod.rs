@@ -15,5 +15,4 @@
 //! Set of helpers for btc anchoring testing.
 
 #[macro_use]
-pub mod rpc;
 pub mod testkit;

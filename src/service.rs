@@ -57,7 +57,7 @@ impl Service for BtcAnchoringService {
         fork: &Fork,
         params: Vec<u8>,
     ) -> Result<(), ExecutionError> {
-        // TODO Use a special type for constructor.
+        // TODO Use a special type for constructor. [ECR-3222]
         let config = Config::from_bytes(params.into())
             .and_then(ValidateInput::into_validated)
             .map_err(DispatcherError::malformed_arguments)?;
@@ -70,8 +70,11 @@ impl Service for BtcAnchoringService {
         BtcAnchoringSchema::new(instance.name, snapshot).state_hash()
     }
 
+    // TODO Move this feature to the separate crate [ECR-3222]
     fn before_commit(&self, context: BeforeCommitContext) {
-        // Writes a hash of the latest block to the proof list index.
+        // FIXME At the moment this feature is completely broken.
+
+        // Write a hash of the latest block to the proof list index.
         let block_header_hash = CoreSchema::new(context.fork)
             .block_hashes_by_height()
             .last()

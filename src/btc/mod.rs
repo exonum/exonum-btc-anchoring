@@ -22,8 +22,10 @@ pub use self::{
 };
 
 use bitcoin::{network::constants::Network, util::address};
+use bitcoin_hashes::sha256d;
 use btc_transaction_utils;
 use derive_more::{From, Into};
+use exonum::crypto;
 use hex::{self, FromHex, ToHex};
 use rand::Rng;
 
@@ -158,16 +160,29 @@ impl_serde_str! { PublicKey }
 impl_serde_str! { Address }
 impl_serde_str! { InputSignature }
 
-/// Generates public and secret keys for Bitcoin node
-/// using given random number generator.
+/// Generate Bitcoin keypair using the given random number generator.
 pub fn gen_keypair_with_rng<R: Rng>(rng: &mut R, network: Network) -> (PublicKey, PrivateKey) {
     let (pk, sk) = secp_gen_keypair_with_rng(rng, network);
     (PublicKey(pk), PrivateKey(sk))
 }
 
 /// Same as [`gen_keypair_with_rng`](fn.gen_keypair_with_rng.html)
-/// but it uses default random number generator.
+/// but it uses a default random number generator.
 pub fn gen_keypair(network: Network) -> (PublicKey, PrivateKey) {
     let (pk, sk) = secp_gen_keypair(network);
     (PublicKey(pk), PrivateKey(sk))
+}
+
+/// Convert Bitcoin sha256d type to the Exonum hash type.
+pub fn sha256d_to_exonum_hash(hash: sha256d::Hash) -> crypto::Hash {
+    let mut bytes = [0_u8; 32];
+    bytes.copy_from_slice(&hash[..]);
+    bytes.reverse();
+    crypto::Hash::new(bytes)
+}
+
+/// Convert Exonum hash type to the Bitcoin sha256d.
+pub fn exonum_hash_to_sha256d(hash: crypto::Hash) -> sha256d::Hash {
+    use bitcoin_hashes::Hash;
+    sha256d::Hash::from_slice(hash.as_ref()).unwrap()
 }

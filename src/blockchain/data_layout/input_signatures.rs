@@ -24,7 +24,7 @@ use std::{
     vec::IntoIter,
 };
 
-/// TODO Rewrite on top of BinarySet.
+/// TODO Rewrite on top of BinarySet. [ECR-3222]
 
 /// A set of signatures for a transaction input ordered by the validators identifiers.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]

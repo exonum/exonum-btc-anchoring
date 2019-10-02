@@ -20,16 +20,17 @@ use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::crypto::Hash;
 use futures::future::Future;
 
-use std::{collections::HashMap, sync::Arc};
+use std::{collections::HashMap, fmt::Display, sync::Arc};
 
 use crate::{
     api::{AnchoringProposalState, PrivateApi},
     blockchain::SignInput,
     btc,
     config::Config,
+    ResultEx,
 };
 
-use self::bitcoin_relay::BtcRelay;
+use self::bitcoin_relay::BitcoinRelay;
 
 pub mod bitcoin_relay;
 
@@ -50,7 +51,7 @@ macro_rules! some_or_return {
 #[derive(Debug, Clone)]
 pub struct AnchoringChainUpdater<T>
 where
-    T: PrivateApi<Error = String> + Send + Clone + 'static,
+    T: PrivateApi + Send + Clone + 'static,
 {
     key_pool: KeyPool,
     api_client: T,
@@ -58,7 +59,8 @@ where
 
 impl<T> AnchoringChainUpdater<T>
 where
-    T: PrivateApi<Error = String> + Send + Clone + 'static,
+    T: PrivateApi + Send + Clone + 'static,
+    <T as PrivateApi>::Error: Display,
 {
     /// Create a new anchoring chain updater instance.
     pub fn new(
@@ -75,13 +77,13 @@ where
     pub fn process(self) -> Result<(), String> {
         log::trace!("Perform an anchoring chain update");
 
-        match self.api_client.anchoring_proposal()? {
+        match self.api_client.anchoring_proposal().err_to_string()? {
             AnchoringProposalState::None => Ok(()),
             AnchoringProposalState::Available {
                 transaction,
                 inputs,
             } => {
-                let config = self.api_client.config()?;
+                let config = self.api_client.config().err_to_string()?;
                 self.handle_proposal(config, transaction, inputs)
             }
             AnchoringProposalState::InsufficientFunds { balance, total_fee } => {
@@ -153,7 +155,10 @@ where
             .map_err(|e| e.to_string())?;
         // Send sign input transactions to the Exonum node.
         for sign_input in sign_input_messages {
-            self.api_client.sign_input(sign_input).wait()?;
+            self.api_client
+                .sign_input(sign_input)
+                .wait()
+                .err_to_string()?;
         }
         Ok(())
     }
@@ -175,8 +180,8 @@ where
 #[derive(Debug)]
 pub struct SyncWithBitcoinTask<T, R>
 where
-    T: PrivateApi<Error = String> + Send + 'static,
-    R: BtcRelay + Send + 'static,
+    T: PrivateApi + Send + 'static,
+    R: BitcoinRelay + Send + 'static,
 {
     btc_relay: R,
     api_client: T,
@@ -184,8 +189,10 @@ where
 
 impl<T, R> SyncWithBitcoinTask<T, R>
 where
-    T: PrivateApi<Error = String> + Send + 'static,
-    R: BtcRelay + Send + 'static,
+    T: PrivateApi + Send + 'static,
+    R: BitcoinRelay + Send + 'static,
+    <T as PrivateApi>::Error: Display,
+    <R as BitcoinRelay>::Error: Display,
 {
     /// Create a new sync with Bitcoin task instance.
     pub fn new(btc_relay: R, api_client: T) -> Self {
@@ -204,9 +211,9 @@ where
             if let Some(index) = latest_committed_tx_index {
                 // Check that the latest committed transaction was really committed into
                 // the Bitcoin network.
-                let tx = self.get_transaction(index)?;
-                if self.transaction_is_committed(&tx.id())? {
-                    let chain_len = self.api_client.transactions_count()?.value;
+                let tx = self.get_transaction(index).err_to_string()?;
+                if self.transaction_is_committed(tx.id())? {
+                    let chain_len = self.api_client.transactions_count().err_to_string()?.value;
                     if index + 1 == chain_len {
                         return Ok(Some(index));
                     }
@@ -224,9 +231,7 @@ where
             }
         };
         // Send an actual uncommitted transaction into the Bitcoin network.
-        self.btc_relay
-            .send_transaction(&tx)
-            .map_err(|e| e.to_string())?;
+        self.btc_relay.send_transaction(&tx).err_to_string()?;
         log::info!(
             "Sent transaction to the Bitcoin network: {}",
             tx.id().to_hex()
@@ -240,7 +245,7 @@ where
         &self,
     ) -> Result<Option<(btc::Transaction, u64)>, String> {
         let index = {
-            let count = self.api_client.transactions_count()?.value;
+            let count = self.api_client.transactions_count().err_to_string()?.value;
             if count == 0 {
                 return Ok(None);
             }
@@ -248,11 +253,11 @@ where
         };
         // Check that the tail of anchoring chain is committed to the Bitcoin.
         let transaction = self.get_transaction(index)?;
-        if self.transaction_is_committed(&transaction.id())? {
+        if self.transaction_is_committed(transaction.id())? {
             return Ok(None);
         }
         // Or this transaction is ready to be committed into the Bitcoin network.
-        if self.transaction_is_committed(&transaction.prev_tx_id())? {
+        if self.transaction_is_committed(transaction.prev_tx_id())? {
             return Ok(Some((transaction, index)));
         }
         // Try to find the first of uncommitted transactions.
@@ -263,7 +268,7 @@ where
                 index,
                 transaction.id().to_hex()
             );
-            if self.transaction_is_committed(&transaction.prev_tx_id())? {
+            if self.transaction_is_committed(transaction.prev_tx_id())? {
                 log::trace!("Found committed transaction");
                 return Ok(Some((transaction, index)));
             }
@@ -273,7 +278,8 @@ where
 
     fn get_transaction(&self, index: u64) -> Result<btc::Transaction, String> {
         self.api_client
-            .transaction_with_index(index)?
+            .transaction_with_index(index)
+            .err_to_string()?
             .ok_or_else(|| {
                 format!(
                     "Transaction with index {} is absent in the anchoring chain",
@@ -282,11 +288,11 @@ where
             })
     }
 
-    fn transaction_is_committed(&self, txid: &Hash) -> Result<bool, String> {
+    fn transaction_is_committed(&self, txid: Hash) -> Result<bool, String> {
         let info = self
             .btc_relay
-            .transaction_info(txid)
-            .map_err(|e| e.to_string())?;
+            .transaction_confirmations(txid)
+            .err_to_string()?;
         Ok(info.is_some())
     }
 }

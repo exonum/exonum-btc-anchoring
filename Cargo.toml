@@ -22,7 +22,6 @@ btc-transaction-utils = "0.5"
 byteorder = "1.3"
 derive_more = "0.15"
 exonum = "0.12.0"
-exonum_bitcoinrpc = "0.6"
 exonum-cli = { git = "https://github.com/alekseysidorov/exonum.git", rev = "5b50333e618b20aa05d81464e2bd25a55ee629ba" }
 exonum-derive = "0.12.0"
 exonum-merkledb = "0.12.0"

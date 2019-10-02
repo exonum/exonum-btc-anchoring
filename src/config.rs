@@ -128,7 +128,7 @@ impl ValidateInput for Config {
         .quorum(quorum)
         .to_script()?;
 
-        // TODO remove funding transaction from the config.
+        // TODO remove funding transaction from the config. [ECR-3603]
         if let Some(tx) = self.funding_transaction.as_ref() {
             tx.find_out(&redeem_script.as_ref().to_v0_p2wsh())
                 .ok_or_else(|| failure::format_err!("Funding transaction is unsuitable."))?;

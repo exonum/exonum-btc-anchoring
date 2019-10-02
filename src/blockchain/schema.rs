@@ -246,7 +246,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
 
     /// Set a new anchoring configuration parameters.
     pub fn set_actual_config(&self, config: Config) {
-        // TODO remove this special case.
+        // TODO remove this special case. [ECR-3603]
         if let Some(tx) = config
             .funding_transaction
             .clone()

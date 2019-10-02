@@ -8,6 +8,7 @@ Awnht
 backend
 bech32
 bigint
+bitcoincore
 bitcoind
 bitcoinrpc
 bitfury
@@ -123,8 +124,8 @@ oneshot
 OP_CHECKSIG
 OP_EQUALVERIFY
 openssl
-PASSWD
 passwd
+PASSWD
 peekable
 permissioned
 pkey
@@ -149,8 +150,8 @@ pubkeys
 PUSHBYTES
 readonly
 reddit
-regtest
 Regtest
+regtest
 reimplemented
 repr
 reqwest
@@ -202,7 +203,6 @@ tempdir
 terminfo
 testdata
 testkit
-testkit
 testnet
 testnetctl
 Tfop
@@ -231,7 +231,6 @@ unsynced
 untagged
 userid
 usize
-utxo
 utxo
 utxos
 validateaddress
