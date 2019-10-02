@@ -29,12 +29,11 @@ fn find_transaction(
     height: Option<Height>,
 ) -> Option<btc::Transaction> {
     let api = anchoring_testkit.inner.api();
-    api.find_transaction(height).unwrap().map(|proof| {
-        proof
-            .validate(&anchoring_testkit.inner.consensus_config())
-            .unwrap()
-            .1
-    })
+    let proof = api.find_transaction(height).unwrap();
+    proof
+        .validate(&anchoring_testkit.inner.consensus_config())
+        .unwrap()
+        .map(|x| x.1)
 }
 
 fn transaction_with_index(
@@ -286,38 +285,6 @@ fn find_transaction_configuration_change() {
         find_transaction(&anchoring_testkit, None),
         anchoring_schema.anchoring_transactions_chain().get(3)
     );
-}
-
-// Try to get a proof of existence for an anchored block.
-#[test]
-fn block_header_proof() {
-    let anchoring_interval = 4;
-    let mut anchoring_testkit = AnchoringTestKit::new(4, 70_000, anchoring_interval);
-    // Create a several anchoring transactions
-    for i in 1..=5 {
-        anchoring_testkit.inner.create_block_with_transactions(
-            anchoring_testkit
-                .create_signature_txs()
-                .into_iter()
-                .flatten(),
-        );
-        anchoring_testkit
-            .inner
-            .create_blocks_until(Height(anchoring_interval * i));
-    }
-
-    let api = anchoring_testkit.inner.api();
-    let cfg = anchoring_testkit.inner.consensus_config();
-    // Check proof for the genesis block.
-    let genesis_block_proof = api.block_header_proof(Height(0)).unwrap();
-    let value = genesis_block_proof.validate(&cfg).unwrap();
-    assert_eq!(value.0, 0);
-    assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(0)));
-    // Check proof for the second block.
-    let second_block_proof = api.block_header_proof(Height(4)).unwrap();
-    let value = second_block_proof.validate(&cfg).unwrap();
-    assert_eq!(value.0, 4);
-    assert_eq!(value.1, anchoring_testkit.block_hash_on_height(Height(4)));
 }
 
 #[test]

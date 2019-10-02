@@ -13,7 +13,6 @@
 // limitations under the License.
 
 use exonum::{
-    blockchain::Schema as CoreSchema,
     crypto::Hash,
     helpers::ValidateInput,
     merkledb::{BinaryValue, Fork},
@@ -21,7 +20,7 @@ use exonum::{
         api::ServiceApiBuilder,
         rust::{
             interfaces::{verify_caller_is_supervisor, Configure},
-            BeforeCommitContext, Service, TransactionContext,
+            Service, TransactionContext,
         },
         DispatcherError, ExecutionError, InstanceDescriptor,
     },
@@ -68,20 +67,6 @@ impl Service for BtcAnchoringService {
 
     fn state_hash(&self, instance: InstanceDescriptor, snapshot: &dyn Snapshot) -> Vec<Hash> {
         BtcAnchoringSchema::new(instance.name, snapshot).state_hash()
-    }
-
-    // TODO Move this feature to the separate crate [ECR-3222]
-    fn before_commit(&self, context: BeforeCommitContext) {
-        // FIXME At the moment this feature is completely broken.
-
-        // Write a hash of the latest block to the proof list index.
-        let block_header_hash = CoreSchema::new(context.fork)
-            .block_hashes_by_height()
-            .last()
-            .expect("An attempt to invoke execute during the genesis block initialization.");
-
-        let schema = BtcAnchoringSchema::new(context.instance.name, context.fork);
-        schema.anchored_blocks().push(block_header_hash);
     }
 
     fn wire_api(&self, builder: &mut ServiceApiBuilder) {

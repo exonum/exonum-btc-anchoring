@@ -68,11 +68,6 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
             .get_object(self.index_name("transaction_signatures"))
     }
 
-    /// Return a list of hashes of Exonum blocks headers.
-    pub fn anchored_blocks(&self) -> RefMut<ProofListIndex<T, Hash>> {
-        self.access.get_object(self.index_name("anchored_blocks"))
-    }
-
     /// Return an actual anchoring configuration entry.
     pub fn actual_config_entry(&self) -> RefMut<Entry<T, Config>> {
         self.access.get_object(self.index_name("actual_config"))
@@ -96,7 +91,6 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
             self.anchoring_transactions_chain().object_hash(),
             self.spent_funding_transactions().object_hash(),
             self.transaction_signatures().object_hash(),
-            self.anchored_blocks().object_hash(),
         ]
     }
 

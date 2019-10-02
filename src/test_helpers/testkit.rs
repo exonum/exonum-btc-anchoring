@@ -39,8 +39,8 @@ use std::collections::BTreeMap;
 
 use crate::{
     api::{
-        AnchoringChainLength, AnchoringProposalState, BlockHeaderProof, FindTransactionQuery,
-        HeightQuery, IndexQuery, PrivateApi, PublicApi, TransactionProof,
+        AnchoringChainLength, AnchoringProposalState, FindTransactionQuery, IndexQuery, PrivateApi,
+        PublicApi, TransactionProof,
     },
     blockchain::{transactions::SignInput, BtcAnchoringSchema},
     btc,
@@ -351,19 +351,10 @@ impl PublicApi for TestKitApi {
             .get("address/following")
     }
 
-    fn find_transaction(
-        &self,
-        height: Option<Height>,
-    ) -> Result<Option<TransactionProof>, Self::Error> {
+    fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .query(&FindTransactionQuery { height })
             .get("find-transaction")
-    }
-
-    fn block_header_proof(&self, height: Height) -> Result<BlockHeaderProof, Self::Error> {
-        self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
-            .query(&HeightQuery { height })
-            .get("block-header-proof")
     }
 
     fn config(&self) -> Result<Config, Self::Error> {
@@ -451,7 +442,7 @@ pub trait ValidateProof {
 }
 
 impl ValidateProof for TransactionProof {
-    type Output = (u64, btc::Transaction);
+    type Output = Option<(u64, btc::Transaction)>;
 
     fn validate(self, actual_config: &ConsensusConfig) -> Result<Self::Output, failure::Error> {
         let proof_entry =
@@ -464,26 +455,8 @@ impl ValidateProof for TransactionProof {
             .to_transaction
             .validate(proof_entry.1)
             .map_err(|e| format_err!("An error occurred {:?}", e))?;
-        ensure!(values.len() == 1, "Invalid values count");
+        ensure!(values.len() <= 1, "Invalid values count");
 
-        Ok((values[0].0, values[0].1.clone()))
-    }
-}
-
-impl ValidateProof for BlockHeaderProof {
-    type Output = (u64, Hash);
-
-    fn validate(self, actual_config: &ConsensusConfig) -> Result<Self::Output, failure::Error> {
-        let proof_entry =
-            validate_table_proof(actual_config, &self.latest_authorized_block, self.to_table)?;
-        let table_location = IndexCoordinates::new(IndexOwner::Service(ANCHORING_INSTANCE_ID), 3);
-        ensure!(proof_entry.0 == table_location, "Invalid table location");
-        // Validate value.
-        let values = self
-            .to_block_header
-            .validate(proof_entry.1)
-            .map_err(|e| format_err!("An error occurred {:?}", e))?;
-        ensure!(values.len() == 1, "Invalid values count");
-        Ok((values[0].0, values[0].1))
+        Ok(values.first().cloned())
     }
 }

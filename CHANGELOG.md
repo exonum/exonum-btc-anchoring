@@ -26,6 +26,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   TODO Reference to the description in the README.md.
   - "v1" prefix has been removed from API endpoints and introduced a lot of
   private API endpoints for the `btc_anchoring_sync` util.
+  - Removed cryptographic proofs for Exonum blocks feature.
+  It will be implemented as separate service.
 
 ### Internal improvements
 

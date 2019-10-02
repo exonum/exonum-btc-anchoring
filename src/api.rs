@@ -51,19 +51,6 @@ pub struct TransactionProof {
     pub to_table: MapProof<IndexCoordinates, Hash>,
     /// Proof for the specific transaction in this table.
     pub to_transaction: ListProof<btc::Transaction>,
-    /// Anchoring transactions total count.
-    pub transactions_count: u64,
-}
-
-/// A proof of existence for an anchored or a non-anchored Exonum block at the given height.
-#[derive(Debug, Serialize, Deserialize)]
-pub struct BlockHeaderProof {
-    /// Latest authorized block in the blockchain.
-    pub latest_authorized_block: BlockProof,
-    /// Proof for the whole database table.
-    pub to_table: MapProof<IndexCoordinates, Hash>,
-    /// Proof for the specific header in this table.
-    pub to_block_header: ListProof<Hash>,
 }
 
 /// State of the next anchoring transaction proposal.
@@ -139,16 +126,7 @@ pub trait PublicApi {
     /// to the given one.
     ///
     /// `GET /{api_prefix}/find-transaction`
-    fn find_transaction(
-        &self,
-        height: Option<Height>,
-    ) -> Result<Option<TransactionProof>, Self::Error>;
-    /// A method that provides cryptographic proofs for Exonum blocks including those anchored to
-    /// Bitcoin blockchain. The proof is an apparent evidence of availability of a certain Exonum
-    /// block in the blockchain.
-    ///
-    /// `GET /{api_prefix}/block-header-proof?height={height}`
-    fn block_header_proof(&self, height: Height) -> Result<BlockHeaderProof, Self::Error>;
+    fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error>;
     /// Return an actual anchoring configuration.
     ///
     /// `GET /{api_prefix}/config`
@@ -269,7 +247,6 @@ impl<'a> ApiImpl<'a> {
             latest_authorized_block,
             to_table,
             to_transaction,
-            transactions_count: tx_chain.len(),
         }
     }
 }
@@ -291,16 +268,13 @@ impl<'a> PublicApi for ApiImpl<'a> {
             .map(|config| config.anchoring_address()))
     }
 
-    fn find_transaction(
-        &self,
-        height: Option<Height>,
-    ) -> Result<Option<TransactionProof>, Self::Error> {
+    fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error> {
         let snapshot = self.0.snapshot();
         let anchoring_schema = BtcAnchoringSchema::new(self.0.instance.name, snapshot);
         let tx_chain = anchoring_schema.anchoring_transactions_chain();
 
         if tx_chain.is_empty() {
-            return Ok(None);
+            return Ok(self.transaction_proof(0));
         }
 
         let tx_index = if let Some(height) = height {
@@ -338,29 +312,7 @@ impl<'a> PublicApi for ApiImpl<'a> {
             tx_chain.len() - 1
         };
 
-        Ok(Some(self.transaction_proof(tx_index)))
-    }
-
-    fn block_header_proof(&self, height: Height) -> Result<BlockHeaderProof, Self::Error> {
-        let snapshot = self.0.snapshot();
-        let blockchain_schema = CoreSchema::new(snapshot);
-        let anchoring_schema = BtcAnchoringSchema::new(self.0.instance.name, snapshot);
-
-        let max_height = blockchain_schema.block_hashes_by_height().len() - 1;
-
-        let latest_authorized_block = blockchain_schema
-            .block_and_precommits(Height(max_height))
-            .unwrap();
-        let to_table = blockchain_schema
-            .state_hash_aggregator()
-            .get_proof(IndexOwner::Service(self.0.instance.id).coordinate_for(3));
-        let to_block_header = anchoring_schema.anchored_blocks().get_proof(height.0);
-
-        Ok(BlockHeaderProof {
-            latest_authorized_block,
-            to_table,
-            to_block_header,
-        })
+        Ok(self.transaction_proof(tx_index))
     }
 
     fn config(&self) -> Result<Config, Self::Error> {
@@ -442,9 +394,6 @@ pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
         })
         .endpoint("find-transaction", |state, query: FindTransactionQuery| {
             ApiImpl(state).find_transaction(query.height)
-        })
-        .endpoint("block-header-proof", |state, query: HeightQuery| {
-            ApiImpl(state).block_header_proof(query.height)
         })
         .endpoint("config", |state, _query: ()| {
             PublicApi::config(&ApiImpl(state))
