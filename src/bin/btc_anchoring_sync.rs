@@ -22,7 +22,10 @@ use exonum_btc_anchoring::{
     blockchain::SignInput,
     btc,
     config::{AnchoringKeys, Config as AnchoringConfig},
-    sync::{AnchoringChainUpdater, SyncWithBitcoinTask},
+    sync::{
+        AnchoringChainUpdateError, AnchoringChainUpdateTask, SyncWithBitcoinError,
+        SyncWithBitcoinTask,
+    },
 };
 use exonum_cli::io::{load_config_file, save_config_file};
 use futures::{Future, IntoFuture};
@@ -258,7 +261,7 @@ impl RunCommand {
         // TODO rewrite on top of tokio or runtime crate [ECR-3222]
         let client = ApiClient::new(sync_config.private_api_address, sync_config.instance_name);
         let chain_updater =
-            AnchoringChainUpdater::new(sync_config.bitcoin_key_pool, client.clone());
+            AnchoringChainUpdateTask::new(sync_config.bitcoin_key_pool, client.clone());
         let bitcoin_relay = sync_config
             .bitcoin_rpc_config
             .map(BitcoinRpcClient::try_from)
@@ -267,18 +270,42 @@ impl RunCommand {
 
         let mut latest_synced_tx_index: Option<u64> = None;
         loop {
-            let _ = chain_updater.clone().process().map_err(|e| {
-                log::error!("An error in the anchoring chain updater occurred. {}", e)
-            });
+            match chain_updater.clone().process() {
+                Ok(_) => {}
+                // Client problems most often occurs due to network problems.
+                Err(AnchoringChainUpdateError::Client(e)) => {
+                    log::error!("An error in the anchoring API client occurred. {}", e)
+                }
+                // Sometimes Bitcoin end in the anchoring wallet.
+                Err(AnchoringChainUpdateError::InsufficientFunds { total_fee, balance }) => {
+                    log::warn!(
+                        "Insufficient funds to construct a new anchoring transaction, \
+                         total fee is {}, total balance is {}",
+                        total_fee,
+                        balance
+                    )
+                }
+                // Stop execution if an internal error occurred.
+                Err(AnchoringChainUpdateError::Internal(e)) => return Err(e),
+            }
 
             if let Some(relay) = bitcoin_relay.as_ref() {
                 match relay.process(latest_synced_tx_index) {
                     Ok(index) => latest_synced_tx_index = index,
-                    Err(e) => log::error!("An error in the sync with bitcoin task occurred. {}", e),
+                    // Client problems most often occurs due to network problems.
+                    Err(SyncWithBitcoinError::Client(e)) => {
+                        log::error!("An error in the anchoring API client occurred. {}", e)
+                    }
+                    // Error in the Bitcoin relay occurs.
+                    Err(SyncWithBitcoinError::Relay(e)) => {
+                        log::error!("An error in the Bitcoin relay occurred. {}", e)
+                    }
+                    // Stop execution if an internal error occurred.
+                    Err(SyncWithBitcoinError::Internal(e)) => return Err(e),
                 }
             }
 
-            std::thread::sleep(Duration::from_secs(1));
+            std::thread::sleep(Duration::from_secs(5));
         }
     }
 }
