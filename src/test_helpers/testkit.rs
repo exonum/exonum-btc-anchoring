@@ -426,7 +426,7 @@ fn validate_table_proof(
     // Checks state_hash.
     let checked_table_proof = to_table.check()?;
     ensure!(
-        checked_table_proof.root_hash() == *latest_authorized_block.block.state_hash(),
+        checked_table_proof.index_hash() == *latest_authorized_block.block.state_hash(),
         "State hash doesn't match"
     );
     let value = checked_table_proof.entries().map(|(a, b)| (*a, *b)).next();
@@ -453,8 +453,9 @@ impl ValidateProof for TransactionProof {
         // Validate value.
         let values = self
             .to_transaction
-            .validate(proof_entry.1)
-            .map_err(|e| format_err!("An error occurred {:?}", e))?;
+            .check_against_hash(proof_entry.1)
+            .map_err(|e| format_err!("An error occurred {:?}", e))?
+            .entries();
         ensure!(values.len() <= 1, "Invalid values count");
 
         Ok(values.first().cloned())

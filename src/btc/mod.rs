@@ -84,16 +84,16 @@ impl FromHex for PublicKey {
 }
 
 impl ToHex for PublicKey {
-    fn write_hex<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
+    fn encode_hex<T: std::iter::FromIterator<char>>(&self) -> T {
         let mut bytes = Vec::default();
         self.0.write_into(&mut bytes);
-        bytes.write_hex(w)
+        bytes.encode_hex()
     }
 
-    fn write_hex_upper<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
+    fn encode_hex_upper<T: std::iter::FromIterator<char>>(&self) -> T {
         let mut bytes = Vec::default();
         self.0.write_into(&mut bytes);
-        bytes.write_hex_upper(w)
+        bytes.encode_hex_upper()
     }
 }
 
@@ -131,12 +131,12 @@ impl FromHex for InputSignature {
 }
 
 impl ToHex for InputSignature {
-    fn write_hex<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
-        self.0.as_ref().write_hex(w)
+    fn encode_hex<T: std::iter::FromIterator<char>>(&self) -> T {
+        self.0.as_ref().encode_hex()
     }
 
-    fn write_hex_upper<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
-        self.0.as_ref().write_hex_upper(w)
+    fn encode_hex_upper<T: std::iter::FromIterator<char>>(&self) -> T {
+        self.0.as_ref().encode_hex_upper()
     }
 }
 

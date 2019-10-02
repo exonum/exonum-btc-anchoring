@@ -51,14 +51,12 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
         }
 
         impl hex::ToHex for $name {
-            fn write_hex<W: ::std::fmt::Write>(&self, w: &mut W) -> std::fmt::Result {
-                let bytes = ::bitcoin::consensus::serialize(&self.0);
-                bytes.write_hex(w)
+            fn encode_hex<T: std::iter::FromIterator<char>>(&self) -> T {
+                bitcoin::consensus::serialize(&self.0).encode_hex()
             }
 
-            fn write_hex_upper<W: ::std::fmt::Write>(&self, w: &mut W) -> std::fmt::Result {
-                let bytes = ::bitcoin::consensus::serialize(&self.0);
-                bytes.write_hex_upper(w)
+            fn encode_hex_upper<T: std::iter::FromIterator<char>>(&self) -> T {
+                bitcoin::consensus::serialize(&self.0).encode_hex_upper()
             }
         }
     };
@@ -69,10 +67,7 @@ macro_rules! impl_string_conversions_for_hex {
         impl std::fmt::LowerHex for $name {
             fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
                 use hex::ToHex;
-
-                let mut buf = String::new();
-                self.write_hex(&mut buf).unwrap();
-                write!(f, "{}", buf)
+                write!(f, "{}", self.encode_hex::<String>())
             }
         }
 
