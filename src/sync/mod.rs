@@ -66,10 +66,10 @@ pub enum AnchoringChainUpdateError<C: Display> {
 
 /// Signs the inputs of the anchoring transaction proposal by the corresponding
 /// Bitcoin private keys.
-#[derive(Debug, Clone)]
+#[derive(Debug)]
 pub struct AnchoringChainUpdateTask<T>
 where
-    T: PrivateApi + Send + Clone + 'static,
+    T: PrivateApi + 'static,
 {
     key_pool: KeyPool,
     api_client: T,
@@ -77,7 +77,7 @@ where
 
 impl<T> AnchoringChainUpdateTask<T>
 where
-    T: PrivateApi + Send + Clone + 'static,
+    T: PrivateApi + 'static,
     T::Error: Display,
 {
     /// Create a new anchoring chain updater instance.
@@ -92,7 +92,7 @@ where
     }
 
     /// Perform a one attempt to sign an anchoring proposal, if any.
-    pub fn process(self) -> Result<(), AnchoringChainUpdateError<T::Error>> {
+    pub fn process(&self) -> Result<(), AnchoringChainUpdateError<T::Error>> {
         log::trace!("Perform an anchoring chain update");
 
         match self
@@ -118,7 +118,7 @@ where
     }
 
     fn handle_proposal(
-        self,
+        &self,
         config: Config,
         proposal: btc::Transaction,
         inputs: Vec<btc::Transaction>,
@@ -210,8 +210,8 @@ pub enum SyncWithBitcoinError<C: Display, R: Display> {
 #[derive(Debug)]
 pub struct SyncWithBitcoinTask<T, R>
 where
-    T: PrivateApi + Send + 'static,
-    R: BitcoinRelay + Send + 'static,
+    T: PrivateApi + 'static,
+    R: BitcoinRelay + 'static,
 {
     btc_relay: R,
     api_client: T,
@@ -219,8 +219,8 @@ where
 
 impl<T, R> SyncWithBitcoinTask<T, R>
 where
-    T: PrivateApi + Send + 'static,
-    R: BitcoinRelay + Send + 'static,
+    T: PrivateApi + 'static,
+    R: BitcoinRelay + 'static,
     T::Error: Display,
     R::Error: Display,
 {

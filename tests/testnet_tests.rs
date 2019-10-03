@@ -18,7 +18,7 @@ use exonum_btc_anchoring::{
     blockchain::{errors::Error, BtcAnchoringSchema},
     btc::BuilderError,
     config::Config,
-    test_helpers::testkit::{
+    test_helpers::{
         create_fake_funding_transaction, AnchoringTestKit, ANCHORING_INSTANCE_ID,
         ANCHORING_INSTANCE_NAME,
     },

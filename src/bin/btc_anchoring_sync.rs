@@ -270,7 +270,7 @@ impl RunCommand {
 
         let mut latest_synced_tx_index: Option<u64> = None;
         loop {
-            match chain_updater.clone().process() {
+            match chain_updater.process() {
                 Ok(_) => {}
                 // Client problems most often occurs due to network problems.
                 Err(AnchoringChainUpdateError::Client(e)) => {

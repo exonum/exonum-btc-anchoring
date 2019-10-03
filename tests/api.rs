@@ -17,7 +17,7 @@ use exonum_btc_anchoring::{
     api::{AnchoringProposalState, PrivateApi, PublicApi},
     blockchain::{BtcAnchoringSchema, SignInput},
     btc,
-    test_helpers::testkit::{
+    test_helpers::{
         AnchoringTestKit, ValidateProof, ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME,
     },
 };
