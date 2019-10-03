@@ -22,7 +22,10 @@ use exonum_btc_anchoring::{
     blockchain::{BtcAnchoringSchema, SignInput},
     btc,
     config::Config,
-    sync::{AnchoringChainUpdateTask, BitcoinRelay, AnchoringChainUpdateError},
+    sync::{
+        AnchoringChainUpdateError, AnchoringChainUpdateTask, BitcoinRelay, SyncWithBitcoinError,
+        SyncWithBitcoinTask,
+    },
     test_helpers::{AnchoringTestKit, ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME},
 };
 use exonum_testkit::TestKitApi;
@@ -46,19 +49,25 @@ enum FakeRelayRequest {
 }
 
 impl FakeRelayRequest {
-    fn as_send_transaction(self) -> (btc::Transaction, Hash) {
+    fn into_send_transaction(self) -> (btc::Transaction, Hash) {
         if let FakeRelayRequest::SendTransaction { request, response } = self {
             (request, response)
         } else {
-            panic!("Expected response for the `send_transaction` request.")
+            panic!(
+                "Expected response for the `send_transaction` request. But got {:?}",
+                self
+            )
         }
     }
 
-    fn as_transaction_confirmations(self) -> (Hash, Option<u32>) {
+    fn into_transaction_confirmations(self) -> (Hash, Option<u32>) {
         if let FakeRelayRequest::TransactionConfirmations { request, response } = self {
             (request, response)
         } else {
-            panic!("Expected response for the `transaction_confirmations` request.")
+            panic!(
+                "Expected response for the `transaction_confirmations` request. But got {:?}",
+                self
+            )
         }
     }
 }
@@ -69,22 +78,28 @@ struct FakeBitcoinRelay {
 }
 
 impl FakeBitcoinRelay {
-    fn with_requests(requests: impl IntoIterator<Item = FakeRelayRequest>) -> Self {
-        Self {
-            requests: Arc::new(Mutex::new(requests.into_iter().collect())),
-        }
-    }
-
-    fn enqueue_request(&self, request: FakeRelayRequest) {
-        self.requests.lock().unwrap().push_back(request)
+    fn enqueue_requests(&self, requests: impl IntoIterator<Item = FakeRelayRequest>) {
+        self.requests.lock().unwrap().extend(requests)
     }
 
     fn dequeue_request(&self) -> FakeRelayRequest {
         self.requests
             .lock()
             .unwrap()
-            .pop_back()
+            .pop_front()
             .expect("Expected relay request")
+    }
+}
+
+impl Drop for FakeBitcoinRelay {
+    fn drop(&mut self) {
+        if !std::thread::panicking() {
+            assert!(
+                self.requests.lock().unwrap().is_empty(),
+                "Unhandled requests remained. {:?}",
+                self
+            );
+        }
     }
 }
 
@@ -92,13 +107,13 @@ impl BitcoinRelay for FakeBitcoinRelay {
     type Error = failure::Error;
 
     fn send_transaction(&self, transaction: &btc::Transaction) -> Result<Hash, Self::Error> {
-        let (expected_request, response) = self.dequeue_request().as_send_transaction();
+        let (expected_request, response) = self.dequeue_request().into_send_transaction();
         assert_eq!(&expected_request, transaction, "Unexpected data in request");
         Ok(response)
     }
 
     fn transaction_confirmations(&self, id: Hash) -> Result<Option<u32>, Self::Error> {
-        let (expected_request, response) = self.dequeue_request().as_transaction_confirmations();
+        let (expected_request, response) = self.dequeue_request().into_transaction_confirmations();
         assert_eq!(expected_request, id, "Unexpected data in request");
         Ok(response)
     }
@@ -212,264 +227,117 @@ fn chain_updater_insufficient_funds() {
             assert_eq!(balance, 10);
             assert_eq!(total_fee, 1530);
         }
-        e => panic!("Unexpected error occurred: {:?}", e)
+        e => panic!("Unexpected error occurred: {:?}", e),
     }
 }
 
-// use hex::FromHex;
+#[test]
+fn sync_with_bitcoin_normal() {
+    let anchoring_interval = 5;
+    let mut testkit = AnchoringTestKit::new(4, 100_000, anchoring_interval);
+    // Create a several anchoring transactions
+    for i in 0..2 {
+        testkit
+            .inner
+            .create_blocks_until(Height(anchoring_interval * i));
 
-// use exonum::{crypto::Hash, helpers::Height};
-// use exonum_bitcoinrpc as bitcoin_rpc;
-// use exonum_btc_anchoring::{
-//     blockchain::BtcAnchoringSchema,
-//     btc::Transaction,
-//     rpc::TransactionInfo as BtcTransactionInfo,
-//     test_helpers::{
-//         rpc::{FakeRelayRequest, FakeRelayResponse, TestRequest},
-//         testkit::ANCHORING_INSTANCE_NAME,
-//     },
-// };
+        testkit
+            .inner
+            .create_block_with_transactions(testkit.create_signature_txs().into_iter().flatten());
+    }
 
-// fn funding_tx_request() -> TestRequest {
-//     (
-//         FakeRelayRequest::TransactionInfo {
-//             id: Hash::from_hex("69ef1d6847712089783bf861342568625e1e4a499993f27e10d9bb5f259d0894")
-//                 .unwrap(),
-//         },
-//         FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
-//             content: Transaction::from_hex(
-//                 "02000000000101140b3f5da041f173d938b8fe778d39cb2ef801f75f294\
-//                  6e490e34d6bb47bb9ce0000000000feffffff0230025400000000001600\
-//                  14169fa44a9159f281122bb7f3d43d88d56dfa937e70110100000000002\
-//                  200203abcf8339d06564a151942c35e4a59eee2581e3880bceb84a324e2\
-//                  237f19ceb502483045022100e91d46b565f26641b353591d0c403a05ada\
-//                  5735875fb0f055538bf9df4986165022044b5336772de8c5f6cbf83bcc7\
-//                  099e31d7dce22ba1f3d1badc2fdd7f8013a12201210254053f15b44b825\
-//                  bc5dabfe88f8b94cd217372f3f297d2696a32835b43497397358d1400",
-//             )
-//             .unwrap(),
-//             confirmations: 6,
-//         }))),
-//     )
-// }
+    // Check that sync with bitcoin works as expected.
+    let snapshot = testkit.inner.snapshot();
+    let anchoring_schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+    let tx_chain = anchoring_schema.anchoring_transactions_chain();
 
-// #[test]
-// fn normal_operation() {
-//     let mut anchoring_testkit = AnchoringTestKit::new_with_fake_rpc(4);
-//     let requests = anchoring_testkit.requests();
+    let fake_relay = FakeBitcoinRelay::default();
+    let sync = SyncWithBitcoinTask::new(fake_relay.clone(), testkit.inner.api());
+    // Send first anchoring transaction.
+    fake_relay.enqueue_requests(vec![
+        // Relay should see that we have only a funding transaction confirmed.
+        FakeRelayRequest::TransactionConfirmations {
+            request: tx_chain.get(1).unwrap().id(),
+            response: None,
+        },
+        FakeRelayRequest::TransactionConfirmations {
+            request: tx_chain.get(0).unwrap().id(),
+            response: None,
+        },
+        FakeRelayRequest::TransactionConfirmations {
+            request: tx_chain.get(0).unwrap().prev_tx_id(),
+            response: Some(10),
+        },
+        // Ensure that relay sends first anchoring transaction to the Bitcoin network.
+        FakeRelayRequest::SendTransaction {
+            request: tx_chain.get(0).unwrap(),
+            response: tx_chain.get(0).unwrap().id(),
+        },
+    ]);
+    let latest_committed_tx_index = sync
+        .process(None)
+        .unwrap()
+        .expect("Transaction should be committed");
+    assert_eq!(latest_committed_tx_index, 0);
+    // Send second anchoring transaction.
+    fake_relay.enqueue_requests(vec![
+        FakeRelayRequest::TransactionConfirmations {
+            request: tx_chain.get(1).unwrap().id(),
+            response: None,
+        },
+        FakeRelayRequest::SendTransaction {
+            request: tx_chain.get(1).unwrap(),
+            response: tx_chain.get(1).unwrap().id(),
+        },
+    ]);
+    let latest_committed_tx_index = sync
+        .process(Some(1))
+        .unwrap()
+        .expect("Transaction should be committed");
+    assert_eq!(latest_committed_tx_index, 1);
+}
 
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(2)
-//         .unwrap();
+#[test]
+fn sync_with_bitcoin_empty_chain() {
+    let testkit = AnchoringTestKit::default();
+    assert!(
+        SyncWithBitcoinTask::new(FakeBitcoinRelay::default(), testkit.inner.api())
+            .process(None)
+            .unwrap()
+            .is_none()
+    );
+}
 
-//     let (proposed, _) =
-//         BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
-//             .actual_proposed_anchoring_transaction()
-//             .unwrap()
-//             .unwrap();
+#[test]
+fn sync_with_bitcoin_err_unconfirmed_funding_tx() {
+    let mut testkit = AnchoringTestKit::default();
+    // Establish anchoring transactions chain.
+    testkit
+        .inner
+        .create_block_with_transactions(testkit.create_signature_txs().into_iter().flatten());
+    // Check that synchronization will cause an error if the funding transaction was not confirmed.
+    let snapshot = testkit.inner.snapshot();
+    let anchoring_schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+    let tx_chain = anchoring_schema.anchoring_transactions_chain();
 
-//     let anchoring_tx_id = proposed.id();
-//     anchoring_testkit.create_block_with_transactions(signatures);
+    let fake_relay = FakeBitcoinRelay::default();
+    let sync = SyncWithBitcoinTask::new(fake_relay.clone(), testkit.inner.api());
+    fake_relay.enqueue_requests(vec![
+        FakeRelayRequest::TransactionConfirmations {
+            request: tx_chain.get(0).unwrap().id(),
+            response: None,
+        },
+        FakeRelayRequest::TransactionConfirmations {
+            request: tx_chain.get(0).unwrap().prev_tx_id(),
+            response: None,
+        },
+    ]);
 
-//     // Error while trying fetch info for anchoring tx first time
-//     requests.expect(vec![
-//         funding_tx_request(),
-//         (
-//             FakeRelayRequest::TransactionInfo {
-//                 id: anchoring_tx_id,
-//             },
-//             FakeRelayResponse::TransactionInfo(Err(
-//                 bitcoin_rpc::Error::Memory(String::new()).into()
-//             )),
-//         ),
-//     ]);
-
-//     anchoring_testkit.create_blocks_until(Height(2));
-
-//     let last_tx = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
-//         .anchoring_transactions_chain()
-//         .last()
-//         .unwrap();
-
-//     // Should retry
-//     requests.expect(vec![
-//         funding_tx_request(),
-//         (
-//             FakeRelayRequest::TransactionInfo {
-//                 id: anchoring_tx_id,
-//             },
-//             FakeRelayResponse::TransactionInfo(Ok(None)),
-//         ),
-//         (
-//             FakeRelayRequest::SendTransaction {
-//                 transaction: last_tx.clone(),
-//             },
-//             FakeRelayResponse::SendTransaction(Ok(anchoring_tx_id)),
-//         ),
-//     ]);
-
-//     anchoring_testkit.create_blocks_until(Height(4));
-
-//     // Should ask btc network about last anchoring tx every anchoring_height / 2
-//     requests.expect(vec![
-//         funding_tx_request(),
-//         (
-//             FakeRelayRequest::TransactionInfo {
-//                 id: anchoring_tx_id,
-//             },
-//             FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
-//                 content: last_tx.clone(),
-//                 confirmations: 6,
-//             }))),
-//         ),
-//         funding_tx_request(),
-//         (
-//             FakeRelayRequest::TransactionInfo {
-//                 id: anchoring_tx_id,
-//             },
-//             FakeRelayResponse::TransactionInfo(Ok(Some(BtcTransactionInfo {
-//                 content: last_tx.clone(),
-//                 confirmations: 6,
-//             }))),
-//         ),
-//     ]);
-//     anchoring_testkit.create_blocks_until(Height(8));
-// }
-
-// #[test]
-// fn several_unsynced() {
-//     let mut anchoring_testkit = AnchoringTestKit::new_with_fake_rpc(4);
-//     let requests = anchoring_testkit.requests();
-
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-
-//     let (proposed_0, _) =
-//         BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
-//             .actual_proposed_anchoring_transaction()
-//             .unwrap()
-//             .unwrap();
-
-//     let tx_id_0 = proposed_0.id();
-//     anchoring_testkit.create_block_with_transactions(signatures);
-
-//     // Error while trying fetch info for anchoring tx first time
-//     requests.expect(vec![
-//         funding_tx_request(),
-//         (
-//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-//             FakeRelayResponse::TransactionInfo(Err(
-//                 bitcoin_rpc::Error::Memory(String::new()).into()
-//             )),
-//         ),
-//     ]);
-
-//     anchoring_testkit.create_blocks_until(Height(2));
-
-//     let last_tx = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
-//         .anchoring_transactions_chain()
-//         .last()
-//         .unwrap();
-
-//     // Sync failed
-//     requests.expect(vec![
-//         funding_tx_request(),
-//         (
-//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-//             FakeRelayResponse::TransactionInfo(Ok(None)),
-//         ),
-//         (
-//             FakeRelayRequest::SendTransaction {
-//                 transaction: last_tx.clone(),
-//             },
-//             FakeRelayResponse::SendTransaction(Ok(tx_id_0)),
-//         ),
-//     ]);
-
-//     anchoring_testkit.create_blocks_until(Height(5));
-
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-
-//     let (proposed_1, _) =
-//         BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &anchoring_testkit.snapshot())
-//             .actual_proposed_anchoring_transaction()
-//             .unwrap()
-//             .unwrap();
-
-//     let tx_id_1 = proposed_1.id();
-
-//     requests.expect(vec![
-//         (
-//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-//             FakeRelayResponse::TransactionInfo(Ok(None)),
-//         ),
-//         funding_tx_request(),
-//         (
-//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-//             FakeRelayResponse::TransactionInfo(Ok(None)),
-//         ),
-//         (
-//             FakeRelayRequest::SendTransaction {
-//                 transaction: last_tx.clone(),
-//             },
-//             FakeRelayResponse::SendTransaction(Err(
-//                 bitcoin_rpc::Error::Memory(String::new()).into()
-//             )),
-//         ),
-//         (
-//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-//             FakeRelayResponse::TransactionInfo(Ok(None)),
-//         ),
-//         funding_tx_request(),
-//         (
-//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-//             FakeRelayResponse::TransactionInfo(Ok(None)),
-//         ),
-//         (
-//             FakeRelayRequest::SendTransaction {
-//                 transaction: last_tx.clone(),
-//             },
-//             FakeRelayResponse::SendTransaction(Err(
-//                 bitcoin_rpc::Error::Memory(String::new()).into()
-//             )),
-//         ),
-//     ]);
-
-//     anchoring_testkit.create_block_with_transactions(signatures);
-
-//     anchoring_testkit.create_blocks_until(Height(9));
-//     let signatures = anchoring_testkit
-//         .create_signature_tx_for_validators(3)
-//         .unwrap();
-
-//     // Should walk to first uncommitted
-//     requests.expect(vec![
-//         (
-//             FakeRelayRequest::TransactionInfo { id: tx_id_1 },
-//             FakeRelayResponse::TransactionInfo(Ok(None)),
-//         ),
-//         (
-//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-//             FakeRelayResponse::TransactionInfo(Ok(None)),
-//         ),
-//         funding_tx_request(),
-//         (
-//             FakeRelayRequest::TransactionInfo { id: tx_id_0 },
-//             FakeRelayResponse::TransactionInfo(Ok(None)),
-//         ),
-//         (
-//             FakeRelayRequest::SendTransaction {
-//                 transaction: last_tx.clone(),
-//             },
-//             FakeRelayResponse::SendTransaction(Err(
-//                 bitcoin_rpc::Error::Memory(String::new()).into()
-//             )),
-//         ),
-//     ]);
-
-//     anchoring_testkit.create_block_with_transactions(signatures);
-//     anchoring_testkit.create_blocks_until(Height(11));
-// }
+    let e = sync.process(None).unwrap_err();
+    match e {
+        SyncWithBitcoinError::UnconfirmedFundingTransaction(hash) => {
+            assert_eq!(hash, tx_chain.get(0).unwrap().prev_tx_id())
+        }
+        e => panic!("Unexpected error occurred: {:?}", e),
+    }
+}

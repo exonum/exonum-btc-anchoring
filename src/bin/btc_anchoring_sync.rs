@@ -300,6 +300,13 @@ impl RunCommand {
                     Err(SyncWithBitcoinError::Relay(e)) => {
                         log::error!("An error in the Bitcoin relay occurred. {}", e)
                     }
+                    // Funding transaction is unconfirmed by Bitcoin network.
+                    // This is a serious mistake that can break anchoring process.
+                    Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(id)) => failure::bail!(
+                        "Funding transaction with id {} is unconfirmed by Bitcoin network. \
+                         This is a serious mistake that can break anchoring process.",
+                        id.to_hex()
+                    ),
                     // Stop execution if an internal error occurred.
                     Err(SyncWithBitcoinError::Internal(e)) => return Err(e),
                 }

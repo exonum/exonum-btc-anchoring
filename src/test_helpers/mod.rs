@@ -169,7 +169,6 @@ impl AnchoringTestKit {
 
         let inner = TestKitBuilder::validator()
             .with_keys(validator_keys)
-            .with_logger()
             .with_service(SimpleSupervisor)
             .with_service(InstanceCollection::new(BtcAnchoringService).with_instance(
                 ANCHORING_INSTANCE_ID,

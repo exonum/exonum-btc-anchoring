@@ -204,6 +204,8 @@ pub enum SyncWithBitcoinError<C: Display, R: Display> {
     Relay(R),
     /// Internal error.
     Internal(failure::Error),
+    /// Initial funding transaction is unconfirmed.
+    UnconfirmedFundingTransaction(Hash),
 }
 
 /// Pushes anchoring transactions to the Bitcoin blockchain.
@@ -303,12 +305,8 @@ where
         if self.transaction_is_committed(transaction.id())? {
             return Ok(None);
         }
-        // Or this transaction is ready to be committed into the Bitcoin network.
-        if self.transaction_is_committed(transaction.prev_tx_id())? {
-            return Ok(Some((transaction, index)));
-        }
         // Try to find the first of uncommitted transactions.
-        for index in (0..index).rev() {
+        for index in (0..=index).rev() {
             let transaction = self.get_transaction(index)?;
             log::trace!(
                 "Checking for transaction with index {} and id {}",
@@ -318,6 +316,10 @@ where
             if self.transaction_is_committed(transaction.prev_tx_id())? {
                 log::trace!("Found committed transaction");
                 return Ok(Some((transaction, index)));
+            } else if index == 0 {
+                return Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(
+                    transaction.prev_tx_id(),
+                ));
             }
         }
         Ok(None)
