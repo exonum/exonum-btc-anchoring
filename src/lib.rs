@@ -37,16 +37,14 @@
 //!
 //! Create application with anchoring service
 //!
-//! ```rust,no_run,ignore
-//! use exonum::helpers::fabric::NodeBuilder;
+//! ```rust,no_run
+//! use exonum_cli::NodeBuilder;
 //!
-//! fn main() {
-//!     exonum::crypto::init();
-//!     exonum::helpers::init_logger().unwrap();
-//!
-//!     let node = NodeBuilder::new()
-//!         .with_service(Box::new(exonum_btc_anchoring::ServiceFactory));
-//!     node.run();
+//! fn main() -> Result<(), failure::Error> {
+//!     exonum::helpers::init_logger()?;
+//!     NodeBuilder::new()
+//!         .with_service(exonum_btc_anchoring::BtcAnchoringService)
+//!         .run()
 //! }
 //! ```
 //!

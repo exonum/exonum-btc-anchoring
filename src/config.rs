@@ -115,10 +115,10 @@ impl ValidateInput for Config {
     fn validate(&self) -> Result<(), Self::Error> {
         ensure!(
             self.anchoring_keys.len() <= Self::MAX_NODES_COUNT,
-            "Too many anchoring nodes: amount of anchoring nodes should be lesser than the {}.",
+            "Too many anchoring nodes: amount of anchoring nodes should be less or equal than the {}.",
             Self::MAX_NODES_COUNT
         );
-        // TODO Validate other parameters.
+        // TODO Validate other parameters. [ECR-3633]
 
         // Verify that the redeem script is suitable.
         let quorum = byzantine_quorum(self.anchoring_keys.len());

@@ -35,19 +35,13 @@ use crate::{
     proto,
 };
 
-/// Btc anchoring service implementation for the Exonum blockchain.
-#[derive(ServiceFactory)]
+/// Bitcoin anchoring service implementation for the Exonum blockchain.
+#[derive(ServiceFactory, Debug)]
 #[exonum(
     proto_sources = "proto",
     implements("Transactions", "Configure<Params = Config>")
 )]
 pub struct BtcAnchoringService;
-
-impl std::fmt::Debug for BtcAnchoringService {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        f.debug_struct("BtcAnchoringService").finish()
-    }
-}
 
 impl Service for BtcAnchoringService {
     fn initialize(

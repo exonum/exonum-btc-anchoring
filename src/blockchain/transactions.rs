@@ -64,56 +64,60 @@ impl Transactions for BtcAnchoringService {
         {
             return Ok(());
         }
-
+        // Check that there is an anchoring proposal for the actual blockchain state.
         let (expected_transaction, expected_inputs) = schema
             .actual_proposed_anchoring_transaction()
-            .ok_or(Error::AnchoringUnnecessary)?
+            .ok_or(Error::AnchoringNotRequested)?
             .map_err(Error::anchoring_builder_error)?;
-
+        // Check that proposal from transaction is same as expected.
         if expected_transaction.id() != proposed_tx.id() {
-            return Err(Error::UnexpectedAnchoringProposal).map_err(From::from);
+            return Err(Error::UnexpectedAnchoringProposal.into());
         }
-
+        // Check that author is authorized to sign inputs of the anchoring proposal.
         let actual_state = schema.actual_state();
         let (anchoring_node_id, public_key) = actual_state
             .actual_configuration()
             .find_bitcoin_key(&author)
             .ok_or(Error::MissingAnchoringPublicKey)?;
 
+        // Check that input with the specified index exist.
+        let input_idx = arg.input as usize;
+        let input_tx = expected_inputs.get(input_idx).ok_or(Error::NoSuchInput)?;
+
+        // Check that input signature is correct.
         let redeem_script = actual_state.actual_configuration().redeem_script();
         let redeem_script_content = redeem_script.content();
 
         let input_signer = InputSigner::new(redeem_script.clone());
-        // Check signature content.
-        let input_signature_ref = arg.input_signature.as_ref();
-        let input_idx = arg.input as usize;
-        let input_tx = expected_inputs.get(input_idx).ok_or(Error::NoSuchInput)?;
 
         let verification_result = input_signer.verify_input(
             TxInRef::new(proposed_tx.as_ref(), arg.input as usize),
             input_tx.as_ref(),
             &public_key.0,
-            input_signature_ref,
+            arg.input_signature.as_ref(),
         );
 
         if verification_result.is_err() {
-            return Err(Error::InputVerificationFailed).map_err(From::from);
+            return Err(Error::InputVerificationFailed.into());
         }
 
+        // All preconditions are correct and we can use this signature.
         let input_id = arg.input_id();
         let mut input_signatures = schema.input_signatures(&input_id, &redeem_script);
+        // Check that we have not reached the quorum yet, otherwise we should not do anything.
         if input_signatures.len() != redeem_script_content.quorum {
             // Add signature to schema.
             input_signatures.insert(anchoring_node_id, arg.input_signature.clone().into());
             schema
                 .transaction_signatures()
                 .put(&input_id, input_signatures);
-            // Try to finalize transaction.
             let mut finalized_tx: btc::Transaction = proposed_tx.clone();
+            // Make sure we reach a quorum for each input.
             for index in 0..expected_inputs.len() {
                 let input_id = TxInputId::new(arg.transaction.id(), index as u32);
                 let input_signatures = schema.input_signatures(&input_id, &redeem_script);
-
+                // We have not enough signatures for this input, so we can not finalize this
+                // proposal at the moment.
                 if input_signatures.len() != redeem_script_content.quorum {
                     return Ok(());
                 }
@@ -134,6 +138,7 @@ impl Transactions for BtcAnchoringService {
             info!("hash: {}", payload.block_hash.to_hex());
             info!("balance: {}", finalized_tx.0.output[0].value);
             trace!("Anchoring txhex: {}", finalized_tx.to_string());
+
             // Add finalized transaction to the tail of anchoring transactions.
             schema.push_anchoring_transaction(finalized_tx);
         }

@@ -220,6 +220,7 @@ fn socket_to_http_address(addr: std::net::SocketAddr) -> String {
 impl GenerateConfigCommand {
     fn run(self) -> Result<(), failure::Error> {
         let bitcoin_keypair = btc::gen_keypair(self.bitcoin_network);
+        // Print the received Bitcoin public key to use it in scripts.
         println!("{}", bitcoin_keypair.0);
 
         let bitcoin_rpc_config = self.bitcoin_rpc_config();
@@ -311,7 +312,7 @@ impl RunCommand {
                     Err(SyncWithBitcoinError::Internal(e)) => return Err(e),
                 }
             }
-
+            // Don't perform this actions too frequent to avoid DOS attack.
             std::thread::sleep(Duration::from_secs(5));
         }
     }
@@ -319,6 +320,7 @@ impl RunCommand {
 
 impl AnchoringAddressCommand {
     fn run(self) -> Result<(), failure::Error> {
+        // Create fake config to reuse its `anchoring_address` method.
         let fake_config = AnchoringConfig {
             anchoring_keys: self
                 .anchoring_keys

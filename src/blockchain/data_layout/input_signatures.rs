@@ -56,7 +56,7 @@ impl InputSignatures {
 
     /// Check that signatures set is not empty.
     pub fn is_empty(&self) -> bool {
-        self.content.iter().any(Option::is_some)
+        self.content.iter().all(Option::is_none)
     }
 }
 

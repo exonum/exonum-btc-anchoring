@@ -33,16 +33,6 @@ use crate::{
 
 mod bitcoin_relay;
 
-macro_rules! some_or_return {
-    ($value_expr:expr) => {
-        if let Some(value) = $value_expr {
-            value
-        } else {
-            return Ok(());
-        }
-    };
-}
-
 /// Anchoring transaction with its index in the anchoring chain.
 pub type TransactionWithIndex = (btc::Transaction, u64);
 
@@ -126,10 +116,14 @@ where
         log::trace!("Got an anchoring proposal: {:?}", proposal);
         // Find among the keys one from which we have a private part.
         // TODO What we have to do if we find more than one key? [ECR-3222]
-        let keypair = some_or_return!(
+        let keypair = if let Some(keypair) =
             self.find_private_key(config.anchoring_keys.iter().map(|x| x.bitcoin_key))
-        );
-        // Create `SignInput` transactions
+        {
+            keypair
+        } else {
+            return Ok(());
+        };
+        // Create `SignInput` transactions.
         let redeem_script = config.redeem_script();
         let block_height = match proposal.anchoring_payload() {
             Some(payload) => payload.block_height,
@@ -313,16 +307,24 @@ where
                 index,
                 transaction.id().to_hex()
             );
-            if self.transaction_is_committed(transaction.prev_tx_id())? {
+
+            let previous_tx_id = transaction.prev_tx_id();
+            // If the transaction previous to current one is committed, we found the first
+            // uncommitted transaction (we've checked that the last one was not committed,
+            // so scenario when all the transactions are committed is not possible).
+            if self.transaction_is_committed(previous_tx_id)? {
                 log::trace!("Found committed transaction");
+                // Note that we were checking the previous transaction to be committed, so
+                // we return this transaction as the first not committed.
                 return Ok(Some((transaction, index)));
-            } else if index == 0 {
-                return Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(
-                    transaction.prev_tx_id(),
-                ));
             }
         }
-        Ok(None)
+        // If we reach this branch then the transaction previous to the first one was not
+        // committed, but previous transaction for the first anchoring transaction always
+        // is funding. Therefore, the first funding transaction has no confirmation.
+        Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(
+            transaction.prev_tx_id(),
+        ))
     }
 
     fn get_transaction(

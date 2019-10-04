@@ -174,6 +174,9 @@ pub fn gen_keypair(network: Network) -> (PublicKey, PrivateKey) {
 }
 
 /// Convert Bitcoin sha256d type to the Exonum hash type.
+///
+/// This types have same data layout, and so we can convert the Bitcoin hash type to use in the
+/// Merkledb without "newtype" wrapper.
 pub fn sha256d_to_exonum_hash(hash: sha256d::Hash) -> crypto::Hash {
     let mut bytes = [0_u8; 32];
     bytes.copy_from_slice(&hash[..]);
@@ -181,7 +184,7 @@ pub fn sha256d_to_exonum_hash(hash: sha256d::Hash) -> crypto::Hash {
     crypto::Hash::new(bytes)
 }
 
-/// Convert Exonum hash type to the Bitcoin sha256d.
+/// Convert Exonum hash type back to the Bitcoin sha256d.
 pub fn exonum_hash_to_sha256d(hash: crypto::Hash) -> sha256d::Hash {
     use bitcoin_hashes::Hash;
     sha256d::Hash::from_slice(hash.as_ref()).unwrap()

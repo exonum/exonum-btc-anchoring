@@ -24,8 +24,8 @@ use crate::btc;
 pub enum Error {
     /// Received signature is for the incorrect anchoring transaction.
     UnexpectedAnchoringProposal = 0,
-    /// There is no anchoring transaction proposal for the current blockchain height.
-    AnchoringUnnecessary = 1,
+    /// There is no anchoring request at the current blockchain state.
+    AnchoringNotRequested = 1,
     /// Transaction author is not authorized to sign anchoring transactions.
     MissingAnchoringPublicKey = 2,
     /// Transaction input with the specified index is absent in the anchoring proposal.

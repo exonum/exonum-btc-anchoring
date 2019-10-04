@@ -206,7 +206,10 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         let tx = self.anchoring_transactions_chain().last()?;
         Some(
             tx.anchoring_metadata()
-                .expect("Expected payload in the anchoring transaction")
+                .expect(
+                    "Expected payload in the anchoring transaction. \
+                     If this error occurs, inform the service authors about it.",
+                )
                 .1
                 .block_height,
         )
@@ -224,13 +227,18 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
             // Check that the anchoring transaction is correct.
             let tx_out_script = tx
                 .anchoring_metadata()
-                .expect("Unable to find metadata in the anchoring transaction.")
+                .expect(
+                    "Unable to find metadata in the anchoring transaction. \
+                     If this error occurs, inform the service authors about it.",
+                )
                 .0;
             // If a following config is exist, then the anchoring transaction's output should have
             // same script as in the following config.
+            // Otherwise, this is a critical error in the logic of the anchoring.
             assert!(
                 config.anchoring_out_script() == *tx_out_script,
-                "Malformed output address in the anchoring transaction"
+                "Malformed output address in the anchoring transaction. \
+                 If this error occurs, inform the service authors about it."
             );
             // If preconditions are correct, just reassign the config as an actual.
             self.following_config_entry().remove();
