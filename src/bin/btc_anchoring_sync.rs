@@ -13,10 +13,7 @@
 // limitations under the License.
 
 use bitcoincore_rpc::{Auth as BitcoinRpcAuth, Client as BitcoinRpcClient};
-use exonum::{
-    crypto::{self, Hash},
-    node::NodeConfig,
-};
+use exonum::crypto::{self, Hash};
 use exonum_btc_anchoring::{
     api::{AnchoringChainLength, AnchoringProposalState, IndexQuery, PrivateApi},
     blockchain::SignInput,
@@ -130,13 +127,13 @@ impl PrivateApi for ApiClient {
 /// Generate initial configuration for the btc anchoring sync utility.
 #[derive(Debug, StructOpt)]
 struct GenerateConfigCommand {
-    /// Path to a node configuration file.
-    #[structopt(long, short = "c")]
-    node_config: PathBuf,
     /// Path to a sync utility configuration file which will be created after
     /// running this command.
     #[structopt(long, short = "o")]
     output: PathBuf,
+    /// Anchoring node private API url address.
+    #[structopt(long, short = "e")]
+    exonum_private_api: String,
     /// Bitcoin network type.
     #[structopt(long, short = "n")]
     bitcoin_network: bitcoin::Network,
@@ -183,7 +180,7 @@ enum Commands {
 
 #[derive(Debug, Serialize, Deserialize)]
 struct SyncConfig {
-    private_api_address: String,
+    exonum_private_api: String,
     instance_name: String,
     #[serde(with = "flatten_keypairs")]
     bitcoin_key_pool: HashMap<btc::PublicKey, btc::PrivateKey>,
@@ -213,10 +210,6 @@ impl TryFrom<BitcoinRpcConfig> for BitcoinRpcClient {
     }
 }
 
-fn socket_to_http_address(addr: std::net::SocketAddr) -> String {
-    format!("http://{}", addr)
-}
-
 impl GenerateConfigCommand {
     fn run(self) -> Result<(), failure::Error> {
         let bitcoin_keypair = btc::gen_keypair(self.bitcoin_network);
@@ -224,15 +217,8 @@ impl GenerateConfigCommand {
         println!("{}", bitcoin_keypair.0);
 
         let bitcoin_rpc_config = self.bitcoin_rpc_config();
-        let node_config: NodeConfig = load_config_file(self.node_config)?;
         let sync_config = SyncConfig {
-            private_api_address: node_config
-                .api
-                .private_api_address
-                .map(socket_to_http_address)
-                .ok_or_else(|| {
-                    failure::format_err!("Public API address should be exist in the node config")
-                })?,
+            exonum_private_api: self.exonum_private_api,
             bitcoin_key_pool: std::iter::once(bitcoin_keypair.clone()).collect(),
             instance_name: self.instance_name,
             bitcoin_rpc_config,
@@ -260,7 +246,7 @@ impl RunCommand {
     fn run(self) -> Result<(), failure::Error> {
         let sync_config: SyncConfig = load_config_file(self.config)?;
         // TODO rewrite on top of tokio or runtime crate [ECR-3222]
-        let client = ApiClient::new(sync_config.private_api_address, sync_config.instance_name);
+        let client = ApiClient::new(sync_config.exonum_private_api, sync_config.instance_name);
         let chain_updater =
             AnchoringChainUpdateTask::new(sync_config.bitcoin_key_pool, client.clone());
         let bitcoin_relay = sync_config
