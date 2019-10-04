@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Breaking changes
 
-- Porting anchoring to a new Exonum with dynamic services.
+- Ported `exonum-btc-anchoring` to a new version of Exonum with support of dynamic services.
 
   In this way, a large number of changes have occurred in service business logic:
 
