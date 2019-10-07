@@ -22,7 +22,7 @@ btc-transaction-utils = "0.5"
 byteorder = "1.3"
 derive_more = "0.15"
 exonum = "0.12.0"
-exonum-cli = { git = "https://github.com/exonum/exonum.git", rev = "270def39e94449c3e0c264b80e909954ee5d995c" }
+exonum-cli = { git = "https://github.com/exonum/exonum.git", rev = "4b45f0eafd1d8de7149513a8126cc8ec0671fe9e" }
 exonum-derive = "0.12.0"
 exonum-merkledb = "0.12.0"
 exonum-testkit = "0.12.0"
@@ -53,9 +53,9 @@ proptest = "0.9"
 exonum-build = "0.12.0"
 
 [patch.crates-io]
-exonum = { git = "https://github.com/exonum/exonum.git", rev = "270def39e94449c3e0c264b80e909954ee5d995c" }
-exonum-merkledb = { git = "https://github.com/exonum/exonum.git", rev = "270def39e94449c3e0c264b80e909954ee5d995c" }
-exonum-derive = { git = "https://github.com/exonum/exonum.git", rev = "270def39e94449c3e0c264b80e909954ee5d995c" }
-exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "270def39e94449c3e0c264b80e909954ee5d995c" }
-exonum-build = { git = "https://github.com/exonum/exonum.git", rev = "270def39e94449c3e0c264b80e909954ee5d995c" }
+exonum = { git = "https://github.com/exonum/exonum.git", rev = "4b45f0eafd1d8de7149513a8126cc8ec0671fe9e" }
+exonum-merkledb = { git = "https://github.com/exonum/exonum.git", rev = "4b45f0eafd1d8de7149513a8126cc8ec0671fe9e" }
+exonum-derive = { git = "https://github.com/exonum/exonum.git", rev = "4b45f0eafd1d8de7149513a8126cc8ec0671fe9e" }
+exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "4b45f0eafd1d8de7149513a8126cc8ec0671fe9e" }
+exonum-build = { git = "https://github.com/exonum/exonum.git", rev = "4b45f0eafd1d8de7149513a8126cc8ec0671fe9e" }
 
