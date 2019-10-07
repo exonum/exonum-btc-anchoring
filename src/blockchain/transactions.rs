@@ -26,7 +26,7 @@ use crate::{btc, BtcAnchoringService};
 use super::{data_layout::TxInputId, errors::Error, BtcAnchoringSchema};
 
 impl SignInput {
-    /// Return identifier of the signed transaction input.
+    /// Returns identifier of the signed transaction input.
     pub fn input_id(&self) -> TxInputId {
         TxInputId {
             txid: self.transaction.id(),
@@ -38,7 +38,7 @@ impl SignInput {
 /// Exonum BTC anchoring transactions.
 #[exonum_service]
 pub trait Transactions {
-    /// Sign a single input of the anchoring transaction proposal.
+    /// Signs a single input of the anchoring transaction proposal.
     fn sign_input(&self, context: TransactionContext, arg: SignInput)
         -> Result<(), ExecutionError>;
 }

@@ -23,9 +23,9 @@ use crate::btc;
 pub trait BitcoinRelay {
     /// Error type for the current Bitcoin relay implementation.
     type Error;
-    /// Send raw transaction to the Bitcoin network node.
+    /// Sends a raw transaction to the Bitcoin network node.
     fn send_transaction(&self, transaction: &btc::Transaction) -> Result<Hash, Self::Error>;
-    /// Get the number of transaction confirmations with the specified identifier.
+    /// Gets the number of transaction confirmations with the specified identifier.
     fn transaction_confirmations(&self, id: Hash) -> Result<Option<u32>, Self::Error>;
 }
 

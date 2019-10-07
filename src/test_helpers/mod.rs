@@ -54,7 +54,7 @@ pub const ANCHORING_INSTANCE_ID: InstanceId = 14;
 /// Default anchoring instance name.
 pub const ANCHORING_INSTANCE_NAME: &str = "btc_anchoring";
 
-/// Generate a fake funding transaction.
+/// Generates a fake funding transaction.
 pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -> btc::Transaction {
     // Generate random transaction id.
     let mut rng = thread_rng();
@@ -146,7 +146,7 @@ pub struct AnchoringTestKit {
 }
 
 impl AnchoringTestKit {
-    /// Create an anchoring testkit instance for the specified number of anchoring nodes,
+    /// Creates an anchoring testkit instance for the specified number of anchoring nodes,
     /// total funds in satoshis and interval between anchors.
     pub fn new(nodes_num: u16, total_funds: u64, anchoring_interval: u64) -> Self {
         let validator_keys = (0..nodes_num)
@@ -183,21 +183,21 @@ impl AnchoringTestKit {
         }
     }
 
-    /// Return the actual anchoring configuration.
+    /// Returns the actual anchoring configuration.
     pub fn actual_anchoring_config(&self) -> Config {
         let snapshot = self.inner.snapshot();
         let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
         schema.actual_configuration()
     }
 
-    /// Return the latest anchoring transaction.
+    /// Returns the latest anchoring transaction.
     pub fn last_anchoring_tx(&self) -> Option<btc::Transaction> {
         let snapshot = self.inner.snapshot();
         let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
         schema.anchoring_transactions_chain().last()
     }
 
-    /// Return the proposal of the next anchoring transaction for the actual anchoring state.
+    /// Returns the proposal of the next anchoring transaction for the actual anchoring state.
     pub fn anchoring_transaction_proposal(
         &self,
     ) -> Option<(btc::Transaction, Vec<btc::Transaction>)> {
@@ -208,7 +208,7 @@ impl AnchoringTestKit {
             .map(Result::unwrap)
     }
 
-    /// Create signatures for each input of the proposed anchoring transaction signed by the
+    /// Creates signatures for each input of the proposed anchoring transaction signed by the
     /// specified node.
     pub fn create_signature_tx_for_node(
         &self,
@@ -257,7 +257,7 @@ impl AnchoringTestKit {
         Ok(signatures)
     }
 
-    /// Create signatures for each input of the proposed anchoring transaction signed by all of
+    /// Creates signatures for each input of the proposed anchoring transaction signed by all of
     /// anchoring nodes.
     pub fn create_signature_txs(&self) -> Vec<Vec<Verified<AnyTx>>> {
         let mut signatures = Vec::new();
@@ -272,7 +272,7 @@ impl AnchoringTestKit {
         signatures
     }
 
-    /// Create the confirmation transactions with a funding transaction to the current address
+    /// Creates the confirmation transactions with a funding transaction to the current address
     /// with a given amount of Satoshi.
     pub fn create_funding_confirmation_txs(
         &self,
@@ -288,7 +288,7 @@ impl AnchoringTestKit {
         )
     }
 
-    /// Create the confirmation transactions with a specified funding transaction.
+    /// Creates the confirmation transactions with a specified funding transaction.
     pub fn create_funding_confirmation_txs_with(
         &self,
         tx: btc::Transaction,
@@ -300,7 +300,7 @@ impl AnchoringTestKit {
             .into_tx()]
     }
 
-    /// Add new auditor node to the testkit network and create Bitcoin keypair for it.
+    /// Adds a new auditor node to the testkit network and create Bitcoin keypair for it.
     pub fn add_node(&mut self) -> AnchoringKeys {
         let service_key = self.inner.network_mut().add_node().service_keypair().0;
         let bitcoin_key = self
@@ -313,19 +313,19 @@ impl AnchoringTestKit {
         }
     }
 
-    /// Return a corresponding private Bitcoin key.
+    /// Returns a corresponding private Bitcoin key.
     pub fn node_private_key(&self, public_key: &btc::PublicKey) -> btc::PrivateKey {
         self.anchoring_nodes.private_key(public_key)
     }
 
-    /// Generate bitcoin keypair and add them to the key pool.
+    /// Generates bitcoin keypair and adds them to the key pool.
     pub fn gen_bitcoin_key(&mut self) -> btc::PublicKey {
         let keypair = btc::gen_keypair(self.actual_anchoring_config().network);
         self.anchoring_nodes.key_pool.insert(keypair.0, keypair.1);
         keypair.0
     }
 
-    /// Return the block hash for the given blockchain height.
+    /// Returns the block hash for the given blockchain height.
     pub fn block_hash_on_height(&self, height: Height) -> Hash {
         CoreSchema::new(&self.inner.snapshot())
             .block_hashes_by_height()
@@ -333,14 +333,14 @@ impl AnchoringTestKit {
             .unwrap()
     }
 
-    /// Return Bitcoin key pairs of anchoring nodes.
+    /// Returns Bitcoin key pairs of anchoring nodes.
     pub fn anchoring_keypairs(
         &self,
     ) -> impl IntoIterator<Item = (btc::PublicKey, btc::PrivateKey)> {
         self.anchoring_nodes.anchoring_keypairs()
     }
 
-    /// Find anchoring node with the specified bitcoin key.
+    /// Finds anchoring node with the specified bitcoin key.
     pub fn find_anchoring_node(&self, bitcoin_key: &btc::PublicKey) -> Option<&TestNode> {
         self.anchoring_nodes
             .inner

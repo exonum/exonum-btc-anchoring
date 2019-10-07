@@ -113,7 +113,7 @@ impl From<u64> for AnchoringChainLength {
 pub trait PublicApi {
     /// Error type for the current public API implementation.
     type Error;
-    /// Return an actual anchoring address.
+    /// Returns an actual anchoring address.
     ///
     /// `GET /{api_prefix}/address/actual`
     fn actual_address(&self) -> Result<btc::Address, Self::Error>;
@@ -121,13 +121,13 @@ pub trait PublicApi {
     ///
     /// `GET /{api_prefix}/address/following`
     fn following_address(&self) -> Result<Option<btc::Address>, Self::Error>;
-    /// Return the latest anchoring transaction if the height is not specified,
+    /// Returns the latest anchoring transaction if the height is not specified,
     /// otherwise, return the anchoring transaction with the height that is greater or equal
     /// to the given one.
     ///
     /// `GET /{api_prefix}/find-transaction`
     fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error>;
-    /// Return an actual anchoring configuration.
+    /// Returns an actual anchoring configuration.
     ///
     /// `GET /{api_prefix}/config`
     fn config(&self) -> Result<Config, Self::Error>;
@@ -137,7 +137,7 @@ pub trait PublicApi {
 pub trait PrivateApi {
     /// Error type for the current public API implementation.
     type Error;
-    /// Create and broadcast the `TxSignature` transaction, which is signed
+    /// Creates and broadcasts the `TxSignature` transaction, which is signed
     /// by the current node, and returns its hash.
     ///
     /// `POST /{api_prefix}/sign-input`
@@ -145,20 +145,20 @@ pub trait PrivateApi {
         &self,
         sign_input: SignInput,
     ) -> Box<dyn Future<Item = Hash, Error = Self::Error>>;
-    /// Return a proposal for the next anchoring transaction, if it makes sense.
+    /// Returns a proposal for the next anchoring transaction, if it makes sense.
     /// If there is not enough satoshis to create a proposal an error is returned.
     ///
     /// `GET /{api_prefix}/anchoring-proposal`
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error>;
-    /// Return an actual anchoring configuration.
+    /// Returns an actual anchoring configuration.
     ///
     /// `GET /{api_prefix}/config`
     fn config(&self) -> Result<Config, Self::Error>;
-    /// Return an anchoring transaction with the specified index in anchoring transactions chain.
+    /// Returns an anchoring transaction with the specified index in anchoring transactions chain.
     ///
     /// `GET /{api_prefix}/transaction?index={index}`
     fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error>;
-    /// Return a total number of anchoring transactions in the chain.
+    /// Returns a total number of anchoring transactions in the chain.
     ///
     /// `GET /{api_prefix}/transactions-count`
     fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error>;

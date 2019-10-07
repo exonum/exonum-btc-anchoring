@@ -29,7 +29,7 @@ use failure::ensure;
 
 use crate::btc::{self, Address};
 
-/// Return the sufficient number of keys for the given validators number.
+/// Returns the sufficient number of keys for the given validators number.
 pub fn byzantine_quorum(total: usize) -> usize {
     exonum::node::state::State::byzantine_majority_count(total)
 }
@@ -50,7 +50,7 @@ impl Config {
     /// Current limit on the number of keys in a redeem script on the Bitcoin network.
     const MAX_NODES_COUNT: usize = 20;
 
-    /// Create Bitcoin anchoring config instance with default parameters for the
+    /// Creates Bitcoin anchoring config instance with default parameters for the
     /// given Bitcoin network and public keys of participants.
     pub fn with_public_keys(
         network: Network,
@@ -68,7 +68,7 @@ impl Config {
         })
     }
 
-    /// Try to find bitcoin public key corresponding with the given service key.
+    /// Tries to find bitcoin public key corresponding with the given service key.
     pub fn find_bitcoin_key(&self, service_key: &PublicKey) -> Option<(usize, btc::PublicKey)> {
         self.anchoring_keys.iter().enumerate().find_map(|(n, x)| {
             if &x.service_key == service_key {
@@ -79,12 +79,12 @@ impl Config {
         })
     }
 
-    /// Return the corresponding Bitcoin address.
+    /// Returns the corresponding Bitcoin address.
     pub fn anchoring_address(&self) -> Address {
         p2wsh::address(&self.redeem_script(), self.network).into()
     }
 
-    /// Return the corresponding redeem script.
+    /// Returns the corresponding redeem script.
     pub fn redeem_script(&self) -> RedeemScript {
         let quorum = byzantine_quorum(self.anchoring_keys.len());
         RedeemScriptBuilder::with_public_keys(self.anchoring_keys.iter().map(|x| x.bitcoin_key.0))
@@ -93,17 +93,17 @@ impl Config {
             .unwrap()
     }
 
-    /// Compute the P2WSH output corresponding to the actual redeem script.
+    /// Computes the P2WSH output corresponding to the actual redeem script.
     pub fn anchoring_out_script(&self) -> bitcoin::Script {
         self.redeem_script().as_ref().to_v0_p2wsh()
     }
 
-    /// Return the latest height below the given height which must be anchored.
+    /// Returns the latest height below the given height which must be anchored.
     pub fn previous_anchoring_height(&self, current_height: Height) -> Height {
         Height(current_height.0 - current_height.0 % self.anchoring_interval)
     }
 
-    /// Return the nearest height above the given height which must be anchored.
+    /// Returns the nearest height above the given height which must be anchored.
     pub fn following_anchoring_height(&self, current_height: Height) -> Height {
         Height(self.previous_anchoring_height(current_height).0 + self.anchoring_interval)
     }

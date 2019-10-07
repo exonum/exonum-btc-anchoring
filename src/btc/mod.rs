@@ -160,7 +160,7 @@ impl_serde_str! { PublicKey }
 impl_serde_str! { Address }
 impl_serde_str! { InputSignature }
 
-/// Generate Bitcoin keypair using the given random number generator.
+/// Generates Bitcoin keypair using the given random number generator.
 pub fn gen_keypair_with_rng<R: Rng>(rng: &mut R, network: Network) -> (PublicKey, PrivateKey) {
     let (pk, sk) = secp_gen_keypair_with_rng(rng, network);
     (PublicKey(pk), PrivateKey(sk))
@@ -173,7 +173,7 @@ pub fn gen_keypair(network: Network) -> (PublicKey, PrivateKey) {
     (PublicKey(pk), PrivateKey(sk))
 }
 
-/// Convert Bitcoin sha256d type to the Exonum hash type.
+/// Converts Bitcoin sha256d type to the Exonum hash type.
 ///
 /// This types have same data layout, and so we can convert the Bitcoin hash type to use in the
 /// Merkledb without "newtype" wrapper.
@@ -184,7 +184,7 @@ pub(crate) fn sha256d_to_exonum_hash(hash: sha256d::Hash) -> crypto::Hash {
     crypto::Hash::new(bytes)
 }
 
-/// Convert Exonum hash type back to the Bitcoin sha256d.
+/// Converts Exonum hash type back to the Bitcoin sha256d.
 pub(crate) fn exonum_hash_to_sha256d(hash: crypto::Hash) -> sha256d::Hash {
     use bitcoin_hashes::Hash;
     sha256d::Hash::from_slice(hash.as_ref()).unwrap()

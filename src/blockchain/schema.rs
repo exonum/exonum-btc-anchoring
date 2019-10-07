@@ -38,7 +38,7 @@ pub struct BtcAnchoringSchema<'a, T> {
 }
 
 impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
-    /// Construct schema for the given database `snapshot`.
+    /// Constructs a schema for the given database `snapshot`.
     pub fn new(instance_name: &'a str, access: T) -> Self {
         Self {
             instance_name,
@@ -50,42 +50,42 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         [self.instance_name, ".", suffix].concat()
     }
 
-    /// Return a table that contains complete chain of the anchoring transactions.
+    /// Returns a table that contains complete chain of the anchoring transactions.
     pub fn anchoring_transactions_chain(&self) -> RefMut<ProofListIndex<T, Transaction>> {
         self.access
             .get_object(self.index_name("transactions_chain"))
     }
 
-    /// Return a table that contains already spent funding transactions.
+    /// Returns a table that contains already spent funding transactions.
     pub fn spent_funding_transactions(&self) -> RefMut<ProofMapIndex<T, Hash, Transaction>> {
         self.access
             .get_object(self.index_name("spent_funding_transactions"))
     }
 
-    /// Return a table that contains signatures for the given transaction input.
+    /// Returns a table that contains signatures for the given transaction input.
     pub fn transaction_signatures(&self) -> RefMut<ProofMapIndex<T, TxInputId, InputSignatures>> {
         self.access
             .get_object(self.index_name("transaction_signatures"))
     }
 
-    /// Return an actual anchoring configuration entry.
+    /// Returns an actual anchoring configuration entry.
     pub fn actual_config_entry(&self) -> RefMut<Entry<T, Config>> {
         self.access.get_object(self.index_name("actual_config"))
     }
 
-    /// Return a following anchoring configuration entry.
+    /// Returns a following anchoring configuration entry.
     pub fn following_config_entry(&self) -> RefMut<Entry<T, Config>> {
         self.access.get_object(self.index_name("following_config"))
     }
 
-    /// Return an entry that may contain an unspent funding transaction for the
+    /// Returns an entry that may contain an unspent funding transaction for the
     /// actual configuration.
     pub fn unspent_funding_transaction_entry(&self) -> RefMut<Entry<T, Transaction>> {
         self.access
             .get_object(self.index_name("unspent_funding_transaction"))
     }
 
-    /// Return object hashes of the stored tables.
+    /// Returns object hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
         vec![
             self.anchoring_transactions_chain().object_hash(),
@@ -94,17 +94,17 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         ]
     }
 
-    /// Return an actual anchoring configuration.
+    /// Returns an actual anchoring configuration.
     pub fn actual_configuration(&self) -> Config {
         self.actual_config_entry().get().unwrap()
     }
 
-    /// Return the nearest following configuration if it exists.
+    /// Returns the nearest following configuration if it exists.
     pub fn following_configuration(&self) -> Option<Config> {
         self.following_config_entry().get()
     }
 
-    /// Return the list of signatures for the given transaction input.
+    /// Returns the list of signatures for the given transaction input.
     pub fn input_signatures(
         &self,
         input: &TxInputId,
@@ -115,7 +115,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
             .unwrap_or_else(|| InputSignatures::new(redeem_script.content().public_keys.len()))
     }
 
-    /// Return an actual state of anchoring.
+    /// Returns an actual state of anchoring.
     pub fn actual_state(&self) -> BtcAnchoringState {
         let actual_configuration = self.actual_configuration();
         if let Some(following_configuration) = self.following_configuration() {
@@ -132,7 +132,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         }
     }
 
-    /// Return the proposal of the next anchoring transaction for the given anchoring state.
+    /// Returns the proposal of the next anchoring transaction for the given anchoring state.
     pub fn proposed_anchoring_transaction(
         &self,
         actual_state: &BtcAnchoringState,
@@ -193,7 +193,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         Some(builder.create())
     }
 
-    /// Return the proposal of the next anchoring transaction for the actual anchoring state.
+    /// Returns the proposal of the next anchoring transaction for the actual anchoring state.
     pub fn actual_proposed_anchoring_transaction(
         &self,
     ) -> Option<Result<(Transaction, Vec<Transaction>), BuilderError>> {
@@ -201,7 +201,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         self.proposed_anchoring_transaction(&actual_state)
     }
 
-    /// Return the height of the latest anchored block.
+    /// Returns the height of the latest anchored block.
     pub fn latest_anchored_height(&self) -> Option<Height> {
         let tx = self.anchoring_transactions_chain().last()?;
         Some(
@@ -215,7 +215,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         )
     }
 
-    /// Add a finalized transaction to the tail of the anchoring transactions.
+    /// Adds a finalized transaction to the tail of the anchoring transactions.
     pub fn push_anchoring_transaction(&self, tx: Transaction) {
         // An unspent funding transaction is always unconditionally added to the anchoring
         // transaction proposal, so we can simply move it to the list of spent.
@@ -247,7 +247,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         self.anchoring_transactions_chain().push(tx);
     }
 
-    /// Set a new anchoring configuration parameters.
+    /// Sets a new anchoring configuration parameters.
     pub fn set_actual_config(&self, config: Config) {
         // TODO remove this special case. [ECR-3603]
         if let Some(tx) = config

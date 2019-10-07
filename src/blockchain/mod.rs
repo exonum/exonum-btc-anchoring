@@ -46,7 +46,7 @@ pub enum BtcAnchoringState {
 }
 
 impl BtcAnchoringState {
-    /// Return the redeem script corresponding to the address to which the anchoring
+    /// Returns the redeem script corresponding to the address to which the anchoring
     /// transaction will be sent.
     pub fn redeem_script(&self) -> RedeemScript {
         match self {
@@ -60,17 +60,17 @@ impl BtcAnchoringState {
         }
     }
 
-    /// Return the `script_pubkey` for the corresponding redeem script.
+    /// Returns the `script_pubkey` for the corresponding redeem script.
     pub fn script_pubkey(&self) -> Script {
         self.redeem_script().as_ref().to_v0_p2wsh()
     }
 
-    /// Return the output address for the corresponding redeem script.
+    /// Returns the output address for the corresponding redeem script.
     pub fn output_address(&self) -> Address {
         p2wsh::address(&self.redeem_script(), self.actual_configuration().network).into()
     }
 
-    /// Check that anchoring state is regular.
+    /// Checks that anchoring state is regular.
     pub fn is_regular(&self) -> bool {
         if let BtcAnchoringState::Regular { .. } = self {
             true
@@ -79,7 +79,7 @@ impl BtcAnchoringState {
         }
     }
 
-    /// Check that anchoring is in the transition state.
+    /// Checks that anchoring is in the transition state.
     pub fn is_transition(&self) -> bool {
         if let BtcAnchoringState::Transition { .. } = self {
             true
@@ -88,7 +88,7 @@ impl BtcAnchoringState {
         }
     }
 
-    /// Return the actual anchoring configuration.
+    /// Returns the actual anchoring configuration.
     pub fn actual_configuration(&self) -> &Config {
         match self {
             BtcAnchoringState::Regular {
@@ -101,7 +101,7 @@ impl BtcAnchoringState {
         }
     }
 
-    /// Return the following anchoring configuration if anchoring is in transition state.
+    /// Returns the following anchoring configuration if anchoring is in transition state.
     pub fn following_configuration(&self) -> Option<&Config> {
         match self {
             BtcAnchoringState::Regular { .. } => None,
@@ -112,7 +112,7 @@ impl BtcAnchoringState {
         }
     }
 
-    /// Return the nearest following anchoring height for the given height.
+    /// Returns the nearest following anchoring height for the given height.
     pub fn following_anchoring_height(&self, latest_anchored_height: Option<Height>) -> Height {
         latest_anchored_height.map_or_else(Height::zero, |height| match self {
             BtcAnchoringState::Regular {

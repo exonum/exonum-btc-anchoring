@@ -70,7 +70,7 @@ where
     T: PrivateApi + 'static,
     T::Error: Display,
 {
-    /// Create a new anchoring chain updater instance.
+    /// Creates a new anchoring chain updater instance.
     pub fn new(
         keys: impl IntoIterator<Item = (btc::PublicKey, btc::PrivateKey)>,
         api_client: T,
@@ -81,7 +81,7 @@ where
         }
     }
 
-    /// Perform a one attempt to sign an anchoring proposal, if any.
+    /// Performs a one attempt to sign an anchoring proposal, if any.
     pub fn process(&self) -> Result<(), AnchoringChainUpdateError<T::Error>> {
         log::trace!("Perform an anchoring chain update");
 
@@ -220,7 +220,7 @@ where
     T::Error: Display,
     R::Error: Display,
 {
-    /// Create a new sync with Bitcoin task instance.
+    /// Creates a new sync with Bitcoin task instance.
     pub fn new(btc_relay: R, api_client: T) -> Self {
         Self {
             api_client,
@@ -228,8 +228,8 @@ where
         }
     }
 
-    /// Perform a one attempt to send the first uncommitted anchoring transaction into the Bitcoin network, if any.
-    /// sign an anchoring proposal, if any. Return an index of the first committed transaction.
+    /// Performs a one attempt to send the first uncommitted anchoring transaction into the Bitcoin network, if any.
+    /// sign an anchoring proposal, if any. Returns an index of the first committed transaction.
     pub fn process(
         &self,
         latest_committed_tx_index: Option<u64>,
@@ -277,7 +277,7 @@ where
         Ok(Some(index))
     }
 
-    /// Find the first anchoring transaction and its index, which was not committed into
+    /// Finds the first anchoring transaction and its index, which was not committed into
     /// the Bitcoin blockchain.
     pub fn find_index_of_first_uncommitted_transaction(
         &self,

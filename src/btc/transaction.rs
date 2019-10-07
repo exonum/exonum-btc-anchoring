@@ -117,7 +117,7 @@ pub enum BuilderError {
 }
 
 impl BtcAnchoringTransactionBuilder {
-    /// Create a new btc anchoring transaction builder for the given redeem script.
+    /// Creates a new btc anchoring transaction builder for the given redeem script.
     pub fn new(redeem_script: &RedeemScript) -> BtcAnchoringTransactionBuilder {
         Self {
             script_pubkey: redeem_script.as_ref().to_v0_p2wsh(),
@@ -130,12 +130,12 @@ impl BtcAnchoringTransactionBuilder {
         }
     }
 
-    /// Mark an anchoring transaction as the transition to the given address.
+    /// Marks an anchoring transaction as the transition to the given address.
     pub fn transit_to(&mut self, script: Script) {
         self.transit_to = Some(script);
     }
 
-    /// Set an transaction which corresponding unspent output will use
+    /// Sets an transaction which corresponding unspent output will use
     /// as an input for the following anchoring transaction.
     pub fn prev_tx(&mut self, tx: Transaction) -> Result<(), BuilderError> {
         if tx.anchoring_metadata().unwrap().0 != &self.script_pubkey {
@@ -146,13 +146,13 @@ impl BtcAnchoringTransactionBuilder {
         }
     }
 
-    /// Set a transaction identifier of the latest transaction of the
+    /// Sets a transaction identifier of the latest transaction of the
     /// corrupted anchoring chain.
     pub fn recover(&mut self, last_tx: Hash) {
         self.recovery_tx = Some(last_tx);
     }
 
-    /// Add an additional funding transaction which corresponding unspent output
+    /// Adds an additional funding transaction which corresponding unspent output
     /// will use as additional input for the following anchoring transaction.
     pub fn additional_funds(&mut self, tx: Transaction) -> Result<(), BuilderError> {
         let out = tx
@@ -163,17 +163,17 @@ impl BtcAnchoringTransactionBuilder {
         Ok(())
     }
 
-    /// Set the fee per byte value.
+    /// Sets the fee per byte value.
     pub fn fee(&mut self, fee: u64) {
         self.fee = Some(fee);
     }
 
-    /// Set the anchoring transaction payload.
+    /// Sets the anchoring transaction payload.
     pub fn payload(&mut self, block_height: Height, block_hash: Hash) {
         self.payload = Some((block_height, block_hash));
     }
 
-    /// Finalize the anchoring transaction and return
+    /// Finalizes the anchoring transaction and returns
     /// it with the list of input transactions.
     pub fn create(mut self) -> Result<(Transaction, Vec<Transaction>), BuilderError> {
         // Creates transaction inputs.

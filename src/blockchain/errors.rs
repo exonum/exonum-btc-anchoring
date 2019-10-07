@@ -37,7 +37,7 @@ pub enum Error {
 }
 
 impl Error {
-    /// Create an error instance from the anchoring transaction builder error.
+    /// Creates an error instance from the anchoring transaction builder error.
     pub fn anchoring_builder_error(error: btc::BuilderError) -> ExecutionError {
         (Self::AnchoringBuilderError, error).into()
     }
