@@ -213,8 +213,6 @@ impl TryFrom<BitcoinRpcConfig> for BitcoinRpcClient {
 impl GenerateConfigCommand {
     fn run(self) -> Result<(), failure::Error> {
         let bitcoin_keypair = btc::gen_keypair(self.bitcoin_network);
-        // Print the received Bitcoin public key to use it in scripts.
-        println!("{}", bitcoin_keypair.0);
 
         let bitcoin_rpc_config = self.bitcoin_rpc_config();
         let sync_config = SyncConfig {
@@ -230,6 +228,8 @@ impl GenerateConfigCommand {
             "Available Bitcoin keys in key pool: {:?}",
             sync_config.bitcoin_key_pool
         );
+        // Print the received Bitcoin public key to use it in scripts.
+        println!("{}", bitcoin_keypair.0);
         Ok(())
     }
 
