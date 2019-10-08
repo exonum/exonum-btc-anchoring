@@ -33,3 +33,9 @@ message InputSignature {
     // Inner data.    
     bytes data = 1;
 }
+
+// Bitcoin SHA256d hash.
+message Sha256d {
+    // Inner data.    
+    bytes data = 1;
+}

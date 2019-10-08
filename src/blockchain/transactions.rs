@@ -109,7 +109,7 @@ impl Transactions for BtcAnchoringService {
             let payload = finalized_tx.anchoring_metadata().unwrap().1;
 
             info!("====== ANCHORING ======");
-            info!("txid: {}", finalized_tx.id().to_hex());
+            info!("txid: {}", finalized_tx.id().to_string());
             info!("height: {}", payload.block_height);
             info!("hash: {}", payload.block_hash.to_hex());
             info!("balance: {}", finalized_tx.0.output[0].value);

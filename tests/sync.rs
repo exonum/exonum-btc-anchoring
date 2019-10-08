@@ -40,16 +40,16 @@ use std::{
 enum FakeRelayRequest {
     SendTransaction {
         request: btc::Transaction,
-        response: Hash,
+        response: btc::Sha256d,
     },
     TransactionConfirmations {
-        request: Hash,
+        request: btc::Sha256d,
         response: Option<u32>,
     },
 }
 
 impl FakeRelayRequest {
-    fn into_send_transaction(self) -> (btc::Transaction, Hash) {
+    fn into_send_transaction(self) -> (btc::Transaction, btc::Sha256d) {
         if let FakeRelayRequest::SendTransaction { request, response } = self {
             (request, response)
         } else {
@@ -60,7 +60,7 @@ impl FakeRelayRequest {
         }
     }
 
-    fn into_transaction_confirmations(self) -> (Hash, Option<u32>) {
+    fn into_transaction_confirmations(self) -> (btc::Sha256d, Option<u32>) {
         if let FakeRelayRequest::TransactionConfirmations { request, response } = self {
             (request, response)
         } else {
@@ -106,13 +106,16 @@ impl Drop for FakeBitcoinRelay {
 impl BitcoinRelay for FakeBitcoinRelay {
     type Error = failure::Error;
 
-    fn send_transaction(&self, transaction: &btc::Transaction) -> Result<Hash, Self::Error> {
+    fn send_transaction(
+        &self,
+        transaction: &btc::Transaction,
+    ) -> Result<btc::Sha256d, Self::Error> {
         let (expected_request, response) = self.dequeue_request().into_send_transaction();
         assert_eq!(&expected_request, transaction, "Unexpected data in request");
         Ok(response)
     }
 
-    fn transaction_confirmations(&self, id: Hash) -> Result<Option<u32>, Self::Error> {
+    fn transaction_confirmations(&self, id: btc::Sha256d) -> Result<Option<u32>, Self::Error> {
         let (expected_request, response) = self.dequeue_request().into_transaction_confirmations();
         assert_eq!(expected_request, id, "Unexpected data in request");
         Ok(response)

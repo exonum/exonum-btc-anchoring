@@ -163,7 +163,7 @@ impl AnchoringTestKit {
             ..Config::default()
         };
         anchoring_config.funding_transaction = Some(create_fake_funding_transaction(
-            &anchoring_config.anchoring_address(),
+            anchoring_config.anchoring_address().as_ref(),
             total_funds,
         ));
 
@@ -278,7 +278,7 @@ impl AnchoringTestKit {
         satoshis: u64,
     ) -> (Vec<Verified<AnyTx>>, btc::Transaction) {
         let funding_transaction = create_fake_funding_transaction(
-            &self.actual_anchoring_config().anchoring_address(),
+            self.actual_anchoring_config().anchoring_address().as_ref(),
             satoshis,
         );
         (

@@ -24,12 +24,10 @@ pub use self::{
 use bitcoin::{network::constants::Network, util::address};
 use bitcoin_hashes::sha256d;
 use btc_transaction_utils;
-use derive_more::{From, Into};
-use exonum::crypto;
+use derive_more::{Display, From, FromStr, Into};
 use hex::{self, FromHex, ToHex};
 use rand::Rng;
-
-use std::ops::Deref;
+use serde_derive::{Deserialize, Serialize};
 
 #[macro_use]
 mod macros;
@@ -42,16 +40,20 @@ pub(crate) mod transaction;
 pub struct PrivateKey(pub bitcoin::PrivateKey);
 
 /// Secp256k1 public key wrapper, used for verification of signatures.
-#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash, Display, FromStr)]
 pub struct PublicKey(pub bitcoin::PublicKey);
 
 /// Bitcoin address wrapper.
-#[derive(Debug, Clone, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash, Display, FromStr)]
 pub struct Address(pub address::Address);
 
 /// Bitcoin input signature wrapper.
 #[derive(Debug, Clone, PartialEq, Into, From)]
 pub struct InputSignature(pub btc_transaction_utils::InputSignature);
+
+/// Bitcoin SHA256d hash.
+#[derive(Debug, Copy, Clone, PartialEq, Into, From, Serialize, Deserialize, Display)]
+pub struct Sha256d(pub sha256d::Hash);
 
 impl ToString for PrivateKey {
     fn to_string(&self) -> String {
@@ -97,25 +99,8 @@ impl ToHex for PublicKey {
     }
 }
 
-impl std::str::FromStr for Address {
-    type Err = <address::Address as ::std::str::FromStr>::Err;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let inner = address::Address::from_str(s)?;
-        Ok(Self(inner))
-    }
-}
-
-impl std::fmt::Display for Address {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        write!(f, "{}", self.0.to_string())
-    }
-}
-
-impl Deref for Address {
-    type Target = address::Address;
-
-    fn deref(&self) -> &Self::Target {
+impl AsRef<bitcoin::Address> for Address {
+    fn as_ref(&self) -> &bitcoin::Address {
         &self.0
     }
 }
@@ -152,7 +137,27 @@ impl From<InputSignature> for Vec<u8> {
     }
 }
 
-impl_string_conversions_for_hex! { PublicKey }
+impl Sha256d {
+    pub(crate) const LEN: usize = <bitcoin_hashes::sha256d::Hash as bitcoin_hashes::Hash>::LEN;
+
+    /// Creates a new instance from bytes array.
+    pub fn new(bytes: [u8; Self::LEN]) -> Self {
+        Self::from_slice(&bytes).unwrap()
+    }
+
+    /// Creates a new instance from bytes slice.
+    pub fn from_slice(slice: &[u8]) -> Option<Self> {
+        use bitcoin_hashes::Hash;
+        sha256d::Hash::from_slice(slice).ok().map(Self)
+    }
+}
+
+impl AsRef<bitcoin_hashes::sha256d::Hash> for Sha256d {
+    fn as_ref(&self) -> &bitcoin_hashes::sha256d::Hash {
+        &self.0
+    }
+}
+
 impl_string_conversions_for_hex! { InputSignature }
 
 impl_serde_str! { PrivateKey }
@@ -171,21 +176,4 @@ pub fn gen_keypair_with_rng<R: Rng>(rng: &mut R, network: Network) -> (PublicKey
 pub fn gen_keypair(network: Network) -> (PublicKey, PrivateKey) {
     let (pk, sk) = secp_gen_keypair(network);
     (PublicKey(pk), PrivateKey(sk))
-}
-
-/// Converts Bitcoin sha256d type to the Exonum hash type.
-///
-/// This types have same data layout, and so we can convert the Bitcoin hash type to use in the
-/// Merkledb without "newtype" wrapper.
-pub(crate) fn sha256d_to_exonum_hash(hash: sha256d::Hash) -> crypto::Hash {
-    let mut bytes = [0_u8; 32];
-    bytes.copy_from_slice(&hash[..]);
-    bytes.reverse();
-    crypto::Hash::new(bytes)
-}
-
-/// Converts Exonum hash type back to the Bitcoin sha256d.
-pub(crate) fn exonum_hash_to_sha256d(hash: crypto::Hash) -> sha256d::Hash {
-    use bitcoin_hashes::Hash;
-    sha256d::Hash::from_slice(hash.as_ref()).unwrap()
 }

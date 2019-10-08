@@ -16,6 +16,8 @@ use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use exonum::crypto::{self, Hash};
 use exonum_merkledb::{BinaryKey, ObjectHash};
 
+use crate::btc::Sha256d;
+
 use std::io::{Cursor, Read, Write};
 
 /// Unique transaction input identifier composed of a transaction identifier
@@ -23,14 +25,14 @@ use std::io::{Cursor, Read, Write};
 #[derive(Debug, Copy, Clone, PartialEq)]
 pub struct TxInputId {
     /// Transaction identifier.
-    pub txid: Hash,
+    pub txid: Sha256d,
     /// Transaction input index.
     pub input: u32,
 }
 
 impl TxInputId {
     /// Creates a new identifier.
-    pub fn new(txid: Hash, input: u32) -> Self {
+    pub fn new(txid: Sha256d, input: u32) -> Self {
         Self { txid, input }
     }
 }
@@ -46,7 +48,7 @@ impl BinaryKey for TxInputId {
         let txid = {
             let mut txid = [0_u8; 32];
             let _ = reader.read(&mut txid).unwrap();
-            Hash::new(txid)
+            Sha256d::new(txid)
         };
         let input = reader.read_u32::<LittleEndian>().unwrap();
         Self { txid, input }
@@ -54,7 +56,7 @@ impl BinaryKey for TxInputId {
 
     fn write(&self, out: &mut [u8]) -> usize {
         let mut writer = Cursor::new(out);
-        let _ = writer.write(self.txid.as_ref()).unwrap();
+        let _ = writer.write(&self.txid.0[..]).unwrap();
         writer.write_u32::<LittleEndian>(self.input).unwrap();
         self.size()
     }
@@ -69,9 +71,9 @@ impl ObjectHash for TxInputId {
 }
 
 #[test]
-fn test_tx_input_id_storage_key() {
+fn test_tx_input_id_binary_key() {
     let txout = TxInputId {
-        txid: crypto::hash(&[1, 2, 3]),
+        txid: Sha256d::from_slice(crypto::hash(&[1, 2, 3]).as_ref()).unwrap(),
         input: 2,
     };
 

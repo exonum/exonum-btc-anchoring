@@ -401,7 +401,7 @@ fn change_anchoring_node_with_funds() {
     test_anchoring_config_change(|anchoring_testkit, cfg| {
         cfg.anchoring_keys[0].bitcoin_key = anchoring_testkit.gen_bitcoin_key();
         cfg.funding_transaction = Some(create_fake_funding_transaction(
-            &cfg.anchoring_address(),
+            cfg.anchoring_address().as_ref(),
             150_000,
         ));
     });

@@ -17,7 +17,7 @@ use btc_transaction_utils::multisig::RedeemScript;
 use derive_more::{From, Into};
 use failure_derive::Fail;
 
-use super::{payload::PayloadBuilder, Payload};
+use super::{payload::PayloadBuilder, Payload, Sha256d};
 
 /// Bitcoin transaction wrapper.
 #[derive(Debug, Clone, From, Into, PartialEq)]
@@ -33,19 +33,13 @@ impl AsRef<transaction::Transaction> for Transaction {
 
 impl Transaction {
     /// Return the Bitcoin transaction identifier.
-    pub fn id(&self) -> Hash {
-        let mut bytes = [0_u8; 32];
-        bytes.copy_from_slice(&self.0.txid()[..]);
-        bytes.reverse();
-        Hash::new(bytes)
+    pub fn id(&self) -> Sha256d {
+        self.0.txid().into()
     }
 
     /// Return the previous anchoring transaction identifier.
-    pub fn prev_tx_id(&self) -> Hash {
-        let mut bytes = [0_u8; 32];
-        bytes.copy_from_slice(&self.0.input[0].previous_output.txid[..]);
-        bytes.reverse();
-        Hash::new(bytes)
+    pub fn prev_tx_id(&self) -> Sha256d {
+        self.0.input[0].previous_output.txid.into()
     }
 
     /// Find output number for the given script pubkey.
@@ -84,7 +78,7 @@ pub struct BtcAnchoringTransactionBuilder {
     script_pubkey: Script,
     transit_to: Option<Script>,
     prev_tx: Option<Transaction>,
-    recovery_tx: Option<Hash>,
+    recovery_tx: Option<Sha256d>,
     additional_funds: Vec<(usize, Transaction)>,
     fee: Option<u64>,
     payload: Option<(Height, Hash)>,
@@ -148,7 +142,7 @@ impl BtcAnchoringTransactionBuilder {
 
     /// Sets a transaction identifier of the latest transaction of the
     /// corrupted anchoring chain.
-    pub fn recover(&mut self, last_tx: Hash) {
+    pub fn recover(&mut self, last_tx: Sha256d) {
         self.recovery_tx = Some(last_tx);
     }
 
@@ -302,7 +296,7 @@ mod tests {
         )
         .unwrap();
         let txid_hex = "6ed431718c73787ad92e6bcbd6ac7c8151e08dffeeebb6d9e5af2d25b6837d98";
-        assert_eq!(tx.id().to_hex(), txid_hex);
+        assert_eq!(tx.id().to_string(), txid_hex);
     }
 
     #[test]

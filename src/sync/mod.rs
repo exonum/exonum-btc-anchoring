@@ -19,7 +19,6 @@
 pub use self::bitcoin_relay::BitcoinRelay;
 
 use btc_transaction_utils::{p2wsh, TxInRef};
-use exonum::crypto::Hash;
 use futures::future::Future;
 
 use std::{collections::HashMap, fmt::Display, sync::Arc};
@@ -191,7 +190,7 @@ pub enum SyncWithBitcoinError<C: Display, R: Display> {
     /// Internal error.
     Internal(failure::Error),
     /// Initial funding transaction is unconfirmed.
-    UnconfirmedFundingTransaction(Hash),
+    UnconfirmedFundingTransaction(btc::Sha256d),
 }
 
 /// Pushes anchoring transactions to the Bitcoin blockchain.
@@ -261,10 +260,7 @@ where
             .send_transaction(&tx)
             .map_err(SyncWithBitcoinError::Relay)?;
 
-        log::info!(
-            "Sent transaction to the Bitcoin network: {}",
-            tx.id().to_hex()
-        );
+        log::info!("Sent transaction to the Bitcoin network: {}", tx.id());
 
         Ok(Some(index))
     }
@@ -297,7 +293,7 @@ where
             log::trace!(
                 "Checking for transaction with index {} and id {}",
                 index,
-                transaction.id().to_hex()
+                transaction.id()
             );
 
             let previous_tx_id = transaction.prev_tx_id();
@@ -336,7 +332,7 @@ where
 
     fn transaction_is_committed(
         &self,
-        txid: Hash,
+        txid: btc::Sha256d,
     ) -> Result<bool, SyncWithBitcoinError<T::Error, R::Error>> {
         let info = self
             .btc_relay

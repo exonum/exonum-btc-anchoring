@@ -19,12 +19,15 @@ use btc_transaction_utils;
 use exonum::{
     crypto::{Hash, PublicKey},
     impl_serde_hex_for_binary_value,
-    merkledb::{BinaryValue, ObjectHash},
+    merkledb::{impl_object_hash_for_binary_value, BinaryKey, BinaryValue, ObjectHash},
     proto::{schema::helpers, ProtobufConvert},
 };
 use exonum_derive::ProtobufConvert;
 use failure;
+use protobuf::Message;
 use serde_derive::{Deserialize, Serialize};
+
+use std::borrow::Cow;
 
 use crate::btc;
 
@@ -75,6 +78,23 @@ impl ProtobufConvert for btc::InputSignature {
         Ok(Self(btc_transaction_utils::InputSignature::from_bytes(
             bytes,
         )?))
+    }
+}
+
+impl ProtobufConvert for btc::Sha256d {
+    type ProtoStruct = btc_types::Sha256d;
+
+    fn to_pb(&self) -> Self::ProtoStruct {
+        let mut proto_struct = Self::ProtoStruct::default();
+        proto_struct.data.extend(&self.0[..]);
+        proto_struct
+    }
+
+    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
+        use bitcoin_hashes::{sha256d, Hash};
+        sha256d::Hash::from_slice(pb.get_data())
+            .map(Self::from)
+            .map_err(From::from)
     }
 }
 
@@ -155,14 +175,12 @@ impl ProtobufConvert for Config {
 
 impl BinaryValue for Config {
     fn to_bytes(&self) -> Vec<u8> {
-        use protobuf::Message;
         self.to_pb()
             .write_to_bytes()
             .expect("Error while serializing value")
     }
 
     fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
-        use protobuf::Message;
         let mut pb = <Self as ProtobufConvert>::ProtoStruct::new();
         pb.merge_from_bytes(bytes.as_ref())?;
         Self::from_pb(pb)
@@ -176,3 +194,37 @@ impl ObjectHash for Config {
 }
 
 impl_serde_hex_for_binary_value! { SignInput }
+
+impl BinaryValue for btc::Sha256d {
+    fn to_bytes(&self) -> Vec<u8> {
+        self.to_pb()
+            .write_to_bytes()
+            .expect("Error while serializing value")
+    }
+
+    fn from_bytes(bytes: Cow<[u8]>) -> Result<Self, failure::Error> {
+        let mut pb = btc_types::Sha256d::new();
+        pb.merge_from_bytes(bytes.as_ref())?;
+        Self::from_pb(pb)
+    }
+}
+
+impl BinaryKey for btc::Sha256d {
+    fn size(&self) -> usize {
+        Self::LEN
+    }
+
+    fn write(&self, buffer: &mut [u8]) -> usize {
+        buffer.copy_from_slice(&self.0[..]);
+        self.size()
+    }
+
+    fn read(buffer: &[u8]) -> Self::Owned {
+        Self::from_slice(buffer).unwrap()
+    }
+}
+
+// TODO Fix kind of input for these macro [ECR-3222]
+use btc::Sha256d;
+use exonum::crypto as exonum_crypto;
+impl_object_hash_for_binary_value! { Sha256d }

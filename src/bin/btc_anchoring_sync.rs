@@ -291,7 +291,7 @@ impl RunCommand {
                     Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(id)) => failure::bail!(
                         "Funding transaction with id {} is unconfirmed by Bitcoin network. \
                          This is a serious mistake that can break anchoring process.",
-                        id.to_hex()
+                        id
                     ),
 
                     // Stop execution if an internal error occurred.

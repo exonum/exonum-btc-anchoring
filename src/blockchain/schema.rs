@@ -24,7 +24,7 @@ use exonum::{
 use log::{error, trace};
 
 use crate::{
-    btc::{BtcAnchoringTransactionBuilder, BuilderError, Transaction},
+    btc::{BtcAnchoringTransactionBuilder, BuilderError, Sha256d, Transaction},
     config::Config,
 };
 
@@ -57,7 +57,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
     }
 
     /// Returns a table that contains already spent funding transactions.
-    pub fn spent_funding_transactions(&self) -> RefMut<ProofMapIndex<T, Hash, Transaction>> {
+    pub fn spent_funding_transactions(&self) -> RefMut<ProofMapIndex<T, Sha256d, Transaction>> {
         self.access
             .get_object(self.index_name("spent_funding_transactions"))
     }
