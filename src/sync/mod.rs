@@ -147,19 +147,11 @@ where
             .map(|(index, proposal_input)| {
                 let signature = signer.sign_input(
                     TxInRef::new(proposal.as_ref(), index),
-                    inputs[index].as_ref(),
+                    proposal_input.as_ref(),
                     &(keypair.1).0.key,
                 )?;
 
-                signer.verify_input(
-                    TxInRef::new(proposal.as_ref(), index),
-                    proposal_input.as_ref(),
-                    &(keypair.0).0,
-                    &signature,
-                )?;
-
                 Ok(SignInput {
-                    transaction: proposal.clone(),
                     input: index as u32,
                     input_signature: signature.into(),
                 })

@@ -38,7 +38,7 @@ pub struct BtcAnchoringSchema<'a, T> {
 }
 
 impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
-    /// Constructs a schema for the given database `snapshot`.
+    /// Constructs a schema for the given database `access` object.
     pub fn new(instance_name: &'a str, access: T) -> Self {
         Self {
             instance_name,
@@ -219,8 +219,9 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
     pub fn push_anchoring_transaction(&self, tx: Transaction) {
         // An unspent funding transaction is always unconditionally added to the anchoring
         // transaction proposal, so we can simply move it to the list of spent.
-        if let Some(tx) = self.unspent_funding_transaction_entry().take() {
-            self.spent_funding_transactions().put(&tx.id(), tx);
+        if let Some(funding_transaction) = self.unspent_funding_transaction_entry().take() {
+            self.spent_funding_transactions()
+                .put(&funding_transaction.id(), funding_transaction);
         }
         // Special case if we have an active following configuration.
         if let Some(config) = self.following_configuration() {
@@ -232,11 +233,12 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
                      If this error occurs, inform the service authors about it.",
                 )
                 .0;
-            // If a following config is exist, then the anchoring transaction's output should have
+            // If there is a following config, then the anchoring transaction's output should have
             // same script as in the following config.
             // Otherwise, this is a critical error in the logic of the anchoring.
-            assert!(
-                config.anchoring_out_script() == *tx_out_script,
+            assert_eq!(
+                config.anchoring_out_script(),
+                *tx_out_script,
                 "Malformed output address in the anchoring transaction. \
                  If this error occurs, inform the service authors about it."
             );

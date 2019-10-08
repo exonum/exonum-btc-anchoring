@@ -198,10 +198,6 @@ impl<'a> ApiImpl<'a> {
         let input = inputs.get(sign_input.input as usize).ok_or_else(|| {
             failure::format_err!("Missing input with index: {}", sign_input.input)
         })?;
-        failure::ensure!(
-            proposal == sign_input.transaction,
-            "Invalid anchoring proposal"
-        );
 
         // Find corresponding Bitcoin key.
         let config = schema.actual_configuration();
@@ -213,7 +209,7 @@ impl<'a> ApiImpl<'a> {
         // Verify input signature.
         p2wsh::InputSigner::new(config.redeem_script())
             .verify_input(
-                TxInRef::new(sign_input.transaction.as_ref(), sign_input.input as usize),
+                TxInRef::new(proposal.as_ref(), sign_input.input as usize),
                 input.as_ref(),
                 &bitcoin_key.0,
                 sign_input.input_signature.as_ref(),

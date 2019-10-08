@@ -29,12 +29,10 @@ message AnchoringKeys {
 
 // Exonum message with a signature for one of the inputs of a new anchoring transaction.
 message SignInput {
-    // Signed transaction.
-    exonum.btc.Transaction transaction = 2;
     // Signed input.
-    uint32 input = 3;
+    fixed32 input = 1;
     // Signature content.
-    exonum.btc.InputSignature input_signature = 4;
+    exonum.btc.InputSignature input_signature = 2;
 }
 
 /// Configuration parameters.
@@ -46,7 +44,7 @@ message Config {
     // Bitcoin - 3652501241(0xD9B4BEF9)
     // Testnet - 118034699(0x0709110B)
     // Regtest - 3669344250(0xDAB5BFFA)
-    uint32 network = 1;
+    fixed32 network = 1;
     // Bitcoin public keys of nodes from from which the current anchoring redeem script can 
     // be calculated.
     repeated AnchoringKeys anchoring_keys = 2;

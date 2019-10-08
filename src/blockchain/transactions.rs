@@ -25,16 +25,6 @@ use crate::{btc, BtcAnchoringService};
 
 use super::{data_layout::TxInputId, errors::Error, BtcAnchoringSchema};
 
-impl SignInput {
-    /// Returns identifier of the signed transaction input.
-    pub fn input_id(&self) -> TxInputId {
-        TxInputId {
-            txid: self.transaction.id(),
-            input: self.input,
-        }
-    }
-}
-
 /// Exonum BTC anchoring transactions.
 #[exonum_service]
 pub trait Transactions {
@@ -53,32 +43,18 @@ impl Transactions for BtcAnchoringService {
             .verify_caller(Caller::author)
             .ok_or(DispatcherError::UnauthorizedCaller)?;
 
-        let proposed_tx = &arg.transaction;
         let schema = BtcAnchoringSchema::new(context.instance.name, fork);
-        // Check that the number of signatures is sufficient to spend.
-        if schema
-            .anchoring_transactions_chain()
-            .last()
-            .map(|tx| tx.id())
-            == Some(proposed_tx.id())
-        {
-            return Ok(());
-        }
         // Check that there is an anchoring proposal for the actual blockchain state.
-        let (expected_transaction, expected_inputs) = schema
+        let (proposal, expected_inputs) = schema
             .actual_proposed_anchoring_transaction()
             .ok_or(Error::AnchoringNotRequested)?
             .map_err(Error::anchoring_builder_error)?;
-        // Check that proposal from transaction is same as expected.
-        if expected_transaction.id() != proposed_tx.id() {
-            return Err(Error::UnexpectedAnchoringProposal.into());
-        }
         // Check that author is authorized to sign inputs of the anchoring proposal.
         let actual_state = schema.actual_state();
         let (anchoring_node_id, public_key) = actual_state
             .actual_configuration()
             .find_bitcoin_key(&author)
-            .ok_or(Error::MissingAnchoringPublicKey)?;
+            .ok_or(Error::UnauthorizedAnchoringKey)?;
 
         // Check that input with the specified index exist.
         let input_idx = arg.input as usize;
@@ -91,7 +67,7 @@ impl Transactions for BtcAnchoringService {
         let input_signer = InputSigner::new(redeem_script.clone());
 
         let verification_result = input_signer.verify_input(
-            TxInRef::new(proposed_tx.as_ref(), arg.input as usize),
+            TxInRef::new(proposal.as_ref(), arg.input as usize),
             input_tx.as_ref(),
             &public_key.0,
             arg.input_signature.as_ref(),
@@ -102,7 +78,7 @@ impl Transactions for BtcAnchoringService {
         }
 
         // All preconditions are correct and we can use this signature.
-        let input_id = arg.input_id();
+        let input_id = TxInputId::new(proposal.id(), arg.input);
         let mut input_signatures = schema.input_signatures(&input_id, &redeem_script);
         // Check that we have not reached the quorum yet, otherwise we should not do anything.
         if input_signatures.len() != redeem_script_content.quorum {
@@ -111,10 +87,10 @@ impl Transactions for BtcAnchoringService {
             schema
                 .transaction_signatures()
                 .put(&input_id, input_signatures);
-            let mut finalized_tx: btc::Transaction = proposed_tx.clone();
+            let mut finalized_tx: btc::Transaction = proposal.clone();
             // Make sure we reach a quorum for each input.
             for index in 0..expected_inputs.len() {
-                let input_id = TxInputId::new(arg.transaction.id(), index as u32);
+                let input_id = TxInputId::new(proposal.id(), index as u32);
                 let input_signatures = schema.input_signatures(&input_id, &redeem_script);
                 // We have not enough signatures for this input, so we can not finalize this
                 // proposal at the moment.

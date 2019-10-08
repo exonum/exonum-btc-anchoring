@@ -242,7 +242,6 @@ impl AnchoringTestKit {
 
                 signatures.push(
                     SignInput {
-                        transaction: proposal.clone(),
                         input: index as u32,
                         input_signature: signature.into(),
                     }

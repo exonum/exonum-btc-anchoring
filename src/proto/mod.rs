@@ -92,8 +92,6 @@ pub struct AnchoringKeys {
 #[derive(Debug, Clone, PartialEq, ProtobufConvert)]
 #[exonum(pb = "self::service::SignInput")]
 pub struct SignInput {
-    /// Signed Bitcoin anchoring transaction.
-    pub transaction: btc::Transaction,
     /// Signed input.
     pub input: u32,
     /// Signature content.
@@ -133,7 +131,7 @@ impl ProtobufConvert for Config {
         proto_struct
     }
 
-    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
+    fn from_pb(mut pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
         let network = bitcoin::Network::from_magic(pb.get_network())
             .ok_or_else(|| failure::format_err!("Unknown Bitcoin network"))?;
         let funding_transaction = {
@@ -148,7 +146,7 @@ impl ProtobufConvert for Config {
         Ok(Self {
             network,
             funding_transaction,
-            anchoring_keys: ProtobufConvert::from_pb(pb.get_anchoring_keys().to_owned())?,
+            anchoring_keys: ProtobufConvert::from_pb(pb.take_anchoring_keys().into_vec())?,
             anchoring_interval: ProtobufConvert::from_pb(pb.get_anchoring_interval())?,
             transaction_fee: ProtobufConvert::from_pb(pb.get_transaction_fee())?,
         })

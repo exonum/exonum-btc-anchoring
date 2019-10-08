@@ -371,7 +371,6 @@ fn anchoring_sign_input() {
         .inner
         .api()
         .sign_input(SignInput {
-            transaction: proposal,
             input: 0,
             input_signature: signature.into(),
         })

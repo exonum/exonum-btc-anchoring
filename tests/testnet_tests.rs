@@ -369,7 +369,7 @@ fn unexpected_anchoring_proposal() {
     let block = anchoring_testkit
         .inner
         .create_block_with_transactions(leftover_signatures);
-    assert_tx_error(&block[0], Error::UnexpectedAnchoringProposal);
+    assert_tx_error(&block[0], Error::InputVerificationFailed);
 }
 
 #[test]
