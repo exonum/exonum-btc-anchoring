@@ -333,34 +333,34 @@ mod tests {
 
     proptest! {
         #[test]
-        fn test_transaction_exonum_field(input_num in 1_usize..4,
-                                         vout in 1_u32..10,
-                                         output_num in 1_usize..4,
-                                         value in 1_u64..1_000_000_000,
-                                         ref s in "\\PC*") {
-            let input = (0..input_num).map(|_| {
-                // Just a random hash
-                let txid = Sha256dHash::hash(s.as_bytes());
-                TxIn {
-                    previous_output: OutPoint {
-                        txid,
-                        vout,
-                    },
-                    script_sig: Script::default(),
-                    sequence: 0xFFFF_FFFF,
-                    witness: Vec::default(),
-                }
-            }).collect::<Vec<_>>();
+        fn test_transaction_exonum_field(
+            input_num in 1_usize..4,
+            vout in 1_u32..10,
+            output_num in 1_usize..4,
+            value in 1_u64..1_000_000_000,
+            ref s in "\\PC*") {
+            let input = (0..input_num)
+                .map(|_| {
+                    // Just a random hash
+                    let txid = Sha256dHash::hash(s.as_bytes());
+                    TxIn {
+                        previous_output: OutPoint { txid, vout },
+                        script_sig: Script::default(),
+                        sequence: 0xFFFF_FFFF,
+                        witness: Vec::default(),
+                    }
+                })
+                .collect::<Vec<_>>();
 
-            let output = (0..output_num).map(|_| {
-                TxOut {
+            let output = (0..output_num)
+                .map(|_| TxOut {
                     value,
                     script_pubkey: Builder::new()
                         .push_opcode(OP_RETURN)
                         .push_slice(s.as_bytes())
                         .into_script(),
-                }
-            }).collect::<Vec<_>>();
+                })
+                .collect::<Vec<_>>();
 
             let transaction = Transaction::from(transaction::Transaction {
                 version: 2,

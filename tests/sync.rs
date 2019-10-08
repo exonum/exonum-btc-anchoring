@@ -23,7 +23,7 @@ use exonum_btc_anchoring::{
     btc,
     config::Config,
     sync::{
-        AnchoringChainUpdateError, AnchoringChainUpdateTask, BitcoinRelay, SyncWithBitcoinError,
+        AnchoringChainUpdateTask, BitcoinRelay, ChainUpdateError, SyncWithBitcoinError,
         SyncWithBitcoinTask,
     },
     test_helpers::{AnchoringTestKit, ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME},
@@ -226,7 +226,7 @@ fn chain_updater_insufficient_funds() {
         .unwrap_err();
 
     match e {
-        AnchoringChainUpdateError::InsufficientFunds { balance, total_fee } => {
+        ChainUpdateError::InsufficientFunds { balance, total_fee } => {
             assert_eq!(balance, 10);
             assert_eq!(total_fee, 1530);
         }

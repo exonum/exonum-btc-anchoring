@@ -19,10 +19,7 @@ use exonum_btc_anchoring::{
     blockchain::SignInput,
     btc,
     config::{AnchoringKeys, Config as AnchoringConfig},
-    sync::{
-        AnchoringChainUpdateError, AnchoringChainUpdateTask, SyncWithBitcoinError,
-        SyncWithBitcoinTask,
-    },
+    sync::{AnchoringChainUpdateTask, ChainUpdateError, SyncWithBitcoinError, SyncWithBitcoinTask},
 };
 use exonum_cli::io::{load_config_file, save_config_file};
 use futures::{Future, IntoFuture};
@@ -260,20 +257,18 @@ impl RunCommand {
             match chain_updater.process() {
                 Ok(_) => {}
                 // Client problems most often occurs due to network problems.
-                Err(AnchoringChainUpdateError::Client(e)) => {
+                Err(ChainUpdateError::Client(e)) => {
                     log::error!("An error in the anchoring API client occurred. {}", e)
                 }
                 // Sometimes Bitcoin end in the anchoring wallet.
-                Err(AnchoringChainUpdateError::InsufficientFunds { total_fee, balance }) => {
-                    log::warn!(
-                        "Insufficient funds to construct a new anchoring transaction, \
-                         total fee is {}, total balance is {}",
-                        total_fee,
-                        balance
-                    )
-                }
+                Err(ChainUpdateError::InsufficientFunds { total_fee, balance }) => log::warn!(
+                    "Insufficient funds to construct a new anchoring transaction, \
+                     total fee is {}, total balance is {}",
+                    total_fee,
+                    balance
+                ),
                 // Stop execution if an internal error occurred.
-                Err(AnchoringChainUpdateError::Internal(e)) => return Err(e),
+                Err(ChainUpdateError::Internal(e)) => return Err(e),
             }
 
             if let Some(relay) = bitcoin_relay.as_ref() {
