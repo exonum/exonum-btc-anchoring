@@ -28,12 +28,9 @@ use exonum::{
 use futures::{Future, IntoFuture, Sink};
 use serde_derive::{Deserialize, Serialize};
 
-use std::{
-    cmp::{
-        self,
-        Ordering::{self, Equal, Greater, Less},
-    },
-    convert::{TryFrom, TryInto},
+use std::cmp::{
+    self,
+    Ordering::{self, Equal, Greater, Less},
 };
 
 use crate::{
@@ -74,15 +71,11 @@ pub enum AnchoringProposalState {
     },
 }
 
-impl TryFrom<Option<Result<(btc::Transaction, Vec<btc::Transaction>), btc::BuilderError>>>
-    for AnchoringProposalState
-{
-    type Error = api::Error;
-
-    fn try_from(
-        value: Option<Result<(btc::Transaction, Vec<btc::Transaction>), btc::BuilderError>>,
-    ) -> Result<Self, Self::Error> {
-        match value {
+impl AnchoringProposalState {
+    fn try_from_proposal(
+        proposal: Option<Result<(btc::Transaction, Vec<btc::Transaction>), btc::BuilderError>>,
+    ) -> Result<Self, api::Error> {
+        match proposal {
             None => Ok(AnchoringProposalState::None),
             Some(Ok((transaction, inputs))) => Ok(AnchoringProposalState::Available {
                 transaction,
@@ -335,9 +328,10 @@ impl<'a> PrivateApi for ApiImpl<'a> {
     }
 
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
-        self.anchoring_schema()
-            .actual_proposed_anchoring_transaction()
-            .try_into()
+        AnchoringProposalState::try_from_proposal(
+            self.anchoring_schema()
+                .actual_proposed_anchoring_transaction(),
+        )
     }
 
     fn config(&self) -> Result<Config, Self::Error> {

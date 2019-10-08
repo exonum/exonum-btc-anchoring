@@ -129,16 +129,16 @@ impl PrivateApi for ApiClient {
 struct GenerateConfigCommand {
     /// Path to a sync utility configuration file which will be created after
     /// running this command.
-    #[structopt(long, short = "o")]
+    #[structopt(long, short = "o", default_value = "btc_anchoring_sync.toml")]
     output: PathBuf,
     /// Anchoring node private API url address.
-    #[structopt(long, short = "e")]
+    #[structopt(long, short = "e", default_value = "http://localhost:8081")]
     exonum_private_api: String,
     /// Bitcoin network type.
-    #[structopt(long, short = "n")]
+    #[structopt(long, short = "n", default_value = "testnet")]
     bitcoin_network: bitcoin::Network,
-    /// Anchoring instance name.
-    #[structopt(long, short = "i")]
+    /// Name of the anchoring service instance.
+    #[structopt(long, short = "i", default_value = "anchoring")]
     instance_name: String,
     /// Bitcoin RPC url.
     #[structopt(long)]
@@ -279,21 +279,21 @@ impl RunCommand {
             if let Some(relay) = bitcoin_relay.as_ref() {
                 match relay.process(latest_synced_tx_index) {
                     Ok(index) => latest_synced_tx_index = index,
-                    // Client problems most often occurs due to network problems.
+
                     Err(SyncWithBitcoinError::Client(e)) => {
                         log::error!("An error in the anchoring API client occurred. {}", e)
                     }
-                    // Error in the Bitcoin relay occurs.
+
                     Err(SyncWithBitcoinError::Relay(e)) => {
                         log::error!("An error in the Bitcoin relay occurred. {}", e)
                     }
-                    // Funding transaction is unconfirmed by Bitcoin network.
-                    // This is a serious mistake that can break anchoring process.
+
                     Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(id)) => failure::bail!(
                         "Funding transaction with id {} is unconfirmed by Bitcoin network. \
                          This is a serious mistake that can break anchoring process.",
                         id.to_hex()
                     ),
+
                     // Stop execution if an internal error occurred.
                     Err(SyncWithBitcoinError::Internal(e)) => return Err(e),
                 }
@@ -356,12 +356,9 @@ mod flatten_keypairs {
         private_key: PrivateKey,
     }
 
-    pub fn serialize<S>(
-        keys: &HashMap<PublicKey, PrivateKey>,
-        ser: S,
-    ) -> ::std::result::Result<S::Ok, S::Error>
+    pub fn serialize<S>(keys: &HashMap<PublicKey, PrivateKey>, ser: S) -> Result<S::Ok, S::Error>
     where
-        S: ::serde::Serializer,
+        S: serde::Serializer,
     {
         use serde::Serialize;
 
@@ -377,7 +374,7 @@ mod flatten_keypairs {
 
     pub fn deserialize<'de, D>(deserializer: D) -> Result<HashMap<PublicKey, PrivateKey>, D::Error>
     where
-        D: ::serde::Deserializer<'de>,
+        D: serde::Deserializer<'de>,
     {
         use serde::Deserialize;
         Vec::<BitcoinKeypair>::deserialize(deserializer).map(|keypairs| {

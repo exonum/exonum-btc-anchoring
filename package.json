@@ -14,12 +14,12 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/exonum/exonum.git"
+    "url": "git+https://github.com/exonum/exonum-btc-anchoring"
   },
   "author": "Exonum Team <exonum@bitfury.com>",
   "license": "Apache-2.0",
   "bugs": {
-    "url": "https://github.com/exonum/exonum/issues"
+    "url": "https://github.com/exonum/exonum-btc-anchoring/issues"
   },
-  "homepage": "https://github.com/exonum/exonum#readme"
+  "homepage": "https://github.com/exonum/exonum-btc-anchoring#readme"
 }
