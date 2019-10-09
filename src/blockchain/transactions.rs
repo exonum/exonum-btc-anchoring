@@ -44,17 +44,18 @@ impl Transactions for BtcAnchoringService {
             .ok_or(DispatcherError::UnauthorizedCaller)?;
 
         let schema = BtcAnchoringSchema::new(context.instance.name, fork);
-        // Check that there is an anchoring proposal for the actual blockchain state.
-        let (proposal, expected_inputs) = schema
-            .actual_proposed_anchoring_transaction()
-            .ok_or(Error::AnchoringNotRequested)?
-            .map_err(Error::anchoring_builder_error)?;
         // Check that author is authorized to sign inputs of the anchoring proposal.
         let actual_state = schema.actual_state();
         let (anchoring_node_id, public_key) = actual_state
             .actual_configuration()
             .find_bitcoin_key(&author)
             .ok_or(Error::UnauthorizedAnchoringKey)?;
+
+        // Check that there is an anchoring proposal for the actual blockchain state.
+        let (proposal, expected_inputs) = schema
+            .actual_proposed_anchoring_transaction()
+            .ok_or(Error::AnchoringNotRequested)?
+            .map_err(Error::anchoring_builder_error)?;
 
         // Check that input with the specified index exist.
         let input_idx = arg.input as usize;
@@ -65,17 +66,14 @@ impl Transactions for BtcAnchoringService {
         let redeem_script_content = redeem_script.content();
 
         let input_signer = InputSigner::new(redeem_script.clone());
-
-        let verification_result = input_signer.verify_input(
-            TxInRef::new(proposal.as_ref(), arg.input as usize),
-            input_tx.as_ref(),
-            &public_key.0,
-            arg.input_signature.as_ref(),
-        );
-
-        if verification_result.is_err() {
-            return Err(Error::InputVerificationFailed.into());
-        }
+        input_signer
+            .verify_input(
+                TxInRef::new(proposal.as_ref(), arg.input as usize),
+                input_tx.as_ref(),
+                &public_key.0,
+                arg.input_signature.as_ref(),
+            )
+            .map_err(|e| (Error::InputVerificationFailed, e))?;
 
         // All preconditions are correct and we can use this signature.
         let input_id = TxInputId::new(proposal.id(), arg.input);

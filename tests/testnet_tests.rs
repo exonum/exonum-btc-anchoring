@@ -140,7 +140,11 @@ fn simple() {
 
     anchoring_testkit
         .inner
-        .create_block_with_transactions(signatures);
+        .create_block_with_transactions(signatures)
+        .transactions
+        .iter()
+        .try_for_each(|tx| tx.status())
+        .expect("Each transaction should be successful.");
 
     let tx0 = anchoring_testkit.last_anchoring_tx().unwrap();
     let tx0_meta = tx0.anchoring_metadata().unwrap();
