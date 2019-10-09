@@ -59,7 +59,7 @@ pub enum AnchoringProposalState {
     Available {
         /// Proposal content.
         transaction: btc::Transaction,
-        // TODO Replace by more lightweight value amounts per input in according of 
+        // TODO Replace by more lightweight value amounts per input in according of
         // `UnspentTxOutValue::Balance` variant. [ECR-3222]
         /// Input transactions.
         inputs: Vec<btc::Transaction>,
