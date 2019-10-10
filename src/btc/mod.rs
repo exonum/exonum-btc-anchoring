@@ -25,6 +25,7 @@ use bitcoin::{network::constants::Network, util::address};
 use bitcoin_hashes::sha256d;
 use btc_transaction_utils;
 use derive_more::{Display, From, FromStr, Into};
+use exonum_merkledb::{BinaryValue, ObjectHash};
 use hex::{self, FromHex, ToHex};
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -134,6 +135,24 @@ impl AsRef<btc_transaction_utils::InputSignature> for InputSignature {
 impl From<InputSignature> for Vec<u8> {
     fn from(f: InputSignature) -> Self {
         f.0.into()
+    }
+}
+
+impl BinaryValue for InputSignature {
+    fn to_bytes(&self) -> Vec<u8> {
+        self.0.clone().into()
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
+        btc_transaction_utils::InputSignature::from_bytes(bytes.into())
+            .map(Self)
+            .map_err(From::from)
+    }
+}
+
+impl ObjectHash for InputSignature {
+    fn object_hash(&self) -> exonum::crypto::Hash {
+        exonum::crypto::hash(&self.to_bytes())
     }
 }
 

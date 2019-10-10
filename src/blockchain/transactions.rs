@@ -16,7 +16,7 @@
 
 pub use crate::proto::SignInput;
 
-use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
+use btc_transaction_utils::{p2wsh::InputSigner, TxInRef};
 use exonum::runtime::{rust::TransactionContext, Caller, DispatcherError, ExecutionError};
 use exonum_derive::exonum_service;
 use log::{info, trace};
@@ -102,18 +102,20 @@ impl Transactions for BtcAnchoringService {
 
         // Check that input signature is correct.
         let redeem_script = actual_config.redeem_script();
-        let input_signer = InputSigner::new(redeem_script.clone());
+        let quorum = redeem_script.content().quorum;
+        let input_signer = InputSigner::new(redeem_script);
         arg.verify_signature(&input_signer, &public_key, &proposal, &expected_inputs)?;
 
         // All preconditions are correct and we can use this signature.
         let input_id = TxInputId::new(proposal.id(), arg.input);
-        let mut input_signatures = schema.input_signatures(&input_id, &redeem_script);
-        let quorum = redeem_script.content().quorum;
-        let mut input_signature_len = input_signatures.len();
+        let mut input_signatures = schema.input_signatures(&input_id);
+        let mut input_signature_len = input_signatures.0.len();
         // Check that we have not reached the quorum yet, otherwise we should not do anything.
         if input_signature_len < quorum {
             // Add signature to schema.
-            input_signatures.insert(anchoring_node_id, arg.input_signature.clone().into());
+            input_signatures
+                .0
+                .insert(anchoring_node_id as u16, arg.input_signature.clone());
             schema
                 .transaction_signatures()
                 .put(&input_id, input_signatures);
@@ -129,18 +131,16 @@ impl Transactions for BtcAnchoringService {
             // Make sure we reach a quorum for each input.
             for index in 0..expected_inputs.len() {
                 let input_id = TxInputId::new(proposal.id(), index as u32);
-                let signatures_for_input = schema.input_signatures(&input_id, &redeem_script);
+                let signatures_for_input = schema.input_signatures(&input_id);
                 // We have not enough signatures for this input, so we can not finalize this
                 // proposal at the moment.
-                if signatures_for_input.len() != quorum {
+                if signatures_for_input.0.len() != quorum {
                     return Ok(());
                 }
 
                 input_signer.spend_input(
                     &mut finalized_tx.0.input[index],
-                    signatures_for_input
-                        .into_iter()
-                        .map(|bytes| InputSignature::from_bytes(bytes).unwrap()),
+                    signatures_for_input.0.values().map(|x| x.0.clone()),
                 );
             }
 

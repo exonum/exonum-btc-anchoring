@@ -14,7 +14,6 @@
 
 //! Information schema for the btc anchoring service.
 
-use btc_transaction_utils::multisig::RedeemScript;
 use exonum::{
     blockchain::Schema,
     crypto::Hash,
@@ -24,12 +23,15 @@ use exonum::{
 use log::{error, trace};
 
 use crate::{
-    btc::{BtcAnchoringTransactionBuilder, BuilderError, Sha256d, Transaction, self},
+    btc::{self, BtcAnchoringTransactionBuilder, BuilderError, Sha256d, Transaction},
     config::Config,
     proto::BinaryMap,
 };
 
 use super::{data_layout::*, BtcAnchoringState};
+
+/// A set of signatures for a transaction input ordered by the validators identifiers.
+pub type InputSignatures = BinaryMap<u16, btc::InputSignature>;
 
 /// Information schema for `exonum-btc-anchoring`.
 #[derive(Debug)]
@@ -114,14 +116,8 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
     }
 
     /// Returns the list of signatures for the given transaction input.
-    pub fn input_signatures(
-        &self,
-        input: &TxInputId,
-        redeem_script: &RedeemScript,
-    ) -> InputSignatures {
-        self.transaction_signatures()
-            .get(input)
-            .unwrap_or_else(|| InputSignatures::new(redeem_script.content().public_keys.len()))
+    pub fn input_signatures(&self, input: &TxInputId) -> InputSignatures {
+        self.transaction_signatures().get(input).unwrap_or_default()
     }
 
     /// Returns an actual state of anchoring.

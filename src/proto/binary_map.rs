@@ -19,9 +19,18 @@ use protobuf::Message;
 
 use std::{borrow::Cow, collections::BTreeMap};
 
-/// Protobuf wrapper type to store map of non-scalar keys and values.
+/// Protobuf wrapper type to store small maps of non-scalar keys and values.
 #[derive(Debug)]
 pub struct BinaryMap<K, V>(pub BTreeMap<K, V>);
+
+impl<K, V> Default for BinaryMap<K, V>
+where
+    K: Ord,
+{
+    fn default() -> Self {
+        Self(BTreeMap::new())
+    }
+}
 
 #[derive(ProtobufConvert)]
 #[exonum(pb = "crate::proto::internal::KeyValue")]
