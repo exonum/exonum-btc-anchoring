@@ -29,11 +29,6 @@ use failure::ensure;
 
 use crate::btc::{self, Address};
 
-/// Returns the sufficient number of keys for the given validators number.
-pub fn byzantine_quorum(total: usize) -> usize {
-    exonum::node::state::State::byzantine_majority_count(total)
-}
-
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -86,7 +81,7 @@ impl Config {
 
     /// Returns the corresponding redeem script.
     pub fn redeem_script(&self) -> RedeemScript {
-        let quorum = byzantine_quorum(self.anchoring_keys.len());
+        let quorum = exonum::helpers::byzantine_quorum(self.anchoring_keys.len());
         RedeemScriptBuilder::with_public_keys(self.anchoring_keys.iter().map(|x| x.bitcoin_key.0))
             .quorum(quorum)
             .to_script()
@@ -121,7 +116,7 @@ impl ValidateInput for Config {
         // TODO Validate other parameters. [ECR-3633]
 
         // Verify that the redeem script is suitable.
-        let quorum = byzantine_quorum(self.anchoring_keys.len());
+        let quorum = exonum::helpers::byzantine_quorum(self.anchoring_keys.len());
         let redeem_script = RedeemScriptBuilder::with_public_keys(
             self.anchoring_keys.iter().map(|x| x.bitcoin_key.0),
         )

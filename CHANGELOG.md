@@ -9,7 +9,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Breaking changes
 
-- Ported `exonum-btc-anchoring` to a new version of Exonum with support of dynamic services.
+- Ported `exonum-btc-anchoring` to a new version of Exonum with support
+  of dynamic services. (#145)
 
   In this way, a large number of changes have occurred in service business logic:
 
@@ -31,7 +32,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ### Internal improvements
 
-- `exonum_bitcoinrpc` crate has been replaced in favor of `bitcoincore-rpc`.
+- `exonum_bitcoinrpc` crate has been replaced in favor of `bitcoincore-rpc`. (#145)
 
 ## 0.12.0 - 2018-08-14
 
