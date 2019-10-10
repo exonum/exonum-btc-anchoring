@@ -244,6 +244,7 @@ impl AnchoringTestKit {
                     SignInput {
                         input: index as u32,
                         input_signature: signature.into(),
+                        txid: proposal.id(),
                     }
                     .sign(
                         ANCHORING_INSTANCE_ID,

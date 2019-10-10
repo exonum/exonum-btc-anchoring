@@ -112,6 +112,8 @@ pub struct AnchoringKeys {
 #[derive(Debug, Clone, PartialEq, ProtobufConvert)]
 #[exonum(pb = "self::service::SignInput")]
 pub struct SignInput {
+    /// Proposal transaction id.
+    pub txid: Sha256d,
     /// Signed input.
     pub input: u32,
     /// Signature content.

@@ -29,10 +29,12 @@ message AnchoringKeys {
 
 // Exonum message with a signature for one of the inputs of a new anchoring transaction.
 message SignInput {
+    // Proposal transaction ID.
+    exonum.btc.Sha256d txid = 1;
     // Signed input.
-    fixed32 input = 1;
+    fixed32 input = 2;
     // Signature content.
-    exonum.btc.InputSignature input_signature = 2;
+    exonum.btc.InputSignature input_signature = 3;
 }
 
 /// Configuration parameters.

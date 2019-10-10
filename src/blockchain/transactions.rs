@@ -73,10 +73,32 @@ impl Transactions for BtcAnchoringService {
             .ok_or(Error::UnauthorizedAnchoringKey)?;
 
         // Check that there is an anchoring proposal for the actual blockchain state.
-        let (proposal, expected_inputs) = schema
+        let (proposal, expected_inputs) = if let Some(proposal) = schema
             .actual_proposed_anchoring_transaction()
-            .ok_or(Error::AnchoringNotRequested)?
-            .map_err(Error::anchoring_builder_error)?;
+            .transpose()
+            .map_err(Error::anchoring_builder_error)?
+        {
+            proposal
+        } else {
+            // There is no anchoring request at the current blockchain state.
+            // Make sure txid is equal to the identifier of the last anchoring transaction.
+            let latest_anchoring_txid = schema
+                .anchoring_transactions_chain()
+                .last()
+                // If the anchoring chain is not established, then the proposal must exist.
+                .unwrap()
+                .id();
+            if latest_anchoring_txid == arg.txid {
+                return Ok(());
+            } else {
+                return Err(Error::UnexpectedProposalTxId.into());
+            }
+        };
+
+        // Make sure txid is equal to the identifier of the anchoring transaction proposal.
+        if proposal.id() != arg.txid {
+            return Err(Error::UnexpectedProposalTxId.into());
+        }
 
         // Check that input signature is correct.
         let redeem_script = actual_config.redeem_script();

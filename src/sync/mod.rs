@@ -150,6 +150,7 @@ where
                 Ok(SignInput {
                     input: index as u32,
                     input_signature: signature.into(),
+                    txid: proposal.id(),
                 })
             })
             .collect::<Result<Vec<_>, failure::Error>>()

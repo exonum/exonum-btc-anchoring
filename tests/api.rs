@@ -373,6 +373,7 @@ fn anchoring_sign_input() {
         .sign_input(SignInput {
             input: 0,
             input_signature: signature.into(),
+            txid: proposal.id(),
         })
         .wait()
         .unwrap();

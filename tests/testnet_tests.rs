@@ -333,7 +333,7 @@ fn no_anchoring_proposal() {
     let block = anchoring_testkit
         .inner
         .create_block_with_transactions(leftover_signatures);
-    assert_tx_error(&block[0], Error::AnchoringNotRequested);
+    assert_tx_error(&block[0], Error::UnexpectedProposalTxId);
 }
 
 #[test]
@@ -373,7 +373,7 @@ fn unexpected_anchoring_proposal() {
     let block = anchoring_testkit
         .inner
         .create_block_with_transactions(leftover_signatures);
-    assert_tx_error(&block[0], Error::InputVerificationFailed);
+    assert_tx_error(&block[0], Error::UnexpectedProposalTxId);
 }
 
 #[test]

@@ -22,16 +22,16 @@ use crate::btc;
 /// Possible errors during execution of the `sign_input` method.
 #[derive(Debug, IntoExecutionError)]
 pub enum Error {
-    /// There is no anchoring request at the current blockchain state.
-    AnchoringNotRequested = 0,
     /// Transaction author is not authorized to sign anchoring transactions.
-    UnauthorizedAnchoringKey = 1,
+    UnauthorizedAnchoringKey = 0,
     /// Transaction input with the specified index is absent in the anchoring proposal.
-    NoSuchInput = 2,
+    NoSuchInput = 1,
     /// The transaction input signature is invalid.
-    InputVerificationFailed = 3,
+    InputVerificationFailed = 2,
     /// An error occurred while creating of the anchoring transaction proposal.
-    AnchoringBuilderError = 4,
+    AnchoringBuilderError = 3,
+    /// Unexpected anchoring proposal transaction ID.
+    UnexpectedProposalTxId = 4,
 }
 
 impl Error {
