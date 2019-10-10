@@ -19,7 +19,7 @@ use exonum::{
     blockchain::Schema,
     crypto::Hash,
     helpers::Height,
-    merkledb::{Entry, ObjectAccess, ObjectHash, ProofListIndex, ProofMapIndex, RefMut},
+    merkledb::{Entry, IndexAccess, ObjectHash, ProofListIndex, ProofMapIndex},
 };
 use log::{error, trace};
 
@@ -37,7 +37,7 @@ pub struct BtcAnchoringSchema<'a, T> {
     access: T,
 }
 
-impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
+impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
     /// Constructs a schema for the given database `access` object.
     pub fn new(instance_name: &'a str, access: T) -> Self {
         Self {
@@ -51,38 +51,43 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
     }
 
     /// Returns a table that contains complete chain of the anchoring transactions.
-    pub fn anchoring_transactions_chain(&self) -> RefMut<ProofListIndex<T, Transaction>> {
-        self.access
-            .get_object(self.index_name("transactions_chain"))
+    pub fn anchoring_transactions_chain(&self) -> ProofListIndex<T, Transaction> {
+        ProofListIndex::new(self.index_name("transactions_chain"), self.access.clone())
     }
 
     /// Returns a table that contains already spent funding transactions.
-    pub fn spent_funding_transactions(&self) -> RefMut<ProofMapIndex<T, Sha256d, Transaction>> {
-        self.access
-            .get_object(self.index_name("spent_funding_transactions"))
+    pub fn spent_funding_transactions(&self) -> ProofMapIndex<T, Sha256d, Transaction> {
+        ProofMapIndex::new(
+            self.index_name("spent_funding_transactions"),
+            self.access.clone(),
+        )
     }
 
     /// Returns a table that contains signatures for the given transaction input.
-    pub fn transaction_signatures(&self) -> RefMut<ProofMapIndex<T, TxInputId, InputSignatures>> {
-        self.access
-            .get_object(self.index_name("transaction_signatures"))
+    pub fn transaction_signatures(&self) -> ProofMapIndex<T, TxInputId, InputSignatures> {
+        ProofMapIndex::new(
+            self.index_name("transaction_signatures"),
+            self.access.clone(),
+        )
     }
 
     /// Returns an actual anchoring configuration entry.
-    pub fn actual_config_entry(&self) -> RefMut<Entry<T, Config>> {
-        self.access.get_object(self.index_name("actual_config"))
+    pub fn actual_config_entry(&self) -> Entry<T, Config> {
+        Entry::new(self.index_name("actual_config"), self.access.clone())
     }
 
     /// Returns a following anchoring configuration entry.
-    pub fn following_config_entry(&self) -> RefMut<Entry<T, Config>> {
-        self.access.get_object(self.index_name("following_config"))
+    pub fn following_config_entry(&self) -> Entry<T, Config> {
+        Entry::new(self.index_name("following_config"), self.access.clone())
     }
 
     /// Returns an entry that may contain an unspent funding transaction for the
     /// actual configuration.
-    pub fn unspent_funding_transaction_entry(&self) -> RefMut<Entry<T, Transaction>> {
-        self.access
-            .get_object(self.index_name("unspent_funding_transaction"))
+    pub fn unspent_funding_transaction_entry(&self) -> Entry<T, Transaction> {
+        Entry::new(
+            self.index_name("unspent_funding_transaction"),
+            self.access.clone(),
+        )
     }
 
     /// Returns object hashes of the stored tables.
@@ -95,12 +100,15 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
     }
 
     /// Returns an actual anchoring configuration.
-    pub fn actual_configuration(&self) -> Config {
-        self.actual_config_entry().get().unwrap()
+    pub fn actual_config(&self) -> Config {
+        self.actual_config_entry().get().expect(
+            "Actual configuration of anchoring is absent. \
+             If this error occurs, inform the service authors about it.",
+        )
     }
 
     /// Returns the nearest following configuration if it exists.
-    pub fn following_configuration(&self) -> Option<Config> {
+    pub fn following_config(&self) -> Option<Config> {
         self.following_config_entry().get()
     }
 
@@ -117,8 +125,8 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
 
     /// Returns an actual state of anchoring.
     pub fn actual_state(&self) -> BtcAnchoringState {
-        let actual_configuration = self.actual_configuration();
-        if let Some(following_configuration) = self.following_configuration() {
+        let actual_configuration = self.actual_config();
+        if let Some(following_configuration) = self.following_config() {
             if actual_configuration.redeem_script() != following_configuration.redeem_script() {
                 return BtcAnchoringState::Transition {
                     actual_configuration,
@@ -137,7 +145,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
         &self,
         actual_state: &BtcAnchoringState,
     ) -> Option<Result<(Transaction, Vec<Transaction>), BuilderError>> {
-        let config = actual_state.actual_configuration();
+        let config = actual_state.actual_config();
         let unspent_anchoring_transaction = self.anchoring_transactions_chain().last();
         let unspent_funding_transaction = self.unspent_funding_transaction_entry().get();
 
@@ -151,12 +159,15 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
                 let current_script_pubkey = &tx.0.output[0].script_pubkey;
                 let outgoing_script_pubkey = &actual_state.script_pubkey();
                 if current_script_pubkey == outgoing_script_pubkey {
-                    trace!("Awaiting for new configuration to become an actual.");
+                    trace!(
+                        "Waiting for the moment when the following configuration \
+                         becomes actual."
+                    );
                     return None;
                 } else {
                     trace!(
                         "Transition from {} to {}.",
-                        actual_state.actual_configuration().anchoring_address(),
+                        actual_state.actual_config().anchoring_address(),
                         actual_state.output_address(),
                     );
                     builder.transit_to(actual_state.script_pubkey());
@@ -224,7 +235,7 @@ impl<'a, T: ObjectAccess> BtcAnchoringSchema<'a, T> {
                 .put(&funding_transaction.id(), funding_transaction);
         }
         // Special case if we have an active following configuration.
-        if let Some(config) = self.following_configuration() {
+        if let Some(config) = self.following_config() {
             // Check that the anchoring transaction is correct.
             let tx_out_script = tx
                 .anchoring_metadata()

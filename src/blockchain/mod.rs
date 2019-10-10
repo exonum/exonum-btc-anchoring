@@ -67,7 +67,7 @@ impl BtcAnchoringState {
 
     /// Returns the output address for the corresponding redeem script.
     pub fn output_address(&self) -> Address {
-        p2wsh::address(&self.redeem_script(), self.actual_configuration().network).into()
+        p2wsh::address(&self.redeem_script(), self.actual_config().network).into()
     }
 
     /// Checks that anchoring state is regular.
@@ -89,7 +89,7 @@ impl BtcAnchoringState {
     }
 
     /// Returns the actual anchoring configuration.
-    pub fn actual_configuration(&self) -> &Config {
+    pub fn actual_config(&self) -> &Config {
         match self {
             BtcAnchoringState::Regular {
                 ref actual_configuration,
@@ -102,7 +102,7 @@ impl BtcAnchoringState {
     }
 
     /// Returns the following anchoring configuration if anchoring is in transition state.
-    pub fn following_configuration(&self) -> Option<&Config> {
+    pub fn following_config(&self) -> Option<&Config> {
         match self {
             BtcAnchoringState::Regular { .. } => None,
             BtcAnchoringState::Transition {

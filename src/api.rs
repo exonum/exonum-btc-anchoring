@@ -187,7 +187,7 @@ impl<'a> ApiImpl<'a> {
     }
 
     fn actual_config(&self) -> Result<Config, failure::Error> {
-        Ok(BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot()).actual_configuration())
+        Ok(BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot()).actual_config())
     }
 
     fn verify_sign_input(&self, sign_input: &SignInput) -> Result<(), failure::Error> {
@@ -202,7 +202,7 @@ impl<'a> ApiImpl<'a> {
         })?;
 
         // Find corresponding Bitcoin key.
-        let config = schema.actual_configuration();
+        let config = schema.actual_config();
         let bitcoin_key = config
             .find_bitcoin_key(&self.0.service_keypair.0)
             .ok_or_else(|| failure::format_err!("This node is not an anchoring node."))?
@@ -246,16 +246,13 @@ impl<'a> PublicApi for ApiImpl<'a> {
     type Error = api::Error;
 
     fn actual_address(&self) -> Result<btc::Address, Self::Error> {
-        Ok(self
-            .anchoring_schema()
-            .actual_configuration()
-            .anchoring_address())
+        Ok(self.anchoring_schema().actual_config().anchoring_address())
     }
 
     fn following_address(&self) -> Result<Option<btc::Address>, Self::Error> {
         Ok(self
             .anchoring_schema()
-            .following_configuration()
+            .following_config()
             .map(|config| config.anchoring_address()))
     }
 

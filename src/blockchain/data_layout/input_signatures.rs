@@ -54,7 +54,7 @@ impl InputSignatures {
         self.content.iter().filter(|x| x.is_some()).count()
     }
 
-    /// Checks that signatures set is not empty.
+    /// Checks that signatures set is empty.
     pub fn is_empty(&self) -> bool {
         self.content.iter().all(Option::is_none)
     }

@@ -77,8 +77,8 @@ where
 
         let snapshot = anchoring_testkit.inner.snapshot();
         let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
-        assert_eq!(schema.following_configuration().unwrap(), new_cfg);
-        assert_eq!(schema.actual_configuration(), old_cfg);
+        assert_eq!(schema.following_config().unwrap(), new_cfg);
+        assert_eq!(schema.actual_config(), old_cfg);
 
         let (out_script, payload) = anchoring_tx_proposal.anchoring_metadata().unwrap();
         // Height for the transition anchoring transaction should be same as in the latest
@@ -98,8 +98,8 @@ where
     // Verify that the following configuration becomes an actual.
     let snapshot = anchoring_testkit.inner.snapshot();
     let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
-    assert!(schema.following_configuration().is_none());
-    assert_eq!(schema.actual_configuration(), new_cfg);
+    assert!(schema.following_config().is_none());
+    assert_eq!(schema.actual_config(), new_cfg);
 
     assert_eq!(
         anchoring_tx_proposal.id(),

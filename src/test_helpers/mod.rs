@@ -187,7 +187,7 @@ impl AnchoringTestKit {
     pub fn actual_anchoring_config(&self) -> Config {
         let snapshot = self.inner.snapshot();
         let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
-        schema.actual_configuration()
+        schema.actual_config()
     }
 
     /// Returns the latest anchoring transaction.
@@ -222,7 +222,7 @@ impl AnchoringTestKit {
         if let Some(p) = schema.actual_proposed_anchoring_transaction() {
             let (proposal, proposal_inputs) = p?;
 
-            let actual_config = schema.actual_state().actual_configuration().clone();
+            let actual_config = schema.actual_state().actual_config().clone();
             let bitcoin_key = actual_config
                 .find_bitcoin_key(&service_keypair.0)
                 .unwrap()

@@ -95,7 +95,7 @@ impl Configure for BtcAnchoringService {
             .ok_or(DispatcherError::UnauthorizedCaller)?;
 
         let schema = BtcAnchoringSchema::new(context.instance.name, fork);
-        if schema.actual_configuration().anchoring_address() == params.anchoring_address() {
+        if schema.actual_config().anchoring_address() == params.anchoring_address() {
             // There are no changes in the anchoring address, so we just apply the config
             // immediately.
             schema.set_actual_config(params);
