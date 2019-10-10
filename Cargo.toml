@@ -31,8 +31,6 @@ failure_derive = "0.1"
 futures = "0.1"
 hex = "0.4"
 log = "0.4"
-maplit = "1.0"
-matches = "0.1"
 protobuf = { version = "2.8", features = ["with-serde"] }
 rand = "0.4"
 reqwest = "0.9"
@@ -42,11 +40,9 @@ serde_derive = "1.0"
 serde_json = "1.0"
 serde_str = "0.1"
 structopt = "0.3"
-toml = "0.5"
 bitcoincore-rpc = "0.7.0"
 
 [dev-dependencies]
-libc = "0.2"
 proptest = "0.9"
 
 [build-dependencies]
@@ -58,4 +54,3 @@ exonum-merkledb = { git = "https://github.com/exonum/exonum.git", rev = "fee4b9f
 exonum-derive = { git = "https://github.com/exonum/exonum.git", rev = "fee4b9ff19800671e2ab6690d4390ccf9dff1051" }
 exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "fee4b9ff19800671e2ab6690d4390ccf9dff1051" }
 exonum-build = { git = "https://github.com/exonum/exonum.git", rev = "fee4b9ff19800671e2ab6690d4390ccf9dff1051" }
-

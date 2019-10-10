@@ -260,7 +260,6 @@ mod tests {
     use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
     use btc_transaction_utils::multisig::RedeemScriptBuilder;
     use hex::FromHex;
-    use matches::assert_matches;
     use proptest::proptest;
 
     use std::borrow::Cow;
@@ -574,7 +573,7 @@ mod tests {
 
         builder.additional_funds(funding_tx).unwrap();
 
-        assert_matches!(
+        assert_eq!(
             builder.prev_tx(prev_tx).unwrap_err(),
             BuilderError::UnsuitableOutput
         );
@@ -605,7 +604,7 @@ mod tests {
             .unwrap();
 
         let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
-        assert_matches!(
+        assert_eq!(
             builder.additional_funds(funding_tx).unwrap_err(),
             BuilderError::UnsuitableFundingTx
         );
