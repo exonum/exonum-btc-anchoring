@@ -12,32 +12,21 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// Protobuf wrappers for the common Bitcoin types.
+// Internal data types of Bitcoin anchoring service.
 
 syntax = "proto3";
 
-package exonum.btc;
+package exonum.service.btc_anchoring.schema;
 
-// Bitcoin public key wrapper.
-message PublicKey {
-    // Inner Data.
-    bytes data = 1;
+import "helpers.proto";
+import "btc_types.proto";
+
+// Some non-scalar key-value pair.
+message KeyValue {
+    bytes key = 1;
+    bytes value = 2;
 }
 
-// Bitcoin transaction wrapper.
-message Transaction {
-    // Inner data.
-    bytes data = 1;
-}
-
-// Bitcoin transaction input signature wrapper.
-message InputSignature {
-    // Inner data.    
-    bytes data = 1;
-}
-
-// Bitcoin SHA256d hash.
-message Sha256d {
-    // Inner data.    
-    bytes data = 1;
+message BinaryMap {
+    repeated KeyValue inner = 1;
 }

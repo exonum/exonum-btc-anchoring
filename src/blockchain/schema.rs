@@ -24,8 +24,9 @@ use exonum::{
 use log::{error, trace};
 
 use crate::{
-    btc::{BtcAnchoringTransactionBuilder, BuilderError, Sha256d, Transaction},
+    btc::{BtcAnchoringTransactionBuilder, BuilderError, Sha256d, Transaction, self},
     config::Config,
+    proto::BinaryMap,
 };
 
 use super::{data_layout::*, BtcAnchoringState};

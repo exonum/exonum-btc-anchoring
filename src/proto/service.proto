@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Bitcoin anchoring service protobuf description.
+
 syntax = "proto3";
 
 package exonum.service.btc_anchoring;

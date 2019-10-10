@@ -14,6 +14,8 @@
 
 //! Module of the rust-protobuf generated files.
 
+pub use binary_map::BinaryMap;
+
 use bitcoin;
 use btc_transaction_utils;
 use exonum::{
@@ -30,6 +32,8 @@ use serde_derive::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 use crate::btc;
+
+mod binary_map;
 
 include!(concat!(env!("OUT_DIR"), "/protobuf_mod.rs"));
 
