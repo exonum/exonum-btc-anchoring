@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -15,12 +15,13 @@
 //! Blockchain implementation details for the BTC anchoring service.
 
 pub use self::{schema::BtcAnchoringSchema, transactions::Transactions};
+pub use crate::proto::SignInput;
 
 use bitcoin::blockdata::script::Script;
 use btc_transaction_utils::{multisig::RedeemScript, p2wsh};
 use exonum::helpers::Height;
 
-use crate::{btc::Address, config::GlobalConfig};
+use crate::{btc::Address, config::Config};
 
 pub mod data_layout;
 pub mod errors;
@@ -33,19 +34,19 @@ pub enum BtcAnchoringState {
     /// The usual anchoring workflow.
     Regular {
         /// Current anchoring configuration.
-        actual_configuration: GlobalConfig,
+        actual_configuration: Config,
     },
     /// The transition from the current anchoring address to the following one.
     Transition {
         /// Current anchoring configuration.
-        actual_configuration: GlobalConfig,
+        actual_configuration: Config,
         /// Following anchoring configuration.
-        following_configuration: GlobalConfig,
+        following_configuration: Config,
     },
 }
 
 impl BtcAnchoringState {
-    /// Returns the redeem script which corresponds to the address to which the anchoring
+    /// Returns the redeem script corresponding to the address to which the anchoring
     /// transaction will be sent.
     pub fn redeem_script(&self) -> RedeemScript {
         match self {
@@ -59,14 +60,14 @@ impl BtcAnchoringState {
         }
     }
 
-    /// Returns the script_pubkey for the corresponding redeem script.
+    /// Returns the `script_pubkey` for the corresponding redeem script.
     pub fn script_pubkey(&self) -> Script {
         self.redeem_script().as_ref().to_v0_p2wsh()
     }
 
     /// Returns the output address for the corresponding redeem script.
     pub fn output_address(&self) -> Address {
-        p2wsh::address(&self.redeem_script(), self.actual_configuration().network).into()
+        p2wsh::address(&self.redeem_script(), self.actual_config().network).into()
     }
 
     /// Checks that anchoring state is regular.
@@ -78,7 +79,7 @@ impl BtcAnchoringState {
         }
     }
 
-    /// Checks that anchoring is in transition state.
+    /// Checks that anchoring is in the transition state.
     pub fn is_transition(&self) -> bool {
         if let BtcAnchoringState::Transition { .. } = self {
             true
@@ -88,7 +89,7 @@ impl BtcAnchoringState {
     }
 
     /// Returns the actual anchoring configuration.
-    pub fn actual_configuration(&self) -> &GlobalConfig {
+    pub fn actual_config(&self) -> &Config {
         match self {
             BtcAnchoringState::Regular {
                 ref actual_configuration,
@@ -101,7 +102,7 @@ impl BtcAnchoringState {
     }
 
     /// Returns the following anchoring configuration if anchoring is in transition state.
-    pub fn following_configuration(&self) -> Option<&GlobalConfig> {
+    pub fn following_config(&self) -> Option<&Config> {
         match self {
             BtcAnchoringState::Regular { .. } => None,
             BtcAnchoringState::Transition {

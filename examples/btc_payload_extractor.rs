@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,15 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate exonum;
-extern crate exonum_btc_anchoring;
-
-extern crate hex;
-extern crate serde_json;
-extern crate structopt;
-#[macro_use]
-extern crate failure;
-
+use failure::format_err;
 use hex::FromHex;
 use structopt::StructOpt;
 

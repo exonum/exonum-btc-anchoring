@@ -73,20 +73,14 @@ exonum-btc-anchoring = "0.11"
 Add the BTC anchoring service to the blockchain in the main project file:
 
 ```rust
-extern crate exonum;
-extern crate exonum_btc_anchoring as anchoring;
+use exonum_cli::NodeBuilder;
 
-use exonum::helpers;
-use exonum::helpers::fabric::NodeBuilder;
-
-fn main() {
-    exonum::crypto::init();
-    helpers::init_logger().unwrap();
-    let node = NodeBuilder::new()
-        .with_service(Box::new(anchoring::ServiceFactory));
-    node.run();
+fn main() -> Result<(), failure::Error> {
+    exonum::helpers::init_logger()?;
+    NodeBuilder::new()
+        .with_service(exonum_btc_anchoring::BtcAnchoringService)
+        .run()
 }
-
 ```
 
 ## Configuration Parameters

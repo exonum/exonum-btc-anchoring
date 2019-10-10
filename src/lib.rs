@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -38,19 +38,13 @@
 //! Create application with anchoring service
 //!
 //! ```rust,no_run
-//! extern crate exonum;
-//! extern crate exonum_btc_anchoring as anchoring;
-//! extern crate exonum_configuration as configuration;
-//! use exonum::helpers::fabric::NodeBuilder;
-//! use exonum::helpers;
+//! use exonum_cli::NodeBuilder;
 //!
-//! fn main() {
-//!     exonum::crypto::init();
-//!     helpers::init_logger().unwrap();
-//!     let node = NodeBuilder::new()
-//!        .with_service(Box::new(configuration::ServiceFactory))
-//!        .with_service(Box::new(anchoring::ServiceFactory));
-//!     node.run();
+//! fn main() -> Result<(), failure::Error> {
+//!     exonum::helpers::init_logger()?;
+//!     NodeBuilder::new()
+//!         .with_service(exonum_btc_anchoring::BtcAnchoringService)
+//!         .run()
 //! }
 //! ```
 //!
@@ -62,41 +56,15 @@
     bare_trait_objects
 )]
 
-pub use crate::factory::BtcAnchoringFactory as ServiceFactory;
-pub use crate::service::{
-    BtcAnchoringService, BTC_ANCHORING_SERVICE_ID, BTC_ANCHORING_SERVICE_NAME,
-};
+pub use crate::service::BtcAnchoringService;
 
 pub mod api;
 pub mod blockchain;
 pub mod btc;
 pub mod config;
-pub mod rpc;
+pub mod sync;
 pub mod test_helpers;
 
-pub(crate) mod factory;
 pub(crate) mod service;
 
-use log::{error, warn};
-
-mod handler;
 mod proto;
-
-pub(crate) trait ResultEx {
-    fn log_error(self);
-    fn log_warn(self);
-}
-
-impl<T: std::fmt::Display> ResultEx for Result<(), T> {
-    fn log_error(self) {
-        if let Err(e) = self {
-            error!("{}", e);
-        }
-    }
-
-    fn log_warn(self) {
-        if let Err(e) = self {
-            warn!("{}", e);
-        }
-    }
-}

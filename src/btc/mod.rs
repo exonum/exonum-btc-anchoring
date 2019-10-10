@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,23 +14,23 @@
 
 //! Collection of wrappers for the rust-bitcoin crate.
 
+pub use btc_transaction_utils::test_data::{secp_gen_keypair, secp_gen_keypair_with_rng};
+
 pub use self::{
     payload::Payload,
     transaction::{BtcAnchoringTransactionBuilder, BuilderError, Transaction},
 };
 
 use bitcoin::{network::constants::Network, util::address};
+use bitcoin_hashes::sha256d;
 use btc_transaction_utils;
-use derive_more::{From, Into};
+use derive_more::{Display, From, FromStr, Into};
 use hex::{self, FromHex, ToHex};
 use rand::Rng;
-
-use std::ops::Deref;
+use serde_derive::{Deserialize, Serialize};
 
 #[macro_use]
 mod macros;
-
-pub use btc_transaction_utils::test_data::{secp_gen_keypair, secp_gen_keypair_with_rng};
 
 pub(crate) mod payload;
 pub(crate) mod transaction;
@@ -40,16 +40,20 @@ pub(crate) mod transaction;
 pub struct PrivateKey(pub bitcoin::PrivateKey);
 
 /// Secp256k1 public key wrapper, used for verification of signatures.
-#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash, Display, FromStr)]
 pub struct PublicKey(pub bitcoin::PublicKey);
 
 /// Bitcoin address wrapper.
-#[derive(Debug, Clone, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone, From, Into, PartialEq, Eq, PartialOrd, Ord, Hash, Display, FromStr)]
 pub struct Address(pub address::Address);
 
 /// Bitcoin input signature wrapper.
 #[derive(Debug, Clone, PartialEq, Into, From)]
 pub struct InputSignature(pub btc_transaction_utils::InputSignature);
+
+/// Bitcoin SHA256d hash.
+#[derive(Debug, Copy, Clone, PartialEq, Into, From, Serialize, Deserialize, Display)]
+pub struct Sha256d(pub sha256d::Hash);
 
 impl ToString for PrivateKey {
     fn to_string(&self) -> String {
@@ -57,7 +61,7 @@ impl ToString for PrivateKey {
     }
 }
 
-impl ::std::str::FromStr for PrivateKey {
+impl std::str::FromStr for PrivateKey {
     type Err = <bitcoin::PrivateKey as ::std::str::FromStr>::Err;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -65,7 +69,7 @@ impl ::std::str::FromStr for PrivateKey {
     }
 }
 
-impl ::std::fmt::Debug for PrivateKey {
+impl std::fmt::Debug for PrivateKey {
     fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
         f.debug_struct("PrivateKey").finish()
     }
@@ -77,43 +81,26 @@ impl FromHex for PublicKey {
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
         let bytes = hex::decode(hex)?;
         let inner = bitcoin::PublicKey::from_slice(&bytes)?;
-        Ok(PublicKey(inner))
+        Ok(Self(inner))
     }
 }
 
 impl ToHex for PublicKey {
-    fn write_hex<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
+    fn encode_hex<T: std::iter::FromIterator<char>>(&self) -> T {
         let mut bytes = Vec::default();
         self.0.write_into(&mut bytes);
-        bytes.write_hex(w)
+        bytes.encode_hex()
     }
 
-    fn write_hex_upper<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
+    fn encode_hex_upper<T: std::iter::FromIterator<char>>(&self) -> T {
         let mut bytes = Vec::default();
         self.0.write_into(&mut bytes);
-        bytes.write_hex_upper(w)
+        bytes.encode_hex_upper()
     }
 }
 
-impl ::std::str::FromStr for Address {
-    type Err = <address::Address as ::std::str::FromStr>::Err;
-
-    fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let inner = address::Address::from_str(s)?;
-        Ok(Address(inner))
-    }
-}
-
-impl ::std::fmt::Display for Address {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        write!(f, "{}", self.0.to_string())
-    }
-}
-
-impl Deref for Address {
-    type Target = address::Address;
-
-    fn deref(&self) -> &Self::Target {
+impl AsRef<bitcoin::Address> for Address {
+    fn as_ref(&self) -> &bitcoin::Address {
         &self.0
     }
 }
@@ -124,17 +111,17 @@ impl FromHex for InputSignature {
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
         let bytes = hex::decode(hex)?;
         let inner = btc_transaction_utils::InputSignature::from_bytes(bytes)?;
-        Ok(InputSignature(inner))
+        Ok(Self(inner))
     }
 }
 
 impl ToHex for InputSignature {
-    fn write_hex<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
-        self.0.as_ref().write_hex(w)
+    fn encode_hex<T: std::iter::FromIterator<char>>(&self) -> T {
+        self.0.as_ref().encode_hex()
     }
 
-    fn write_hex_upper<W: ::std::fmt::Write>(&self, w: &mut W) -> ::std::fmt::Result {
-        self.0.as_ref().write_hex_upper(w)
+    fn encode_hex_upper<T: std::iter::FromIterator<char>>(&self) -> T {
+        self.0.as_ref().encode_hex_upper()
     }
 }
 
@@ -150,7 +137,27 @@ impl From<InputSignature> for Vec<u8> {
     }
 }
 
-impl_string_conversions_for_hex! { PublicKey }
+impl Sha256d {
+    pub(crate) const LEN: usize = <bitcoin_hashes::sha256d::Hash as bitcoin_hashes::Hash>::LEN;
+
+    /// Creates a new instance from bytes array.
+    pub fn new(bytes: [u8; Self::LEN]) -> Self {
+        Self::from_slice(&bytes).unwrap()
+    }
+
+    /// Creates a new instance from bytes slice.
+    pub fn from_slice(slice: &[u8]) -> Option<Self> {
+        use bitcoin_hashes::Hash;
+        sha256d::Hash::from_slice(slice).ok().map(Self)
+    }
+}
+
+impl AsRef<bitcoin_hashes::sha256d::Hash> for Sha256d {
+    fn as_ref(&self) -> &bitcoin_hashes::sha256d::Hash {
+        &self.0
+    }
+}
+
 impl_string_conversions_for_hex! { InputSignature }
 
 impl_serde_str! { PrivateKey }
@@ -158,15 +165,14 @@ impl_serde_str! { PublicKey }
 impl_serde_str! { Address }
 impl_serde_str! { InputSignature }
 
-/// Generates public and secret keys for Bitcoin node
-/// using given random number generator.
+/// Generates Bitcoin keypair using the given random number generator.
 pub fn gen_keypair_with_rng<R: Rng>(rng: &mut R, network: Network) -> (PublicKey, PrivateKey) {
     let (pk, sk) = secp_gen_keypair_with_rng(rng, network);
     (PublicKey(pk), PrivateKey(sk))
 }
 
 /// Same as [`gen_keypair_with_rng`](fn.gen_keypair_with_rng.html)
-/// but it uses default random number generator.
+/// but it uses a default random number generator.
 pub fn gen_keypair(network: Network) -> (PublicKey, PrivateKey) {
     let (pk, sk) = secp_gen_keypair(network);
     (PublicKey(pk), PrivateKey(sk))

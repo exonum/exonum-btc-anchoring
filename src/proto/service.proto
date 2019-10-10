@@ -1,0 +1,61 @@
+// Copyright 2019 The Exonum Team
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+syntax = "proto3";
+
+package exonum.service.btc_anchoring;
+
+import "helpers.proto";
+import "btc_types.proto";
+
+// Public keys of an anchoring node.
+message AnchoringKeys {
+    // Service key is used to authorize service transactions.
+    exonum.PublicKey service_key = 1;
+    // The Bitcoin public key is used to calculate the corresponding redeem script.
+    exonum.btc.PublicKey bitcoin_key = 2;
+}
+
+// Exonum message with a signature for one of the inputs of a new anchoring transaction.
+message SignInput {
+    // Proposal transaction ID.
+    exonum.btc.Sha256d txid = 1;
+    // Signed input.
+    fixed32 input = 2;
+    // Signature content.
+    exonum.btc.InputSignature input_signature = 3;
+}
+
+/// Configuration parameters.
+message Config {
+    // Type of the used BTC network.
+    //
+    // Possible values:
+    //
+    // Bitcoin - 3652501241(0xD9B4BEF9)
+    // Testnet - 118034699(0x0709110B)
+    // Regtest - 3669344250(0xDAB5BFFA)
+    fixed32 network = 1;
+    // Bitcoin public keys of nodes from from which the current anchoring redeem script can 
+    // be calculated.
+    repeated AnchoringKeys anchoring_keys = 2;
+    // Interval in blocks between anchored blocks.
+    uint64 anchoring_interval = 3;
+    // Fee per byte in satoshis.
+    uint64 transaction_fee = 4;
+    // Funding transaction.
+    exonum.btc.Transaction funding_transaction = 5;
+}
+
+// TODO Create separate constructor.

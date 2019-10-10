@@ -8,6 +8,7 @@ Awnht
 backend
 bech32
 bigint
+bitcoincore
 bitcoind
 bitcoinrpc
 bitfury
@@ -116,6 +117,7 @@ mynkNvvoysgzn3CX51KwyKyNVbEJEHs8Cw
 n4a3q23iUKZsmmrT5bVkeAsyqzvR5TmUbf
 nanos
 NCJY
+newtype
 nodelay
 ntxid
 Nvvoysgzn
@@ -202,7 +204,6 @@ tempdir
 terminfo
 testdata
 testkit
-testkit
 testnet
 testnetctl
 Tfop
@@ -231,7 +232,6 @@ unsynced
 untagged
 userid
 usize
-utxo
 utxo
 utxos
 validateaddress

@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,10 +14,16 @@
 
 syntax = "proto3";
 
-package exonum.service.btc_anchoring;
+package exonum.btc;
+
+// Bitcoin public key wrapper.
+message PublicKey {
+    // Inner Data.
+    bytes data = 1;
+}
 
 // Bitcoin transaction wrapper.
-message BtcTransaction {
+message Transaction {
     // Inner data.
     bytes data = 1;
 }
@@ -28,14 +34,8 @@ message InputSignature {
     bytes data = 1;
 }
 
-// Exonum message with the signature for the new anchoring transaction.
-message TxSignature {
-    // Public key index in the anchoring public keys list.
-    uint32 validator = 1;
-    // Signed transaction.
-    BtcTransaction transaction = 2;
-    // Signed input.
-    uint32 input = 3;
-    // Signature content.
-    InputSignature input_signature = 4;
+// Bitcoin SHA256d hash.
+message Sha256d {
+    // Inner data.    
+    bytes data = 1;
 }

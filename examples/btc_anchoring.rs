@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -12,18 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate exonum;
-extern crate exonum_btc_anchoring as anchoring;
-extern crate exonum_configuration as configuration;
+use exonum_cli::NodeBuilder;
 
-use exonum::helpers;
-use exonum::helpers::fabric::NodeBuilder;
-
-fn main() {
-    exonum::crypto::init();
-    helpers::init_logger().unwrap();
-    let node = NodeBuilder::new()
-        .with_service(Box::new(configuration::ServiceFactory))
-        .with_service(Box::new(anchoring::ServiceFactory));
-    node.run();
+fn main() -> Result<(), failure::Error> {
+    exonum::helpers::init_logger()?;
+    NodeBuilder::new()
+        .with_service(exonum_btc_anchoring::BtcAnchoringService)
+        .run()
 }

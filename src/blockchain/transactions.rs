@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -14,155 +14,147 @@
 
 //! BTC anchoring transactions.
 
+pub use crate::proto::SignInput;
+
 use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
-use exonum::{
-    blockchain::{ExecutionResult, Transaction, TransactionContext},
-    helpers::ValidatorId,
-};
-use exonum_derive::{ProtobufConvert, TransactionSet};
+use exonum::runtime::{rust::TransactionContext, Caller, DispatcherError, ExecutionError};
+use exonum_derive::exonum_service;
 use log::{info, trace};
-use serde_derive::{Deserialize, Serialize};
 
-use crate::{btc, proto};
+use crate::{btc, BtcAnchoringService};
 
-use super::{data_layout::TxInputId, errors::SignatureError, BtcAnchoringSchema};
+use super::{data_layout::TxInputId, errors::Error, BtcAnchoringSchema};
 
-/// Exonum message with the signature for the new anchoring transaction.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert)]
-#[exonum(pb = "proto::TxSignature")]
-pub struct TxSignature {
-    /// Public key index in the anchoring public keys list.
-    pub validator: ValidatorId,
-    /// Signed Bitcoin anchoring transaction.
-    pub transaction: btc::Transaction,
-    /// Signed input.
-    pub input: u32,
-    /// Signature content.
-    pub input_signature: btc::InputSignature,
-}
-
-/// Exonum BTC anchoring transactions.
-#[derive(Serialize, Deserialize, Clone, Debug, TransactionSet)]
-pub enum Transactions {
-    /// Exonum message with the signature for the new anchoring transaction.
-    Signature(TxSignature),
-}
-
-impl TxSignature {
-    /// Returns identifier of the signed transaction input.
-    pub fn input_id(&self) -> TxInputId {
-        TxInputId {
-            txid: self.transaction.id(),
-            input: self.input,
-        }
+impl SignInput {
+    // Check that input signature is correct.
+    fn verify_signature(
+        &self,
+        input_signer: &InputSigner,
+        public_key: &btc::PublicKey,
+        proposal: &btc::Transaction,
+        inputs: &[btc::Transaction],
+    ) -> Result<(), ExecutionError> {
+        // Check that input with the specified index exist.
+        let input_transaction = inputs.get(self.input as usize).ok_or(Error::NoSuchInput)?;
+        input_signer
+            .verify_input(
+                TxInRef::new(proposal.as_ref(), self.input as usize),
+                input_transaction.as_ref(),
+                &public_key.0,
+                self.input_signature.as_ref(),
+            )
+            .map_err(|e| (Error::InputVerificationFailed, e).into())
     }
 }
 
-impl Transaction for TxSignature {
-    fn execute(&self, context: TransactionContext) -> ExecutionResult {
-        // TODO Checks that transaction author is validator.
-        let tx = &self.transaction;
-        let schema = BtcAnchoringSchema::new(context.fork());
-        // Checks that the number of signatures is sufficient to spend.
-        if schema
-            .anchoring_transactions_chain()
-            .last()
-            .map(|tx| tx.id())
-            == Some(tx.id())
-        {
-            return Ok(());
-        }
+/// Exonum BTC anchoring transactions.
+#[exonum_service]
+pub trait Transactions {
+    /// Signs a single input of the anchoring transaction proposal.
+    fn sign_input(&self, context: TransactionContext, arg: SignInput)
+        -> Result<(), ExecutionError>;
+}
 
-        let (expected_transaction, expected_inputs) = schema
+impl Transactions for BtcAnchoringService {
+    fn sign_input(
+        &self,
+        context: TransactionContext,
+        arg: SignInput,
+    ) -> Result<(), ExecutionError> {
+        let (author, fork) = context
+            .verify_caller(Caller::author)
+            .ok_or(DispatcherError::UnauthorizedCaller)?;
+
+        let schema = BtcAnchoringSchema::new(context.instance.name, fork);
+        // Check that author is authorized to sign inputs of the anchoring proposal.
+        let actual_config = schema.actual_state().actual_config().clone();
+        let (anchoring_node_id, public_key) = actual_config
+            .find_bitcoin_key(&author)
+            .ok_or(Error::UnauthorizedAnchoringKey)?;
+
+        // Check that there is an anchoring proposal for the actual blockchain state.
+        let (proposal, expected_inputs) = if let Some(proposal) = schema
             .actual_proposed_anchoring_transaction()
-            .ok_or(SignatureError::InTransition)?
-            .map_err(SignatureError::TxBuilderError)?;
-
-        if expected_transaction.id() != tx.id() {
-            return Err(SignatureError::Unexpected {
-                expected_id: expected_transaction.id(),
-                received_id: tx.id(),
-            }
-            .into());
-        }
-
-        let redeem_script = schema.actual_state().actual_configuration().redeem_script();
-        let redeem_script_content = redeem_script.content();
-        let public_key = if let Some(pk) = redeem_script_content
-            .public_keys
-            .get(self.validator.0 as usize)
+            .transpose()
+            .map_err(Error::anchoring_builder_error)?
         {
-            pk
+            proposal
         } else {
-            return Err(SignatureError::MissingPublicKey {
-                validator_id: self.validator,
+            // There is no anchoring request at the current blockchain state.
+            // Make sure txid is equal to the identifier of the last anchoring transaction.
+            let latest_anchoring_txid = schema
+                .anchoring_transactions_chain()
+                .last()
+                // If the anchoring chain is not established, then the proposal must exist.
+                .unwrap()
+                .id();
+            if latest_anchoring_txid == arg.txid {
+                return Ok(());
+            } else {
+                return Err(Error::UnexpectedProposalTxId.into());
             }
-            .into());
         };
 
-        let input_signer = InputSigner::new(redeem_script.clone());
-
-        // Checks signature content.
-        let input_signature_ref = self.input_signature.as_ref();
-        let input_idx = self.input as usize;
-        let input_tx = match expected_inputs.get(input_idx) {
-            Some(input_tx) => input_tx,
-            _ => return Err(SignatureError::NoSuchInput { idx: input_idx }.into()),
-        };
-
-        let verification_result = input_signer.verify_input(
-            TxInRef::new(tx.as_ref(), self.input as usize),
-            input_tx.as_ref(),
-            &public_key,
-            input_signature_ref,
-        );
-
-        if verification_result.is_err() {
-            return Err(SignatureError::VerificationFailed.into());
+        // Make sure txid is equal to the identifier of the anchoring transaction proposal.
+        if proposal.id() != arg.txid {
+            return Err(Error::UnexpectedProposalTxId.into());
         }
 
-        let input_id = self.input_id();
+        // Check that input signature is correct.
+        let redeem_script = actual_config.redeem_script();
+        let input_signer = InputSigner::new(redeem_script.clone());
+        arg.verify_signature(&input_signer, &public_key, &proposal, &expected_inputs)?;
+
+        // All preconditions are correct and we can use this signature.
+        let input_id = TxInputId::new(proposal.id(), arg.input);
         let mut input_signatures = schema.input_signatures(&input_id, &redeem_script);
-        if input_signatures.len() != redeem_script_content.quorum {
-            // Adds signature to schema.
-            input_signatures.insert(self.validator, self.input_signature.clone().into());
+        let quorum = redeem_script.content().quorum;
+        let mut input_signature_len = input_signatures.len();
+        // Check that we have not reached the quorum yet, otherwise we should not do anything.
+        if input_signature_len < quorum {
+            // Add signature to schema.
+            input_signatures.insert(anchoring_node_id, arg.input_signature.clone().into());
             schema
                 .transaction_signatures()
                 .put(&input_id, input_signatures);
-            // Tries to finalize transaction.
-            let mut tx: btc::Transaction = tx.clone();
-            for index in 0..expected_inputs.len() {
-                let input_id = TxInputId::new(self.transaction.id(), index as u32);
-                let input_signatures = schema.input_signatures(&input_id, &redeem_script);
+            input_signature_len += 1;
+        } else {
+            return Ok(());
+        }
 
-                if input_signatures.len() != redeem_script_content.quorum {
+        // If we have enough signatures for specific input we have to check that we also have
+        // sufficient signatures to finalize proposal transaction.
+        if input_signature_len == quorum {
+            let mut finalized_tx: btc::Transaction = proposal.clone();
+            // Make sure we reach a quorum for each input.
+            for index in 0..expected_inputs.len() {
+                let input_id = TxInputId::new(proposal.id(), index as u32);
+                let signatures_for_input = schema.input_signatures(&input_id, &redeem_script);
+                // We have not enough signatures for this input, so we can not finalize this
+                // proposal at the moment.
+                if signatures_for_input.len() != quorum {
                     return Ok(());
                 }
 
                 input_signer.spend_input(
-                    &mut tx.0.input[index],
-                    input_signatures
+                    &mut finalized_tx.0.input[index],
+                    signatures_for_input
                         .into_iter()
                         .map(|bytes| InputSignature::from_bytes(bytes).unwrap()),
                 );
             }
 
-            let payload = tx.anchoring_metadata().unwrap().1;
+            let payload = finalized_tx.anchoring_metadata().unwrap().1;
 
             info!("====== ANCHORING ======");
-            info!("txid: {}", tx.id().to_hex());
+            info!("txid: {}", finalized_tx.id().to_string());
             info!("height: {}", payload.block_height);
             info!("hash: {}", payload.block_hash.to_hex());
-            info!("balance: {}", tx.0.output[0].value);
-            trace!("Anchoring txhex: {}", tx.to_string());
+            info!("balance: {}", finalized_tx.0.output[0].value);
+            trace!("Anchoring txhex: {}", finalized_tx.to_string());
 
-            // Adds finalized transaction to the tail of anchoring transactions.
-            schema.anchoring_transactions_chain().push(tx);
-            if let Some(unspent_funding_tx) = schema.unspent_funding_transaction() {
-                schema
-                    .spent_funding_transactions()
-                    .put(&unspent_funding_tx.id(), unspent_funding_tx);
-            }
+            // Add finalized transaction to the tail of anchoring transactions.
+            schema.push_anchoring_transaction(finalized_tx);
         }
         Ok(())
     }

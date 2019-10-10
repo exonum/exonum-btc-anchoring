@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+### Breaking changes
+
+- Ported `exonum-btc-anchoring` to a new version of Exonum with support
+  of dynamic services. (#145)
+
+  In this way, a large number of changes have occurred in service business logic:
+
+  - Nodes performing anchoring are no longer strictly associated with the
+  validator nodes. It means that there may exist a validator node that does not
+  perform anchoring, and vice versa an anchoring node that is not a validator.
+  But we strongly recommend to keep one to one relationship between the
+  anchoring and validator nodes.
+  - The bootstrapping procedure has been completely changed in accordance with
+  the fact that the service can be started at any time during the blockchain
+  life. The implementation of the service has become stateless and all logic
+  that previously was performed in the `after_commit` method was taken out
+  in a separate `btc_anchoring_sync` utility.
+  TODO Reference to the description in the README.md.
+  - "v1" prefix has been removed from API endpoints and introduced a lot of
+  private API endpoints for the `btc_anchoring_sync` util.
+  - Removed cryptographic proofs for Exonum blocks feature.
+  It will be implemented as separate service.
+
+### Internal improvements
+
+- `exonum_bitcoinrpc` crate has been replaced in favor of `bitcoincore-rpc`. (#145)
+
 ## 0.12.0 - 2018-08-14
 
 - Updated to the [Exonum 0.12.0](https://github.com/exonum/exonum/releases/tag/v0.12)

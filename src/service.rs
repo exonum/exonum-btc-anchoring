@@ -1,4 +1,4 @@
-// Copyright 2018 The Exonum Team
+// Copyright 2019 The Exonum Team
 //
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,109 +13,97 @@
 // limitations under the License.
 
 use exonum::{
-    api::ServiceApiBuilder,
-    blockchain::{Schema as CoreSchema, Service, ServiceContext, Transaction, TransactionSet},
     crypto::Hash,
-    messages::RawTransaction,
+    helpers::ValidateInput,
+    merkledb::{BinaryValue, Fork},
+    runtime::{
+        api::ServiceApiBuilder,
+        rust::{
+            interfaces::{verify_caller_is_supervisor, Configure},
+            Service, TransactionContext,
+        },
+        DispatcherError, ExecutionError, InstanceDescriptor,
+    },
 };
-use exonum_merkledb::{Fork, Snapshot};
-
-use serde_json::json;
-
-use std::sync::{Arc, RwLock};
-
-use std::collections::HashMap;
+use exonum_derive::ServiceFactory;
+use exonum_merkledb::Snapshot;
 
 use crate::{
     api,
     blockchain::{BtcAnchoringSchema, Transactions},
-    btc::{Address, PrivateKey},
-    config::GlobalConfig,
-    handler::{SyncWithBtcRelayTask, UpdateAnchoringChainTask},
-    rpc::BtcRelay,
-    ResultEx,
+    config::Config,
+    proto,
 };
 
-/// Anchoring service id.
-pub const BTC_ANCHORING_SERVICE_ID: u16 = 3;
-/// Anchoring service name.
-pub const BTC_ANCHORING_SERVICE_NAME: &str = "btc_anchoring";
-/// Set of bitcoin private keys for corresponding anchoring addresses.
-pub(crate) type KeyPool = Arc<RwLock<HashMap<Address, PrivateKey>>>;
-
-/// Btc anchoring service implementation for the Exonum blockchain.
-pub struct BtcAnchoringService {
-    global_config: GlobalConfig,
-    private_keys: KeyPool,
-    btc_relay: Option<Box<dyn BtcRelay>>,
-}
-
-impl ::std::fmt::Debug for BtcAnchoringService {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
-        f.debug_struct("BtcAnchoringService").finish()
-    }
-}
-
-impl BtcAnchoringService {
-    /// Creates a new btc anchoring service instance.
-    pub fn new(
-        global_config: GlobalConfig,
-        private_keys: KeyPool,
-        btc_relay: Option<Box<dyn BtcRelay>>,
-    ) -> Self {
-        Self {
-            global_config,
-            private_keys,
-            btc_relay,
-        }
-    }
-}
+/// Bitcoin anchoring service implementation for the Exonum blockchain.
+#[derive(ServiceFactory, Debug)]
+#[exonum(
+    proto_sources = "proto",
+    implements("Transactions", "Configure<Params = Config>")
+)]
+pub struct BtcAnchoringService;
 
 impl Service for BtcAnchoringService {
-    fn service_id(&self) -> u16 {
-        BTC_ANCHORING_SERVICE_ID
+    fn initialize(
+        &self,
+        instance: InstanceDescriptor,
+        fork: &Fork,
+        params: Vec<u8>,
+    ) -> Result<(), ExecutionError> {
+        // TODO Use a special type for constructor. [ECR-3222]
+        let config = Config::from_bytes(params.into())
+            .and_then(ValidateInput::into_validated)
+            .map_err(DispatcherError::malformed_arguments)?;
+
+        BtcAnchoringSchema::new(instance.name, fork).set_actual_config(config);
+        Ok(())
     }
 
-    fn service_name(&self) -> &'static str {
-        BTC_ANCHORING_SERVICE_NAME
-    }
-
-    fn state_hash(&self, snapshot: &dyn Snapshot) -> Vec<Hash> {
-        BtcAnchoringSchema::new(snapshot).state_hash()
-    }
-
-    fn tx_from_raw(&self, raw: RawTransaction) -> Result<Box<dyn Transaction>, failure::Error> {
-        let tx = Transactions::tx_from_raw(raw)?;
-        Ok(tx.into())
-    }
-
-    fn initialize(&self, _fork: &Fork) -> serde_json::Value {
-        json!(self.global_config)
-    }
-
-    fn before_commit(&self, fork: &Fork) {
-        // Writes a hash of the latest block to the proof list index.
-        let block_header_hash = CoreSchema::new(fork)
-            .block_hashes_by_height()
-            .last()
-            .expect("An attempt to invoke execute during the genesis block initialization.");
-
-        let schema = BtcAnchoringSchema::new(fork);
-        schema.anchored_blocks().push(block_header_hash);
-    }
-
-    fn after_commit(&self, context: &ServiceContext) {
-        let keys = &self.private_keys.read().unwrap();
-        let task = UpdateAnchoringChainTask::new(context, keys);
-        task.run().log_error();
-        // TODO make this task async via tokio core or something else.
-        if let Some(ref relay) = self.btc_relay.as_ref() {
-            let task = SyncWithBtcRelayTask::new(context, relay.as_ref());
-            task.run().log_error();
-        }
+    fn state_hash(&self, instance: InstanceDescriptor, snapshot: &dyn Snapshot) -> Vec<Hash> {
+        BtcAnchoringSchema::new(instance.name, snapshot).state_hash()
     }
 
     fn wire_api(&self, builder: &mut ServiceApiBuilder) {
         api::wire(builder);
+    }
+}
+
+impl Configure for BtcAnchoringService {
+    type Params = Config;
+
+    fn verify_config(
+        &self,
+        context: TransactionContext,
+        params: Self::Params,
+    ) -> Result<(), ExecutionError> {
+        context
+            .verify_caller(verify_caller_is_supervisor)
+            .ok_or(DispatcherError::UnauthorizedCaller)?;
+
+        params
+            .validate()
+            .map_err(DispatcherError::malformed_arguments)
+    }
+
+    fn apply_config(
+        &self,
+        context: TransactionContext,
+        params: Self::Params,
+    ) -> Result<(), ExecutionError> {
+        let (_, fork) = context
+            .verify_caller(verify_caller_is_supervisor)
+            .ok_or(DispatcherError::UnauthorizedCaller)?;
+
+        let schema = BtcAnchoringSchema::new(context.instance.name, fork);
+        if schema.actual_config().anchoring_address() == params.anchoring_address() {
+            // There are no changes in the anchoring address, so we just apply the config
+            // immediately.
+            schema.set_actual_config(params);
+        } else {
+            // Set the config as the next one, which will become an actual after the transition
+            // of the anchoring chain to the following address.
+            schema.following_config_entry().set(params);
+        }
+        Ok(())
     }
 }
