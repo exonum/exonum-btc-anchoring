@@ -14,16 +14,18 @@
 
 //! BTC anchoring transactions.
 
-pub use crate::proto::SignInput;
+pub use crate::proto::{AddFunds, SignInput};
 
 use btc_transaction_utils::{p2wsh::InputSigner, TxInRef};
 use exonum::runtime::{rust::TransactionContext, Caller, DispatcherError, ExecutionError};
 use exonum_derive::exonum_service;
 use log::{info, trace};
 
-use crate::{btc, BtcAnchoringService};
+use crate::{btc, config::Config, BtcAnchoringService};
 
-use super::{data_layout::TxInputId, errors::Error, BtcAnchoringSchema};
+use super::{
+    data_layout::TxInputId, errors::Error, schema::TransactionConfirmations, BtcAnchoringSchema,
+};
 
 impl SignInput {
     // Check that input signature is correct.
@@ -47,12 +49,44 @@ impl SignInput {
     }
 }
 
+impl TransactionConfirmations {
+    /// Adds confirmation from the specified anchoring node.
+    fn confirm_by_node(&mut self, anchoring_node_id: u16, public_key: btc::PublicKey) {
+        self.0.insert(anchoring_node_id, public_key);
+    }
+
+    /// Checks if there are enough confirmations to mark transaction as funding.
+    pub(crate) fn has_enough_confirmations(&self, config: &Config) -> Result<bool, ExecutionError> {
+        let confirmations = self
+            .0
+            .iter()
+            .try_fold(0, |count, (anchoring_node_id, public_key)| {
+                let expected_public_key = config
+                    .anchoring_keys
+                    .get(*anchoring_node_id as usize)
+                    .map(|x| &x.bitcoin_key);
+                if expected_public_key != Some(public_key) {
+                    Err(Error::MalformedFundingTxConfirmation)
+                } else {
+                    Ok(count + 1)
+                }
+            });
+        let quorum = exonum::helpers::byzantine_quorum(config.anchoring_keys.len());
+        Ok(confirmations? == quorum)
+    }
+}
+
 /// Exonum BTC anchoring transactions.
 #[exonum_service]
 pub trait Transactions {
     /// Signs a single input of the anchoring transaction proposal.
     fn sign_input(&self, context: TransactionContext, arg: SignInput)
         -> Result<(), ExecutionError>;
+    /// Add funds via suitable funding transaction.
+    ///
+    /// Bitcoin transaction should have output with value to the current anchoring address.
+    /// The transaction will be applied if 2/3+1 anchoring nodes sent it.
+    fn add_funds(&self, context: TransactionContext, arg: AddFunds) -> Result<(), ExecutionError>;
 }
 
 impl Transactions for BtcAnchoringService {
@@ -64,10 +98,10 @@ impl Transactions for BtcAnchoringService {
         let (author, fork) = context
             .verify_caller(Caller::author)
             .ok_or(DispatcherError::UnauthorizedCaller)?;
-
         let schema = BtcAnchoringSchema::new(context.instance.name, fork);
+
         // Check that author is authorized to sign inputs of the anchoring proposal.
-        let actual_config = schema.actual_state().actual_config().clone();
+        let actual_config = schema.actual_config();
         let (anchoring_node_id, public_key) = actual_config
             .find_bitcoin_key(&author)
             .ok_or(Error::UnauthorizedAnchoringKey)?;
@@ -155,6 +189,48 @@ impl Transactions for BtcAnchoringService {
 
             // Add finalized transaction to the tail of anchoring transactions.
             schema.push_anchoring_transaction(finalized_tx);
+        }
+        Ok(())
+    }
+
+    fn add_funds(&self, context: TransactionContext, arg: AddFunds) -> Result<(), ExecutionError> {
+        let (author, fork) = context
+            .verify_caller(Caller::author)
+            .ok_or(DispatcherError::UnauthorizedCaller)?;
+        let schema = BtcAnchoringSchema::new(context.instance.name, fork);
+
+        // Check that author is authorized to sign inputs of the anchoring proposal.
+        let actual_config = schema.actual_config();
+        let (anchoring_node_id, public_key) = actual_config
+            .find_bitcoin_key(&author)
+            .ok_or(Error::UnauthorizedAnchoringKey)?;
+
+        // Check that the given transaction is suitable.
+        arg.transaction
+            .find_out(&actual_config.anchoring_out_script())
+            .ok_or(Error::UnsuitableFundingTx)?;
+
+        // Check that the transaction has not been used before
+        let funding_txid = arg.transaction.id();
+        if schema.spent_funding_transactions().contains(&funding_txid) {
+            return Err(Error::AlreadyUsedFundingTx.into());
+        }
+
+        // Add confirmation from this node for this funding transaction.
+        let mut confirmations = schema
+            .unconfirmed_funding_transactions()
+            .get(&funding_txid)
+            .unwrap_or_default();
+        confirmations.confirm_by_node(anchoring_node_id as u16, public_key);
+
+        // Set this transaction as unspent funding if there are enough confirmations
+        // otherwise just write confirmation to the schema.
+        if confirmations.has_enough_confirmations(&actual_config)? {
+            schema.set_funding_transaction(arg.transaction);
+        } else {
+            schema
+                .unconfirmed_funding_transactions()
+                .put(&funding_txid, confirmations);
         }
         Ok(())
     }

@@ -408,6 +408,18 @@ impl PrivateApi for TestKitApi {
         )
     }
 
+    fn add_funds(
+        &self,
+        transaction: btc::Transaction,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
+        Box::new(
+            self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+                .query(&transaction)
+                .post("add-funds")
+                .into_future(),
+        )
+    }
+
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("anchoring-proposal")

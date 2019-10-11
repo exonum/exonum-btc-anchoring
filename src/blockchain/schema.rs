@@ -30,8 +30,10 @@ use crate::{
 
 use super::{data_layout::*, BtcAnchoringState};
 
-/// A set of signatures for a transaction input ordered by the validators identifiers.
+/// A set of signatures for a transaction input ordered by the anchoring node identifiers.
 pub type InputSignatures = BinaryMap<u16, btc::InputSignature>;
+/// A set of funding transaction confirmations ordered by the anchoring node identifiers.
+pub type TransactionConfirmations = BinaryMap<u16, btc::PublicKey>;
 
 /// Information schema for `exonum-btc-anchoring`.
 #[derive(Debug)]
@@ -84,6 +86,16 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
         Entry::new(self.index_name("following_config"), self.access.clone())
     }
 
+    /// Returns a table that contains confirmations for the corresponding funding transaction.
+    pub fn unconfirmed_funding_transactions(
+        &self,
+    ) -> ProofMapIndex<T, Sha256d, TransactionConfirmations> {
+        ProofMapIndex::new(
+            self.index_name("unconfirmed_funding_transactions"),
+            self.access.clone(),
+        )
+    }
+
     /// Returns an entry that may contain an unspent funding transaction for the
     /// actual configuration.
     pub fn unspent_funding_transaction_entry(&self) -> Entry<T, Transaction> {
@@ -99,6 +111,7 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
             self.anchoring_transactions_chain().object_hash(),
             self.spent_funding_transactions().object_hash(),
             self.transaction_signatures().object_hash(),
+            self.unconfirmed_funding_transactions().object_hash(),
         ]
     }
 
@@ -268,5 +281,20 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
             self.unspent_funding_transaction_entry().set(tx);
         }
         self.actual_config_entry().set(config);
+    }
+
+    /// Sets the given transaction as the current unspent funding transaction.
+    pub fn set_funding_transaction(&self, transaction: btc::Transaction) {
+        debug_assert!(
+            !self
+                .spent_funding_transactions()
+                .contains(&transaction.id()),
+            "Funding transaction must be unspent."
+        );
+        // Remove confirmations for this transaction to avoid attack of re-setting
+        // this transaction as funding.
+        self.unconfirmed_funding_transactions()
+            .put(&transaction.id(), TransactionConfirmations::default());
+        self.unspent_funding_transaction_entry().set(transaction);
     }
 }

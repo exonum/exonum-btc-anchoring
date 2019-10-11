@@ -25,6 +25,7 @@ use exonum::{
         rust::Transaction,
     },
 };
+use failure::ensure;
 use futures::{Future, IntoFuture, Sink};
 use serde_derive::{Deserialize, Serialize};
 
@@ -34,7 +35,7 @@ use std::cmp::{
 };
 
 use crate::{
-    blockchain::{BtcAnchoringSchema, SignInput},
+    blockchain::{AddFunds, BtcAnchoringSchema, SignInput},
     btc,
     config::Config,
 };
@@ -140,6 +141,16 @@ pub trait PrivateApi {
         &self,
         sign_input: SignInput,
     ) -> Box<dyn Future<Item = Hash, Error = Self::Error>>;
+    /// Add funds via suitable funding transaction.
+    ///
+    /// Bitcoin transaction should have output with value to the current anchoring address.
+    /// The transaction will be applied if 2/3+1 anchoring nodes sent it.
+    ///
+    /// `POST /{api_prefix}/add-funds`
+    fn add_funds(
+        &self,
+        transaction: btc::Transaction,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>>;
     /// Returns a proposal for the next anchoring transaction, if it makes sense.
     /// If there is not enough satoshis to create a proposal an error is returned.
     ///
@@ -217,6 +228,33 @@ impl<'a> ApiImpl<'a> {
                 sign_input.input_signature.as_ref(),
             )
             .map_err(|e| failure::format_err!("Input signature verification failed: {}", e))
+    }
+
+    fn verify_funding_tx(&self, tx: &btc::Transaction) -> Result<(), failure::Error> {
+        let txid = tx.id();
+
+        let schema = self.anchoring_schema();
+        let config = schema.actual_config();
+        ensure!(
+            schema.spent_funding_transactions().contains(&txid),
+            "Funding transaction {} has been already used.",
+            txid
+        );
+        ensure!(
+            tx.find_out(&config.anchoring_out_script()).is_some(),
+            "Funding transaction {} is not suitable.",
+            txid
+        );
+        ensure!(
+            !schema
+                .unconfirmed_funding_transactions()
+                .get(&txid)
+                .unwrap_or_default()
+                .has_enough_confirmations(&config)?,
+            "{}",
+            txid
+        );
+        Ok(())
     }
 
     fn transaction_proof(&self, tx_index: u64) -> TransactionProof {
@@ -322,6 +360,17 @@ impl<'a> PrivateApi for ApiImpl<'a> {
         Box::new(self.broadcast_transaction(sign_input).map_err(From::from))
     }
 
+    fn add_funds(
+        &self,
+        transaction: btc::Transaction,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
+        if let Err(e) = self.verify_funding_tx(&transaction) {
+            return Box::new(Err(api::Error::BadRequest(e.to_string())).into_future());
+        }
+        let add_funds = AddFunds { transaction };
+        Box::new(self.broadcast_transaction(add_funds).map_err(From::from))
+    }
+
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
         AnchoringProposalState::try_from_proposal(
             self.anchoring_schema()
@@ -391,6 +440,9 @@ pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
         .private_scope()
         .endpoint_mut("sign-input", |state, query: SignInput| {
             ApiImpl(state).sign_input(query)
+        })
+        .endpoint_mut("add-funds", |state, query: btc::Transaction| {
+            ApiImpl(state).add_funds(query)
         })
         .endpoint("anchoring-proposal", |state, _query: ()| {
             ApiImpl(state).anchoring_proposal()

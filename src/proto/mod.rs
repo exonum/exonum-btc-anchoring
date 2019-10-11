@@ -124,6 +124,14 @@ pub struct SignInput {
     pub input_signature: btc::InputSignature,
 }
 
+/// Exonum message with the unspent funding transaction.
+#[derive(Debug, Clone, PartialEq, ProtobufConvert)]
+#[exonum(pb = "self::service::AddFunds")]
+pub struct AddFunds {
+    /// Transaction content.
+    pub transaction: btc::Transaction,
+}
+
 /// Consensus parameters in the BTC anchoring.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Config {

@@ -19,7 +19,7 @@ use exonum::{
 };
 use exonum_btc_anchoring::{
     api::{AnchoringChainLength, AnchoringProposalState, PrivateApi},
-    blockchain::{BtcAnchoringSchema, SignInput},
+    blockchain::{AddFunds, BtcAnchoringSchema, SignInput},
     btc,
     config::Config,
     sync::{
@@ -151,6 +151,20 @@ impl PrivateApi for FakePrivateApi {
         sign_input: SignInput,
     ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
         let signed_tx = sign_input.sign(
+            ANCHORING_INSTANCE_ID,
+            self.service_keypair.0,
+            &self.service_keypair.1,
+        );
+        let hash = signed_tx.object_hash();
+        self.inner.send(signed_tx);
+        Box::new(Ok(hash).into_future())
+    }
+
+    fn add_funds(
+        &self,
+        transaction: btc::Transaction,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
+        let signed_tx = AddFunds { transaction }.sign(
             ANCHORING_INSTANCE_ID,
             self.service_keypair.0,
             &self.service_keypair.1,

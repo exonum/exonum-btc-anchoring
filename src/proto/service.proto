@@ -39,6 +39,12 @@ message SignInput {
     exonum.btc.InputSignature input_signature = 3;
 }
 
+// Exonum message with the unspent funding transaction.
+message AddFunds {
+    // Bitcoin transaction content.
+    exonum.btc.Transaction transaction = 1;
+}
+
 /// Configuration parameters.
 message Config {
     // Type of the used BTC network.

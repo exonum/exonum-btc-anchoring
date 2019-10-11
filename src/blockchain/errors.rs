@@ -32,6 +32,12 @@ pub enum Error {
     AnchoringBuilderError = 3,
     /// Unexpected anchoring proposal transaction ID.
     UnexpectedProposalTxId = 4,
+    /// Funding transaction has been already used.
+    AlreadyUsedFundingTx = 5,
+    /// Malformed funding transaction confirmation.
+    MalformedFundingTxConfirmation = 6,
+    /// Funding transaction is unsuitable.
+    UnsuitableFundingTx = 7,
 }
 
 impl Error {

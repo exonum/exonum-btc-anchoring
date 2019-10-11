@@ -53,7 +53,9 @@ pub struct Address(pub address::Address);
 pub struct InputSignature(pub btc_transaction_utils::InputSignature);
 
 /// Bitcoin SHA256d hash.
-#[derive(Debug, Copy, Clone, PartialEq, Into, From, Serialize, Deserialize, Display)]
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Into, From, Serialize, Deserialize, Display,
+)]
 pub struct Sha256d(pub sha256d::Hash);
 
 impl ToString for PrivateKey {
@@ -97,6 +99,26 @@ impl ToHex for PublicKey {
         let mut bytes = Vec::default();
         self.0.write_into(&mut bytes);
         bytes.encode_hex_upper()
+    }
+}
+
+impl BinaryValue for PublicKey {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::default();
+        self.0.write_into(&mut bytes);
+        bytes
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
+        bitcoin::PublicKey::from_slice(bytes.as_ref())
+            .map(Self)
+            .map_err(From::from)
+    }
+}
+
+impl ObjectHash for PublicKey {
+    fn object_hash(&self) -> exonum::crypto::Hash {
+        exonum::crypto::hash(&self.to_bytes())
     }
 }
 

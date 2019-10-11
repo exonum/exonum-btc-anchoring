@@ -104,6 +104,13 @@ impl PrivateApi for ApiClient {
         Box::new(self.post("sign-input", &sign_input).into_future())
     }
 
+    fn add_funds(
+        &self,
+        transaction: btc::Transaction,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
+        Box::new(self.post("add-funds", &transaction).into_future())
+    }
+
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
         self.get("anchoring-proposal")
     }
