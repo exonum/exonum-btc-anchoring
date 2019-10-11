@@ -28,8 +28,8 @@ use exonum::{
 };
 use exonum_merkledb::{MapProof, ObjectHash};
 use exonum_testkit::{
-    simple_supervisor::{ConfigPropose, SimpleSupervisor},
-    ApiKind, InstanceCollection, TestKit, TestKitApi, TestKitBuilder, TestNode,
+    simple_supervisor::SimpleSupervisor, ApiKind, InstanceCollection, TestKit, TestKitApi,
+    TestKitBuilder, TestNode,
 };
 use failure::{ensure, format_err};
 use futures::{Future, IntoFuture};
@@ -42,7 +42,7 @@ use crate::{
         AnchoringChainLength, AnchoringProposalState, FindTransactionQuery, IndexQuery, PrivateApi,
         PublicApi, TransactionProof,
     },
-    blockchain::{transactions::SignInput, BtcAnchoringSchema},
+    blockchain::{AddFunds, BtcAnchoringSchema, SignInput},
     btc,
     config::Config,
     proto::AnchoringKeys,
@@ -264,7 +264,7 @@ impl AnchoringTestKit {
 
         for anchoring_keys in self.actual_anchoring_config().anchoring_keys {
             let node = self
-                .find_node_by(|node| node.service_keypair().0 == anchoring_keys.service_key)
+                .find_node_by_service_key(anchoring_keys.service_key)
                 .unwrap();
 
             signatures.push(self.create_signature_tx_for_node(node).unwrap());
@@ -291,13 +291,23 @@ impl AnchoringTestKit {
     /// Creates the confirmation transactions with a specified funding transaction.
     pub fn create_funding_confirmation_txs_with(
         &self,
-        tx: btc::Transaction,
+        transaction: btc::Transaction,
     ) -> Vec<Verified<AnyTx>> {
-        let mut new_cfg = self.actual_anchoring_config();
-        new_cfg.funding_transaction = Some(tx);
-        vec![ConfigPropose::actual_from(self.inner.height().next())
-            .service_config(ANCHORING_INSTANCE_ID, new_cfg)
-            .into_tx()]
+        let add_funds = AddFunds { transaction };
+        self.actual_anchoring_config()
+            .anchoring_keys
+            .into_iter()
+            .map(|anchoring_keys| {
+                let node_keypair = self
+                    .find_node_by_service_key(anchoring_keys.service_key)
+                    .unwrap()
+                    .service_keypair();
+
+                add_funds
+                    .clone()
+                    .sign(ANCHORING_INSTANCE_ID, node_keypair.0, &node_keypair.1)
+            })
+            .collect()
     }
 
     /// Adds a new auditor node to the testkit network and create Bitcoin keypair for it.
@@ -352,13 +362,15 @@ impl AnchoringTestKit {
                     None
                 }
             })
-            .and_then(|service_key| {
-                self.find_node_by(|node| node.service_keypair().0 == service_key)
-            })
+            .and_then(|service_key| self.find_node_by_service_key(service_key))
     }
 
-    fn find_node_by(&self, predicate: impl FnMut(&&TestNode) -> bool) -> Option<&TestNode> {
-        self.inner.network().nodes().iter().find(predicate)
+    fn find_node_by_service_key(&self, service_key: PublicKey) -> Option<&TestNode> {
+        self.inner
+            .network()
+            .nodes()
+            .iter()
+            .find(|node| node.service_keypair().0 == service_key)
     }
 }
 
