@@ -265,22 +265,9 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
             );
             // If preconditions are correct, just reassign the config as an actual.
             self.following_config_entry().remove();
-            self.set_actual_config(config);
+            self.actual_config_entry().set(config);
         }
         self.anchoring_transactions_chain().push(tx);
-    }
-
-    /// Sets a new anchoring configuration parameters.
-    pub fn set_actual_config(&self, config: Config) {
-        // TODO remove this special case. [ECR-3603]
-        if let Some(tx) = config
-            .funding_transaction
-            .clone()
-            .filter(|tx| !self.spent_funding_transactions().contains(&tx.id()))
-        {
-            self.unspent_funding_transaction_entry().set(tx);
-        }
-        self.actual_config_entry().set(config);
     }
 
     /// Sets the given transaction as the current unspent funding transaction.

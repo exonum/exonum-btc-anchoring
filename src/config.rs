@@ -36,7 +36,6 @@ impl Default for Config {
             anchoring_keys: vec![],
             anchoring_interval: 5_000,
             transaction_fee: 10,
-            funding_transaction: None,
         }
     }
 }
@@ -117,17 +116,9 @@ impl ValidateInput for Config {
 
         // Verify that the redeem script is suitable.
         let quorum = exonum::helpers::byzantine_quorum(self.anchoring_keys.len());
-        let redeem_script = RedeemScriptBuilder::with_public_keys(
-            self.anchoring_keys.iter().map(|x| x.bitcoin_key.0),
-        )
-        .quorum(quorum)
-        .to_script()?;
-
-        // TODO remove funding transaction from the config. [ECR-3603]
-        if let Some(tx) = self.funding_transaction.as_ref() {
-            tx.find_out(&redeem_script.as_ref().to_v0_p2wsh())
-                .ok_or_else(|| failure::format_err!("Funding transaction is unsuitable."))?;
-        }
+        RedeemScriptBuilder::with_public_keys(self.anchoring_keys.iter().map(|x| x.bitcoin_key.0))
+            .quorum(quorum)
+            .to_script()?;
         Ok(())
     }
 }

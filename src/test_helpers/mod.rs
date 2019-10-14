@@ -148,7 +148,7 @@ pub struct AnchoringTestKit {
 impl AnchoringTestKit {
     /// Creates an anchoring testkit instance for the specified number of anchoring nodes,
     /// total funds in satoshis and interval between anchors.
-    pub fn new(nodes_num: u16, total_funds: u64, anchoring_interval: u64) -> Self {
+    pub fn new(nodes_num: u16, anchoring_interval: u64) -> Self {
         let validator_keys = (0..nodes_num)
             .map(|_| gen_validator_keys())
             .collect::<Vec<_>>();
@@ -156,16 +156,12 @@ impl AnchoringTestKit {
         let network = Network::Testnet;
         let anchoring_nodes = AnchoringNodes::from_keys(Network::Testnet, &validator_keys);
 
-        let mut anchoring_config = Config {
+        let anchoring_config = Config {
             network,
             anchoring_keys: anchoring_nodes.anchoring_keys(),
             anchoring_interval,
             ..Config::default()
         };
-        anchoring_config.funding_transaction = Some(create_fake_funding_transaction(
-            anchoring_config.anchoring_address().as_ref(),
-            total_funds,
-        ));
 
         let inner = TestKitBuilder::validator()
             .with_keys(validator_keys)
@@ -375,8 +371,16 @@ impl AnchoringTestKit {
 }
 
 impl Default for AnchoringTestKit {
+    /// Creates anchoring testkit instance with the unspent funding transaction.
+    ///
+    /// To add funds, this instance commit a block with transactions, so in addition to the
+    /// genesis block this instance contains one more.
     fn default() -> Self {
-        Self::new(4, 70000, 5)
+        let mut testkit = Self::new(4, 5);
+        testkit
+            .inner
+            .create_block_with_transactions(testkit.create_funding_confirmation_txs(700_000).0);
+        testkit
     }
 }
 

@@ -77,7 +77,7 @@ fn actual_address() {
 
 #[test]
 fn following_address() {
-    let mut anchoring_testkit = AnchoringTestKit::new(4, 2_000, 5);
+    let mut anchoring_testkit = AnchoringTestKit::default();
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
         .anchoring_interval;
@@ -99,7 +99,6 @@ fn following_address() {
     // Add an anchoring node.
     let mut new_cfg = anchoring_testkit.actual_anchoring_config();
     new_cfg.anchoring_keys.push(anchoring_testkit.add_node());
-    new_cfg.funding_transaction = None;
     let following_address = new_cfg.anchoring_address();
 
     // Commit configuration with without last anchoring node.
@@ -118,8 +117,11 @@ fn following_address() {
 
 #[test]
 fn find_transaction_regular() {
-    let anchoring_interval = 4;
-    let mut anchoring_testkit = AnchoringTestKit::new(4, 70_000, anchoring_interval);
+    let mut anchoring_testkit = AnchoringTestKit::default();
+    let anchoring_interval = anchoring_testkit
+        .actual_anchoring_config()
+        .anchoring_interval;
+
     // Create a several anchoring transactions
     for i in 1..=5 {
         anchoring_testkit.inner.create_block_with_transactions(
@@ -169,8 +171,7 @@ fn find_transaction_regular() {
 // Check come edge cases in the find_transaction api method.
 #[test]
 fn find_transaction_configuration_change() {
-    let anchoring_interval = 5;
-    let mut anchoring_testkit = AnchoringTestKit::new(4, 150_000, anchoring_interval);
+    let mut anchoring_testkit = AnchoringTestKit::default();
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
         .anchoring_interval;
@@ -192,7 +193,6 @@ fn find_transaction_configuration_change() {
     // Add an anchoring node.
     let mut new_cfg = anchoring_testkit.actual_anchoring_config();
     new_cfg.anchoring_keys.push(anchoring_testkit.add_node());
-    new_cfg.funding_transaction = None;
 
     // Commit configuration with without last anchoring node.
     anchoring_testkit.inner.create_block_with_transaction(
@@ -332,8 +332,28 @@ fn anchoring_proposal_none() {
 }
 
 #[test]
+fn anchoring_proposal_err_without_initial_funds() {
+    let anchoring_testkit = AnchoringTestKit::new(4, 5);
+
+    let api = anchoring_testkit.inner.api();
+    let state = api.anchoring_proposal().unwrap();
+    assert_eq!(
+        state,
+        AnchoringProposalState::InsufficientFunds {
+            total_fee: 1140,
+            balance: 0
+        }
+    );
+}
+
+#[test]
 fn anchoring_proposal_err_insufficient_funds() {
-    let anchoring_testkit = AnchoringTestKit::new(4, 100, 5);
+    let mut anchoring_testkit = AnchoringTestKit::new(4, 5);
+
+    // Add an initial funding transaction to enable anchoring.
+    anchoring_testkit
+        .inner
+        .create_block_with_transactions(anchoring_testkit.create_funding_confirmation_txs(20).0);
 
     let api = anchoring_testkit.inner.api();
     let state = api.anchoring_proposal().unwrap();
@@ -341,17 +361,20 @@ fn anchoring_proposal_err_insufficient_funds() {
         state,
         AnchoringProposalState::InsufficientFunds {
             total_fee: 1530,
-            balance: 100
+            balance: 20
         }
     );
 }
 
 #[test]
 fn anchoring_sign_input() {
-    let mut anchoring_testkit = AnchoringTestKit::new(1, 10_000, 5);
+    let mut anchoring_testkit = AnchoringTestKit::default();
 
     let config = anchoring_testkit.actual_anchoring_config();
-    let bitcoin_public_key = config.anchoring_keys[0].bitcoin_key;
+    let bitcoin_public_key = config
+        .find_bitcoin_key(&anchoring_testkit.inner.us().service_keypair().0)
+        .unwrap()
+        .1;
     let bitcoin_private_key = anchoring_testkit.node_private_key(&bitcoin_public_key);
     // Create sign input transaction
     let redeem_script = config.redeem_script();
@@ -364,6 +387,15 @@ fn anchoring_sign_input() {
             TxInRef::new(proposal.as_ref(), 0),
             proposal_input.as_ref(),
             &bitcoin_private_key.0.key,
+        )
+        .unwrap();
+
+    p2wsh::InputSigner::new(config.redeem_script())
+        .verify_input(
+            TxInRef::new(proposal.as_ref(), 0),
+            proposal_input.as_ref(),
+            &bitcoin_public_key.0,
+            &signature,
         )
         .unwrap();
 

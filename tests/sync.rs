@@ -201,8 +201,8 @@ fn anchoring_transaction_payload(testkit: &AnchoringTestKit, index: u64) -> Opti
 
 #[test]
 fn chain_updater_normal() {
-    let anchoring_interval = 5;
-    let mut testkit = AnchoringTestKit::new(4, 100_000, anchoring_interval);
+    let mut testkit = AnchoringTestKit::default();
+    let anchoring_interval = testkit.actual_anchoring_config().anchoring_interval;
     // Commit several blocks.
     testkit
         .inner
@@ -229,7 +229,7 @@ fn chain_updater_normal() {
 #[test]
 fn chain_updater_insufficient_funds() {
     let anchoring_interval = 5;
-    let mut testkit = AnchoringTestKit::new(1, 10, anchoring_interval);
+    let mut testkit = AnchoringTestKit::new(1, anchoring_interval);
     // Commit several blocks.
     testkit
         .inner
@@ -241,8 +241,8 @@ fn chain_updater_insufficient_funds() {
 
     match e {
         ChainUpdateError::InsufficientFunds { balance, total_fee } => {
-            assert_eq!(balance, 10);
-            assert_eq!(total_fee, 1530);
+            assert_eq!(balance, 0);
+            assert_eq!(total_fee, 1140);
         }
         e => panic!("Unexpected error occurred: {:?}", e),
     }
@@ -250,8 +250,8 @@ fn chain_updater_insufficient_funds() {
 
 #[test]
 fn sync_with_bitcoin_normal() {
-    let anchoring_interval = 5;
-    let mut testkit = AnchoringTestKit::new(4, 100_000, anchoring_interval);
+    let mut testkit = AnchoringTestKit::default();
+    let anchoring_interval = testkit.actual_anchoring_config().anchoring_interval;
     // Create a several anchoring transactions
     for i in 0..2 {
         testkit

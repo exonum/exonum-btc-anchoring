@@ -62,8 +62,6 @@ message Config {
     uint64 anchoring_interval = 3;
     // Fee per byte in satoshis.
     uint64 transaction_fee = 4;
-    // Funding transaction.
-    exonum.btc.Transaction funding_transaction = 5;
 }
 
 // TODO Create separate constructor.

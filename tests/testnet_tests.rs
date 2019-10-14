@@ -18,10 +18,7 @@ use exonum_btc_anchoring::{
     blockchain::{errors::Error, BtcAnchoringSchema},
     btc::BuilderError,
     config::Config,
-    test_helpers::{
-        create_fake_funding_transaction, AnchoringTestKit, ANCHORING_INSTANCE_ID,
-        ANCHORING_INSTANCE_NAME,
-    },
+    test_helpers::{AnchoringTestKit, ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME},
 };
 use exonum_testkit::simple_supervisor::ConfigPropose;
 
@@ -235,11 +232,16 @@ fn additional_funding() {
 }
 
 #[test]
-fn spent_funding() {
-    let mut anchoring_testkit = AnchoringTestKit::default();
-    let anchoring_interval = anchoring_testkit
-        .actual_anchoring_config()
-        .anchoring_interval;
+fn err_spent_funding() {
+    let anchoring_interval = 5;
+    let mut anchoring_testkit = AnchoringTestKit::new(4, anchoring_interval);
+
+    // Add an initial funding transaction to enable anchoring.
+    let (txs, spent_funding_transaction) =
+        anchoring_testkit.create_funding_confirmation_txs(20_000);
+    anchoring_testkit
+        .inner
+        .create_block_with_transactions(txs.into_iter().skip(1));
 
     assert!(anchoring_testkit.last_anchoring_tx().is_none());
     // Establish anchoring transactions chain with the initial funding transaction.
@@ -250,14 +252,14 @@ fn spent_funding() {
             .flatten(),
     );
 
-    // Add spent funding transaction.
-    let spent_funding_transaction = anchoring_testkit
-        .actual_anchoring_config()
-        .funding_transaction
-        .unwrap();
-    anchoring_testkit.inner.create_block_with_transactions(
-        anchoring_testkit.create_funding_confirmation_txs_with(spent_funding_transaction),
+    // Try to add spent funding transaction.
+    let block = anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit
+            .create_funding_confirmation_txs_with(spent_funding_transaction)
+            .into_iter()
+            .take(1),
     );
+    assert_tx_error(&block[0], Error::AlreadyUsedFundingTx);
 
     // Reach the next anchoring height.
     anchoring_testkit
@@ -277,7 +279,7 @@ fn spent_funding() {
 
 #[test]
 fn insufficient_funds() {
-    let mut anchoring_testkit = AnchoringTestKit::new(4, 10, 5);
+    let mut anchoring_testkit = AnchoringTestKit::new(4, 5);
 
     {
         let snapshot = anchoring_testkit.inner.snapshot();
@@ -286,8 +288,8 @@ fn insufficient_funds() {
         assert_eq!(
             proposal,
             Err(BuilderError::InsufficientFunds {
-                total_fee: 1530,
-                balance: 10
+                total_fee: 1140,
+                balance: 0
             })
         );
     }
@@ -380,7 +382,6 @@ fn unexpected_anchoring_proposal() {
 fn add_anchoring_node() {
     test_anchoring_config_change(|anchoring_testkit, cfg| {
         cfg.anchoring_keys.push(anchoring_testkit.add_node());
-        cfg.funding_transaction = None;
     });
 }
 
@@ -388,7 +389,6 @@ fn add_anchoring_node() {
 fn remove_anchoring_node() {
     test_anchoring_config_change(|_, cfg| {
         cfg.anchoring_keys.pop();
-        cfg.funding_transaction = None;
     });
 }
 
@@ -396,27 +396,20 @@ fn remove_anchoring_node() {
 fn change_anchoring_node_without_funds() {
     test_anchoring_config_change(|anchoring_testkit, cfg| {
         cfg.anchoring_keys[0].bitcoin_key = anchoring_testkit.gen_bitcoin_key();
-        cfg.funding_transaction = None;
-    });
-}
-
-#[test]
-fn change_anchoring_node_with_funds() {
-    test_anchoring_config_change(|anchoring_testkit, cfg| {
-        cfg.anchoring_keys[0].bitcoin_key = anchoring_testkit.gen_bitcoin_key();
-        cfg.funding_transaction = Some(create_fake_funding_transaction(
-            cfg.anchoring_address().as_ref(),
-            150_000,
-        ));
     });
 }
 
 #[test]
 fn add_anchoring_node_insufficient_funds() {
-    let mut anchoring_testkit = AnchoringTestKit::new(4, 2_000, 5);
+    let mut anchoring_testkit = AnchoringTestKit::new(4, 5);
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
         .anchoring_interval;
+
+    // Add an initial funding transaction to enable anchoring.
+    anchoring_testkit
+        .inner
+        .create_block_with_transactions(anchoring_testkit.create_funding_confirmation_txs(2000).0);
 
     assert!(anchoring_testkit.last_anchoring_tx().is_none());
     // Establish anchoring transactions chain.
@@ -435,7 +428,6 @@ fn add_anchoring_node_insufficient_funds() {
     // Add an anchoring node.
     let mut new_cfg = anchoring_testkit.actual_anchoring_config();
     new_cfg.anchoring_keys.push(anchoring_testkit.add_node());
-    new_cfg.funding_transaction = None;
 
     // Commit configuration with without last anchoring node.
     anchoring_testkit.inner.create_block_with_transaction(
