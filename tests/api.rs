@@ -18,7 +18,8 @@ use exonum_btc_anchoring::{
     blockchain::{BtcAnchoringSchema, SignInput},
     btc,
     test_helpers::{
-        AnchoringTestKit, ValidateProof, ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME,
+        create_fake_funding_transaction, AnchoringTestKit, ValidateProof, ANCHORING_INSTANCE_ID,
+        ANCHORING_INSTANCE_NAME,
     },
 };
 use exonum_testkit::simple_supervisor::ConfigPropose;
@@ -361,7 +362,7 @@ fn anchoring_proposal_err_insufficient_funds() {
 }
 
 #[test]
-fn anchoring_sign_input() {
+fn sign_input() {
     let mut anchoring_testkit = AnchoringTestKit::default();
 
     let config = anchoring_testkit.actual_anchoring_config();
@@ -409,4 +410,68 @@ fn anchoring_sign_input() {
         .create_block_with_tx_hashes(&[tx_hash])[0]
         .status()
         .expect("Transaction should be successful");
+}
+
+#[test]
+fn add_funds_ok() {
+    let anchoring_interval = 5;
+    let mut anchoring_testkit = AnchoringTestKit::new(1, anchoring_interval);
+
+    let config = anchoring_testkit.actual_anchoring_config();
+    let funding_transaction = create_fake_funding_transaction(&config.anchoring_address(), 10_000);
+
+    let tx_hash = anchoring_testkit
+        .inner
+        .api()
+        .add_funds(funding_transaction)
+        .wait()
+        .unwrap();
+
+    anchoring_testkit
+        .inner
+        .create_block_with_tx_hashes(&[tx_hash])[0]
+        .status()
+        .expect("Transaction should be successful");
+}
+
+#[test]
+fn add_funds_err_already_used() {
+    let anchoring_interval = 5;
+    let mut anchoring_testkit = AnchoringTestKit::new(1, anchoring_interval);
+
+    // Add an initial funding transaction to enable anchoring.
+    let (txs, funding_transaction) = anchoring_testkit.create_funding_confirmation_txs(2000);
+    anchoring_testkit.inner.create_block_with_transactions(txs);
+
+    // Establish anchoring transactions chain.
+    anchoring_testkit.inner.create_block_with_transactions(
+        anchoring_testkit
+            .create_signature_txs()
+            .into_iter()
+            .flatten(),
+    );
+
+    anchoring_testkit
+        .inner
+        .api()
+        .add_funds(funding_transaction)
+        .wait()
+        .expect_err("Add funds must fail");
+}
+
+#[test]
+fn add_funds_err_unsuitable() {
+    let anchoring_interval = 5;
+    let anchoring_testkit = AnchoringTestKit::new(4, anchoring_interval);
+
+    let mut config = anchoring_testkit.actual_anchoring_config();
+    config.anchoring_keys.swap(1, 3);
+    let funding_transaction = create_fake_funding_transaction(&config.anchoring_address(), 10_000);
+
+    anchoring_testkit
+        .inner
+        .api()
+        .add_funds(funding_transaction)
+        .wait()
+        .expect_err("Add funds must fail");
 }

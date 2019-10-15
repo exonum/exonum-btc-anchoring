@@ -239,7 +239,7 @@ impl<'a> ApiImpl<'a> {
         let schema = self.anchoring_schema();
         let config = schema.actual_config();
         ensure!(
-            schema.spent_funding_transactions().contains(&txid),
+            !schema.spent_funding_transactions().contains(&txid),
             "Funding transaction {} has been already used.",
             txid
         );

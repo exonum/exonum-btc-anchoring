@@ -55,7 +55,7 @@ pub const ANCHORING_INSTANCE_ID: InstanceId = 14;
 pub const ANCHORING_INSTANCE_NAME: &str = "btc_anchoring";
 
 /// Generates a fake funding transaction.
-pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -> btc::Transaction {
+pub fn create_fake_funding_transaction(address: &btc::Address, value: u64) -> btc::Transaction {
     // Generate random transaction id.
     let mut rng = thread_rng();
     let mut data = [0_u8; 32];
@@ -75,7 +75,7 @@ pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -
         }],
         output: vec![bitcoin::TxOut {
             value,
-            script_pubkey: address.script_pubkey(),
+            script_pubkey: address.0.script_pubkey(),
         }],
     }
     .into()
@@ -275,7 +275,7 @@ impl AnchoringTestKit {
         satoshis: u64,
     ) -> (Vec<Verified<AnyTx>>, btc::Transaction) {
         let funding_transaction = create_fake_funding_transaction(
-            self.actual_anchoring_config().anchoring_address().as_ref(),
+            &self.actual_anchoring_config().anchoring_address(),
             satoshis,
         );
         (
