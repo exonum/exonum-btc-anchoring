@@ -34,10 +34,8 @@ pub enum Error {
     UnexpectedProposalTxId = 4,
     /// Funding transaction has been already used.
     AlreadyUsedFundingTx = 5,
-    /// Malformed funding transaction confirmation.
-    MalformedFundingTxConfirmation = 6,
     /// Funding transaction is unsuitable.
-    UnsuitableFundingTx = 7,
+    UnsuitableFundingTx = 6,
 }
 
 impl Error {

@@ -32,8 +32,8 @@ use super::{data_layout::*, BtcAnchoringState};
 
 /// A set of signatures for a transaction input ordered by the anchoring node identifiers.
 pub type InputSignatures = BinaryMap<u16, btc::InputSignature>;
-/// A set of funding transaction confirmations ordered by the anchoring node identifiers.
-pub type TransactionConfirmations = BinaryMap<u16, btc::PublicKey>;
+/// A set of funding transaction confirmations.
+pub type TransactionConfirmations = BinaryMap<btc::PublicKey, ()>;
 
 /// Information schema for `exonum-btc-anchoring`.
 #[derive(Debug)]

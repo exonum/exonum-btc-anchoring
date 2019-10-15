@@ -73,26 +73,13 @@ impl InputSignatures {
 
 impl TransactionConfirmations {
     /// Adds confirmation from the specified anchoring node.
-    fn confirm_by_node(&mut self, anchoring_node_id: u16, public_key: btc::PublicKey) {
-        self.0.insert(anchoring_node_id, public_key);
+    fn confirm_by_node(&mut self, public_key: btc::PublicKey) {
+        self.0.insert(public_key, ());
     }
 
     /// Checks if there are enough confirmations to mark transaction as funding.
     pub(crate) fn has_enough_confirmations(&self, config: &Config) -> Result<bool, ExecutionError> {
-        let confirmations =
-            self.0
-                .iter()
-                .try_fold(0, |count, (anchoring_node_id, public_key)| {
-                    let expected_public_key = config
-                        .anchoring_keys
-                        .get(*anchoring_node_id as usize)
-                        .map(|x| &x.bitcoin_key);
-                    if expected_public_key != Some(public_key) {
-                        Err(Error::MalformedFundingTxConfirmation)
-                    } else {
-                        Ok(count + 1)
-                    }
-                })?;
+        let confirmations = self.0.len();
         let quorum = exonum::helpers::byzantine_quorum(config.anchoring_keys.len());
         Ok(confirmations == quorum)
     }
@@ -221,7 +208,7 @@ impl Transactions for BtcAnchoringService {
 
         // Check that author is authorized to sign inputs of the anchoring proposal.
         let actual_config = schema.actual_config();
-        let (anchoring_node_id, public_key) = actual_config
+        let (_, public_key) = actual_config
             .find_bitcoin_key(&author)
             .ok_or(Error::UnauthorizedAnchoringKey)?;
 
@@ -241,7 +228,7 @@ impl Transactions for BtcAnchoringService {
             .unconfirmed_funding_transactions()
             .get(&funding_txid)
             .unwrap_or_default();
-        confirmations.confirm_by_node(anchoring_node_id as u16, public_key);
+        confirmations.confirm_by_node(public_key);
 
         // Set this transaction as unspent funding if there are enough confirmations
         // otherwise just write confirmation to the schema.
