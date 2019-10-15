@@ -24,7 +24,10 @@ use log::{info, trace};
 use crate::{btc, config::Config, BtcAnchoringService};
 
 use super::{
-    data_layout::TxInputId, errors::Error, schema::TransactionConfirmations, BtcAnchoringSchema,
+    data_layout::TxInputId,
+    errors::Error,
+    schema::{InputSignatures, TransactionConfirmations},
+    BtcAnchoringSchema,
 };
 
 impl SignInput {
@@ -49,6 +52,25 @@ impl SignInput {
     }
 }
 
+impl InputSignatures {
+    /// Returns the number of elements in the map.
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Inserts a key-value pair into the map.
+    fn insert(&mut self, id: u16, signature: btc::InputSignature) {
+        self.0.insert(id, signature);
+    }
+
+    /// Gets an iterator over the values of the map, in order by key.
+    fn values<'a>(
+        &'a self,
+    ) -> impl IntoIterator<Item = btc_transaction_utils::InputSignature> + 'a {
+        self.0.values().map(|x| x.0.clone())
+    }
+}
+
 impl TransactionConfirmations {
     /// Adds confirmation from the specified anchoring node.
     fn confirm_by_node(&mut self, anchoring_node_id: u16, public_key: btc::PublicKey) {
@@ -57,22 +79,22 @@ impl TransactionConfirmations {
 
     /// Checks if there are enough confirmations to mark transaction as funding.
     pub(crate) fn has_enough_confirmations(&self, config: &Config) -> Result<bool, ExecutionError> {
-        let confirmations = self
-            .0
-            .iter()
-            .try_fold(0, |count, (anchoring_node_id, public_key)| {
-                let expected_public_key = config
-                    .anchoring_keys
-                    .get(*anchoring_node_id as usize)
-                    .map(|x| &x.bitcoin_key);
-                if expected_public_key != Some(public_key) {
-                    Err(Error::MalformedFundingTxConfirmation)
-                } else {
-                    Ok(count + 1)
-                }
-            });
+        let confirmations =
+            self.0
+                .iter()
+                .try_fold(0, |count, (anchoring_node_id, public_key)| {
+                    let expected_public_key = config
+                        .anchoring_keys
+                        .get(*anchoring_node_id as usize)
+                        .map(|x| &x.bitcoin_key);
+                    if expected_public_key != Some(public_key) {
+                        Err(Error::MalformedFundingTxConfirmation)
+                    } else {
+                        Ok(count + 1)
+                    }
+                })?;
         let quorum = exonum::helpers::byzantine_quorum(config.anchoring_keys.len());
-        Ok(confirmations? == quorum)
+        Ok(confirmations == quorum)
     }
 }
 
@@ -143,13 +165,11 @@ impl Transactions for BtcAnchoringService {
         // All preconditions are correct and we can use this signature.
         let input_id = TxInputId::new(proposal.id(), arg.input);
         let mut input_signatures = schema.input_signatures(&input_id);
-        let mut input_signature_len = input_signatures.0.len();
+        let mut input_signature_len = input_signatures.len();
         // Check that we have not reached the quorum yet, otherwise we should not do anything.
         if input_signature_len < quorum {
             // Add signature to schema.
-            input_signatures
-                .0
-                .insert(anchoring_node_id as u16, arg.input_signature.clone());
+            input_signatures.insert(anchoring_node_id, arg.input_signature.clone());
             schema
                 .transaction_signatures()
                 .put(&input_id, input_signatures);
@@ -168,13 +188,13 @@ impl Transactions for BtcAnchoringService {
                 let signatures_for_input = schema.input_signatures(&input_id);
                 // We have not enough signatures for this input, so we can not finalize this
                 // proposal at the moment.
-                if signatures_for_input.0.len() != quorum {
+                if signatures_for_input.len() != quorum {
                     return Ok(());
                 }
 
                 input_signer.spend_input(
                     &mut finalized_tx.0.input[index],
-                    signatures_for_input.0.values().map(|x| x.0.clone()),
+                    signatures_for_input.values(),
                 );
             }
 

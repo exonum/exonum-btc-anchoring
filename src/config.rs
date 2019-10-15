@@ -63,10 +63,10 @@ impl Config {
     }
 
     /// Tries to find bitcoin public key corresponding with the given service key.
-    pub fn find_bitcoin_key(&self, service_key: &PublicKey) -> Option<(usize, btc::PublicKey)> {
+    pub fn find_bitcoin_key(&self, service_key: &PublicKey) -> Option<(u16, btc::PublicKey)> {
         self.anchoring_keys.iter().enumerate().find_map(|(n, x)| {
             if &x.service_key == service_key {
-                Some((n, x.bitcoin_key))
+                Some((n as u16, x.bitcoin_key))
             } else {
                 None
             }

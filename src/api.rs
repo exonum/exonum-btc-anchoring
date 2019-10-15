@@ -245,15 +245,6 @@ impl<'a> ApiImpl<'a> {
             "Funding transaction {} is not suitable.",
             txid
         );
-        ensure!(
-            !schema
-                .unconfirmed_funding_transactions()
-                .get(&txid)
-                .unwrap_or_default()
-                .has_enough_confirmations(&config)?,
-            "{}",
-            txid
-        );
         Ok(())
     }
 
