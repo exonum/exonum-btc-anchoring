@@ -21,6 +21,7 @@ sandbox_tests/Cargo.lock
 __pycache__/
 *.py[cod]
 *$py.class
+.mypy_cache
 
 # other
 *.orig

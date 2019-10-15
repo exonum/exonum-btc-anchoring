@@ -212,7 +212,8 @@ impl Transactions for BtcAnchoringService {
             .ok_or(Error::UnauthorizedAnchoringKey)?;
 
         // Check that the given transaction is suitable.
-        arg.transaction
+        let (_, txout) = arg
+            .transaction
             .find_out(&actual_config.anchoring_out_script())
             .ok_or(Error::UnsuitableFundingTx)?;
 
@@ -232,6 +233,10 @@ impl Transactions for BtcAnchoringService {
         // Set this transaction as unspent funding if there are enough confirmations
         // otherwise just write confirmation to the schema.
         if confirmations.has_enough_confirmations(&actual_config)? {
+            info!("====== ADD_FUNDS ======");
+            info!("txid: {}", arg.transaction.id().to_string());
+            info!("balance: {}", txout.value);
+
             schema.set_funding_transaction(arg.transaction);
         } else {
             schema

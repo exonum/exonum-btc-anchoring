@@ -286,9 +286,12 @@ impl RunCommand {
 
                     log::warn!(
                         "Initial funding transaction is absent, you should send some \
-                         Bitcoins to the address {}, And then confirm this transaction \
-                         using the private `add-funds` API method.",
+                         Bitcoins to the address {}",
                         address
+                    );
+                    log::warn!(
+                        "And then confirm this transaction using the private \
+                         `add-funds` API method."
                     )
                 }
                 // Stop execution if an internal error occurred.
