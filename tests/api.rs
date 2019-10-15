@@ -337,13 +337,7 @@ fn anchoring_proposal_err_without_initial_funds() {
 
     let api = anchoring_testkit.inner.api();
     let state = api.anchoring_proposal().unwrap();
-    assert_eq!(
-        state,
-        AnchoringProposalState::InsufficientFunds {
-            total_fee: 1140,
-            balance: 0
-        }
-    );
+    assert_eq!(state, AnchoringProposalState::NoInitialFunds);
 }
 
 #[test]

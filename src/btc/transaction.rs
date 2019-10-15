@@ -197,6 +197,12 @@ impl BtcAnchoringTransactionBuilder {
             }
             (input, input_transactions, balance)
         };
+
+        // Check that at least one input exists.
+        if input_transactions.is_empty() {
+            return Err(BuilderError::NoInputs);
+        }
+
         // Compute payload script.
         let (block_height, block_hash) = self.payload.take().expect("Payload isn't set.");
         let payload_script = PayloadBuilder::new()

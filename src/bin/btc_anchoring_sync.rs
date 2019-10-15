@@ -274,6 +274,23 @@ impl RunCommand {
                     total_fee,
                     balance
                 ),
+                // For the work of anchoring you need to  replenish anchoring wallet.
+                Err(ChainUpdateError::NoInitialFunds) => {
+                    let address = match chain_updater.anchoring_config() {
+                        Ok(config) => config.anchoring_address(),
+                        Err(e) => {
+                            log::error!("An error in the anchoring API client occurred. {}", e);
+                            continue;
+                        }
+                    };
+
+                    log::warn!(
+                        "Initial funding transaction is absent, you should send some \
+                         Bitcoins to the address {}, And then confirm this transaction \
+                         using the private `add-funds` API method.",
+                        address
+                    )
+                }
                 // Stop execution if an internal error occurred.
                 Err(ChainUpdateError::Internal(e)) => return Err(e),
             }

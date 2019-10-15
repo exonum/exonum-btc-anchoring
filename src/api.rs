@@ -72,6 +72,8 @@ pub enum AnchoringProposalState {
         /// Available balance.
         balance: u64,
     },
+    /// Initial funding transaction is absent.
+    NoInitialFunds,
 }
 
 impl AnchoringProposalState {
@@ -87,6 +89,7 @@ impl AnchoringProposalState {
             Some(Err(btc::BuilderError::InsufficientFunds { total_fee, balance })) => {
                 Ok(AnchoringProposalState::InsufficientFunds { total_fee, balance })
             }
+            Some(Err(btc::BuilderError::NoInputs)) => Ok(AnchoringProposalState::NoInitialFunds),
             Some(Err(e)) => Err(api::Error::InternalError(e.into())),
         }
     }

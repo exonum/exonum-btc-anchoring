@@ -227,7 +227,7 @@ fn chain_updater_normal() {
 }
 
 #[test]
-fn chain_updater_insufficient_funds() {
+fn chain_updater_no_initial_funds() {
     let anchoring_interval = 5;
     let mut testkit = AnchoringTestKit::new(1, anchoring_interval);
     // Commit several blocks.
@@ -240,9 +240,34 @@ fn chain_updater_insufficient_funds() {
         .unwrap_err();
 
     match e {
+        ChainUpdateError::NoInitialFunds => {}
+        e => panic!("Unexpected error occurred: {:?}", e),
+    }
+}
+
+#[test]
+fn chain_updater_insufficient_funds() {
+    let anchoring_interval = 5;
+    let mut testkit = AnchoringTestKit::new(1, anchoring_interval);
+
+    // Add an initial funding transaction to enable anchoring.
+    testkit
+        .inner
+        .create_block_with_transactions(testkit.create_funding_confirmation_txs(200).0);
+
+    // Commit several blocks.
+    testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval));
+    // Try to perform anchoring chain update.
+    let e = AnchoringChainUpdateTask::new(testkit.anchoring_keypairs(), testkit.inner.api())
+        .process()
+        .unwrap_err();
+
+    match e {
         ChainUpdateError::InsufficientFunds { balance, total_fee } => {
-            assert_eq!(balance, 0);
-            assert_eq!(total_fee, 1140);
+            assert_eq!(balance, 200);
+            assert_eq!(total_fee, 1530);
         }
         e => panic!("Unexpected error occurred: {:?}", e),
     }
