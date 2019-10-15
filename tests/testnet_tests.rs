@@ -285,22 +285,27 @@ fn insufficient_funds() {
         let snapshot = anchoring_testkit.inner.snapshot();
         let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
         let proposal = schema.actual_proposed_anchoring_transaction().unwrap();
-        assert_eq!(
-            proposal,
-            Err(BuilderError::InsufficientFunds {
-                total_fee: 1140,
-                balance: 0
-            })
-        );
+        assert_eq!(proposal, Err(BuilderError::NoInputs));
     }
 
     // Replenish the anchoring wallet by the given amount of satoshis.
     anchoring_testkit
         .inner
-        .create_block_with_transactions(anchoring_testkit.create_funding_confirmation_txs(2000).0);
-    anchoring_testkit
-        .anchoring_transaction_proposal()
-        .expect("Anchoring proposal should be correct.");
+        .create_block_with_transactions(anchoring_testkit.create_funding_confirmation_txs(20).0);
+
+    // Check that we have not enough satoshis to create proposal.
+    {
+        let snapshot = anchoring_testkit.inner.snapshot();
+        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+        let proposal = schema.actual_proposed_anchoring_transaction().unwrap();
+        assert_eq!(
+            proposal,
+            Err(BuilderError::InsufficientFunds {
+                balance: 20,
+                total_fee: 1530
+            })
+        );
+    }
 }
 
 #[test]
