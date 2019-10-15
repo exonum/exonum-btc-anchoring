@@ -147,7 +147,7 @@ pub struct AnchoringTestKit {
 
 impl AnchoringTestKit {
     /// Creates an anchoring testkit instance for the specified number of anchoring nodes,
-    /// total funds in satoshis and interval between anchors.
+    /// and interval between anchors.
     pub fn new(nodes_num: u16, anchoring_interval: u64) -> Self {
         let validator_keys = (0..nodes_num)
             .map(|_| gen_validator_keys())

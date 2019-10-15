@@ -80,9 +80,8 @@ impl Config {
 
     /// Returns the corresponding redeem script.
     pub fn redeem_script(&self) -> RedeemScript {
-        let quorum = exonum::helpers::byzantine_quorum(self.anchoring_keys.len());
         RedeemScriptBuilder::with_public_keys(self.anchoring_keys.iter().map(|x| x.bitcoin_key.0))
-            .quorum(quorum)
+            .quorum(self.byzantine_quorum())
             .to_script()
             .unwrap()
     }
@@ -101,6 +100,11 @@ impl Config {
     pub fn following_anchoring_height(&self, current_height: Height) -> Height {
         Height(self.previous_anchoring_height(current_height).0 + self.anchoring_interval)
     }
+
+    /// Returns sufficient number of votes for the given anchoring nodes number.
+    pub fn byzantine_quorum(&self) -> usize {
+        exonum::helpers::byzantine_quorum(self.anchoring_keys.len())
+    }
 }
 
 impl ValidateInput for Config {
@@ -115,9 +119,8 @@ impl ValidateInput for Config {
         // TODO Validate other parameters. [ECR-3633]
 
         // Verify that the redeem script is suitable.
-        let quorum = exonum::helpers::byzantine_quorum(self.anchoring_keys.len());
         RedeemScriptBuilder::with_public_keys(self.anchoring_keys.iter().map(|x| x.bitcoin_key.0))
-            .quorum(quorum)
+            .quorum(self.byzantine_quorum())
             .to_script()?;
         Ok(())
     }

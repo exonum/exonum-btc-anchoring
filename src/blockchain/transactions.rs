@@ -80,8 +80,7 @@ impl TransactionConfirmations {
     /// Checks if there are enough confirmations to mark transaction as funding.
     pub(crate) fn has_enough_confirmations(&self, config: &Config) -> Result<bool, ExecutionError> {
         let confirmations = self.0.len();
-        let quorum = exonum::helpers::byzantine_quorum(config.anchoring_keys.len());
-        Ok(confirmations == quorum)
+        Ok(confirmations == config.byzantine_quorum())
     }
 }
 
