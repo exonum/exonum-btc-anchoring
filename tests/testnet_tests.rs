@@ -518,4 +518,10 @@ fn funding_tx_override() {
     );
 }
 
+// TODO Test for Error::UnauthorizedAnchoringKey
+
+// TODO Test for Error::NoSuchInput
+
+// TODO Test for Error::InputVerificationFailed
+
 // TODO Implement tests for anchoring recovery [ECR-3581]
