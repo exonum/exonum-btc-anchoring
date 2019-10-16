@@ -55,7 +55,9 @@ impl Service for BtcAnchoringService {
             .and_then(ValidateInput::into_validated)
             .map_err(DispatcherError::malformed_arguments)?;
 
-        BtcAnchoringSchema::new(instance.name, fork).set_actual_config(config);
+        BtcAnchoringSchema::new(instance.name, fork)
+            .actual_config_entry()
+            .set(config);
         Ok(())
     }
 
@@ -98,7 +100,7 @@ impl Configure for BtcAnchoringService {
         if schema.actual_config().anchoring_address() == params.anchoring_address() {
             // There are no changes in the anchoring address, so we just apply the config
             // immediately.
-            schema.set_actual_config(params);
+            schema.actual_config_entry().set(params);
         } else {
             // Set the config as the next one, which will become an actual after the transition
             // of the anchoring chain to the following address.

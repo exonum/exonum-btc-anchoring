@@ -36,7 +36,6 @@ impl Default for Config {
             anchoring_keys: vec![],
             anchoring_interval: 5_000,
             transaction_fee: 10,
-            funding_transaction: None,
         }
     }
 }
@@ -64,10 +63,10 @@ impl Config {
     }
 
     /// Tries to find bitcoin public key corresponding with the given service key.
-    pub fn find_bitcoin_key(&self, service_key: &PublicKey) -> Option<(usize, btc::PublicKey)> {
+    pub fn find_bitcoin_key(&self, service_key: &PublicKey) -> Option<(u16, btc::PublicKey)> {
         self.anchoring_keys.iter().enumerate().find_map(|(n, x)| {
             if &x.service_key == service_key {
-                Some((n, x.bitcoin_key))
+                Some((n as u16, x.bitcoin_key))
             } else {
                 None
             }
@@ -81,9 +80,8 @@ impl Config {
 
     /// Returns the corresponding redeem script.
     pub fn redeem_script(&self) -> RedeemScript {
-        let quorum = exonum::helpers::byzantine_quorum(self.anchoring_keys.len());
         RedeemScriptBuilder::with_public_keys(self.anchoring_keys.iter().map(|x| x.bitcoin_key.0))
-            .quorum(quorum)
+            .quorum(self.byzantine_quorum())
             .to_script()
             .unwrap()
     }
@@ -102,6 +100,11 @@ impl Config {
     pub fn following_anchoring_height(&self, current_height: Height) -> Height {
         Height(self.previous_anchoring_height(current_height).0 + self.anchoring_interval)
     }
+
+    /// Returns sufficient number of votes for the given anchoring nodes number.
+    pub fn byzantine_quorum(&self) -> usize {
+        exonum::helpers::byzantine_quorum(self.anchoring_keys.len())
+    }
 }
 
 impl ValidateInput for Config {
@@ -116,18 +119,9 @@ impl ValidateInput for Config {
         // TODO Validate other parameters. [ECR-3633]
 
         // Verify that the redeem script is suitable.
-        let quorum = exonum::helpers::byzantine_quorum(self.anchoring_keys.len());
-        let redeem_script = RedeemScriptBuilder::with_public_keys(
-            self.anchoring_keys.iter().map(|x| x.bitcoin_key.0),
-        )
-        .quorum(quorum)
-        .to_script()?;
-
-        // TODO remove funding transaction from the config. [ECR-3603]
-        if let Some(tx) = self.funding_transaction.as_ref() {
-            tx.find_out(&redeem_script.as_ref().to_v0_p2wsh())
-                .ok_or_else(|| failure::format_err!("Funding transaction is unsuitable."))?;
-        }
+        RedeemScriptBuilder::with_public_keys(self.anchoring_keys.iter().map(|x| x.bitcoin_key.0))
+            .quorum(self.byzantine_quorum())
+            .to_script()?;
         Ok(())
     }
 }

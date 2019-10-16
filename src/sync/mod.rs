@@ -49,6 +49,8 @@ pub enum ChainUpdateError<C: Display> {
         /// Available balance.
         balance: u64,
     },
+    /// Initial funding transaction is absent.
+    NoInitialFunds,
     /// Internal error.
     Internal(failure::Error),
 }
@@ -80,6 +82,11 @@ where
         }
     }
 
+    /// Returns an actual anchoring configuration.
+    pub fn anchoring_config(&self) -> Result<Config, T::Error> {
+        self.api_client.config()
+    }
+
     /// Performs one attempt to sign an anchoring proposal, if any.
     pub fn process(&self) -> Result<(), ChainUpdateError<T::Error>> {
         log::trace!("Perform an anchoring chain update");
@@ -94,12 +101,13 @@ where
                 transaction,
                 inputs,
             } => {
-                let config = self.api_client.config().map_err(ChainUpdateError::Client)?;
+                let config = self.anchoring_config().map_err(ChainUpdateError::Client)?;
                 self.handle_proposal(config, transaction, inputs)
             }
             AnchoringProposalState::InsufficientFunds { balance, total_fee } => {
                 Err(ChainUpdateError::InsufficientFunds { balance, total_fee })
             }
+            AnchoringProposalState::NoInitialFunds => Err(ChainUpdateError::NoInitialFunds),
         }
     }
 

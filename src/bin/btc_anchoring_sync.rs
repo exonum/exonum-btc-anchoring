@@ -104,6 +104,13 @@ impl PrivateApi for ApiClient {
         Box::new(self.post("sign-input", &sign_input).into_future())
     }
 
+    fn add_funds(
+        &self,
+        transaction: btc::Transaction,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
+        Box::new(self.post("add-funds", &transaction).into_future())
+    }
+
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
         self.get("anchoring-proposal")
     }
@@ -267,6 +274,26 @@ impl RunCommand {
                     total_fee,
                     balance
                 ),
+                // For the work of anchoring you need to replenish anchoring wallet.
+                Err(ChainUpdateError::NoInitialFunds) => {
+                    let address = match chain_updater.anchoring_config() {
+                        Ok(config) => config.anchoring_address(),
+                        Err(e) => {
+                            log::error!("An error in the anchoring API client occurred. {}", e);
+                            continue;
+                        }
+                    };
+
+                    log::warn!(
+                        "Initial funding transaction is absent, you should send some \
+                         Bitcoins to the address {}",
+                        address
+                    );
+                    log::warn!(
+                        "And then confirm this transaction using the private \
+                         `add-funds` API method."
+                    )
+                }
                 // Stop execution if an internal error occurred.
                 Err(ChainUpdateError::Internal(e)) => return Err(e),
             }

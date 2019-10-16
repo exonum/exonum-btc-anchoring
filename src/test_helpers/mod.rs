@@ -28,8 +28,8 @@ use exonum::{
 };
 use exonum_merkledb::{MapProof, ObjectHash};
 use exonum_testkit::{
-    simple_supervisor::{ConfigPropose, SimpleSupervisor},
-    ApiKind, InstanceCollection, TestKit, TestKitApi, TestKitBuilder, TestNode,
+    simple_supervisor::SimpleSupervisor, ApiKind, InstanceCollection, TestKit, TestKitApi,
+    TestKitBuilder, TestNode,
 };
 use failure::{ensure, format_err};
 use futures::{Future, IntoFuture};
@@ -42,7 +42,7 @@ use crate::{
         AnchoringChainLength, AnchoringProposalState, FindTransactionQuery, IndexQuery, PrivateApi,
         PublicApi, TransactionProof,
     },
-    blockchain::{transactions::SignInput, BtcAnchoringSchema},
+    blockchain::{AddFunds, BtcAnchoringSchema, SignInput},
     btc,
     config::Config,
     proto::AnchoringKeys,
@@ -55,7 +55,7 @@ pub const ANCHORING_INSTANCE_ID: InstanceId = 14;
 pub const ANCHORING_INSTANCE_NAME: &str = "btc_anchoring";
 
 /// Generates a fake funding transaction.
-pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -> btc::Transaction {
+pub fn create_fake_funding_transaction(address: &btc::Address, value: u64) -> btc::Transaction {
     // Generate random transaction id.
     let mut rng = thread_rng();
     let mut data = [0_u8; 32];
@@ -75,7 +75,7 @@ pub fn create_fake_funding_transaction(address: &bitcoin::Address, value: u64) -
         }],
         output: vec![bitcoin::TxOut {
             value,
-            script_pubkey: address.script_pubkey(),
+            script_pubkey: address.0.script_pubkey(),
         }],
     }
     .into()
@@ -147,8 +147,8 @@ pub struct AnchoringTestKit {
 
 impl AnchoringTestKit {
     /// Creates an anchoring testkit instance for the specified number of anchoring nodes,
-    /// total funds in satoshis and interval between anchors.
-    pub fn new(nodes_num: u16, total_funds: u64, anchoring_interval: u64) -> Self {
+    /// and interval between anchors.
+    pub fn new(nodes_num: u16, anchoring_interval: u64) -> Self {
         let validator_keys = (0..nodes_num)
             .map(|_| gen_validator_keys())
             .collect::<Vec<_>>();
@@ -156,16 +156,12 @@ impl AnchoringTestKit {
         let network = Network::Testnet;
         let anchoring_nodes = AnchoringNodes::from_keys(Network::Testnet, &validator_keys);
 
-        let mut anchoring_config = Config {
+        let anchoring_config = Config {
             network,
             anchoring_keys: anchoring_nodes.anchoring_keys(),
             anchoring_interval,
             ..Config::default()
         };
-        anchoring_config.funding_transaction = Some(create_fake_funding_transaction(
-            anchoring_config.anchoring_address().as_ref(),
-            total_funds,
-        ));
 
         let inner = TestKitBuilder::validator()
             .with_keys(validator_keys)
@@ -264,7 +260,7 @@ impl AnchoringTestKit {
 
         for anchoring_keys in self.actual_anchoring_config().anchoring_keys {
             let node = self
-                .find_node_by(|node| node.service_keypair().0 == anchoring_keys.service_key)
+                .find_node_by_service_key(anchoring_keys.service_key)
                 .unwrap();
 
             signatures.push(self.create_signature_tx_for_node(node).unwrap());
@@ -279,7 +275,7 @@ impl AnchoringTestKit {
         satoshis: u64,
     ) -> (Vec<Verified<AnyTx>>, btc::Transaction) {
         let funding_transaction = create_fake_funding_transaction(
-            self.actual_anchoring_config().anchoring_address().as_ref(),
+            &self.actual_anchoring_config().anchoring_address(),
             satoshis,
         );
         (
@@ -291,13 +287,23 @@ impl AnchoringTestKit {
     /// Creates the confirmation transactions with a specified funding transaction.
     pub fn create_funding_confirmation_txs_with(
         &self,
-        tx: btc::Transaction,
+        transaction: btc::Transaction,
     ) -> Vec<Verified<AnyTx>> {
-        let mut new_cfg = self.actual_anchoring_config();
-        new_cfg.funding_transaction = Some(tx);
-        vec![ConfigPropose::actual_from(self.inner.height().next())
-            .service_config(ANCHORING_INSTANCE_ID, new_cfg)
-            .into_tx()]
+        let add_funds = AddFunds { transaction };
+        self.actual_anchoring_config()
+            .anchoring_keys
+            .into_iter()
+            .map(|anchoring_keys| {
+                let node_keypair = self
+                    .find_node_by_service_key(anchoring_keys.service_key)
+                    .unwrap()
+                    .service_keypair();
+
+                add_funds
+                    .clone()
+                    .sign(ANCHORING_INSTANCE_ID, node_keypair.0, &node_keypair.1)
+            })
+            .collect()
     }
 
     /// Adds a new auditor node to the testkit network and create Bitcoin keypair for it.
@@ -352,19 +358,29 @@ impl AnchoringTestKit {
                     None
                 }
             })
-            .and_then(|service_key| {
-                self.find_node_by(|node| node.service_keypair().0 == service_key)
-            })
+            .and_then(|service_key| self.find_node_by_service_key(service_key))
     }
 
-    fn find_node_by(&self, predicate: impl FnMut(&&TestNode) -> bool) -> Option<&TestNode> {
-        self.inner.network().nodes().iter().find(predicate)
+    fn find_node_by_service_key(&self, service_key: PublicKey) -> Option<&TestNode> {
+        self.inner
+            .network()
+            .nodes()
+            .iter()
+            .find(|node| node.service_keypair().0 == service_key)
     }
 }
 
 impl Default for AnchoringTestKit {
+    /// Creates anchoring testkit instance with the unspent funding transaction.
+    ///
+    /// To add funds, this instance commit a block with transactions, so in addition to the
+    /// genesis block this instance contains one more.
     fn default() -> Self {
-        Self::new(4, 70000, 5)
+        let mut testkit = Self::new(4, 5);
+        testkit
+            .inner
+            .create_block_with_transactions(testkit.create_funding_confirmation_txs(700_000).0);
+        testkit
     }
 }
 
@@ -404,6 +420,18 @@ impl PrivateApi for TestKitApi {
             self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
                 .query(&sign_input)
                 .post("sign-input")
+                .into_future(),
+        )
+    }
+
+    fn add_funds(
+        &self,
+        transaction: btc::Transaction,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
+        Box::new(
+            self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+                .query(&transaction)
+                .post("add-funds")
                 .into_future(),
         )
     }

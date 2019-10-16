@@ -197,6 +197,12 @@ impl BtcAnchoringTransactionBuilder {
             }
             (input, input_transactions, balance)
         };
+
+        // Check that at least one input exists.
+        if input_transactions.is_empty() {
+            return Err(BuilderError::NoInputs);
+        }
+
         // Compute payload script.
         let (block_height, block_hash) = self.payload.take().expect("Payload isn't set.");
         let payload_script = PayloadBuilder::new()
@@ -260,7 +266,6 @@ mod tests {
     use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
     use btc_transaction_utils::multisig::RedeemScriptBuilder;
     use hex::FromHex;
-    use matches::assert_matches;
     use proptest::proptest;
 
     use std::borrow::Cow;
@@ -574,7 +579,7 @@ mod tests {
 
         builder.additional_funds(funding_tx).unwrap();
 
-        assert_matches!(
+        assert_eq!(
             builder.prev_tx(prev_tx).unwrap_err(),
             BuilderError::UnsuitableOutput
         );
@@ -605,7 +610,7 @@ mod tests {
             .unwrap();
 
         let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
-        assert_matches!(
+        assert_eq!(
             builder.additional_funds(funding_tx).unwrap_err(),
             BuilderError::UnsuitableFundingTx
         );

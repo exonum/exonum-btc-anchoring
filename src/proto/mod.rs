@@ -14,6 +14,8 @@
 
 //! Module of the rust-protobuf generated files.
 
+pub use binary_map::BinaryMap;
+
 use bitcoin;
 use btc_transaction_utils;
 use exonum::{
@@ -30,6 +32,8 @@ use serde_derive::{Deserialize, Serialize};
 use std::borrow::Cow;
 
 use crate::btc;
+
+mod binary_map;
 
 include!(concat!(env!("OUT_DIR"), "/protobuf_mod.rs"));
 
@@ -120,6 +124,14 @@ pub struct SignInput {
     pub input_signature: btc::InputSignature,
 }
 
+/// Exonum message with the unspent funding transaction.
+#[derive(Debug, Clone, PartialEq, ProtobufConvert)]
+#[exonum(pb = "self::service::AddFunds")]
+pub struct AddFunds {
+    /// Transaction content.
+    pub transaction: btc::Transaction,
+}
+
 /// Consensus parameters in the BTC anchoring.
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub struct Config {
@@ -131,9 +143,6 @@ pub struct Config {
     pub anchoring_interval: u64,
     /// Fee per byte in satoshis.
     pub transaction_fee: u64,
-    // TODO remove funding transaction from the config. [ECR-3603]
-    /// Funding transaction.
-    pub funding_transaction: Option<btc::Transaction>,
 }
 
 impl ProtobufConvert for Config {
@@ -146,28 +155,15 @@ impl ProtobufConvert for Config {
         proto_struct.set_anchoring_keys(self.anchoring_keys.to_pb().into());
         proto_struct.set_anchoring_interval(self.anchoring_interval.to_pb());
         proto_struct.set_transaction_fee(self.transaction_fee.to_pb());
-        if let Some(tx) = self.funding_transaction.as_ref() {
-            proto_struct.set_funding_transaction(tx.to_pb())
-        }
-
         proto_struct
     }
 
     fn from_pb(mut pb: Self::ProtoStruct) -> Result<Self, failure::Error> {
         let network = bitcoin::Network::from_magic(pb.get_network())
             .ok_or_else(|| failure::format_err!("Unknown Bitcoin network"))?;
-        let funding_transaction = {
-            let tx = pb.get_funding_transaction().to_owned();
-            if tx.get_data().is_empty() {
-                None
-            } else {
-                Some(btc::Transaction::from_pb(tx)?)
-            }
-        };
 
         Ok(Self {
             network,
-            funding_transaction,
             anchoring_keys: ProtobufConvert::from_pb(pb.take_anchoring_keys().into_vec())?,
             anchoring_interval: ProtobufConvert::from_pb(pb.get_anchoring_interval())?,
             transaction_fee: ProtobufConvert::from_pb(pb.get_transaction_fee())?,

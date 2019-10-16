@@ -14,7 +14,77 @@
 
 //! Additional data types for the BTC anchoring information schema.
 
-pub use self::{input_signatures::InputSignatures, tx_input_id::TxInputId};
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use exonum::crypto::{self, Hash};
+use exonum_merkledb::{BinaryKey, ObjectHash};
 
-mod input_signatures;
-mod tx_input_id;
+use crate::btc::Sha256d;
+
+use std::io::{Cursor, Read, Write};
+
+/// Unique transaction input identifier composed of a transaction identifier
+/// and an input index.
+#[derive(Debug, Copy, Clone, PartialEq)]
+pub struct TxInputId {
+    /// Transaction identifier.
+    pub txid: Sha256d,
+    /// Transaction input index.
+    pub input: u32,
+}
+
+impl TxInputId {
+    /// Creates a new identifier.
+    pub fn new(txid: Sha256d, input: u32) -> Self {
+        Self { txid, input }
+    }
+}
+
+impl BinaryKey for TxInputId {
+    fn size(&self) -> usize {
+        self.txid.size() + self.input.size()
+    }
+
+    fn read(inp: &[u8]) -> Self {
+        let mut reader = Cursor::new(inp);
+
+        let txid = {
+            let mut txid = [0_u8; 32];
+            let _ = reader.read(&mut txid).unwrap();
+            Sha256d::new(txid)
+        };
+        let input = reader.read_u32::<LittleEndian>().unwrap();
+        Self { txid, input }
+    }
+
+    fn write(&self, out: &mut [u8]) -> usize {
+        let mut writer = Cursor::new(out);
+        let _ = writer.write(&self.txid.0[..]).unwrap();
+        writer.write_u32::<LittleEndian>(self.input).unwrap();
+        self.size()
+    }
+}
+
+impl ObjectHash for TxInputId {
+    fn object_hash(&self) -> Hash {
+        let mut bytes = [0_u8; 36];
+        self.write(&mut bytes);
+        crypto::hash(bytes.as_ref())
+    }
+}
+
+#[test]
+fn test_tx_input_id_binary_key() {
+    let txout = TxInputId {
+        txid: Sha256d::from_slice(crypto::hash(&[1, 2, 3]).as_ref()).unwrap(),
+        input: 2,
+    };
+
+    let mut buf = vec![0_u8; txout.size()];
+    txout.write(&mut buf);
+
+    let txout2 = TxInputId::read(&buf);
+    assert_eq!(txout, txout2);
+
+    let buf_hash = crypto::hash(&buf);
+    assert_eq!(txout2.object_hash(), buf_hash);
+}

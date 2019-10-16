@@ -14,7 +14,6 @@
 
 //! Information schema for the btc anchoring service.
 
-use btc_transaction_utils::multisig::RedeemScript;
 use exonum::{
     blockchain::Schema,
     crypto::Hash,
@@ -24,11 +23,17 @@ use exonum::{
 use log::{error, trace};
 
 use crate::{
-    btc::{BtcAnchoringTransactionBuilder, BuilderError, Sha256d, Transaction},
+    btc::{self, BtcAnchoringTransactionBuilder, BuilderError, Sha256d, Transaction},
     config::Config,
+    proto::BinaryMap,
 };
 
 use super::{data_layout::*, BtcAnchoringState};
+
+/// A set of signatures for a transaction input ordered by the anchoring node identifiers.
+pub type InputSignatures = BinaryMap<u16, btc::InputSignature>;
+/// A set of funding transaction confirmations.
+pub type TransactionConfirmations = BinaryMap<btc::PublicKey, ()>;
 
 /// Information schema for `exonum-btc-anchoring`.
 #[derive(Debug)]
@@ -81,6 +86,16 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
         Entry::new(self.index_name("following_config"), self.access.clone())
     }
 
+    /// Returns a table that contains confirmations for the corresponding funding transaction.
+    pub fn unconfirmed_funding_transactions(
+        &self,
+    ) -> ProofMapIndex<T, Sha256d, TransactionConfirmations> {
+        ProofMapIndex::new(
+            self.index_name("unconfirmed_funding_transactions"),
+            self.access.clone(),
+        )
+    }
+
     /// Returns an entry that may contain an unspent funding transaction for the
     /// actual configuration.
     pub fn unspent_funding_transaction_entry(&self) -> Entry<T, Transaction> {
@@ -96,6 +111,7 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
             self.anchoring_transactions_chain().object_hash(),
             self.spent_funding_transactions().object_hash(),
             self.transaction_signatures().object_hash(),
+            self.unconfirmed_funding_transactions().object_hash(),
         ]
     }
 
@@ -113,14 +129,8 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
     }
 
     /// Returns the list of signatures for the given transaction input.
-    pub fn input_signatures(
-        &self,
-        input: &TxInputId,
-        redeem_script: &RedeemScript,
-    ) -> InputSignatures {
-        self.transaction_signatures()
-            .get(input)
-            .unwrap_or_else(|| InputSignatures::new(redeem_script.content().public_keys.len()))
+    pub fn input_signatures(&self, input: &TxInputId) -> InputSignatures {
+        self.transaction_signatures().get(input).unwrap_or_default()
     }
 
     /// Returns an actual state of anchoring.
@@ -255,21 +265,23 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
             );
             // If preconditions are correct, just reassign the config as an actual.
             self.following_config_entry().remove();
-            self.set_actual_config(config);
+            self.actual_config_entry().set(config);
         }
         self.anchoring_transactions_chain().push(tx);
     }
 
-    /// Sets a new anchoring configuration parameters.
-    pub fn set_actual_config(&self, config: Config) {
-        // TODO remove this special case. [ECR-3603]
-        if let Some(tx) = config
-            .funding_transaction
-            .clone()
-            .filter(|tx| !self.spent_funding_transactions().contains(&tx.id()))
-        {
-            self.unspent_funding_transaction_entry().set(tx);
-        }
-        self.actual_config_entry().set(config);
+    /// Sets the given transaction as the current unspent funding transaction.
+    pub fn set_funding_transaction(&self, transaction: btc::Transaction) {
+        debug_assert!(
+            !self
+                .spent_funding_transactions()
+                .contains(&transaction.id()),
+            "Funding transaction must be unspent."
+        );
+        // Remove confirmations for this transaction to avoid attack of re-setting
+        // this transaction as funding.
+        self.unconfirmed_funding_transactions()
+            .put(&transaction.id(), TransactionConfirmations::default());
+        self.unspent_funding_transaction_entry().set(transaction);
     }
 }

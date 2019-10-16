@@ -25,6 +25,7 @@ use bitcoin::{network::constants::Network, util::address};
 use bitcoin_hashes::sha256d;
 use btc_transaction_utils;
 use derive_more::{Display, From, FromStr, Into};
+use exonum_merkledb::{BinaryValue, ObjectHash};
 use hex::{self, FromHex, ToHex};
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -52,7 +53,9 @@ pub struct Address(pub address::Address);
 pub struct InputSignature(pub btc_transaction_utils::InputSignature);
 
 /// Bitcoin SHA256d hash.
-#[derive(Debug, Copy, Clone, PartialEq, Into, From, Serialize, Deserialize, Display)]
+#[derive(
+    Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Into, From, Serialize, Deserialize, Display,
+)]
 pub struct Sha256d(pub sha256d::Hash);
 
 impl ToString for PrivateKey {
@@ -99,6 +102,26 @@ impl ToHex for PublicKey {
     }
 }
 
+impl BinaryValue for PublicKey {
+    fn to_bytes(&self) -> Vec<u8> {
+        let mut bytes = Vec::default();
+        self.0.write_into(&mut bytes);
+        bytes
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
+        bitcoin::PublicKey::from_slice(bytes.as_ref())
+            .map(Self)
+            .map_err(From::from)
+    }
+}
+
+impl ObjectHash for PublicKey {
+    fn object_hash(&self) -> exonum::crypto::Hash {
+        exonum::crypto::hash(&self.to_bytes())
+    }
+}
+
 impl AsRef<bitcoin::Address> for Address {
     fn as_ref(&self) -> &bitcoin::Address {
         &self.0
@@ -134,6 +157,24 @@ impl AsRef<btc_transaction_utils::InputSignature> for InputSignature {
 impl From<InputSignature> for Vec<u8> {
     fn from(f: InputSignature) -> Self {
         f.0.into()
+    }
+}
+
+impl BinaryValue for InputSignature {
+    fn to_bytes(&self) -> Vec<u8> {
+        self.0.clone().into()
+    }
+
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
+        btc_transaction_utils::InputSignature::from_bytes(bytes.into())
+            .map(Self)
+            .map_err(From::from)
+    }
+}
+
+impl ObjectHash for InputSignature {
+    fn object_hash(&self) -> exonum::crypto::Hash {
+        exonum::crypto::hash(&self.to_bytes())
     }
 }
 

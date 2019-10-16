@@ -19,7 +19,7 @@ use exonum::{
 };
 use exonum_btc_anchoring::{
     api::{AnchoringChainLength, AnchoringProposalState, PrivateApi},
-    blockchain::{BtcAnchoringSchema, SignInput},
+    blockchain::{AddFunds, BtcAnchoringSchema, SignInput},
     btc,
     config::Config,
     sync::{
@@ -160,6 +160,20 @@ impl PrivateApi for FakePrivateApi {
         Box::new(Ok(hash).into_future())
     }
 
+    fn add_funds(
+        &self,
+        transaction: btc::Transaction,
+    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
+        let signed_tx = AddFunds { transaction }.sign(
+            ANCHORING_INSTANCE_ID,
+            self.service_keypair.0,
+            &self.service_keypair.1,
+        );
+        let hash = signed_tx.object_hash();
+        self.inner.send(signed_tx);
+        Box::new(Ok(hash).into_future())
+    }
+
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
         self.inner.anchoring_proposal()
     }
@@ -187,8 +201,8 @@ fn anchoring_transaction_payload(testkit: &AnchoringTestKit, index: u64) -> Opti
 
 #[test]
 fn chain_updater_normal() {
-    let anchoring_interval = 5;
-    let mut testkit = AnchoringTestKit::new(4, 100_000, anchoring_interval);
+    let mut testkit = AnchoringTestKit::default();
+    let anchoring_interval = testkit.actual_anchoring_config().anchoring_interval;
     // Commit several blocks.
     testkit
         .inner
@@ -213,9 +227,34 @@ fn chain_updater_normal() {
 }
 
 #[test]
+fn chain_updater_no_initial_funds() {
+    let anchoring_interval = 5;
+    let mut testkit = AnchoringTestKit::new(1, anchoring_interval);
+    // Commit several blocks.
+    testkit
+        .inner
+        .create_blocks_until(Height(anchoring_interval));
+    // Try to perform anchoring chain update.
+    let e = AnchoringChainUpdateTask::new(testkit.anchoring_keypairs(), testkit.inner.api())
+        .process()
+        .unwrap_err();
+
+    match e {
+        ChainUpdateError::NoInitialFunds => {}
+        e => panic!("Unexpected error occurred: {:?}", e),
+    }
+}
+
+#[test]
 fn chain_updater_insufficient_funds() {
     let anchoring_interval = 5;
-    let mut testkit = AnchoringTestKit::new(1, 10, anchoring_interval);
+    let mut testkit = AnchoringTestKit::new(1, anchoring_interval);
+
+    // Add an initial funding transaction to enable anchoring.
+    testkit
+        .inner
+        .create_block_with_transactions(testkit.create_funding_confirmation_txs(200).0);
+
     // Commit several blocks.
     testkit
         .inner
@@ -227,7 +266,7 @@ fn chain_updater_insufficient_funds() {
 
     match e {
         ChainUpdateError::InsufficientFunds { balance, total_fee } => {
-            assert_eq!(balance, 10);
+            assert_eq!(balance, 200);
             assert_eq!(total_fee, 1530);
         }
         e => panic!("Unexpected error occurred: {:?}", e),
@@ -236,8 +275,8 @@ fn chain_updater_insufficient_funds() {
 
 #[test]
 fn sync_with_bitcoin_normal() {
-    let anchoring_interval = 5;
-    let mut testkit = AnchoringTestKit::new(4, 100_000, anchoring_interval);
+    let mut testkit = AnchoringTestKit::default();
+    let anchoring_interval = testkit.actual_anchoring_config().anchoring_interval;
     // Create a several anchoring transactions
     for i in 0..2 {
         testkit

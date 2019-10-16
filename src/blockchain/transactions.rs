@@ -14,16 +14,21 @@
 
 //! BTC anchoring transactions.
 
-pub use crate::proto::SignInput;
+pub use crate::proto::{AddFunds, SignInput};
 
-use btc_transaction_utils::{p2wsh::InputSigner, InputSignature, TxInRef};
+use btc_transaction_utils::{p2wsh::InputSigner, TxInRef};
 use exonum::runtime::{rust::TransactionContext, Caller, DispatcherError, ExecutionError};
 use exonum_derive::exonum_service;
 use log::{info, trace};
 
-use crate::{btc, BtcAnchoringService};
+use crate::{btc, config::Config, BtcAnchoringService};
 
-use super::{data_layout::TxInputId, errors::Error, BtcAnchoringSchema};
+use super::{
+    data_layout::TxInputId,
+    errors::Error,
+    schema::{InputSignatures, TransactionConfirmations},
+    BtcAnchoringSchema,
+};
 
 impl SignInput {
     // Check that input signature is correct.
@@ -47,12 +52,49 @@ impl SignInput {
     }
 }
 
+impl InputSignatures {
+    /// Returns the number of elements in the map.
+    fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    /// Inserts a key-value pair into the map.
+    fn insert(&mut self, id: u16, signature: btc::InputSignature) {
+        self.0.insert(id, signature);
+    }
+
+    /// Gets an iterator over the values of the map, in order by key.
+    fn values<'a>(
+        &'a self,
+    ) -> impl IntoIterator<Item = btc_transaction_utils::InputSignature> + 'a {
+        self.0.values().map(|x| x.0.clone())
+    }
+}
+
+impl TransactionConfirmations {
+    /// Adds confirmation from the specified anchoring node.
+    fn confirm_by_node(&mut self, public_key: btc::PublicKey) {
+        self.0.insert(public_key, ());
+    }
+
+    /// Checks if there are enough confirmations to mark transaction as funding.
+    pub(crate) fn has_enough_confirmations(&self, config: &Config) -> Result<bool, ExecutionError> {
+        let confirmations = self.0.len();
+        Ok(confirmations == config.byzantine_quorum())
+    }
+}
+
 /// Exonum BTC anchoring transactions.
 #[exonum_service]
 pub trait Transactions {
     /// Signs a single input of the anchoring transaction proposal.
     fn sign_input(&self, context: TransactionContext, arg: SignInput)
         -> Result<(), ExecutionError>;
+    /// Add funds via suitable funding transaction.
+    ///
+    /// Bitcoin transaction should have output with value to the current anchoring address.
+    /// The transaction will be applied if 2/3+1 anchoring nodes sent it.
+    fn add_funds(&self, context: TransactionContext, arg: AddFunds) -> Result<(), ExecutionError>;
 }
 
 impl Transactions for BtcAnchoringService {
@@ -64,10 +106,10 @@ impl Transactions for BtcAnchoringService {
         let (author, fork) = context
             .verify_caller(Caller::author)
             .ok_or(DispatcherError::UnauthorizedCaller)?;
-
         let schema = BtcAnchoringSchema::new(context.instance.name, fork);
+
         // Check that author is authorized to sign inputs of the anchoring proposal.
-        let actual_config = schema.actual_state().actual_config().clone();
+        let actual_config = schema.actual_config();
         let (anchoring_node_id, public_key) = actual_config
             .find_bitcoin_key(&author)
             .ok_or(Error::UnauthorizedAnchoringKey)?;
@@ -102,18 +144,18 @@ impl Transactions for BtcAnchoringService {
 
         // Check that input signature is correct.
         let redeem_script = actual_config.redeem_script();
-        let input_signer = InputSigner::new(redeem_script.clone());
+        let quorum = redeem_script.content().quorum;
+        let input_signer = InputSigner::new(redeem_script);
         arg.verify_signature(&input_signer, &public_key, &proposal, &expected_inputs)?;
 
         // All preconditions are correct and we can use this signature.
         let input_id = TxInputId::new(proposal.id(), arg.input);
-        let mut input_signatures = schema.input_signatures(&input_id, &redeem_script);
-        let quorum = redeem_script.content().quorum;
+        let mut input_signatures = schema.input_signatures(&input_id);
         let mut input_signature_len = input_signatures.len();
         // Check that we have not reached the quorum yet, otherwise we should not do anything.
         if input_signature_len < quorum {
             // Add signature to schema.
-            input_signatures.insert(anchoring_node_id, arg.input_signature.clone().into());
+            input_signatures.insert(anchoring_node_id, arg.input_signature.clone());
             schema
                 .transaction_signatures()
                 .put(&input_id, input_signatures);
@@ -129,7 +171,7 @@ impl Transactions for BtcAnchoringService {
             // Make sure we reach a quorum for each input.
             for index in 0..expected_inputs.len() {
                 let input_id = TxInputId::new(proposal.id(), index as u32);
-                let signatures_for_input = schema.input_signatures(&input_id, &redeem_script);
+                let signatures_for_input = schema.input_signatures(&input_id);
                 // We have not enough signatures for this input, so we can not finalize this
                 // proposal at the moment.
                 if signatures_for_input.len() != quorum {
@@ -138,9 +180,7 @@ impl Transactions for BtcAnchoringService {
 
                 input_signer.spend_input(
                     &mut finalized_tx.0.input[index],
-                    signatures_for_input
-                        .into_iter()
-                        .map(|bytes| InputSignature::from_bytes(bytes).unwrap()),
+                    signatures_for_input.values(),
                 );
             }
 
@@ -155,6 +195,53 @@ impl Transactions for BtcAnchoringService {
 
             // Add finalized transaction to the tail of anchoring transactions.
             schema.push_anchoring_transaction(finalized_tx);
+        }
+        Ok(())
+    }
+
+    fn add_funds(&self, context: TransactionContext, arg: AddFunds) -> Result<(), ExecutionError> {
+        let (author, fork) = context
+            .verify_caller(Caller::author)
+            .ok_or(DispatcherError::UnauthorizedCaller)?;
+        let schema = BtcAnchoringSchema::new(context.instance.name, fork);
+
+        // Check that author is authorized to sign inputs of the anchoring proposal.
+        let actual_config = schema.actual_config();
+        let (_, public_key) = actual_config
+            .find_bitcoin_key(&author)
+            .ok_or(Error::UnauthorizedAnchoringKey)?;
+
+        // Check that the given transaction is suitable.
+        let (_, txout) = arg
+            .transaction
+            .find_out(&actual_config.anchoring_out_script())
+            .ok_or(Error::UnsuitableFundingTx)?;
+
+        // Check that the transaction has not been used before
+        let funding_txid = arg.transaction.id();
+        if schema.spent_funding_transactions().contains(&funding_txid) {
+            return Err(Error::AlreadyUsedFundingTx.into());
+        }
+
+        // Add confirmation from this node for this funding transaction.
+        let mut confirmations = schema
+            .unconfirmed_funding_transactions()
+            .get(&funding_txid)
+            .unwrap_or_default();
+        confirmations.confirm_by_node(public_key);
+
+        // Set this transaction as unspent funding if there are enough confirmations
+        // otherwise just write confirmation to the schema.
+        if confirmations.has_enough_confirmations(&actual_config)? {
+            info!("====== ADD_FUNDS ======");
+            info!("txid: {}", arg.transaction.id().to_string());
+            info!("balance: {}", txout.value);
+
+            schema.set_funding_transaction(arg.transaction);
+        } else {
+            schema
+                .unconfirmed_funding_transactions()
+                .put(&funding_txid, confirmations);
         }
         Ok(())
     }
