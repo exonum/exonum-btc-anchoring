@@ -22,6 +22,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 .mypy_cache
+launcher/exonum_btc_anchoring_plugin.egg-info
 
 # other
 *.orig
