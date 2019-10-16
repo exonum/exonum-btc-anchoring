@@ -33,7 +33,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   endpoint in the anchoring private API. This means is that you no longer need
   to use a configuration update procedure in order to add a new funding
   transaction. Now for this there is a simpler voting procedure using
-  the `add-funds` endpoint. A qualified majority of nodes (`2/3n+1`) just have
+  the `add-funds` endpoint. A qualified majority of nodes (`2/3n+1`) just has
   to send the same transaction so that it is used as a funding one.
 
 ### Internal improvements
