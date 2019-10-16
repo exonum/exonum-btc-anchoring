@@ -30,10 +30,10 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Removed cryptographic proofs for Exonum blocks feature.
   It will be implemented as separate service.
   - Funding transaction entry in config has been replaced by the `add-funds`
-  endpoint in the anchoring private API. This means is that you no longer need
-  to use a configuration update procedure in order to add a new funding
-  transaction. Now for this there is a simpler voting procedure using
-  the `add-funds` endpoint. A qualified majority of nodes (`2/3n+1`) just has
+  endpoint in the anchoring private API. This means that you no longer need
+  to use the configuration update procedure in order to add a new funding
+  transaction. Now there is a simpler voting procedure with the help of the
+  `add-funds` endpoint. A qualified majority of nodes (`2/3n+1`) just have
   to send the same transaction so that it is used as a funding one.
 
 ### Internal improvements
