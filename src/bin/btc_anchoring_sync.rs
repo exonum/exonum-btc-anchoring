@@ -274,7 +274,7 @@ impl RunCommand {
                     total_fee,
                     balance
                 ),
-                // For the work of anchoring you need to  replenish anchoring wallet.
+                // For the work of anchoring you need to replenish anchoring wallet.
                 Err(ChainUpdateError::NoInitialFunds) => {
                     let address = match chain_updater.anchoring_config() {
                         Ok(config) => config.anchoring_address(),

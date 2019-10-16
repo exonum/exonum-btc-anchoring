@@ -144,7 +144,7 @@ pub trait PrivateApi {
         &self,
         sign_input: SignInput,
     ) -> Box<dyn Future<Item = Hash, Error = Self::Error>>;
-    /// Add funds via suitable funding transaction.
+    /// Adds funds via suitable funding transaction.
     ///
     /// Bitcoin transaction should have output with value to the current anchoring address.
     /// The transaction will be applied if 2/3+1 anchoring nodes sent it.
