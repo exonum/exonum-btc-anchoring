@@ -35,21 +35,26 @@ rust:
 cache:
   npm: true
   directories:
-  - $HOME/.local
+  - $HOME/.cache
   - $HOME/.cargo
+  - $HOME/.local
   - $HOME/.kcov
-  - $TRAVIS_BUILD_DIR/target
-  timeout: 900
 
 dist: xenial
 sudo: required
 
 env:
   global:
+  - SCCACHE_VERS=0.2.12
   - DEADLINKS_VERS=0.3.0
   - RUSTFLAGS="-D warnings"
   - ROCKSDB_LIB_DIR=/usr/lib
   - SNAPPY_LIB_DIR=/usr/lib/x86_64-linux-gnu
+
+before_install:
+  - sccache -V | grep $SCCACHE_VERS || cargo install sccache --vers $SCCACHE_VERS --force
+  - export RUSTC_WRAPPER=sccache
+
 jobs:
   include:
   # Formatting & other lints that do not require compilation
@@ -87,11 +92,3 @@ jobs:
     script:
     - cargo doc --no-deps
     - cargo deadlinks --dir target/doc
-    
-before_cache:
-  - |
-    cd $TRAVIS_BUILD_DIR/target/debug
-    rm -rf incremental examples
-    find . -maxdepth 1 -type f -executable -delete
-    find deps -type f -size +20M -delete
-    du -h -d 1 .
