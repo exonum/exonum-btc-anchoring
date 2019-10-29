@@ -135,7 +135,7 @@ pub struct AddFunds {
 }
 
 /// Consensus parameters in the BTC anchoring.
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, BinaryValue, ObjectHash)]
 pub struct Config {
     /// Type of the used BTC network.
     pub network: bitcoin::Network,
@@ -173,26 +173,6 @@ impl ProtobufConvert for Config {
     }
 }
 
-impl BinaryValue for Config {
-    fn to_bytes(&self) -> Vec<u8> {
-        self.to_pb()
-            .write_to_bytes()
-            .expect("Error while serializing value")
-    }
-
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
-        let mut pb = <Self as ProtobufConvert>::ProtoStruct::new();
-        pb.merge_from_bytes(bytes.as_ref())?;
-        Self::from_pb(pb)
-    }
-}
-
-impl ObjectHash for Config {
-    fn object_hash(&self) -> Hash {
-        self.to_bytes().object_hash()
-    }
-}
-
 impl_serde_hex_for_binary_value! { SignInput }
 
 impl BinaryValue for btc::Sha256d {
@@ -226,5 +206,4 @@ impl BinaryKey for btc::Sha256d {
 
 // TODO Fix kind of input for these macro [ECR-3222]
 use btc::Sha256d;
-use exonum::crypto as exonum_crypto;
 impl_object_hash_for_binary_value! { Sha256d }
