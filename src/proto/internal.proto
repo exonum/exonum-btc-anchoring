@@ -18,7 +18,6 @@ syntax = "proto3";
 
 package exonum.service.btc_anchoring.schema;
 
-import "helpers.proto";
 import "btc_types.proto";
 
 // Some non-scalar key-value pair.

@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum::{crypto::Hash, proto::ProtobufConvert};
-use exonum_derive::ProtobufConvert;
+use exonum::crypto::Hash;
 use exonum_merkledb::{BinaryValue, ObjectHash};
+use exonum_proto::ProtobufConvert;
 use protobuf::Message;
 
 use std::{borrow::Cow, collections::BTreeMap};
@@ -33,7 +33,7 @@ where
 }
 
 #[derive(ProtobufConvert)]
-#[exonum(pb = "crate::proto::internal::KeyValue")]
+#[protobuf_convert(source = "crate::proto::internal::KeyValue")]
 struct KeyValue {
     key: Vec<u8>,
     value: Vec<u8>,
