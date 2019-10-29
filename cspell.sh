@@ -18,4 +18,4 @@
 
 set -e
 
-find . -not -path "*/target/*" -and -not -path "*/node_modules/*" \( -name "*.rs" -or -name "*.md" -or -name "*.proto" \) | xargs ./node_modules/.bin/cspell
+find . -not -path "*/target/*" -and -not -path "*/.git/*" -and -not -path "*/node_modules/*" \( -name "*.rs" -or -name "*.md" -or -name "*.proto" \) | xargs ./node_modules/.bin/cspell
