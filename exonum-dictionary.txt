@@ -151,8 +151,8 @@ pubkeys
 PUSHBYTES
 readonly
 reddit
-regtest
 Regtest
+regtest
 reimplemented
 repr
 reqwest
@@ -169,6 +169,7 @@ rustfmt
 rustup
 SATOSHI
 satoshis
+sccache
 scripthash
 scriptSig
 scriptSigs
