@@ -19,12 +19,12 @@ pub use binary_map::BinaryMap;
 use bitcoin;
 use btc_transaction_utils;
 use exonum::{
-    crypto::{Hash, PublicKey},
+    crypto::{proto::*, Hash, PublicKey},
     impl_serde_hex_for_binary_value,
     merkledb::{impl_object_hash_for_binary_value, BinaryKey, BinaryValue, ObjectHash},
-    proto::{schema::helpers, ProtobufConvert},
 };
-use exonum_derive::ProtobufConvert;
+use exonum_derive::{BinaryValue, ObjectHash};
+use exonum_proto::ProtobufConvert;
 use failure;
 use protobuf::Message;
 use serde_derive::{Deserialize, Serialize};
@@ -103,8 +103,10 @@ impl ProtobufConvert for btc::Sha256d {
 }
 
 /// Public keys of an anchoring node.
-#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert)]
-#[exonum(pb = "self::service::AnchoringKeys")]
+#[derive(
+    Serialize, Deserialize, Debug, Clone, PartialEq, ProtobufConvert, BinaryValue, ObjectHash,
+)]
+#[protobuf_convert(source = "self::service::AnchoringKeys")]
 pub struct AnchoringKeys {
     /// Service key is used to authorize transactions.
     pub service_key: PublicKey,
@@ -113,8 +115,8 @@ pub struct AnchoringKeys {
 }
 
 /// Exonum message with a signature for one of the inputs of a new anchoring transaction.
-#[derive(Debug, Clone, PartialEq, ProtobufConvert)]
-#[exonum(pb = "self::service::SignInput")]
+#[derive(Debug, Clone, PartialEq, ProtobufConvert, BinaryValue, ObjectHash)]
+#[protobuf_convert(source = "self::service::SignInput")]
 pub struct SignInput {
     /// Proposal transaction id.
     pub txid: Sha256d,
@@ -125,8 +127,8 @@ pub struct SignInput {
 }
 
 /// Exonum message with the unspent funding transaction.
-#[derive(Debug, Clone, PartialEq, ProtobufConvert)]
-#[exonum(pb = "self::service::AddFunds")]
+#[derive(Debug, Clone, PartialEq, ProtobufConvert, BinaryValue, ObjectHash)]
+#[protobuf_convert(source = "self::service::AddFunds")]
 pub struct AddFunds {
     /// Transaction content.
     pub transaction: btc::Transaction,

@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-extern crate exonum_build;
-
-use exonum_build::protobuf_generate;
-use std::env;
+use exonum_build::{ProtoSources, ProtobufGenerator};
 
 fn main() {
-    let exonum_protos = env::var("DEP_EXONUM_PROTOBUF_PROTOS").unwrap();
-    protobuf_generate(
-        "src/proto",
-        &["src/proto", &exonum_protos],
-        "protobuf_mod.rs",
-    );
+    ProtobufGenerator::with_mod_name("protobuf_mod.rs")
+        .with_input_dir("src/proto")
+        .with_includes(&[
+            "src/proto".into(),
+            ProtoSources::Exonum,
+            ProtoSources::Crypto,
+        ])
+        .generate();
 }

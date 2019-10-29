@@ -18,13 +18,13 @@ syntax = "proto3";
 
 package exonum.service.btc_anchoring;
 
-import "helpers.proto";
+import "types.proto";
 import "btc_types.proto";
 
 // Public keys of an anchoring node.
 message AnchoringKeys {
     // Service key is used to authorize service transactions.
-    exonum.PublicKey service_key = 1;
+    exonum.crypto.PublicKey service_key = 1;
     // The Bitcoin public key is used to calculate the corresponding redeem script.
     exonum.btc.PublicKey bitcoin_key = 2;
 }
