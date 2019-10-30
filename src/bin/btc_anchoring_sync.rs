@@ -13,12 +13,12 @@
 // limitations under the License.
 
 use bitcoincore_rpc::{Auth as BitcoinRpcAuth, Client as BitcoinRpcClient};
-use exonum::crypto::{self, Hash};
+use exonum::crypto::Hash;
 use exonum_btc_anchoring::{
     api::{AnchoringChainLength, AnchoringProposalState, IndexQuery, PrivateApi},
     blockchain::SignInput,
     btc,
-    config::{AnchoringKeys, Config as AnchoringConfig},
+    config::Config as AnchoringConfig,
     sync::{AnchoringChainUpdateTask, ChainUpdateError, SyncWithBitcoinError, SyncWithBitcoinTask},
 };
 use exonum_cli::io::{load_config_file, save_config_file};
@@ -162,14 +162,13 @@ struct RunCommand {
     config: PathBuf,
 }
 
-/// Helper command to compute bitcoin address for the specified bitcoin keys and network.
+/// Generates a new Bitcoin key pair and add them to the key pool of the specified
+/// configuration file.
 #[derive(Debug, StructOpt)]
-struct AnchoringAddressCommand {
-    /// Bitcoin network type.
-    #[structopt(long, short = "n")]
-    bitcoin_network: bitcoin::Network,
-    /// Anchoring keys.
-    anchoring_keys: Vec<btc::PublicKey>,
+struct GenerateKeypairCommand {
+    /// Path to a sync utility configuration file.
+    #[structopt(long, short = "c")]
+    config: PathBuf,
 }
 
 #[derive(Debug, StructOpt)]
@@ -178,8 +177,9 @@ enum Commands {
     GenerateConfig(GenerateConfigCommand),
     /// Run btc anchoring sync utility.
     Run(RunCommand),
-    /// Helper command to compute bitcoin address for the specified bitcoin keys and network.
-    AnchoringAddress(AnchoringAddressCommand),
+    /// Generate a new Bitcoin key pair and add them to the key pool of the specified
+    /// configuration file.
+    GenerateKeypair(GenerateKeypairCommand),
 }
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -189,6 +189,16 @@ struct SyncConfig {
     #[serde(with = "flatten_keypairs")]
     bitcoin_key_pool: HashMap<btc::PublicKey, btc::PrivateKey>,
     bitcoin_rpc_config: Option<BitcoinRpcConfig>,
+}
+
+impl SyncConfig {
+    /// Extracts Bitcoin network type from the one of Bitcoin private keys in this config.
+    fn bitcoin_network(&self) -> Option<bitcoin::Network> {
+        self.bitcoin_key_pool
+            .values()
+            .next()
+            .map(|key| key.0.network)
+    }
 }
 
 /// `Bitcoind` rpc configuration.
@@ -326,22 +336,25 @@ impl RunCommand {
     }
 }
 
-impl AnchoringAddressCommand {
+impl GenerateKeypairCommand {
     fn run(self) -> Result<(), failure::Error> {
-        // Create fake config to reuse its `anchoring_address` method.
-        let fake_config = AnchoringConfig {
-            anchoring_keys: self
-                .anchoring_keys
-                .into_iter()
-                .map(|bitcoin_key| AnchoringKeys {
-                    service_key: crypto::gen_keypair().0,
-                    bitcoin_key,
-                })
-                .collect(),
-            network: self.bitcoin_network,
-            ..AnchoringConfig::default()
-        };
-        println!("{}", fake_config.anchoring_address());
+        let mut sync_config: SyncConfig = load_config_file(&self.config)?;
+
+        let network = sync_config.bitcoin_network().ok_or_else(|| {
+            failure::format_err!(
+                "Unable to determine Bitcoin network type from config.\
+                 Perhaps pool of keys in config is empty."
+            )
+        })?;
+        let bitcoin_keypair = btc::gen_keypair(network);
+        let bitcoin_pub_key = bitcoin_keypair.0;
+
+        sync_config
+            .bitcoin_key_pool
+            .extend(std::iter::once(bitcoin_keypair));
+        save_config_file(&sync_config, self.config)?;
+        // Print the received Bitcoin public key to use it in scripts.
+        println!("{}", bitcoin_pub_key);
         Ok(())
     }
 }
@@ -350,8 +363,8 @@ impl Commands {
     fn run(self) -> Result<(), failure::Error> {
         match self {
             Commands::GenerateConfig(cmd) => cmd.run(),
+            Commands::GenerateKeypair(cmd) => cmd.run(),
             Commands::Run(cmd) => cmd.run(),
-            Commands::AnchoringAddress(cmd) => cmd.run(),
         }
     }
 }
