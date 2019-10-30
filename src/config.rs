@@ -43,6 +43,13 @@ impl Default for Config {
 impl Config {
     /// Current limit on the number of keys in a redeem script on the Bitcoin network.
     const MAX_NODES_COUNT: usize = 20;
+    /// Minimal fee in satoshis for Bitcoin transaction.
+    const MIN_TOTAL_TX_FEE: u64 = 1000;
+    /// Minimal total transaction size in according of
+    /// https://bitcoin.stackexchange.com/questions/1195/how-to-calculate-transaction-size-before-sending-legacy-non-segwit-p2pkh-p2sh     
+    const MIN_TX_LEN: u64 = 10 + 146 + 33 + 81;
+    /// Minimal enough transaction fee per byte.
+    const MIN_TX_FEE: u64 = Self::MIN_TOTAL_TX_FEE / Self::MIN_TX_LEN + 1; // Round up.
 
     /// Creates Bitcoin anchoring config instance with default parameters for the
     /// given Bitcoin network and public keys of participants.
@@ -112,11 +119,23 @@ impl ValidateInput for Config {
 
     fn validate(&self) -> Result<(), Self::Error> {
         ensure!(
+            !self.anchoring_keys.is_empty(),
+            "The list of anchoring keys must not be empty."
+        );
+        ensure!(
             self.anchoring_keys.len() <= Self::MAX_NODES_COUNT,
             "Too many anchoring nodes: amount of anchoring nodes should be less or equal than the {}.",
             Self::MAX_NODES_COUNT
         );
-        // TODO Validate other parameters. [ECR-3633]
+        ensure!(
+            self.anchoring_interval > 0,
+            "Anchoring interval should be greater than zero."
+        );
+        ensure!(
+            self.transaction_fee > Self::MIN_TX_FEE,
+            "Transaction fee should be greater than {}",
+            Self::MIN_TX_FEE
+        );
 
         // Verify that the redeem script is suitable.
         RedeemScriptBuilder::with_public_keys(self.anchoring_keys.iter().map(|x| x.bitcoin_key.0))
@@ -128,7 +147,10 @@ impl ValidateInput for Config {
 
 #[cfg(test)]
 mod tests {
-    use exonum::{crypto, helpers::Height};
+    use exonum::{
+        crypto,
+        helpers::{Height, ValidateInput},
+    };
 
     use bitcoin::network::constants::Network;
     use btc_transaction_utils::test_data::secp_gen_keypair;
@@ -137,14 +159,18 @@ mod tests {
 
     use super::Config;
 
-    #[test]
-    fn test_config_serde() {
-        let public_keys = (0..4)
+    fn gen_anchoring_keys(network: bitcoin::Network, count: usize) -> Vec<AnchoringKeys> {
+        (0..count)
             .map(|_| AnchoringKeys {
-                bitcoin_key: secp_gen_keypair(Network::Bitcoin).0.into(),
+                bitcoin_key: secp_gen_keypair(network).0.into(),
                 service_key: crypto::gen_keypair().0,
             })
-            .collect::<Vec<_>>();
+            .collect::<Vec<_>>()
+    }
+
+    #[test]
+    fn config_serde() {
+        let public_keys = gen_anchoring_keys(Network::Bitcoin, 4);
 
         let config = Config::with_public_keys(Network::Bitcoin, public_keys).unwrap();
         assert_eq!(config.redeem_script().content().quorum, 3);
@@ -155,13 +181,8 @@ mod tests {
     }
 
     #[test]
-    fn test_config_anchoring_height() {
-        let public_keys = (0..4)
-            .map(|_| AnchoringKeys {
-                bitcoin_key: secp_gen_keypair(Network::Bitcoin).0.into(),
-                service_key: crypto::gen_keypair().0,
-            })
-            .collect::<Vec<_>>();
+    fn config_anchoring_height() {
+        let public_keys = gen_anchoring_keys(Network::Bitcoin, 4);
 
         let mut config = Config::with_public_keys(Network::Bitcoin, public_keys).unwrap();
         config.anchoring_interval = 1000;
@@ -184,4 +205,50 @@ mod tests {
     }
 
     // TODO test validation of the Bitcoin anchoring config
+
+    #[test]
+    fn config_validate_errors() {
+        let test_cases = [
+            (
+                Config::default(),
+                "The list of anchoring keys must not be empty",
+            ),
+            (
+                Config {
+                    anchoring_keys: gen_anchoring_keys(bitcoin::Network::Regtest, 30),
+                    ..Config::default()
+                },
+                "Too many anchoring nodes: amount of anchoring nodes should be less or equal",
+            ),
+            (
+                Config {
+                    anchoring_keys: gen_anchoring_keys(bitcoin::Network::Regtest, 4),
+                    anchoring_interval: 0,
+                    ..Config::default()
+                },
+                "Anchoring interval should be greater than zero",
+            ),
+            (
+                Config {
+                    anchoring_keys: gen_anchoring_keys(bitcoin::Network::Regtest, 4),
+                    transaction_fee: 0,
+                    ..Config::default()
+                },
+                "Transaction fee should be greater than",
+            ),
+            (
+                Config {
+                    anchoring_keys: gen_anchoring_keys(bitcoin::Network::Regtest, 4),
+                    transaction_fee: 3,
+                    ..Config::default()
+                },
+                "Transaction fee should be greater than",
+            ),
+        ];
+
+        for (config, expected_err) in &test_cases {
+            let actual_err = config.validate().unwrap_err().to_string();
+            assert!(actual_err.contains(expected_err), actual_err);
+        }
+    }
 }
