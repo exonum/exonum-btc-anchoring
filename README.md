@@ -126,7 +126,10 @@ Variables that you can modify
 
 ### Example of the Anchoring Service Installation
 
-For the fast anchoring demonstration you can use a built-in anchoring example.
+If you are completely new to BTC anchoring, we recommend that you check a
+[newbie guide](newbie_guide.md) first.
+
+For a fast anchoring demonstration you can use the built-in anchoring example.
 
 ```bash
 cargo install --example btc_anchoring
