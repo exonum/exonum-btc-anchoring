@@ -13,9 +13,14 @@
 // limitations under the License.
 
 use exonum::helpers::Height;
-use exonum::{explorer::CommittedTransaction, runtime::ErrorKind};
+use exonum::{
+    crypto,
+    explorer::CommittedTransaction,
+    messages::{AnyTx, Verified},
+    runtime::{rust::Transaction, ErrorKind},
+};
 use exonum_btc_anchoring::{
-    blockchain::{errors::Error, BtcAnchoringSchema},
+    blockchain::{errors::Error, BtcAnchoringSchema, SignInput},
     btc::{self, BuilderError},
     config::Config,
     test_helpers::{
@@ -34,6 +39,13 @@ fn unspent_funding_transaction(anchoring_testkit: &AnchoringTestKit) -> Option<b
     BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot)
         .unspent_funding_transaction_entry()
         .get()
+}
+
+fn change_tx_signature(
+    tx: Verified<AnyTx>,
+    keypair: (crypto::PublicKey, crypto::SecretKey),
+) -> Verified<AnyTx> {
+    Verified::from_value(tx.into_payload(), keypair.0, &keypair.1)
 }
 
 fn test_anchoring_config_change<F>(mut config_change_predicate: F) -> AnchoringTestKit
@@ -518,10 +530,66 @@ fn funding_tx_override() {
     );
 }
 
-// TODO Test for Error::UnauthorizedAnchoringKey for add_funds and sign_input [ECR-3684]
+#[test]
+fn sign_input_err_unauthorized() {
+    let mut testkit = AnchoringTestKit::default();
+    // Create sign_input transaction from the anchoring node.
+    let tx = testkit
+        .create_signature_tx_for_node(&testkit.inner.us())
+        .unwrap()[0]
+        .clone();
+    // Re-sign this transaction by the other keypair.
+    let malformed_tx = change_tx_signature(tx, crypto::gen_keypair());
+    // Commit this transaction and check status.
+    let block = testkit.inner.create_block_with_transaction(malformed_tx);
+    assert_tx_error(&block[0], Error::UnauthorizedAnchoringKey);
+}
 
-// TODO Test for Error::NoSuchInput [ECR-3684]
+#[test]
+fn add_funds_err_unauthorized() {
+    let mut testkit = AnchoringTestKit::default();
+    // Create add_funds transaction from the anchoring node.
+    let tx = testkit.create_funding_confirmation_txs(100).0[0].clone();
+    // Re-sign this transaction by the other keypair.
+    let malformed_tx = change_tx_signature(tx, crypto::gen_keypair());
+    // Commit this transaction and check status.
+    let block = testkit.inner.create_block_with_transaction(malformed_tx);
+    assert_tx_error(&block[0], Error::UnauthorizedAnchoringKey);
+}
 
-// TODO Test for Error::InputVerificationFailed [ECR-3684]
+#[test]
+fn sing_input_err_no_such_input() {
+    let mut testkit = AnchoringTestKit::default();
+    let us = testkit.inner.us();
+    // Create sign_input transaction for the anchoring node.
+    let tx = testkit.create_signature_tx_for_node(&us).unwrap()[0]
+        .payload()
+        .parse::<SignInput>()
+        .unwrap();
+    // Change input ID.
+    let malformed_tx = {
+        let keypair = us.service_keypair();
+        SignInput { input: 10, ..tx }.sign(ANCHORING_INSTANCE_ID, keypair.0, &keypair.1)
+    };
+    // Commit this transaction and check status.
+    let block = testkit.inner.create_block_with_transaction(malformed_tx);
+    assert_tx_error(&block[0], Error::NoSuchInput);
+}
+
+#[test]
+fn sign_input_err_input_verification_failed() {
+    let mut testkit = AnchoringTestKit::default();
+    let (first_node, second_node) = {
+        let validators = testkit.inner.network().validators();
+        (validators[0].clone(), validators[1].clone())
+    };
+    // Create sign_input transaction for the first anchoring node.
+    let tx = testkit.create_signature_tx_for_node(&first_node).unwrap()[0].clone();
+    // Re-sign this transaction by the second anchoring node.
+    let malformed_tx = change_tx_signature(tx, second_node.service_keypair());
+    // Commit this transaction and check status.
+    let block = testkit.inner.create_block_with_transaction(malformed_tx);
+    assert_tx_error(&block[0], Error::InputVerificationFailed);
+}
 
 // TODO Implement tests for anchoring recovery [ECR-3581]
