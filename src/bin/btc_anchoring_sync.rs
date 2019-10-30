@@ -162,7 +162,7 @@ struct RunCommand {
     config: PathBuf,
 }
 
-/// Generate a new Bitcoin key pair and add them to the key pool of the specified
+/// Generates a new Bitcoin key pair and add them to the key pool of the specified
 /// configuration file.
 #[derive(Debug, StructOpt)]
 struct GenerateKeypairCommand {
