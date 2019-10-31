@@ -24,7 +24,7 @@ use exonum_btc_anchoring::{
     config::Config,
     sync::{
         AnchoringChainUpdateTask, BitcoinRelay, ChainUpdateError, SyncWithBitcoinError,
-        SyncWithBitcoinTask,
+        SyncWithBitcoinTask, TransactionStatus,
     },
     test_helpers::{AnchoringTestKit, ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME},
 };
@@ -42,9 +42,9 @@ enum FakeRelayRequest {
         request: btc::Transaction,
         response: btc::Sha256d,
     },
-    TransactionConfirmations {
+    TransactionStatus {
         request: btc::Sha256d,
-        response: Option<u32>,
+        response: TransactionStatus,
     },
 }
 
@@ -60,8 +60,8 @@ impl FakeRelayRequest {
         }
     }
 
-    fn into_transaction_confirmations(self) -> (btc::Sha256d, Option<u32>) {
-        if let FakeRelayRequest::TransactionConfirmations { request, response } = self {
+    fn into_transaction_status(self) -> (btc::Sha256d, TransactionStatus) {
+        if let FakeRelayRequest::TransactionStatus { request, response } = self {
             (request, response)
         } else {
             panic!(
@@ -115,8 +115,8 @@ impl BitcoinRelay for FakeBitcoinRelay {
         Ok(response)
     }
 
-    fn transaction_confirmations(&self, id: btc::Sha256d) -> Result<Option<u32>, Self::Error> {
-        let (expected_request, response) = self.dequeue_request().into_transaction_confirmations();
+    fn transaction_status(&self, id: btc::Sha256d) -> Result<TransactionStatus, Self::Error> {
+        let (expected_request, response) = self.dequeue_request().into_transaction_status();
         assert_eq!(expected_request, id, "Unexpected data in request");
         Ok(response)
     }
@@ -298,17 +298,17 @@ fn sync_with_bitcoin_normal() {
     // Send first anchoring transaction.
     fake_relay.enqueue_requests(vec![
         // Relay should see that we have only a funding transaction confirmed.
-        FakeRelayRequest::TransactionConfirmations {
+        FakeRelayRequest::TransactionStatus {
             request: tx_chain.get(1).unwrap().id(),
-            response: None,
+            response: TransactionStatus::Unknown,
         },
-        FakeRelayRequest::TransactionConfirmations {
+        FakeRelayRequest::TransactionStatus {
             request: tx_chain.get(0).unwrap().id(),
-            response: None,
+            response: TransactionStatus::Unknown,
         },
-        FakeRelayRequest::TransactionConfirmations {
+        FakeRelayRequest::TransactionStatus {
             request: tx_chain.get(0).unwrap().prev_tx_id(),
-            response: Some(10),
+            response: TransactionStatus::Committed(10),
         },
         // Ensure that relay sends first anchoring transaction to the Bitcoin network.
         FakeRelayRequest::SendTransaction {
@@ -323,15 +323,25 @@ fn sync_with_bitcoin_normal() {
     assert_eq!(latest_committed_tx_index, 0);
     // Send second anchoring transaction.
     fake_relay.enqueue_requests(vec![
-        FakeRelayRequest::TransactionConfirmations {
+        FakeRelayRequest::TransactionStatus {
             request: tx_chain.get(1).unwrap().id(),
-            response: None,
+            response: TransactionStatus::Unknown,
         },
         FakeRelayRequest::SendTransaction {
             request: tx_chain.get(1).unwrap(),
             response: tx_chain.get(1).unwrap().id(),
         },
     ]);
+    let latest_committed_tx_index = sync
+        .process(Some(1))
+        .unwrap()
+        .expect("Transaction should be committed");
+    assert_eq!(latest_committed_tx_index, 1);
+    // Check second anchoring transaction.
+    fake_relay.enqueue_requests(vec![FakeRelayRequest::TransactionStatus {
+        request: tx_chain.get(1).unwrap().id(),
+        response: TransactionStatus::Mempool,
+    }]);
     let latest_committed_tx_index = sync
         .process(Some(1))
         .unwrap()
@@ -365,13 +375,13 @@ fn sync_with_bitcoin_err_unconfirmed_funding_tx() {
     let fake_relay = FakeBitcoinRelay::default();
     let sync = SyncWithBitcoinTask::new(fake_relay.clone(), testkit.inner.api());
     fake_relay.enqueue_requests(vec![
-        FakeRelayRequest::TransactionConfirmations {
+        FakeRelayRequest::TransactionStatus {
             request: tx_chain.get(0).unwrap().id(),
-            response: None,
+            response: TransactionStatus::Unknown,
         },
-        FakeRelayRequest::TransactionConfirmations {
+        FakeRelayRequest::TransactionStatus {
             request: tx_chain.get(0).unwrap().prev_tx_id(),
-            response: None,
+            response: TransactionStatus::Unknown,
         },
     ]);
 

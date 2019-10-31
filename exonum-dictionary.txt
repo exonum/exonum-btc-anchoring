@@ -79,6 +79,7 @@ isvalid
 iswatchonly
 JJBZ
 Jjqe
+jsonrpc
 keepalive
 keyhash
 keypair
@@ -93,8 +94,8 @@ libsodium
 libssl
 listunspent
 locktime
-mainnet
 Mainnet
+mainnet
 maintainer's
 maplit
 markdownlint
@@ -154,8 +155,8 @@ pubkeys
 PUSHBYTES
 readonly
 reddit
-Regtest
 regtest
+Regtest
 reimplemented
 repr
 reqwest
