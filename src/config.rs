@@ -45,7 +45,7 @@ impl Config {
     const MAX_NODES_COUNT: usize = 20;
     /// Minimal fee in satoshis for Bitcoin transaction.
     const MIN_TOTAL_TX_FEE: u64 = 1000;
-    /// Minimal total transaction size in according of
+    /// Minimal total transaction size according to
     /// https://bitcoin.stackexchange.com/questions/1195/how-to-calculate-transaction-size-before-sending-legacy-non-segwit-p2pkh-p2sh     
     const MIN_TX_LEN: u64 = 10 + 146 + 33 + 81;
     /// Minimal enough transaction fee per byte.
