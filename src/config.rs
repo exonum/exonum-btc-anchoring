@@ -132,7 +132,7 @@ impl ValidateInput for Config {
             "Anchoring interval should be greater than zero."
         );
         ensure!(
-            self.transaction_fee > Self::MIN_TX_FEE,
+            self.transaction_fee >= Self::MIN_TX_FEE,
             "Transaction fee should be greater than {}",
             Self::MIN_TX_FEE
         );
