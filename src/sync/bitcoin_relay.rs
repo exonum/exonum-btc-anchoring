@@ -32,13 +32,9 @@ pub enum TransactionStatus {
 }
 
 impl TransactionStatus {
-    /// Checks that this transaction is unknown in the Bitcoin network.
-    pub fn is_unknown(self) -> bool {
-        if let TransactionStatus::Unknown = self {
-            true
-        } else {
-            false
-        }
+    /// Checks that this transaction is known by the Bitcoin network.
+    pub fn is_known(self) -> bool {
+        self != TransactionStatus::Unknown
     }
 
     /// Returns number of transaction confirmations in Bitcoin blockchain.
