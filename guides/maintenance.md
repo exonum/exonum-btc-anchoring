@@ -7,23 +7,27 @@ The manual describes most common procedures of the service maintenance:
 
 * [Funding of anchoring chain wallet](#Funding-of-anchoring-chain-wallet)
 * [Modification of configuration parameters](#Modification-of-configuration-parameters)
-* [Changing list of anchoring nodes](#Changing-list-of-anchoring-nodes)
+* [Changing the list of anchoring nodes](#Changing-the-list-of-anchoring-nodes)
 
-## Funding of anchoring chain wallet
+## Funding of Anchoring Chain Wallet
 
-Sometimes you have to replenish the anchoring chain wallet to keep anchoring going.
-To do it, send some amount of Bitcoins to the actual anchoring address, which
-you can obtain by the public HTTP API [endpoint][anchoring:actual-address].
-And then save received transaction hex and wait until it get enough confirmations
-in Bitcoin network. When the transaction receives enough confirmations, send it
-to each of the anchoring nodes using the corresponding private HTTP API
-[endpoint][anchoring:add-funds].
+Anchoring process can be performed only if there is a sufficient amount of funds
+on the anchoring wallet. To keep anchoring working, you have to add funds to
+this wallet and keep the balance non-zero all the time that anchoring node is
+running. To increase a balance of the anchoring wallet, you should do the following:
+
+1. Get the actual anchoring address, which can be obtained by the public HTTP API
+  [endpoint][anchoring:actual-address].
+2. Send a some amount of Bitcoins to the actual anchoring address and then save received.
+  transaction hex and wait until it get enough confirmations.
+3. After ensuring that transaction have got enough confirmations send it to each of the
+  anchoring nodes using the corresponding private HTTP API [endpoint][anchoring:add-funds].
 
 ***Beware!** The anchoring node itself does not check that the funding
 transaction is confirmed and can be spend. If you send a malformed transaction,
-the behaviour of the anchoring node is undefined.*
+the behavior of the anchoring node is undefined.*
 
-## Modification of configuration parameters
+## Modification of Configuration Parameters
 
 You can use the [`exonum_launcher`][exonum_launcher] utility to change the
 anchoring configuration.
@@ -37,7 +41,7 @@ List of parameters that you can change without any preparatory actions:
 The `anchoring_keys` change procedure is more complicated, you can find the description of this process
 in the next section.
 
-## Changing the list of anchoring nodes
+## Changing The List of Anchoring Nodes
 
 * **Excluding node from the anchoring nodes.**
 
