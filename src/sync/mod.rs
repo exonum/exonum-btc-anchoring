@@ -16,7 +16,7 @@
 
 // TODO Rewrite with the async/await syntax when it is ready. [ECR-3222]
 
-pub use self::bitcoin_relay::BitcoinRelay;
+pub use self::bitcoin_relay::{BitcoinRelay, TransactionStatus};
 
 use btc_transaction_utils::{p2wsh, TxInRef};
 use futures::future::Future;
@@ -233,11 +233,12 @@ where
     ) -> Result<Option<u64>, SyncWithBitcoinError<T::Error, R::Error>> {
         log::trace!("Perform syncing with the Bitcoin network");
         // Try to find a suitable transaction for sending to the Bitcoin network.
-        let (index, tx) = if let Some(index) = latest_committed_tx_index {
-            // Check that the latest committed transaction was really committed into
+        let (index, transaction) = if let Some(index) = latest_committed_tx_index {
+            // Check that the latest committed transaction was really sent into
             // the Bitcoin network.
-            let tx = self.get_transaction(index)?;
-            if self.transaction_is_committed(tx.id())? {
+            let transaction = self.get_transaction(index)?;
+            let status = self.transaction_status(transaction.id())?;
+            if status.is_known() {
                 let chain_len = self
                     .api_client
                     .transactions_count()
@@ -250,22 +251,25 @@ where
                 let index = index + 1;
                 (index, self.get_transaction(index)?)
             } else {
-                (index, tx)
+                (index, transaction)
             }
         }
         // Perform to find the actual uncommitted transaction.
-        else if let Some((tx, index)) = self.find_first_uncommitted_transaction()? {
-            (index, tx)
+        else if let Some((transaction, index)) = self.find_first_uncommitted_transaction()? {
+            (index, transaction)
         } else {
             return Ok(None);
         };
 
         // Send an actual uncommitted transaction into the Bitcoin network.
         self.btc_relay
-            .send_transaction(&tx)
+            .send_transaction(&transaction)
             .map_err(SyncWithBitcoinError::Relay)?;
 
-        log::info!("Sent transaction to the Bitcoin network: {}", tx.id());
+        log::info!(
+            "Sent transaction to the Bitcoin network: {}",
+            transaction.id()
+        );
 
         Ok(Some(index))
     }
@@ -289,11 +293,12 @@ where
         };
         // Check that the tail of anchoring chain is committed to the Bitcoin.
         let transaction = self.get_transaction(last_index)?;
-        if self.transaction_is_committed(transaction.id())? {
+        let status = self.transaction_status(transaction.id())?;
+        if status.is_known() {
             return Ok(None);
         }
         // Try to find the first of uncommitted transactions.
-        for index in (0..=last_index).rev() {
+        for index in (1..=last_index).rev() {
             let transaction = self.get_transaction(index)?;
             log::trace!(
                 "Checking for transaction with index {} and id {}",
@@ -305,19 +310,35 @@ where
             // If the transaction previous to current one is committed, we found the first
             // uncommitted transaction (we've checked that the last one was not committed,
             // so scenario when all the transactions are committed is not possible).
-            if self.transaction_is_committed(previous_tx_id)? {
+            let status = self.transaction_status(previous_tx_id)?;
+            if status.is_known() {
                 log::trace!("Found committed transaction");
                 // Note that we were checking the previous transaction to be committed, so
                 // we return this transaction as the first not committed.
                 return Ok(Some((transaction, index)));
             }
         }
+
         // If we reach this branch then the transaction previous to the first one was not
         // committed, but previous transaction for the first anchoring transaction always
-        // is funding. Therefore, the first funding transaction has no confirmation.
-        Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(
-            transaction.prev_tx_id(),
-        ))
+        // is funding. This is special case and should be handled in specific way in order
+        // to check the initial funding transaction confirmations.
+        let transaction = self.get_transaction(0)?;
+        log::trace!(
+            "Checking for initial anchoring transaction with id {}",
+            transaction.id()
+        );
+        let status = self.transaction_status(transaction.prev_tx_id())?;
+        if status.confirmations().is_none() {
+            // First funding transaction has no confirmations.
+            Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(
+                transaction.prev_tx_id(),
+            ))
+        } else {
+            // Initial funding transaction has confirmations and then we return the first
+            // anchoring transaction which actually is uncommitted.
+            Ok(Some((transaction, 0)))
+        }
     }
 
     fn get_transaction(
@@ -335,14 +356,12 @@ where
             })
     }
 
-    fn transaction_is_committed(
+    fn transaction_status(
         &self,
         txid: btc::Sha256d,
-    ) -> Result<bool, SyncWithBitcoinError<T::Error, R::Error>> {
-        let info = self
-            .btc_relay
-            .transaction_confirmations(txid)
-            .map_err(SyncWithBitcoinError::Relay)?;
-        Ok(info.is_some())
+    ) -> Result<TransactionStatus, SyncWithBitcoinError<T::Error, R::Error>> {
+        self.btc_relay
+            .transaction_status(txid)
+            .map_err(SyncWithBitcoinError::Relay)
     }
 }

@@ -41,7 +41,7 @@ class AnchoringInstanceSpecLoader(InstanceSpecLoader):
             service_module = import_or_load_module(loader, instance, "service")
             btc_types_module = import_or_load_module(
                 loader, instance, "btc_types")
-            helpers_module = import_or_load_module(loader, instance, "helpers")
+            exonum_types_module = import_or_load_module(loader, instance, "types")
 
             # Create config message
             config = service_module.Config()
@@ -52,7 +52,7 @@ class AnchoringInstanceSpecLoader(InstanceSpecLoader):
 
             anchoring_keys = []
             for keypair in instance.config["anchoring_keys"]:
-                service_key = helpers_module.PublicKey(
+                service_key = exonum_types_module.PublicKey(
                     data=bytes.fromhex(keypair["service_key"]))
                 bitcoin_key = btc_types_module.PublicKey(
                     data=bytes.fromhex(keypair["bitcoin_key"]))
