@@ -30,7 +30,7 @@ addons:
     - zlib1g-dev
 
 rust:
-  - 1.38.0
+  - 1.39.0
 
 cache:
   npm: true
@@ -41,7 +41,7 @@ cache:
   - $HOME/.local
   - $HOME/.kcov
 
-dist: xenial
+dist: bionic
 sudo: required
 
 env:
