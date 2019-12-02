@@ -23,11 +23,12 @@ btc-transaction-utils = "0.6"
 byteorder = "1.3"
 derive_more = "0.15"
 exonum = "0.12.0"
-exonum-cli = { git = "https://github.com/exonum/exonum.git", rev = "7404bacc109da33bdbf5c3a5a09f3f56dae965e8" }
-exonum-crypto = { features = ["with-protobuf"], git = "https://github.com/exonum/exonum.git", rev = "7404bacc109da33bdbf5c3a5a09f3f56dae965e8" }
+exonum-cli = { git = "https://github.com/exonum/exonum.git", rev = "00998fa2b1d4f47d37d5154bb3a863b28249f014" }
+exonum-crypto = { features = ["with-protobuf"], git = "https://github.com/exonum/exonum.git", rev = "00998fa2b1d4f47d37d5154bb3a863b28249f014" }
 exonum-derive = "0.12.0"
 exonum-merkledb = "0.12.0"
-exonum-proto = { git = "https://github.com/exonum/exonum.git", rev = "7404bacc109da33bdbf5c3a5a09f3f56dae965e8" }
+exonum-proto = { git = "https://github.com/exonum/exonum.git", rev = "00998fa2b1d4f47d37d5154bb3a863b28249f014" }
+exonum-supervisor = { git = "https://github.com/exonum/exonum.git", rev = "00998fa2b1d4f47d37d5154bb3a863b28249f014" }
 exonum-testkit = "0.12.0"
 failure = "0.1"
 failure_derive = "0.1"
@@ -52,8 +53,8 @@ proptest = "0.9"
 exonum-build = "0.12.0"
 
 [patch.crates-io]
-exonum = { git = "https://github.com/exonum/exonum.git", rev = "7404bacc109da33bdbf5c3a5a09f3f56dae965e8" }
-exonum-build = { git = "https://github.com/exonum/exonum.git", rev = "7404bacc109da33bdbf5c3a5a09f3f56dae965e8" }
-exonum-derive = { git = "https://github.com/exonum/exonum.git", rev = "7404bacc109da33bdbf5c3a5a09f3f56dae965e8" }
-exonum-merkledb = { git = "https://github.com/exonum/exonum.git", rev = "7404bacc109da33bdbf5c3a5a09f3f56dae965e8" }
-exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "7404bacc109da33bdbf5c3a5a09f3f56dae965e8" }
+exonum = { git = "https://github.com/exonum/exonum.git", rev = "00998fa2b1d4f47d37d5154bb3a863b28249f014" }
+exonum-build = { git = "https://github.com/exonum/exonum.git", rev = "00998fa2b1d4f47d37d5154bb3a863b28249f014" }
+exonum-derive = { git = "https://github.com/exonum/exonum.git", rev = "00998fa2b1d4f47d37d5154bb3a863b28249f014" }
+exonum-merkledb = { git = "https://github.com/exonum/exonum.git", rev = "00998fa2b1d4f47d37d5154bb3a863b28249f014" }
+exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "00998fa2b1d4f47d37d5154bb3a863b28249f014" }

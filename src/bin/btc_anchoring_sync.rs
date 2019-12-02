@@ -97,18 +97,12 @@ impl ApiClient {
 impl PrivateApi for ApiClient {
     type Error = String;
 
-    fn sign_input(
-        &self,
-        sign_input: SignInput,
-    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
-        Box::new(self.post("sign-input", &sign_input).into_future())
+    fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
+        self.post("sign-input", &sign_input)
     }
 
-    fn add_funds(
-        &self,
-        transaction: btc::Transaction,
-    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
-        Box::new(self.post("add-funds", &transaction).into_future())
+    fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error> {
+        self.post("add-funds", &transaction)
     }
 
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {

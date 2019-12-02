@@ -17,8 +17,8 @@
 pub use crate::proto::{AddFunds, SignInput};
 
 use btc_transaction_utils::{p2wsh::InputSigner, TxInRef};
-use exonum::runtime::{rust::TransactionContext, Caller, DispatcherError, ExecutionError};
-use exonum_derive::exonum_service;
+use exonum::runtime::{rust::CallContext, DispatcherError, ExecutionError};
+use exonum_derive::exonum_interface;
 use log::{info, trace};
 
 use crate::{btc, config::Config, BtcAnchoringService};
@@ -85,28 +85,25 @@ impl TransactionConfirmations {
 }
 
 /// Exonum BTC anchoring transactions.
-#[exonum_service]
+#[exonum_interface]
 pub trait Transactions {
     /// Signs a single input of the anchoring transaction proposal.
-    fn sign_input(&self, context: TransactionContext, arg: SignInput)
-        -> Result<(), ExecutionError>;
+    fn sign_input(&self, context: CallContext<'_>, arg: SignInput) -> Result<(), ExecutionError>;
     /// Add funds via suitable funding transaction.
     ///
     /// Bitcoin transaction should have output with value to the current anchoring address.
     /// The transaction will be applied if 2/3+1 anchoring nodes sent it.
-    fn add_funds(&self, context: TransactionContext, arg: AddFunds) -> Result<(), ExecutionError>;
+    fn add_funds(&self, context: CallContext<'_>, arg: AddFunds) -> Result<(), ExecutionError>;
 }
 
 impl Transactions for BtcAnchoringService {
-    fn sign_input(
-        &self,
-        context: TransactionContext,
-        arg: SignInput,
-    ) -> Result<(), ExecutionError> {
-        let (author, fork) = context
-            .verify_caller(Caller::author)
+    fn sign_input(&self, context: CallContext<'_>, arg: SignInput) -> Result<(), ExecutionError> {
+        let author = context
+            .caller()
+            .author()
             .ok_or(DispatcherError::UnauthorizedCaller)?;
-        let schema = BtcAnchoringSchema::new(context.instance.name, fork);
+
+        let mut schema = BtcAnchoringSchema::new(context.service_data());
 
         // Check that author is authorized to sign inputs of the anchoring proposal.
         let actual_config = schema.actual_config();
@@ -116,7 +113,7 @@ impl Transactions for BtcAnchoringService {
 
         // Check that there is an anchoring proposal for the actual blockchain state.
         let (proposal, expected_inputs) = if let Some(proposal) = schema
-            .actual_proposed_anchoring_transaction()
+            .actual_proposed_anchoring_transaction(context.data().for_core())
             .transpose()
             .map_err(Error::anchoring_builder_error)?
         {
@@ -125,7 +122,7 @@ impl Transactions for BtcAnchoringService {
             // There is no anchoring request at the current blockchain state.
             // Make sure txid is equal to the identifier of the last anchoring transaction.
             let latest_anchoring_txid = schema
-                .anchoring_transactions_chain()
+                .transactions_chain
                 .last()
                 // If the anchoring chain is not established, then the proposal must exist.
                 .unwrap()
@@ -157,7 +154,7 @@ impl Transactions for BtcAnchoringService {
             // Add signature to schema.
             input_signatures.insert(anchoring_node_id, arg.input_signature.clone());
             schema
-                .transaction_signatures()
+                .transaction_signatures
                 .put(&input_id, input_signatures);
             input_signature_len += 1;
         } else {
@@ -199,11 +196,12 @@ impl Transactions for BtcAnchoringService {
         Ok(())
     }
 
-    fn add_funds(&self, context: TransactionContext, arg: AddFunds) -> Result<(), ExecutionError> {
-        let (author, fork) = context
-            .verify_caller(Caller::author)
+    fn add_funds(&self, context: CallContext<'_>, arg: AddFunds) -> Result<(), ExecutionError> {
+        let author = context
+            .caller()
+            .author()
             .ok_or(DispatcherError::UnauthorizedCaller)?;
-        let schema = BtcAnchoringSchema::new(context.instance.name, fork);
+        let mut schema = BtcAnchoringSchema::new(context.service_data());
 
         // Check that author is authorized to sign inputs of the anchoring proposal.
         let actual_config = schema.actual_config();
@@ -219,13 +217,13 @@ impl Transactions for BtcAnchoringService {
 
         // Check that the transaction has not been used before
         let funding_txid = arg.transaction.id();
-        if schema.spent_funding_transactions().contains(&funding_txid) {
+        if schema.spent_funding_transactions.contains(&funding_txid) {
             return Err(Error::AlreadyUsedFundingTx.into());
         }
 
         // Add confirmation from this node for this funding transaction.
         let mut confirmations = schema
-            .unconfirmed_funding_transactions()
+            .unconfirmed_funding_transactions
             .get(&funding_txid)
             .unwrap_or_default();
         confirmations.confirm_by_node(public_key);
@@ -240,7 +238,7 @@ impl Transactions for BtcAnchoringService {
             schema.set_funding_transaction(arg.transaction);
         } else {
             schema
-                .unconfirmed_funding_transactions()
+                .unconfirmed_funding_transactions
                 .put(&funding_txid, confirmations);
         }
         Ok(())
