@@ -26,8 +26,7 @@ use crate::{btc, config::Config, BtcAnchoringService};
 use super::{
     data_layout::TxInputId,
     errors::Error,
-    schema::{InputSignatures, TransactionConfirmations},
-    BtcAnchoringSchema,
+    schema::{InputSignatures, Schema, TransactionConfirmations},
 };
 
 impl SignInput {
@@ -103,7 +102,7 @@ impl Transactions for BtcAnchoringService {
             .author()
             .ok_or(DispatcherError::UnauthorizedCaller)?;
 
-        let mut schema = BtcAnchoringSchema::new(context.service_data());
+        let mut schema = Schema::new(context.service_data());
 
         // Check that author is authorized to sign inputs of the anchoring proposal.
         let actual_config = schema.actual_config();
@@ -201,7 +200,7 @@ impl Transactions for BtcAnchoringService {
             .caller()
             .author()
             .ok_or(DispatcherError::UnauthorizedCaller)?;
-        let mut schema = BtcAnchoringSchema::new(context.service_data());
+        let mut schema = Schema::new(context.service_data());
 
         // Check that author is authorized to sign inputs of the anchoring proposal.
         let actual_config = schema.actual_config();

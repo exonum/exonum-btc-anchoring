@@ -34,7 +34,7 @@ use std::cmp::{
 };
 
 use crate::{
-    blockchain::{AddFunds, BtcAnchoringSchema, SignInput, Transactions},
+    blockchain::{AddFunds, Schema, SignInput, Transactions},
     btc,
     config::Config,
 };
@@ -177,11 +177,11 @@ impl<'a> ApiImpl<'a> {
     }
 
     fn actual_config(&self) -> Result<Config, failure::Error> {
-        Ok(BtcAnchoringSchema::new(self.0.service_data()).actual_config())
+        Ok(Schema::new(self.0.service_data()).actual_config())
     }
 
     fn verify_sign_input(&self, sign_input: &SignInput) -> Result<(), failure::Error> {
-        let schema = BtcAnchoringSchema::new(self.0.service_data());
+        let schema = Schema::new(self.0.service_data());
         let (proposal, inputs) = schema
             .actual_proposed_anchoring_transaction(self.0.data().for_core())
             .ok_or_else(|| failure::format_err!("Anchoring transaction proposal is absent."))??;
@@ -212,7 +212,7 @@ impl<'a> ApiImpl<'a> {
     fn verify_funding_tx(&self, tx: &btc::Transaction) -> Result<(), failure::Error> {
         let txid = tx.id();
 
-        let schema = BtcAnchoringSchema::new(self.0.service_data());
+        let schema = Schema::new(self.0.service_data());
         let config = schema.actual_config();
         ensure!(
             !schema.spent_funding_transactions.contains(&txid),
@@ -234,7 +234,7 @@ impl<'a> ApiImpl<'a> {
             .block_and_precommits(Height(max_height))
             .unwrap();
 
-        let tx_chain = BtcAnchoringSchema::new(self.0.service_data()).transactions_chain;
+        let tx_chain = Schema::new(self.0.service_data()).transactions_chain;
 
         let to_table = blockchain_schema
             .state_hash_aggregator()
@@ -254,19 +254,19 @@ impl<'a> PublicApi for ApiImpl<'a> {
     type Error = api::Error;
 
     fn actual_address(&self) -> Result<btc::Address, Self::Error> {
-        Ok(BtcAnchoringSchema::new(self.0.service_data())
+        Ok(Schema::new(self.0.service_data())
             .actual_config()
             .anchoring_address())
     }
 
     fn following_address(&self) -> Result<Option<btc::Address>, Self::Error> {
-        Ok(BtcAnchoringSchema::new(self.0.service_data())
+        Ok(Schema::new(self.0.service_data())
             .following_config()
             .map(|config| config.anchoring_address()))
     }
 
     fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error> {
-        let anchoring_schema = BtcAnchoringSchema::new(self.0.service_data());
+        let anchoring_schema = Schema::new(self.0.service_data());
         let tx_chain = anchoring_schema.transactions_chain;
 
         if tx_chain.is_empty() {
@@ -335,7 +335,7 @@ impl<'a> PrivateApi for ApiImpl<'a> {
 
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
         let core_schema = self.0.data().for_core();
-        let anchoring_schema = BtcAnchoringSchema::new(self.0.service_data());
+        let anchoring_schema = Schema::new(self.0.service_data());
 
         AnchoringProposalState::try_from_proposal(
             anchoring_schema.actual_proposed_anchoring_transaction(core_schema),
@@ -347,13 +347,13 @@ impl<'a> PrivateApi for ApiImpl<'a> {
     }
 
     fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
-        Ok(BtcAnchoringSchema::new(self.0.service_data())
+        Ok(Schema::new(self.0.service_data())
             .transactions_chain
             .get(index))
     }
 
     fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error> {
-        Ok(BtcAnchoringSchema::new(self.0.service_data())
+        Ok(Schema::new(self.0.service_data())
             .transactions_chain
             .len()
             .into())

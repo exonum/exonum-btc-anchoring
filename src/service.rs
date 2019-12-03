@@ -27,7 +27,7 @@ use exonum_supervisor::Configure;
 
 use crate::{
     api,
-    blockchain::{BtcAnchoringSchema, Transactions},
+    blockchain::{Schema, Transactions},
     config::Config,
     proto,
 };
@@ -45,14 +45,14 @@ impl Service for BtcAnchoringService {
             .and_then(ValidateInput::into_validated)
             .map_err(DispatcherError::malformed_arguments)?;
 
-        BtcAnchoringSchema::new(context.service_data())
+        Schema::new(context.service_data())
             .actual_config
             .set(config);
         Ok(())
     }
 
     fn state_hash(&self, data: BlockchainData<&dyn Snapshot>) -> Vec<Hash> {
-        BtcAnchoringSchema::new(data.for_executing_service()).state_hash()
+        Schema::new(data.for_executing_service()).state_hash()
     }
 
     fn wire_api(&self, builder: &mut ServiceApiBuilder) {
@@ -88,7 +88,7 @@ impl Configure for BtcAnchoringService {
             .as_supervisor()
             .ok_or(DispatcherError::UnauthorizedCaller)?;
 
-        let mut schema = BtcAnchoringSchema::new(context.service_data());
+        let mut schema = Schema::new(context.service_data());
         if schema.actual_config().anchoring_address() == params.anchoring_address() {
             // There are no changes in the anchoring address, so we just apply the config
             // immediately.

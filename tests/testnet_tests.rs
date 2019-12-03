@@ -36,9 +36,7 @@ fn assert_tx_error(tx: &CommittedTransaction, e: impl Into<ErrorKind>) {
 }
 
 fn unspent_funding_transaction(anchoring_testkit: &AnchoringTestKit) -> Option<btc::Transaction> {
-    get_anchoring_schema(&anchoring_testkit.inner.snapshot())
-        .unspent_funding_transaction
-        .get()
+    get_anchoring_schema(&anchoring_testkit.inner.snapshot()).unspent_funding_transaction()
 }
 
 fn change_tx_signature(

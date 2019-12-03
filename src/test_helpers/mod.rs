@@ -39,7 +39,7 @@ use crate::{
         AnchoringChainLength, AnchoringProposalState, FindTransactionQuery, IndexQuery, PrivateApi,
         PublicApi, TransactionProof,
     },
-    blockchain::{AddFunds, BtcAnchoringSchema, SignInput},
+    blockchain::{AddFunds, Schema, SignInput},
     btc,
     config::Config,
     proto::AnchoringKeys,
@@ -143,10 +143,8 @@ pub struct AnchoringTestKit {
 }
 
 /// Returns an anchoring schema instance used in Testkit.
-pub fn get_anchoring_schema<'a>(
-    snapshot: &'a dyn Snapshot,
-) -> BtcAnchoringSchema<impl Access + 'a> {
-    BtcAnchoringSchema::new(snapshot.for_service(ANCHORING_INSTANCE_NAME).unwrap())
+pub fn get_anchoring_schema<'a>(snapshot: &'a dyn Snapshot) -> Schema<impl Access + 'a> {
+    Schema::new(snapshot.for_service(ANCHORING_INSTANCE_NAME).unwrap())
 }
 
 impl AnchoringTestKit {

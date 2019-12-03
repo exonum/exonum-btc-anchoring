@@ -37,25 +37,26 @@ pub type TransactionConfirmations = BinaryMap<btc::PublicKey, ()>;
 
 /// Information schema for `exonum-btc-anchoring`.
 #[derive(Debug, FromAccess)]
-pub struct BtcAnchoringSchema<T: Access> {
+pub struct Schema<T: Access> {
     /// Complete chain of the anchoring transactions.
     pub transactions_chain: ProofListIndex<T::Base, Transaction>,
     /// Already spent funding transactions.
-    pub spent_funding_transactions: ProofMapIndex<T::Base, Sha256d, Transaction>,
+    pub(crate) spent_funding_transactions: ProofMapIndex<T::Base, Sha256d, Transaction>,
     /// Signatures for the given transaction input.
-    pub transaction_signatures: ProofMapIndex<T::Base, TxInputId, InputSignatures>,
+    pub(crate) transaction_signatures: ProofMapIndex<T::Base, TxInputId, InputSignatures>,
     /// Actual anchoring configuration entry.
-    pub actual_config: Entry<T::Base, Config>,
+    pub(crate) actual_config: Entry<T::Base, Config>,
     /// Following anchoring configuration entry.
-    pub following_config: Entry<T::Base, Config>,
+    pub(crate) following_config: Entry<T::Base, Config>,
     /// Confirmations for the corresponding funding transaction.
-    pub unconfirmed_funding_transactions: ProofMapIndex<T::Base, Sha256d, TransactionConfirmations>,
+    pub(crate) unconfirmed_funding_transactions:
+        ProofMapIndex<T::Base, Sha256d, TransactionConfirmations>,
     /// Entry that may contain an unspent funding transaction for the
     /// actual configuration.
-    pub unspent_funding_transaction: Entry<T::Base, Transaction>,
+    pub(crate) unspent_funding_transaction: Entry<T::Base, Transaction>,
 }
 
-impl<T: Access> BtcAnchoringSchema<T> {
+impl<T: Access> Schema<T> {
     /// Returns object hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
         vec![
@@ -85,6 +86,11 @@ impl<T: Access> BtcAnchoringSchema<T> {
     /// Returns the list of signatures for the given transaction input.
     pub fn input_signatures(&self, input: &TxInputId) -> InputSignatures {
         self.transaction_signatures.get(input).unwrap_or_default()
+    }
+
+    /// Returns an unspent funding transaction for the actual configurations if it exists.
+    pub fn unspent_funding_transaction(&self) -> Option<Transaction> {
+        self.unspent_funding_transaction.get()
     }
 
     /// Returns an actual state of anchoring.
@@ -191,9 +197,9 @@ impl<T: Access> BtcAnchoringSchema<T> {
     }
 }
 
-impl BtcAnchoringSchema<Prefixed<'_, &Fork>> {
+impl Schema<Prefixed<'_, &Fork>> {
     /// Adds a finalized transaction to the tail of the anchoring transactions.
-    pub fn push_anchoring_transaction(&mut self, tx: Transaction) {
+    pub(crate) fn push_anchoring_transaction(&mut self, tx: Transaction) {
         // An unspent funding transaction is always unconditionally added to the anchoring
         // transaction proposal, so we can simply move it to the list of spent.
         if let Some(funding_transaction) = self.unspent_funding_transaction.take() {
@@ -227,7 +233,7 @@ impl BtcAnchoringSchema<Prefixed<'_, &Fork>> {
     }
 
     /// Sets the given transaction as the current unspent funding transaction.
-    pub fn set_funding_transaction(&mut self, transaction: btc::Transaction) {
+    pub(crate) fn set_funding_transaction(&mut self, transaction: btc::Transaction) {
         debug_assert!(
             !self.spent_funding_transactions.contains(&transaction.id()),
             "Funding transaction must be unspent."
