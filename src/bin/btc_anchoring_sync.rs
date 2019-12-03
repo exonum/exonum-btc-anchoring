@@ -22,7 +22,6 @@ use exonum_btc_anchoring::{
     sync::{AnchoringChainUpdateTask, ChainUpdateError, SyncWithBitcoinError, SyncWithBitcoinTask},
 };
 use exonum_cli::io::{load_config_file, save_config_file};
-use futures::{Future, IntoFuture};
 use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_derive::{Deserialize, Serialize};
 use structopt::StructOpt;

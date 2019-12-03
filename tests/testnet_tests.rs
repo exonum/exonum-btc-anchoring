@@ -26,7 +26,7 @@ use exonum_btc_anchoring::{
     config::Config,
     test_helpers::{
         create_fake_funding_transaction, get_anchoring_schema, AnchoringTestKit,
-        ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME,
+        ANCHORING_INSTANCE_ID,
     },
 };
 use exonum_supervisor::ConfigPropose;

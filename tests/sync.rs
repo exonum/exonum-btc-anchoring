@@ -26,9 +26,7 @@ use exonum_btc_anchoring::{
         AnchoringChainUpdateTask, BitcoinRelay, ChainUpdateError, SyncWithBitcoinError,
         SyncWithBitcoinTask, TransactionStatus,
     },
-    test_helpers::{
-        get_anchoring_schema, AnchoringTestKit, ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME,
-    },
+    test_helpers::{get_anchoring_schema, AnchoringTestKit, ANCHORING_INSTANCE_ID},
 };
 use exonum_testkit::TestKitApi;
 

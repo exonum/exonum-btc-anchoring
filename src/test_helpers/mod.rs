@@ -19,9 +19,7 @@ use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
     api,
-    blockchain::{
-        BlockProof, ConsensusConfig, IndexCoordinates, Schema as CoreSchema, SchemaOrigin,
-    },
+    blockchain::{BlockProof, ConsensusConfig, IndexCoordinates, SchemaOrigin},
     crypto::{self, Hash, PublicKey},
     helpers::Height,
     keys::Keys,
@@ -32,7 +30,6 @@ use exonum_merkledb::{access::Access, MapProof, ObjectHash, Snapshot};
 use exonum_supervisor::{ConfigPropose, SimpleSupervisor};
 use exonum_testkit::{ApiKind, InstanceCollection, TestKit, TestKitApi, TestKitBuilder, TestNode};
 use failure::{ensure, format_err};
-use futures::{Future, IntoFuture};
 use rand::{thread_rng, Rng};
 
 use std::collections::BTreeMap;

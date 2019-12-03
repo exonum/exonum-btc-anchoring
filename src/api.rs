@@ -16,7 +16,7 @@
 
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
-    blockchain::{BlockProof, IndexCoordinates, Schema as CoreSchema, SchemaOrigin},
+    blockchain::{BlockProof, IndexCoordinates, SchemaOrigin},
     crypto::Hash,
     helpers::Height,
     runtime::rust::{
@@ -24,9 +24,8 @@ use exonum::{
         Transaction,
     },
 };
-use exonum_merkledb::{access::Access, ListProof, MapProof, ObjectHash, Snapshot};
+use exonum_merkledb::{ListProof, MapProof};
 use failure::ensure;
-use futures::{Future, IntoFuture, Sink};
 use serde_derive::{Deserialize, Serialize};
 
 use std::cmp::{
@@ -181,34 +180,34 @@ impl<'a> ApiImpl<'a> {
         Ok(BtcAnchoringSchema::new(self.0.service_data()).actual_config())
     }
 
-    // fn verify_sign_input(&self, sign_input: &SignInput) -> Result<(), failure::Error> {
-    //     let schema = BtcAnchoringSchema::new(self.0.service_data());
-    //     let (proposal, inputs) = schema
-    //         .actual_proposed_anchoring_transaction(self.0.data().for_core())
-    //         .ok_or_else(|| failure::format_err!("Anchoring transaction proposal is absent."))??;
+    fn verify_sign_input(&self, sign_input: &SignInput) -> Result<(), failure::Error> {
+        let schema = BtcAnchoringSchema::new(self.0.service_data());
+        let (proposal, inputs) = schema
+            .actual_proposed_anchoring_transaction(self.0.data().for_core())
+            .ok_or_else(|| failure::format_err!("Anchoring transaction proposal is absent."))??;
 
-    //     // Verify transaction content.
-    //     let input = inputs.get(sign_input.input as usize).ok_or_else(|| {
-    //         failure::format_err!("Missing input with index: {}", sign_input.input)
-    //     })?;
+        // Verify transaction content.
+        let input = inputs.get(sign_input.input as usize).ok_or_else(|| {
+            failure::format_err!("Missing input with index: {}", sign_input.input)
+        })?;
 
-    //     // Find corresponding Bitcoin key.
-    //     let config = schema.actual_config();
-    //     let bitcoin_key = config
-    //         .find_bitcoin_key(&self.0.generic_broadcaster().keypair().0)
-    //         .ok_or_else(|| failure::format_err!("This node is not an anchoring node."))?
-    //         .1;
+        // Find corresponding Bitcoin key.
+        let config = schema.actual_config();
+        let bitcoin_key = config
+            .find_bitcoin_key(&self.0.service_keypair().0)
+            .ok_or_else(|| failure::format_err!("This node is not an anchoring node."))?
+            .1;
 
-    //     // Verify input signature.
-    //     p2wsh::InputSigner::new(config.redeem_script())
-    //         .verify_input(
-    //             TxInRef::new(proposal.as_ref(), sign_input.input as usize),
-    //             input.as_ref(),
-    //             &bitcoin_key.0,
-    //             sign_input.input_signature.as_ref(),
-    //         )
-    //         .map_err(|e| failure::format_err!("Input signature verification failed: {}", e))
-    // }
+        // Verify input signature.
+        p2wsh::InputSigner::new(config.redeem_script())
+            .verify_input(
+                TxInRef::new(proposal.as_ref(), sign_input.input as usize),
+                input.as_ref(),
+                &bitcoin_key.0,
+                sign_input.input_signature.as_ref(),
+            )
+            .map_err(|e| failure::format_err!("Input signature verification failed: {}", e))
+    }
 
     fn verify_funding_tx(&self, tx: &btc::Transaction) -> Result<(), failure::Error> {
         let txid = tx.id();
@@ -322,9 +321,8 @@ impl<'a> PrivateApi for ApiImpl<'a> {
 
     fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
         // Verify Bitcoin signature.
-        // if let Err(e) = self.verify_sign_input(&sign_input) {
-        //     return Err(api::Error::BadRequest(e.to_string()));
-        // }
+        self.verify_sign_input(&sign_input)
+            .map_err(|e| api::Error::BadRequest(e.to_string()))?;
         self.broadcast_transaction(sign_input).map_err(From::from)
     }
 

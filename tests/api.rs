@@ -15,11 +15,11 @@ use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::helpers::Height;
 use exonum_btc_anchoring::{
     api::{AnchoringProposalState, PrivateApi, PublicApi},
-    blockchain::{BtcAnchoringSchema, SignInput},
+    blockchain::SignInput,
     btc,
     test_helpers::{
         create_fake_funding_transaction, get_anchoring_schema, AnchoringTestKit, ValidateProof,
-        ANCHORING_INSTANCE_ID, ANCHORING_INSTANCE_NAME,
+        ANCHORING_INSTANCE_ID,
     },
 };
 use exonum_supervisor::ConfigPropose;
