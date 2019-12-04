@@ -96,6 +96,7 @@ jobs:
 
   # Check publish with Rust 1.36
   - name: publish-with-rust-1.36
+    env: FEATURE=non-fatal-checks
     rust: 1.36.0
     script:
     - cargo publish --dry-run
