@@ -16,17 +16,16 @@
 
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
-    blockchain::{BlockProof, IndexCoordinates, IndexOwner, Schema as CoreSchema},
+    blockchain::{BlockProof, IndexCoordinates, SchemaOrigin},
     crypto::Hash,
     helpers::Height,
-    merkledb::{ListProof, MapProof, ObjectHash, Snapshot},
-    runtime::{
+    runtime::rust::{
         api::{self, ServiceApiBuilder, ServiceApiState},
-        rust::Transaction,
+        Transaction,
     },
 };
+use exonum_merkledb::{ListProof, MapProof};
 use failure::ensure;
-use futures::{Future, IntoFuture, Sink};
 use serde_derive::{Deserialize, Serialize};
 
 use std::cmp::{
@@ -35,7 +34,7 @@ use std::cmp::{
 };
 
 use crate::{
-    blockchain::{AddFunds, BtcAnchoringSchema, SignInput},
+    blockchain::{AddFunds, Schema, SignInput, Transactions},
     btc,
     config::Config,
 };
@@ -140,20 +139,14 @@ pub trait PrivateApi {
     /// by the current node, and returns its hash.
     ///
     /// `POST /{api_prefix}/sign-input`
-    fn sign_input(
-        &self,
-        sign_input: SignInput,
-    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>>;
+    fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error>;
     /// Adds funds via suitable funding transaction.
     ///
     /// Bitcoin transaction should have output with value to the current anchoring address.
     /// The transaction will be applied if 2/3+1 anchoring nodes sent it.
     ///
     /// `POST /{api_prefix}/add-funds`
-    fn add_funds(
-        &self,
-        transaction: btc::Transaction,
-    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>>;
+    fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error>;
     /// Returns a proposal for the next anchoring transaction, if it makes sense.
     /// If there is not enough satoshis to create a proposal an error is returned.
     ///
@@ -176,38 +169,21 @@ pub trait PrivateApi {
 struct ApiImpl<'a>(&'a ServiceApiState<'a>);
 
 impl<'a> ApiImpl<'a> {
-    fn anchoring_schema(&self) -> BtcAnchoringSchema<&'a dyn Snapshot> {
-        BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
-    }
-
     fn broadcast_transaction(
         &self,
-        transaction: impl Transaction,
-    ) -> impl Future<Item = Hash, Error = failure::Error> {
-        use exonum::node::ExternalMessage;
-
-        let keypair = self.0.service_keypair;
-        let signed = transaction.sign(self.0.instance.id, keypair.0, &keypair.1);
-
-        let hash = signed.object_hash();
-        // TODO Move this code to core
-        self.0
-            .sender()
-            .clone()
-            .0
-            .send(ExternalMessage::Transaction(signed))
-            .map(move |_| hash)
-            .map_err(From::from)
+        transaction: impl Transaction<dyn Transactions + 'static>,
+    ) -> Result<Hash, failure::Error> {
+        self.0.generic_broadcaster().send(transaction)
     }
 
     fn actual_config(&self) -> Result<Config, failure::Error> {
-        Ok(BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot()).actual_config())
+        Ok(Schema::new(self.0.service_data()).actual_config())
     }
 
     fn verify_sign_input(&self, sign_input: &SignInput) -> Result<(), failure::Error> {
-        let schema = self.anchoring_schema();
+        let schema = Schema::new(self.0.service_data());
         let (proposal, inputs) = schema
-            .actual_proposed_anchoring_transaction()
+            .actual_proposed_anchoring_transaction(self.0.data().for_core())
             .ok_or_else(|| failure::format_err!("Anchoring transaction proposal is absent."))??;
 
         // Verify transaction content.
@@ -218,7 +194,7 @@ impl<'a> ApiImpl<'a> {
         // Find corresponding Bitcoin key.
         let config = schema.actual_config();
         let bitcoin_key = config
-            .find_bitcoin_key(&self.0.service_keypair.0)
+            .find_bitcoin_key(&self.0.service_key())
             .ok_or_else(|| failure::format_err!("This node is not an anchoring node."))?
             .1;
 
@@ -236,10 +212,10 @@ impl<'a> ApiImpl<'a> {
     fn verify_funding_tx(&self, tx: &btc::Transaction) -> Result<(), failure::Error> {
         let txid = tx.id();
 
-        let schema = self.anchoring_schema();
+        let schema = Schema::new(self.0.service_data());
         let config = schema.actual_config();
         ensure!(
-            !schema.spent_funding_transactions().contains(&txid),
+            !schema.spent_funding_transactions.contains(&txid),
             "Funding transaction {} has been already used.",
             txid
         );
@@ -252,17 +228,17 @@ impl<'a> ApiImpl<'a> {
     }
 
     fn transaction_proof(&self, tx_index: u64) -> TransactionProof {
-        let blockchain_schema = CoreSchema::new(self.0.snapshot());
+        let blockchain_schema = self.0.data().for_core();
         let max_height = blockchain_schema.block_hashes_by_height().len() - 1;
         let latest_authorized_block = blockchain_schema
             .block_and_precommits(Height(max_height))
             .unwrap();
 
-        let tx_chain = self.anchoring_schema().anchoring_transactions_chain();
+        let tx_chain = Schema::new(self.0.service_data()).transactions_chain;
 
         let to_table = blockchain_schema
             .state_hash_aggregator()
-            .get_proof(IndexOwner::Service(self.0.instance.id).coordinate_for(0));
+            .get_proof(SchemaOrigin::Service(self.0.instance().id).coordinate_for(0));
 
         let to_transaction = tx_chain.get_proof(tx_index);
 
@@ -278,20 +254,20 @@ impl<'a> PublicApi for ApiImpl<'a> {
     type Error = api::Error;
 
     fn actual_address(&self) -> Result<btc::Address, Self::Error> {
-        Ok(self.anchoring_schema().actual_config().anchoring_address())
+        Ok(Schema::new(self.0.service_data())
+            .actual_config()
+            .anchoring_address())
     }
 
     fn following_address(&self) -> Result<Option<btc::Address>, Self::Error> {
-        Ok(self
-            .anchoring_schema()
+        Ok(Schema::new(self.0.service_data())
             .following_config()
             .map(|config| config.anchoring_address()))
     }
 
     fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error> {
-        let snapshot = self.0.snapshot();
-        let anchoring_schema = BtcAnchoringSchema::new(self.0.instance.name, snapshot);
-        let tx_chain = anchoring_schema.anchoring_transactions_chain();
+        let anchoring_schema = Schema::new(self.0.service_data());
+        let tx_chain = anchoring_schema.transactions_chain;
 
         if tx_chain.is_empty() {
             return Ok(self.transaction_proof(0));
@@ -343,32 +319,26 @@ impl<'a> PublicApi for ApiImpl<'a> {
 impl<'a> PrivateApi for ApiImpl<'a> {
     type Error = api::Error;
 
-    fn sign_input(
-        &self,
-        sign_input: SignInput,
-    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
+    fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
         // Verify Bitcoin signature.
-        if let Err(e) = self.verify_sign_input(&sign_input) {
-            return Box::new(Err(api::Error::BadRequest(e.to_string())).into_future());
-        }
-        Box::new(self.broadcast_transaction(sign_input).map_err(From::from))
+        self.verify_sign_input(&sign_input)
+            .map_err(|e| api::Error::BadRequest(e.to_string()))?;
+        self.broadcast_transaction(sign_input).map_err(From::from)
     }
 
-    fn add_funds(
-        &self,
-        transaction: btc::Transaction,
-    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
-        if let Err(e) = self.verify_funding_tx(&transaction) {
-            return Box::new(Err(api::Error::BadRequest(e.to_string())).into_future());
-        }
-        let add_funds = AddFunds { transaction };
-        Box::new(self.broadcast_transaction(add_funds).map_err(From::from))
+    fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error> {
+        self.verify_funding_tx(&transaction)
+            .map_err(|e| api::Error::BadRequest(e.to_string()))?;
+        self.broadcast_transaction(AddFunds { transaction })
+            .map_err(From::from)
     }
 
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
+        let core_schema = self.0.data().for_core();
+        let anchoring_schema = Schema::new(self.0.service_data());
+
         AnchoringProposalState::try_from_proposal(
-            self.anchoring_schema()
-                .actual_proposed_anchoring_transaction(),
+            anchoring_schema.actual_proposed_anchoring_transaction(core_schema),
         )
     }
 
@@ -377,20 +347,16 @@ impl<'a> PrivateApi for ApiImpl<'a> {
     }
 
     fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
-        Ok(
-            BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
-                .anchoring_transactions_chain()
-                .get(index),
-        )
+        Ok(Schema::new(self.0.service_data())
+            .transactions_chain
+            .get(index))
     }
 
     fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error> {
-        Ok(
-            BtcAnchoringSchema::new(self.0.instance.name, self.0.snapshot())
-                .anchoring_transactions_chain()
-                .len()
-                .into(),
-        )
+        Ok(Schema::new(self.0.service_data())
+            .transactions_chain
+            .len()
+            .into())
     }
 }
 

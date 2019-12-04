@@ -29,7 +29,7 @@ the behavior of the anchoring node is undefined.*
 
 ## Modification of Configuration Parameters
 
-You can use the [`exonum_launcher`][exonum_launcher] utility to change the
+You can use the [`exonum-python-client`][exonum-python-client] utility to change the
 anchoring configuration.
 
 List of parameters that you can change without any preparatory actions:
@@ -72,5 +72,5 @@ in the next section.
 
 [anchoring:actual-address]: https://exonum.com/doc/version/latest/advanced/bitcoin-anchoring/#actual-address
 [anchoring:add-funds]: https://exonum.com/doc/version/latest/advanced/bitcoin-anchoring/#add-funds
-[exonum_launcher]: https://github.com/popzxc/exonum-launcher
+[exonum-python-client]: https://github.com/exonum/exonum-python-client
 [newbie_guide:step-3]: newbie.md#step-3-deploying-and-running

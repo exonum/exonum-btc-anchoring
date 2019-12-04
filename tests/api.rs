@@ -15,18 +15,17 @@ use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::helpers::Height;
 use exonum_btc_anchoring::{
     api::{AnchoringProposalState, PrivateApi, PublicApi},
-    blockchain::{BtcAnchoringSchema, SignInput},
+    blockchain::SignInput,
     btc,
     test_helpers::{
-        create_fake_funding_transaction, AnchoringTestKit, ValidateProof, ANCHORING_INSTANCE_ID,
-        ANCHORING_INSTANCE_NAME,
+        create_fake_funding_transaction, get_anchoring_schema, AnchoringTestKit, ValidateProof,
+        ANCHORING_INSTANCE_ID,
     },
 };
-use exonum_testkit::simple_supervisor::ConfigPropose;
-use futures::Future;
+use exonum_supervisor::ConfigPropose;
 
 fn find_transaction(
-    anchoring_testkit: &AnchoringTestKit,
+    anchoring_testkit: &mut AnchoringTestKit,
     height: Option<Height>,
 ) -> Option<btc::Transaction> {
     let api = anchoring_testkit.inner.api();
@@ -38,7 +37,7 @@ fn find_transaction(
 }
 
 fn transaction_with_index(
-    anchoring_testkit: &AnchoringTestKit,
+    anchoring_testkit: &mut AnchoringTestKit,
     index: u64,
 ) -> Option<btc::Transaction> {
     anchoring_testkit
@@ -104,9 +103,10 @@ fn following_address() {
 
     // Commit configuration with without last anchoring node.
     anchoring_testkit.inner.create_block_with_transaction(
-        ConfigPropose::actual_from(anchoring_testkit.inner.height().next())
-            .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone())
-            .into_tx(),
+        anchoring_testkit.create_config_change_tx(
+            ConfigPropose::new(0, anchoring_testkit.inner.height().next())
+                .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone()),
+        ),
     );
     anchoring_testkit.inner.create_block();
 
@@ -137,33 +137,33 @@ fn find_transaction_regular() {
     }
 
     let snapshot = anchoring_testkit.inner.snapshot();
-    let anchoring_schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
-    let tx_chain = anchoring_schema.anchoring_transactions_chain();
+    let anchoring_schema = get_anchoring_schema(&snapshot);
+    let tx_chain = anchoring_schema.transactions_chain;
     // Find transactions by height.
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(0))).unwrap(),
+        find_transaction(&mut anchoring_testkit, Some(Height(0))).unwrap(),
         tx_chain.get(0).unwrap()
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(3))).unwrap(),
+        find_transaction(&mut anchoring_testkit, Some(Height(3))).unwrap(),
         tx_chain.get(1).unwrap()
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(4))).unwrap(),
+        find_transaction(&mut anchoring_testkit, Some(Height(4))).unwrap(),
         tx_chain.get(1).unwrap()
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(1000))).unwrap(),
+        find_transaction(&mut anchoring_testkit, Some(Height(1000))).unwrap(),
         tx_chain.get(4).unwrap()
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, None).unwrap(),
+        find_transaction(&mut anchoring_testkit, None).unwrap(),
         tx_chain.last().unwrap()
     );
     // Find transactions by index.
     for i in 0..=tx_chain.len() {
         assert_eq!(
-            transaction_with_index(&anchoring_testkit, i),
+            transaction_with_index(&mut anchoring_testkit, i),
             tx_chain.get(i)
         );
     }
@@ -197,9 +197,10 @@ fn find_transaction_configuration_change() {
 
     // Commit configuration with without last anchoring node.
     anchoring_testkit.inner.create_block_with_transaction(
-        ConfigPropose::actual_from(anchoring_testkit.inner.height().next())
-            .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone())
-            .into_tx(),
+        anchoring_testkit.create_config_change_tx(
+            ConfigPropose::new(0, anchoring_testkit.inner.height().next())
+                .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone()),
+        ),
     );
     anchoring_testkit.inner.create_block();
 
@@ -212,18 +213,18 @@ fn find_transaction_configuration_change() {
     );
 
     let snapshot = anchoring_testkit.inner.snapshot();
-    let anchoring_schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+    let anchoring_schema = get_anchoring_schema(&snapshot);
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(0))),
-        anchoring_schema.anchoring_transactions_chain().get(1)
+        find_transaction(&mut anchoring_testkit, Some(Height(0))),
+        anchoring_schema.transactions_chain.get(1)
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(1))),
-        anchoring_schema.anchoring_transactions_chain().get(1)
+        find_transaction(&mut anchoring_testkit, Some(Height(1))),
+        anchoring_schema.transactions_chain.get(1)
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, None),
-        anchoring_schema.anchoring_transactions_chain().get(1)
+        find_transaction(&mut anchoring_testkit, None),
+        anchoring_schema.transactions_chain.get(1)
     );
 
     // Resume regular anchoring (anchors block on height 5).
@@ -238,22 +239,22 @@ fn find_transaction_configuration_change() {
     );
 
     let snapshot = anchoring_testkit.inner.snapshot();
-    let anchoring_schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+    let anchoring_schema = get_anchoring_schema(&snapshot);
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(0))),
-        anchoring_schema.anchoring_transactions_chain().get(1)
+        find_transaction(&mut anchoring_testkit, Some(Height(0))),
+        anchoring_schema.transactions_chain.get(1)
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(1))),
-        anchoring_schema.anchoring_transactions_chain().get(2)
+        find_transaction(&mut anchoring_testkit, Some(Height(1))),
+        anchoring_schema.transactions_chain.get(2)
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(10))),
-        anchoring_schema.anchoring_transactions_chain().get(2)
+        find_transaction(&mut anchoring_testkit, Some(Height(10))),
+        anchoring_schema.transactions_chain.get(2)
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, None),
-        anchoring_schema.anchoring_transactions_chain().get(2)
+        find_transaction(&mut anchoring_testkit, None),
+        anchoring_schema.transactions_chain.get(2)
     );
 
     // Anchors block on height 10.
@@ -265,32 +266,32 @@ fn find_transaction_configuration_change() {
     );
 
     let snapshot = anchoring_testkit.inner.snapshot();
-    let anchoring_schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+    let anchoring_schema = get_anchoring_schema(&snapshot);
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(0))),
-        anchoring_schema.anchoring_transactions_chain().get(1)
+        find_transaction(&mut anchoring_testkit, Some(Height(0))),
+        anchoring_schema.transactions_chain.get(1)
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(1))),
-        anchoring_schema.anchoring_transactions_chain().get(2)
+        find_transaction(&mut anchoring_testkit, Some(Height(1))),
+        anchoring_schema.transactions_chain.get(2)
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(5))),
-        anchoring_schema.anchoring_transactions_chain().get(2)
+        find_transaction(&mut anchoring_testkit, Some(Height(5))),
+        anchoring_schema.transactions_chain.get(2)
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, Some(Height(6))),
-        anchoring_schema.anchoring_transactions_chain().get(3)
+        find_transaction(&mut anchoring_testkit, Some(Height(6))),
+        anchoring_schema.transactions_chain.get(3)
     );
     assert_eq!(
-        find_transaction(&anchoring_testkit, None),
-        anchoring_schema.anchoring_transactions_chain().get(3)
+        find_transaction(&mut anchoring_testkit, None),
+        anchoring_schema.transactions_chain.get(3)
     );
 }
 
 #[test]
 fn actual_config() {
-    let anchoring_testkit = AnchoringTestKit::default();
+    let mut anchoring_testkit = AnchoringTestKit::default();
     let cfg = anchoring_testkit.actual_anchoring_config();
 
     let api = anchoring_testkit.inner.api();
@@ -300,7 +301,7 @@ fn actual_config() {
 
 #[test]
 fn anchoring_proposal_ok() {
-    let anchoring_testkit = AnchoringTestKit::default();
+    let mut anchoring_testkit = AnchoringTestKit::default();
     let proposal = anchoring_testkit.anchoring_transaction_proposal().unwrap();
 
     let api = anchoring_testkit.inner.api();
@@ -334,7 +335,7 @@ fn anchoring_proposal_none() {
 
 #[test]
 fn anchoring_proposal_err_without_initial_funds() {
-    let anchoring_testkit = AnchoringTestKit::new(4, 5);
+    let mut anchoring_testkit = AnchoringTestKit::new(4, 5);
 
     let api = anchoring_testkit.inner.api();
     let state = api.anchoring_proposal().unwrap();
@@ -402,7 +403,6 @@ fn sign_input() {
             input_signature: signature.into(),
             txid: proposal.id(),
         })
-        .wait()
         .unwrap();
 
     anchoring_testkit
@@ -424,7 +424,6 @@ fn add_funds_ok() {
         .inner
         .api()
         .add_funds(funding_transaction)
-        .wait()
         .unwrap();
 
     anchoring_testkit
@@ -455,14 +454,13 @@ fn add_funds_err_already_used() {
         .inner
         .api()
         .add_funds(funding_transaction)
-        .wait()
         .expect_err("Add funds must fail");
 }
 
 #[test]
 fn add_funds_err_unsuitable() {
     let anchoring_interval = 5;
-    let anchoring_testkit = AnchoringTestKit::new(4, anchoring_interval);
+    let mut anchoring_testkit = AnchoringTestKit::new(4, anchoring_interval);
 
     let mut config = anchoring_testkit.actual_anchoring_config();
     config.anchoring_keys.swap(1, 3);
@@ -472,6 +470,5 @@ fn add_funds_err_unsuitable() {
         .inner
         .api()
         .add_funds(funding_transaction)
-        .wait()
         .expect_err("Add funds must fail");
 }

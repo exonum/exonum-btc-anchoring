@@ -17,28 +17,26 @@ use exonum::{
     crypto,
     explorer::CommittedTransaction,
     messages::{AnyTx, Verified},
+    runtime::SnapshotExt,
     runtime::{rust::Transaction, ErrorKind},
 };
 use exonum_btc_anchoring::{
-    blockchain::{errors::Error, BtcAnchoringSchema, SignInput},
+    blockchain::{errors::Error, SignInput},
     btc::{self, BuilderError},
     config::Config,
     test_helpers::{
-        create_fake_funding_transaction, AnchoringTestKit, ANCHORING_INSTANCE_ID,
-        ANCHORING_INSTANCE_NAME,
+        create_fake_funding_transaction, get_anchoring_schema, AnchoringTestKit,
+        ANCHORING_INSTANCE_ID,
     },
 };
-use exonum_testkit::simple_supervisor::ConfigPropose;
+use exonum_supervisor::ConfigPropose;
 
 fn assert_tx_error(tx: &CommittedTransaction, e: impl Into<ErrorKind>) {
     assert_eq!(tx.status().unwrap_err().kind, e.into(),);
 }
 
 fn unspent_funding_transaction(anchoring_testkit: &AnchoringTestKit) -> Option<btc::Transaction> {
-    let snapshot = anchoring_testkit.inner.snapshot();
-    BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot)
-        .unspent_funding_transaction_entry()
-        .get()
+    get_anchoring_schema(&anchoring_testkit.inner.snapshot()).unspent_funding_transaction()
 }
 
 fn change_tx_signature(
@@ -79,9 +77,10 @@ where
 
     // Commit configuration with without last anchoring node.
     anchoring_testkit.inner.create_block_with_transaction(
-        ConfigPropose::actual_from(anchoring_testkit.inner.height().next())
-            .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone())
-            .into_tx(),
+        anchoring_testkit.create_config_change_tx(
+            ConfigPropose::new(0, anchoring_testkit.inner.height().next())
+                .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone()),
+        ),
     );
 
     // Extract a previous anchoring transaction from the proposal.
@@ -95,7 +94,7 @@ where
         assert_eq!(last_anchoring_tx, previous_anchoring_tx);
 
         let snapshot = anchoring_testkit.inner.snapshot();
-        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+        let schema = get_anchoring_schema(&snapshot);
         assert_eq!(schema.following_config().unwrap(), new_cfg);
         assert_eq!(schema.actual_config(), old_cfg);
 
@@ -116,7 +115,7 @@ where
 
     // Verify that the following configuration becomes an actual.
     let snapshot = anchoring_testkit.inner.snapshot();
-    let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+    let schema = get_anchoring_schema(&snapshot);
     assert!(schema.following_config().is_none());
     assert_eq!(schema.actual_config(), new_cfg);
 
@@ -305,8 +304,10 @@ fn insufficient_funds() {
 
     {
         let snapshot = anchoring_testkit.inner.snapshot();
-        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
-        let proposal = schema.actual_proposed_anchoring_transaction().unwrap();
+        let schema = get_anchoring_schema(&snapshot);
+        let proposal = schema
+            .actual_proposed_anchoring_transaction(snapshot.for_core())
+            .unwrap();
         assert_eq!(proposal, Err(BuilderError::NoInputs));
     }
 
@@ -318,8 +319,10 @@ fn insufficient_funds() {
     // Check that we have not enough satoshis to create proposal.
     {
         let snapshot = anchoring_testkit.inner.snapshot();
-        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
-        let proposal = schema.actual_proposed_anchoring_transaction().unwrap();
+        let schema = get_anchoring_schema(&snapshot);
+        let proposal = schema
+            .actual_proposed_anchoring_transaction(snapshot.for_core())
+            .unwrap();
         assert_eq!(
             proposal,
             Err(BuilderError::InsufficientFunds {
@@ -458,17 +461,20 @@ fn add_anchoring_node_insufficient_funds() {
 
     // Commit configuration with without last anchoring node.
     anchoring_testkit.inner.create_block_with_transaction(
-        ConfigPropose::actual_from(anchoring_testkit.inner.height().next())
-            .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone())
-            .into_tx(),
+        anchoring_testkit.create_config_change_tx(
+            ConfigPropose::new(0, anchoring_testkit.inner.height().next())
+                .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone()),
+        ),
     );
     anchoring_testkit.inner.create_block();
 
     // Ensure that the anchoring transaction proposal is unsuitable.
     {
         let snapshot = anchoring_testkit.inner.snapshot();
-        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
-        let proposal = schema.actual_proposed_anchoring_transaction().unwrap();
+        let schema = get_anchoring_schema(&snapshot);
+        let proposal = schema
+            .actual_proposed_anchoring_transaction(snapshot.for_core())
+            .unwrap();
         assert_eq!(
             proposal,
             Err(BuilderError::InsufficientFunds {

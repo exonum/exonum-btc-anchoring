@@ -3,11 +3,8 @@ language: rust
 addons:
   apt:
     sources:
-    - sourceline: 'ppa:exonum/rocksdb'
     - sourceline: 'ppa:maarten-fonville/protobuf'
     - sourceline: 'ppa:fsgmhoward/shadowsocks-libev'
-    - sourceline: 'deb [arch=amd64] https://packages.microsoft.com/ubuntu/16.04/prod xenial main'
-      key_url: https://packages.microsoft.com/keys/microsoft.asc
     packages:
     - binutils-dev
     - build-essential
@@ -19,18 +16,17 @@ addons:
     - libelf-dev
     - libiberty-dev
     - libprotobuf-dev
-    - librocksdb5.17
+    - librocksdb-dev
     - libsnappy-dev
     - libsodium-dev
     - libssl-dev
     - pkg-config
-    - powershell
     - protobuf-compiler
     - unzip
     - zlib1g-dev
 
 rust:
-  - 1.38.0
+  - 1.39.0
 
 cache:
   npm: true
@@ -41,7 +37,7 @@ cache:
   - $HOME/.local
   - $HOME/.kcov
 
-dist: xenial
+dist: bionic
 sudo: required
 
 env:
@@ -97,3 +93,10 @@ jobs:
     script:
     - cargo doc --no-deps
     - cargo deadlinks --dir target/doc
+
+  # Check publish with Rust 1.36
+  - name: publish-with-rust-1.36
+    env: FEATURE=non-fatal-checks
+    rust: 1.36.0
+    script:
+    - cargo publish --dry-run

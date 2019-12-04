@@ -14,11 +14,11 @@
 
 //! Information schema for the btc anchoring service.
 
-use exonum::{
-    blockchain::Schema,
-    crypto::Hash,
-    helpers::Height,
-    merkledb::{Entry, IndexAccess, ObjectHash, ProofListIndex, ProofMapIndex},
+use exonum::{blockchain::Schema as CoreSchema, crypto::Hash, helpers::Height};
+use exonum_derive::FromAccess;
+use exonum_merkledb::{
+    access::{Access, Prefixed},
+    Entry, Fork, ObjectHash, ProofListIndex, ProofMapIndex,
 };
 use log::{error, trace};
 
@@ -36,88 +36,43 @@ pub type InputSignatures = BinaryMap<u16, btc::InputSignature>;
 pub type TransactionConfirmations = BinaryMap<btc::PublicKey, ()>;
 
 /// Information schema for `exonum-btc-anchoring`.
-#[derive(Debug)]
-pub struct BtcAnchoringSchema<'a, T> {
-    instance_name: &'a str,
-    access: T,
+#[derive(Debug, FromAccess)]
+pub struct Schema<T: Access> {
+    /// Complete chain of the anchoring transactions.
+    pub transactions_chain: ProofListIndex<T::Base, Transaction>,
+    /// Already spent funding transactions.
+    pub(crate) spent_funding_transactions: ProofMapIndex<T::Base, Sha256d, Transaction>,
+    /// Signatures for the given transaction input.
+    pub(crate) transaction_signatures: ProofMapIndex<T::Base, TxInputId, InputSignatures>,
+    /// Actual anchoring configuration entry.
+    pub(crate) actual_config: Entry<T::Base, Config>,
+    /// Following anchoring configuration entry.
+    pub(crate) following_config: Entry<T::Base, Config>,
+    /// Confirmations for the corresponding funding transaction.
+    pub(crate) unconfirmed_funding_transactions:
+        ProofMapIndex<T::Base, Sha256d, TransactionConfirmations>,
+    /// Entry that may contain an unspent funding transaction for the
+    /// actual configuration.
+    pub(crate) unspent_funding_transaction: Entry<T::Base, Transaction>,
 }
 
-impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
-    /// Constructs a schema for the given database `access` object.
-    pub fn new(instance_name: &'a str, access: T) -> Self {
-        Self {
-            instance_name,
-            access,
-        }
-    }
-
-    fn index_name(&self, suffix: &str) -> String {
-        [self.instance_name, ".", suffix].concat()
-    }
-
-    /// Returns a table that contains complete chain of the anchoring transactions.
-    pub fn anchoring_transactions_chain(&self) -> ProofListIndex<T, Transaction> {
-        ProofListIndex::new(self.index_name("transactions_chain"), self.access.clone())
-    }
-
-    /// Returns a table that contains already spent funding transactions.
-    pub fn spent_funding_transactions(&self) -> ProofMapIndex<T, Sha256d, Transaction> {
-        ProofMapIndex::new(
-            self.index_name("spent_funding_transactions"),
-            self.access.clone(),
-        )
-    }
-
-    /// Returns a table that contains signatures for the given transaction input.
-    pub fn transaction_signatures(&self) -> ProofMapIndex<T, TxInputId, InputSignatures> {
-        ProofMapIndex::new(
-            self.index_name("transaction_signatures"),
-            self.access.clone(),
-        )
-    }
-
-    /// Returns an actual anchoring configuration entry.
-    pub fn actual_config_entry(&self) -> Entry<T, Config> {
-        Entry::new(self.index_name("actual_config"), self.access.clone())
-    }
-
-    /// Returns a following anchoring configuration entry.
-    pub fn following_config_entry(&self) -> Entry<T, Config> {
-        Entry::new(self.index_name("following_config"), self.access.clone())
-    }
-
-    /// Returns a table that contains confirmations for the corresponding funding transaction.
-    pub fn unconfirmed_funding_transactions(
-        &self,
-    ) -> ProofMapIndex<T, Sha256d, TransactionConfirmations> {
-        ProofMapIndex::new(
-            self.index_name("unconfirmed_funding_transactions"),
-            self.access.clone(),
-        )
-    }
-
-    /// Returns an entry that may contain an unspent funding transaction for the
-    /// actual configuration.
-    pub fn unspent_funding_transaction_entry(&self) -> Entry<T, Transaction> {
-        Entry::new(
-            self.index_name("unspent_funding_transaction"),
-            self.access.clone(),
-        )
-    }
-
+impl<T: Access> Schema<T> {
     /// Returns object hashes of the stored tables.
     pub fn state_hash(&self) -> Vec<Hash> {
         vec![
-            self.anchoring_transactions_chain().object_hash(),
-            self.spent_funding_transactions().object_hash(),
-            self.transaction_signatures().object_hash(),
-            self.unconfirmed_funding_transactions().object_hash(),
+            self.transactions_chain.object_hash(),
+            self.spent_funding_transactions.object_hash(),
+            self.transaction_signatures.object_hash(),
+            self.actual_config.object_hash(),
+            self.following_config.object_hash(),
+            self.unconfirmed_funding_transactions.object_hash(),
+            self.unspent_funding_transaction.object_hash(),
         ]
     }
 
     /// Returns an actual anchoring configuration.
     pub fn actual_config(&self) -> Config {
-        self.actual_config_entry().get().expect(
+        self.actual_config.get().expect(
             "Actual configuration of anchoring is absent. \
              If this error occurs, inform the service authors about it.",
         )
@@ -125,12 +80,17 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
 
     /// Returns the nearest following configuration if it exists.
     pub fn following_config(&self) -> Option<Config> {
-        self.following_config_entry().get()
+        self.following_config.get()
     }
 
     /// Returns the list of signatures for the given transaction input.
     pub fn input_signatures(&self, input: &TxInputId) -> InputSignatures {
-        self.transaction_signatures().get(input).unwrap_or_default()
+        self.transaction_signatures.get(input).unwrap_or_default()
+    }
+
+    /// Returns an unspent funding transaction for the actual configurations if it exists.
+    pub fn unspent_funding_transaction(&self) -> Option<Transaction> {
+        self.unspent_funding_transaction.get()
     }
 
     /// Returns an actual state of anchoring.
@@ -153,11 +113,12 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
     /// Returns the proposal of the next anchoring transaction for the given anchoring state.
     pub fn proposed_anchoring_transaction(
         &self,
+        core_schema: CoreSchema<impl Access>,
         actual_state: &BtcAnchoringState,
     ) -> Option<Result<(Transaction, Vec<Transaction>), BuilderError>> {
         let config = actual_state.actual_config();
-        let unspent_anchoring_transaction = self.anchoring_transactions_chain().last();
-        let unspent_funding_transaction = self.unspent_funding_transaction_entry().get();
+        let unspent_anchoring_transaction = self.transactions_chain.last();
+        let unspent_funding_transaction = self.unspent_funding_transaction.get();
 
         let mut builder = BtcAnchoringTransactionBuilder::new(&config.redeem_script());
         // First anchoring transaction doesn't have previous.
@@ -203,9 +164,7 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
         // Add corresponding payload.
         let latest_anchored_height = self.latest_anchored_height();
         let anchoring_height = actual_state.following_anchoring_height(latest_anchored_height);
-
-        let anchoring_block_hash =
-            Schema::new(self.access.clone()).block_hash_by_height(anchoring_height)?;
+        let anchoring_block_hash = core_schema.block_hash_by_height(anchoring_height)?;
 
         builder.payload(anchoring_height, anchoring_block_hash);
         builder.fee(config.transaction_fee);
@@ -217,14 +176,15 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
     /// Returns the proposal of the next anchoring transaction for the actual anchoring state.
     pub fn actual_proposed_anchoring_transaction(
         &self,
+        core_schema: CoreSchema<impl Access>,
     ) -> Option<Result<(Transaction, Vec<Transaction>), BuilderError>> {
         let actual_state = self.actual_state();
-        self.proposed_anchoring_transaction(&actual_state)
+        self.proposed_anchoring_transaction(core_schema, &actual_state)
     }
 
     /// Returns the height of the latest anchored block.
     pub fn latest_anchored_height(&self) -> Option<Height> {
-        let tx = self.anchoring_transactions_chain().last()?;
+        let tx = self.transactions_chain.last()?;
         Some(
             tx.anchoring_metadata()
                 .expect(
@@ -235,13 +195,15 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
                 .block_height,
         )
     }
+}
 
+impl Schema<Prefixed<'_, &Fork>> {
     /// Adds a finalized transaction to the tail of the anchoring transactions.
-    pub fn push_anchoring_transaction(&self, tx: Transaction) {
+    pub(crate) fn push_anchoring_transaction(&mut self, tx: Transaction) {
         // An unspent funding transaction is always unconditionally added to the anchoring
         // transaction proposal, so we can simply move it to the list of spent.
-        if let Some(funding_transaction) = self.unspent_funding_transaction_entry().take() {
-            self.spent_funding_transactions()
+        if let Some(funding_transaction) = self.unspent_funding_transaction.take() {
+            self.spent_funding_transactions
                 .put(&funding_transaction.id(), funding_transaction);
         }
         // Special case if we have an active following configuration.
@@ -264,24 +226,22 @@ impl<'a, T: IndexAccess> BtcAnchoringSchema<'a, T> {
                  If this error occurs, inform the service authors about it."
             );
             // If preconditions are correct, just reassign the config as an actual.
-            self.following_config_entry().remove();
-            self.actual_config_entry().set(config);
+            self.following_config.remove();
+            self.actual_config.set(config);
         }
-        self.anchoring_transactions_chain().push(tx);
+        self.transactions_chain.push(tx);
     }
 
     /// Sets the given transaction as the current unspent funding transaction.
-    pub fn set_funding_transaction(&self, transaction: btc::Transaction) {
+    pub(crate) fn set_funding_transaction(&mut self, transaction: btc::Transaction) {
         debug_assert!(
-            !self
-                .spent_funding_transactions()
-                .contains(&transaction.id()),
+            !self.spent_funding_transactions.contains(&transaction.id()),
             "Funding transaction must be unspent."
         );
         // Remove confirmations for this transaction to avoid attack of re-setting
         // this transaction as funding.
-        self.unconfirmed_funding_transactions()
+        self.unconfirmed_funding_transactions
             .put(&transaction.id(), TransactionConfirmations::default());
-        self.unspent_funding_transaction_entry().set(transaction);
+        self.unspent_funding_transaction.set(transaction);
     }
 }

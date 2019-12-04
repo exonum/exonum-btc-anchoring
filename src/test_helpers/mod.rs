@@ -19,20 +19,22 @@ use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
     api,
-    blockchain::{BlockProof, ConsensusConfig, IndexCoordinates, IndexOwner, Schema as CoreSchema},
+    blockchain::{
+        config::InstanceInitParams, BlockProof, ConsensusConfig, IndexCoordinates, SchemaOrigin,
+    },
     crypto::{self, Hash, PublicKey},
     helpers::Height,
     keys::Keys,
     messages::{AnyTx, Verified},
-    runtime::{rust::Transaction, InstanceId},
+    runtime::{
+        rust::{ServiceFactory, Transaction},
+        InstanceId, SnapshotExt,
+    },
 };
-use exonum_merkledb::{MapProof, ObjectHash};
-use exonum_testkit::{
-    simple_supervisor::SimpleSupervisor, ApiKind, InstanceCollection, TestKit, TestKitApi,
-    TestKitBuilder, TestNode,
-};
+use exonum_merkledb::{access::Access, MapProof, ObjectHash, Snapshot};
+use exonum_supervisor::{ConfigPropose, SimpleSupervisor};
+use exonum_testkit::{ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNode};
 use failure::{ensure, format_err};
-use futures::{Future, IntoFuture};
 use rand::{thread_rng, Rng};
 
 use std::collections::BTreeMap;
@@ -42,7 +44,7 @@ use crate::{
         AnchoringChainLength, AnchoringProposalState, FindTransactionQuery, IndexQuery, PrivateApi,
         PublicApi, TransactionProof,
     },
-    blockchain::{AddFunds, BtcAnchoringSchema, SignInput},
+    blockchain::{AddFunds, Schema, SignInput},
     btc,
     config::Config,
     proto::AnchoringKeys,
@@ -145,6 +147,11 @@ pub struct AnchoringTestKit {
     anchoring_nodes: AnchoringNodes,
 }
 
+/// Returns an anchoring schema instance used in Testkit.
+pub fn get_anchoring_schema<'a>(snapshot: &'a dyn Snapshot) -> Schema<impl Access + 'a> {
+    Schema::new(snapshot.for_service(ANCHORING_INSTANCE_NAME).unwrap())
+}
+
 impl AnchoringTestKit {
     /// Creates an anchoring testkit instance for the specified number of anchoring nodes,
     /// and interval between anchors.
@@ -163,12 +170,16 @@ impl AnchoringTestKit {
             ..Config::default()
         };
 
+        let anchoring_artifact = BtcAnchoringService.artifact_id();
         let inner = TestKitBuilder::validator()
             .with_keys(validator_keys)
-            .with_rust_service(SimpleSupervisor)
-            .with_rust_service(InstanceCollection::new(BtcAnchoringService).with_instance(
+            .with_default_rust_service(SimpleSupervisor::new())
+            .with_rust_service(BtcAnchoringService)
+            .with_artifact(anchoring_artifact.clone())
+            .with_instance(InstanceInitParams::new(
                 ANCHORING_INSTANCE_ID,
                 ANCHORING_INSTANCE_NAME,
+                anchoring_artifact.into(),
                 anchoring_config,
             ))
             .create();
@@ -181,26 +192,22 @@ impl AnchoringTestKit {
 
     /// Returns the actual anchoring configuration.
     pub fn actual_anchoring_config(&self) -> Config {
-        let snapshot = self.inner.snapshot();
-        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
-        schema.actual_config()
+        get_anchoring_schema(&self.inner.snapshot()).actual_config()
     }
 
     /// Returns the latest anchoring transaction.
     pub fn last_anchoring_tx(&self) -> Option<btc::Transaction> {
-        let snapshot = self.inner.snapshot();
-        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
-        schema.anchoring_transactions_chain().last()
+        get_anchoring_schema(&self.inner.snapshot())
+            .transactions_chain
+            .last()
     }
 
     /// Returns the proposal of the next anchoring transaction for the actual anchoring state.
     pub fn anchoring_transaction_proposal(
         &self,
     ) -> Option<(btc::Transaction, Vec<btc::Transaction>)> {
-        let snapshot = self.inner.snapshot();
-        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
-        schema
-            .actual_proposed_anchoring_transaction()
+        get_anchoring_schema(&self.inner.snapshot())
+            .actual_proposed_anchoring_transaction(self.inner.snapshot().for_core())
             .map(Result::unwrap)
     }
 
@@ -212,10 +219,10 @@ impl AnchoringTestKit {
     ) -> Result<Vec<Verified<AnyTx>>, btc::BuilderError> {
         let service_keypair = node.service_keypair();
         let snapshot = self.inner.snapshot();
-        let schema = BtcAnchoringSchema::new(ANCHORING_INSTANCE_NAME, &snapshot);
+        let schema = get_anchoring_schema(&snapshot);
 
         let mut signatures = Vec::new();
-        if let Some(p) = schema.actual_proposed_anchoring_transaction() {
+        if let Some(p) = schema.actual_proposed_anchoring_transaction(snapshot.for_core()) {
             let (proposal, proposal_inputs) = p?;
 
             let actual_config = schema.actual_state().actual_config().clone();
@@ -306,6 +313,13 @@ impl AnchoringTestKit {
             .collect()
     }
 
+    /// Creates configuration change transaction for simple supervisor.
+    pub fn create_config_change_tx(&self, proposal: ConfigPropose) -> Verified<AnyTx> {
+        let initiator_id = self.inner.network().us().validator_id().unwrap();
+        let keypair = self.inner.validator(initiator_id).service_keypair();
+        proposal.sign_for_supervisor(keypair.0, &keypair.1)
+    }
+
     /// Adds a new auditor node to the testkit network and create Bitcoin keypair for it.
     pub fn add_node(&mut self) -> AnchoringKeys {
         let service_key = self.inner.network_mut().add_node().service_keypair().0;
@@ -333,7 +347,9 @@ impl AnchoringTestKit {
 
     /// Returns the block hash for the given blockchain height.
     pub fn block_hash_on_height(&self, height: Height) -> Hash {
-        CoreSchema::new(&self.inner.snapshot())
+        self.inner
+            .snapshot()
+            .for_core()
             .block_hashes_by_height()
             .get(height.0)
             .unwrap()
@@ -412,28 +428,16 @@ impl PublicApi for TestKitApi {
 impl PrivateApi for TestKitApi {
     type Error = api::Error;
 
-    fn sign_input(
-        &self,
-        sign_input: SignInput,
-    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
-        Box::new(
-            self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
-                .query(&sign_input)
-                .post("sign-input")
-                .into_future(),
-        )
+    fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
+        self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .query(&sign_input)
+            .post("sign-input")
     }
 
-    fn add_funds(
-        &self,
-        transaction: btc::Transaction,
-    ) -> Box<dyn Future<Item = Hash, Error = Self::Error>> {
-        Box::new(
-            self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
-                .query(&transaction)
-                .post("add-funds")
-                .into_future(),
-        )
+    fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error> {
+        self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
+            .query(&transaction)
+            .post("add-funds")
     }
 
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
@@ -505,7 +509,7 @@ impl ValidateProof for TransactionProof {
     fn validate(self, actual_config: &ConsensusConfig) -> Result<Self::Output, failure::Error> {
         let proof_entry =
             validate_table_proof(actual_config, &self.latest_authorized_block, self.to_table)?;
-        let table_location = IndexCoordinates::new(IndexOwner::Service(ANCHORING_INSTANCE_ID), 0);
+        let table_location = IndexCoordinates::new(SchemaOrigin::Service(ANCHORING_INSTANCE_ID), 0);
 
         ensure!(proof_entry.0 == table_location, "Invalid table location");
         // Validate value.

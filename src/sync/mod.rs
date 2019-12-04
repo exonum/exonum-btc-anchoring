@@ -19,7 +19,6 @@
 pub use self::bitcoin_relay::{BitcoinRelay, TransactionStatus};
 
 use btc_transaction_utils::{p2wsh, TxInRef};
-use futures::future::Future;
 
 use std::{collections::HashMap, fmt::Display, sync::Arc};
 
@@ -167,7 +166,6 @@ where
         for sign_input in sign_input_messages {
             self.api_client
                 .sign_input(sign_input)
-                .wait()
                 .map_err(ChainUpdateError::Client)?;
         }
         Ok(())
