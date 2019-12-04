@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## [Unreleased]
 
+## 0.13.0-rc.2 - 2018-12-04
+
 ### Breaking changes
 
 - Ported `exonum-btc-anchoring` to a new version of Exonum with support
