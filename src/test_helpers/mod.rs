@@ -19,16 +19,21 @@ use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
     api,
-    blockchain::{BlockProof, ConsensusConfig, IndexCoordinates, SchemaOrigin},
+    blockchain::{
+        config::InstanceInitParams, BlockProof, ConsensusConfig, IndexCoordinates, SchemaOrigin,
+    },
     crypto::{self, Hash, PublicKey},
     helpers::Height,
     keys::Keys,
     messages::{AnyTx, Verified},
-    runtime::{rust::Transaction, InstanceId, SnapshotExt},
+    runtime::{
+        rust::{ServiceFactory, Transaction},
+        InstanceId, SnapshotExt,
+    },
 };
 use exonum_merkledb::{access::Access, MapProof, ObjectHash, Snapshot};
 use exonum_supervisor::{ConfigPropose, SimpleSupervisor};
-use exonum_testkit::{ApiKind, InstanceCollection, TestKit, TestKitApi, TestKitBuilder, TestNode};
+use exonum_testkit::{ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNode};
 use failure::{ensure, format_err};
 use rand::{thread_rng, Rng};
 
@@ -165,12 +170,16 @@ impl AnchoringTestKit {
             ..Config::default()
         };
 
+        let anchoring_artifact = BtcAnchoringService.artifact_id();
         let inner = TestKitBuilder::validator()
             .with_keys(validator_keys)
-            .with_rust_service(SimpleSupervisor::new())
-            .with_rust_service(InstanceCollection::new(BtcAnchoringService).with_instance(
+            .with_default_rust_service(SimpleSupervisor::new())
+            .with_rust_service(BtcAnchoringService)
+            .with_artifact(anchoring_artifact.clone())
+            .with_instance(InstanceInitParams::new(
                 ANCHORING_INSTANCE_ID,
                 ANCHORING_INSTANCE_NAME,
+                anchoring_artifact.into(),
                 anchoring_config,
             ))
             .create();

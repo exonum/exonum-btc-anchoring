@@ -33,7 +33,7 @@ use crate::{
 };
 
 /// Bitcoin anchoring service implementation for the Exonum blockchain.
-#[derive(ServiceFactory, ServiceDispatcher, Debug)]
+#[derive(ServiceFactory, ServiceDispatcher, Debug, Clone, Copy)]
 #[service_dispatcher(implements("Transactions", "Configure<Params = Config>"))]
 #[service_factory(proto_sources = "proto")]
 pub struct BtcAnchoringService;

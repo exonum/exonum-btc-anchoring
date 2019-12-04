@@ -194,7 +194,7 @@ impl<'a> ApiImpl<'a> {
         // Find corresponding Bitcoin key.
         let config = schema.actual_config();
         let bitcoin_key = config
-            .find_bitcoin_key(&self.0.service_keypair().0)
+            .find_bitcoin_key(&self.0.service_key())
             .ok_or_else(|| failure::format_err!("This node is not an anchoring node."))?
             .1;
 

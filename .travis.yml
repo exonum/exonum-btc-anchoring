@@ -93,3 +93,9 @@ jobs:
     script:
     - cargo doc --no-deps
     - cargo deadlinks --dir target/doc
+
+  # Check publish with Rust 1.36
+  - name: publish-with-rust-1.36
+    rust: 1.36.0
+    script:
+    - cargo publish --dry-run
