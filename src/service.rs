@@ -13,46 +13,42 @@
 // limitations under the License.
 
 use exonum::{
-    crypto::Hash,
     helpers::ValidateInput,
     merkledb::BinaryValue,
-    runtime::{
-        rust::{api::ServiceApiBuilder, CallContext, Service},
-        BlockchainData, DispatcherError, ExecutionError,
-    },
+    runtime::{CommonError, ExecutionContext, ExecutionError},
 };
 use exonum_derive::{ServiceDispatcher, ServiceFactory};
-use exonum_merkledb::Snapshot;
+use exonum_rust_runtime::{api::ServiceApiBuilder, Service};
 use exonum_supervisor::Configure;
 
 use crate::{
     api,
-    blockchain::{Schema, Transactions},
+    blockchain::{BtcAnchoringInterface, Schema},
     config::Config,
     proto,
 };
 
 /// Bitcoin anchoring service implementation for the Exonum blockchain.
 #[derive(ServiceFactory, ServiceDispatcher, Debug, Clone, Copy)]
-#[service_dispatcher(implements("Transactions", "Configure<Params = Config>"))]
+#[service_dispatcher(implements("BtcAnchoringInterface", raw = "Configure<Params = Config>"))]
 #[service_factory(proto_sources = "proto")]
 pub struct BtcAnchoringService;
 
 impl Service for BtcAnchoringService {
-    fn initialize(&self, context: CallContext<'_>, params: Vec<u8>) -> Result<(), ExecutionError> {
+    fn initialize(
+        &self,
+        context: ExecutionContext<'_>,
+        params: Vec<u8>,
+    ) -> Result<(), ExecutionError> {
         // TODO Use a special type for constructor. [ECR-3222]
         let config = Config::from_bytes(params.into())
             .and_then(ValidateInput::into_validated)
-            .map_err(DispatcherError::malformed_arguments)?;
+            .map_err(CommonError::malformed_arguments)?;
 
         Schema::new(context.service_data())
             .actual_config
             .set(config);
         Ok(())
-    }
-
-    fn state_hash(&self, data: BlockchainData<&dyn Snapshot>) -> Vec<Hash> {
-        Schema::new(data.for_executing_service()).state_hash()
     }
 
     fn wire_api(&self, builder: &mut ServiceApiBuilder) {
@@ -65,28 +61,26 @@ impl Configure for BtcAnchoringService {
 
     fn verify_config(
         &self,
-        context: CallContext<'_>,
+        context: ExecutionContext<'_>,
         params: Self::Params,
     ) -> Result<(), ExecutionError> {
         context
             .caller()
             .as_supervisor()
-            .ok_or(DispatcherError::UnauthorizedCaller)?;
+            .ok_or(CommonError::UnauthorizedCaller)?;
 
-        params
-            .validate()
-            .map_err(DispatcherError::malformed_arguments)
+        params.validate().map_err(CommonError::malformed_arguments)
     }
 
     fn apply_config(
         &self,
-        context: CallContext<'_>,
+        context: ExecutionContext<'_>,
         params: Self::Params,
     ) -> Result<(), ExecutionError> {
         context
             .caller()
             .as_supervisor()
-            .ok_or(DispatcherError::UnauthorizedCaller)?;
+            .ok_or(CommonError::UnauthorizedCaller)?;
 
         let mut schema = Schema::new(context.service_data());
         if schema.actual_config().anchoring_address() == params.anchoring_address() {

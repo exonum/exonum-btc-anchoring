@@ -16,15 +16,15 @@
 
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
-    blockchain::{BlockProof, IndexCoordinates, SchemaOrigin},
+    blockchain::{BlockProof, IndexProof},
     crypto::Hash,
     helpers::Height,
-    runtime::rust::{
-        api::{self, ServiceApiBuilder, ServiceApiState},
-        Transaction,
-    },
 };
 use exonum_merkledb::{ListProof, MapProof};
+use exonum_rust_runtime::{
+    api::{self, ServiceApiBuilder, ServiceApiState},
+    Broadcaster,
+};
 use failure::ensure;
 use serde_derive::{Deserialize, Serialize};
 
@@ -34,7 +34,7 @@ use std::cmp::{
 };
 
 use crate::{
-    blockchain::{AddFunds, Schema, SignInput, Transactions},
+    blockchain::{AddFunds, BtcAnchoringInterface, Schema, SignInput},
     btc,
     config::Config,
 };
@@ -43,11 +43,11 @@ use crate::{
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionProof {
     /// Latest authorized block in the blockchain.
-    pub latest_authorized_block: BlockProof,
+    pub block_proof: BlockProof,
     /// Proof for the whole database table.
-    pub to_table: MapProof<IndexCoordinates, Hash>,
+    pub state_proof: MapProof<String, Hash>,
     /// Proof for the specific transaction in this table.
-    pub to_transaction: ListProof<btc::Transaction>,
+    pub transaction_proof: ListProof<btc::Transaction>,
 }
 
 /// State of the next anchoring transaction proposal.
@@ -89,7 +89,7 @@ impl AnchoringProposalState {
                 Ok(AnchoringProposalState::InsufficientFunds { total_fee, balance })
             }
             Some(Err(btc::BuilderError::NoInputs)) => Ok(AnchoringProposalState::NoInitialFunds),
-            Some(Err(e)) => Err(api::Error::InternalError(e.into())),
+            Some(Err(e)) => Err(api::Error::internal(e)),
         }
     }
 }
@@ -169,14 +169,15 @@ pub trait PrivateApi {
 struct ApiImpl<'a>(&'a ServiceApiState<'a>);
 
 impl<'a> ApiImpl<'a> {
-    fn broadcast_transaction(
-        &self,
-        transaction: impl Transaction<dyn Transactions + 'static>,
-    ) -> Result<Hash, failure::Error> {
-        self.0.generic_broadcaster().send(transaction)
+    fn broadcaster(&self) -> Result<Broadcaster<'_>, api::Error> {
+        self.0.broadcaster().ok_or_else(|| {
+            api::Error::bad_request()
+                .title("Invalid broadcast request")
+                .detail("Nod is not a validator")
+        })
     }
 
-    fn actual_config(&self) -> Result<Config, failure::Error> {
+    fn actual_config(&self) -> Result<Config, api::Error> {
         Ok(Schema::new(self.0.service_data()).actual_config())
     }
 
@@ -228,24 +229,23 @@ impl<'a> ApiImpl<'a> {
     }
 
     fn transaction_proof(&self, tx_index: u64) -> TransactionProof {
-        let blockchain_schema = self.0.data().for_core();
-        let max_height = blockchain_schema.block_hashes_by_height().len() - 1;
-        let latest_authorized_block = blockchain_schema
-            .block_and_precommits(Height(max_height))
+        let IndexProof {
+            block_proof,
+            index_proof,
+            ..
+        } = self
+            .0
+            .data()
+            .proof_for_service_index("transactions_chain")
             .unwrap();
-
-        let tx_chain = Schema::new(self.0.service_data()).transactions_chain;
-
-        let to_table = blockchain_schema
-            .state_hash_aggregator()
-            .get_proof(SchemaOrigin::Service(self.0.instance().id).coordinate_for(0));
-
-        let to_transaction = tx_chain.get_proof(tx_index);
+        let transaction_proof = Schema::new(self.0.service_data())
+            .transactions_chain
+            .get_proof(tx_index);
 
         TransactionProof {
-            latest_authorized_block,
-            to_table,
-            to_transaction,
+            block_proof,
+            state_proof: index_proof,
+            transaction_proof,
         }
     }
 }
@@ -312,7 +312,7 @@ impl<'a> PublicApi for ApiImpl<'a> {
     }
 
     fn config(&self) -> Result<Config, Self::Error> {
-        self.actual_config().map_err(From::from)
+        self.actual_config().map_err(|e| api::Error::internal(e))
     }
 }
 
@@ -322,15 +322,20 @@ impl<'a> PrivateApi for ApiImpl<'a> {
     fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
         // Verify Bitcoin signature.
         self.verify_sign_input(&sign_input)
-            .map_err(|e| api::Error::BadRequest(e.to_string()))?;
-        self.broadcast_transaction(sign_input).map_err(From::from)
+            .map_err(|e| api::Error::bad_request().detail(e.to_string()))?;
+
+        self.broadcaster()?
+            .sign_input((), sign_input)
+            .map_err(|e| api::Error::internal(e).title("Sign input request failed"))
     }
 
     fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error> {
         self.verify_funding_tx(&transaction)
-            .map_err(|e| api::Error::BadRequest(e.to_string()))?;
-        self.broadcast_transaction(AddFunds { transaction })
-            .map_err(From::from)
+            .map_err(|e| api::Error::bad_request().detail(e.to_string()))?;
+
+        self.broadcaster()?
+            .add_funds((), AddFunds { transaction })
+            .map_err(|e| api::Error::internal(e).title("Add funds request failed"))
     }
 
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {

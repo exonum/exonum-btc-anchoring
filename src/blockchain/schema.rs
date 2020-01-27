@@ -14,11 +14,11 @@
 
 //! Information schema for the btc anchoring service.
 
-use exonum::{blockchain::Schema as CoreSchema, crypto::Hash, helpers::Height};
+use exonum::{blockchain::Schema as CoreSchema, helpers::Height};
 use exonum_derive::FromAccess;
 use exonum_merkledb::{
-    access::{Access, Prefixed},
-    Entry, Fork, ObjectHash, ProofListIndex, ProofMapIndex,
+    access::{Access, FromAccess, Prefixed},
+    Entry, Fork, ProofListIndex, ProofMapIndex,
 };
 use log::{error, trace};
 
@@ -57,17 +57,9 @@ pub struct Schema<T: Access> {
 }
 
 impl<T: Access> Schema<T> {
-    /// Returns object hashes of the stored tables.
-    pub fn state_hash(&self) -> Vec<Hash> {
-        vec![
-            self.transactions_chain.object_hash(),
-            self.spent_funding_transactions.object_hash(),
-            self.transaction_signatures.object_hash(),
-            self.actual_config.object_hash(),
-            self.following_config.object_hash(),
-            self.unconfirmed_funding_transactions.object_hash(),
-            self.unspent_funding_transaction.object_hash(),
-        ]
+    /// Returns a new schema instance.
+    pub fn new(access: T) -> Self {
+        Self::from_root(access).unwrap()
     }
 
     /// Returns an actual anchoring configuration.

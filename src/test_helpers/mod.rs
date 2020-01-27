@@ -18,21 +18,16 @@ use bitcoin::{self, network::constants::Network};
 use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
-    api,
-    blockchain::{
-        config::InstanceInitParams, BlockProof, ConsensusConfig, IndexCoordinates, SchemaOrigin,
-    },
+    blockchain::{config::InstanceInitParams, BlockProof, ConsensusConfig},
     crypto::{self, Hash, PublicKey},
     helpers::Height,
     keys::Keys,
     messages::{AnyTx, Verified},
-    runtime::{
-        rust::{ServiceFactory, Transaction},
-        InstanceId, SnapshotExt,
-    },
+    runtime::{InstanceId, SnapshotExt},
 };
 use exonum_merkledb::{access::Access, MapProof, ObjectHash, Snapshot};
-use exonum_supervisor::{ConfigPropose, SimpleSupervisor};
+use exonum_rust_runtime::{api, ServiceFactory};
+use exonum_supervisor::{ConfigPropose, Supervisor};
 use exonum_testkit::{ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNode};
 use failure::{ensure, format_err};
 use rand::{thread_rng, Rng};
@@ -44,7 +39,7 @@ use crate::{
         AnchoringChainLength, AnchoringProposalState, FindTransactionQuery, IndexQuery, PrivateApi,
         PublicApi, TransactionProof,
     },
-    blockchain::{AddFunds, Schema, SignInput},
+    blockchain::{AddFunds, BtcAnchoringInterface, Schema, SignInput},
     btc,
     config::Config,
     proto::AnchoringKeys,
@@ -173,7 +168,11 @@ impl AnchoringTestKit {
         let anchoring_artifact = BtcAnchoringService.artifact_id();
         let inner = TestKitBuilder::validator()
             .with_keys(validator_keys)
-            .with_default_rust_service(SimpleSupervisor::new())
+            // Supervisor
+            .with_rust_service(Supervisor)
+            .with_artifact(Supervisor.artifact_id())
+            .with_instance(Supervisor::simple())
+            // Anchoring
             .with_rust_service(BtcAnchoringService)
             .with_artifact(anchoring_artifact.clone())
             .with_instance(InstanceInitParams::new(
@@ -243,18 +242,14 @@ impl AnchoringTestKit {
                     )
                     .unwrap();
 
-                signatures.push(
+                signatures.push(service_keypair.sign_input(
+                    ANCHORING_INSTANCE_ID,
                     SignInput {
                         input: index as u32,
                         input_signature: signature.into(),
                         txid: proposal.id(),
-                    }
-                    .sign(
-                        ANCHORING_INSTANCE_ID,
-                        service_keypair.0,
-                        &service_keypair.1,
-                    ),
-                );
+                    },
+                ));
             }
         }
         Ok(signatures)
@@ -300,15 +295,13 @@ impl AnchoringTestKit {
         self.actual_anchoring_config()
             .anchoring_keys
             .into_iter()
-            .map(|anchoring_keys| {
+            .map(move |anchoring_keys| {
                 let node_keypair = self
                     .find_node_by_service_key(anchoring_keys.service_key)
                     .unwrap()
                     .service_keypair();
 
-                add_funds
-                    .clone()
-                    .sign(ANCHORING_INSTANCE_ID, node_keypair.0, &node_keypair.1)
+                node_keypair.add_funds(ANCHORING_INSTANCE_ID, add_funds.clone())
             })
             .collect()
     }
@@ -464,11 +457,11 @@ impl PrivateApi for TestKitApi {
 
 fn validate_table_proof(
     actual_config: &ConsensusConfig,
-    latest_authorized_block: &BlockProof,
-    to_table: MapProof<IndexCoordinates, Hash>,
-) -> Result<(IndexCoordinates, Hash), failure::Error> {
+    block_proof: &BlockProof,
+    state_proof: MapProof<String, Hash>,
+) -> Result<(String, Hash), failure::Error> {
     // Checks precommits.
-    for precommit in &latest_authorized_block.precommits {
+    for precommit in &block_proof.precommits {
         let validator_id = precommit.as_ref().validator.0 as usize;
         let _validator_keys = actual_config
             .validator_keys
@@ -480,18 +473,21 @@ fn validate_table_proof(
                 )
             })?;
         ensure!(
-            precommit.as_ref().block_hash() == &latest_authorized_block.block.object_hash(),
+            precommit.as_ref().block_hash() == &block_proof.block.object_hash(),
             "Block hash doesn't match"
         );
     }
 
     // Checks state_hash.
-    let checked_table_proof = to_table.check()?;
+    let checked_table_proof = state_proof.check()?;
     ensure!(
-        checked_table_proof.index_hash() == *latest_authorized_block.block.state_hash(),
+        checked_table_proof.index_hash() == block_proof.block.state_hash,
         "State hash doesn't match"
     );
-    let value = checked_table_proof.entries().map(|(a, b)| (*a, *b)).next();
+    let value = checked_table_proof
+        .entries()
+        .map(|(a, b)| (a.clone(), *b))
+        .next();
     value.ok_or_else(|| format_err!("Unable to get `to_block_header` entry"))
 }
 
@@ -507,14 +503,17 @@ impl ValidateProof for TransactionProof {
     type Output = Option<(u64, btc::Transaction)>;
 
     fn validate(self, actual_config: &ConsensusConfig) -> Result<Self::Output, failure::Error> {
-        let proof_entry =
-            validate_table_proof(actual_config, &self.latest_authorized_block, self.to_table)?;
-        let table_location = IndexCoordinates::new(SchemaOrigin::Service(ANCHORING_INSTANCE_ID), 0);
+        let proof_entry = validate_table_proof(actual_config, &self.block_proof, self.state_proof)?;
 
-        ensure!(proof_entry.0 == table_location, "Invalid table location");
+        dbg!(&proof_entry);
+
+        ensure!(
+            proof_entry.0 == format!("{}.transactions_chain", ANCHORING_INSTANCE_NAME),
+            "Invalid table location"
+        );
         // Validate value.
         let values = self
-            .to_transaction
+            .transaction_proof
             .check_against_hash(proof_entry.1)
             .map_err(|e| format_err!("An error occurred {:?}", e))?
             .entries();

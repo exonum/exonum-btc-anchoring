@@ -15,13 +15,11 @@
 use exonum::helpers::Height;
 use exonum::{
     crypto,
-    explorer::CommittedTransaction,
     messages::{AnyTx, Verified},
-    runtime::SnapshotExt,
-    runtime::{rust::Transaction, ErrorKind},
+    runtime::{ErrorMatch, SnapshotExt},
 };
 use exonum_btc_anchoring::{
-    blockchain::{errors::Error, SignInput},
+    blockchain::{errors::Error, BtcAnchoringInterface, SignInput},
     btc::{self, BuilderError},
     config::Config,
     test_helpers::{
@@ -29,10 +27,11 @@ use exonum_btc_anchoring::{
         ANCHORING_INSTANCE_ID,
     },
 };
+use exonum_explorer::CommittedTransaction;
 use exonum_supervisor::ConfigPropose;
 
-fn assert_tx_error(tx: &CommittedTransaction, e: impl Into<ErrorKind>) {
-    assert_eq!(tx.status().unwrap_err().kind, e.into(),);
+fn assert_tx_error(tx: &CommittedTransaction, e: ErrorMatch) {
+    assert_eq!(*tx.status().unwrap_err(), e);
 }
 
 fn unspent_funding_transaction(anchoring_testkit: &AnchoringTestKit) -> Option<btc::Transaction> {
@@ -280,7 +279,10 @@ fn err_spent_funding() {
             .into_iter()
             .take(1),
     );
-    assert_tx_error(&block[0], Error::AlreadyUsedFundingTx);
+    assert_tx_error(
+        &block[0],
+        ErrorMatch::from_fail(&Error::AlreadyUsedFundingTx).for_service(ANCHORING_INSTANCE_ID),
+    );
 
     // Reach the next anchoring height.
     anchoring_testkit
@@ -365,7 +367,10 @@ fn no_anchoring_proposal() {
     let block = anchoring_testkit
         .inner
         .create_block_with_transactions(leftover_signatures);
-    assert_tx_error(&block[0], Error::UnexpectedProposalTxId);
+    assert_tx_error(
+        &block[0],
+        ErrorMatch::from_fail(&Error::UnexpectedProposalTxId).for_service(ANCHORING_INSTANCE_ID),
+    );
 }
 
 #[test]
@@ -405,7 +410,10 @@ fn unexpected_anchoring_proposal() {
     let block = anchoring_testkit
         .inner
         .create_block_with_transactions(leftover_signatures);
-    assert_tx_error(&block[0], Error::UnexpectedProposalTxId);
+    assert_tx_error(
+        &block[0],
+        ErrorMatch::from_fail(&Error::UnexpectedProposalTxId).for_service(ANCHORING_INSTANCE_ID),
+    );
 }
 
 #[test]
@@ -510,7 +518,10 @@ fn funding_tx_err_unsuitable() {
     let block = anchoring_testkit.inner.create_block_with_transactions(
         anchoring_testkit.create_funding_confirmation_txs_with(funding_tx),
     );
-    assert_tx_error(&block[0], Error::UnsuitableFundingTx);
+    assert_tx_error(
+        &block[0],
+        ErrorMatch::from_fail(&Error::UnsuitableFundingTx).for_service(ANCHORING_INSTANCE_ID),
+    );
 }
 
 #[test]
@@ -548,7 +559,10 @@ fn sign_input_err_unauthorized() {
     let malformed_tx = change_tx_signature(tx, crypto::gen_keypair());
     // Commit this transaction and check status.
     let block = testkit.inner.create_block_with_transaction(malformed_tx);
-    assert_tx_error(&block[0], Error::UnauthorizedAnchoringKey);
+    assert_tx_error(
+        &block[0],
+        ErrorMatch::from_fail(&Error::UnauthorizedAnchoringKey).for_service(ANCHORING_INSTANCE_ID),
+    );
 }
 
 #[test]
@@ -560,7 +574,10 @@ fn add_funds_err_unauthorized() {
     let malformed_tx = change_tx_signature(tx, crypto::gen_keypair());
     // Commit this transaction and check status.
     let block = testkit.inner.create_block_with_transaction(malformed_tx);
-    assert_tx_error(&block[0], Error::UnauthorizedAnchoringKey);
+    assert_tx_error(
+        &block[0],
+        ErrorMatch::from_fail(&Error::UnauthorizedAnchoringKey).for_service(ANCHORING_INSTANCE_ID),
+    );
 }
 
 #[test]
@@ -573,13 +590,15 @@ fn sing_input_err_no_such_input() {
         .parse::<SignInput>()
         .unwrap();
     // Change input ID.
-    let malformed_tx = {
-        let keypair = us.service_keypair();
-        SignInput { input: 10, ..tx }.sign(ANCHORING_INSTANCE_ID, keypair.0, &keypair.1)
-    };
+    let malformed_tx = us
+        .service_keypair()
+        .sign_input(ANCHORING_INSTANCE_ID, SignInput { input: 10, ..tx });
     // Commit this transaction and check status.
     let block = testkit.inner.create_block_with_transaction(malformed_tx);
-    assert_tx_error(&block[0], Error::NoSuchInput);
+    assert_tx_error(
+        &block[0],
+        ErrorMatch::from_fail(&Error::NoSuchInput).for_service(ANCHORING_INSTANCE_ID),
+    );
 }
 
 #[test]
@@ -595,7 +614,12 @@ fn sign_input_err_input_verification_failed() {
     let malformed_tx = change_tx_signature(tx, second_node.service_keypair());
     // Commit this transaction and check status.
     let block = testkit.inner.create_block_with_transaction(malformed_tx);
-    assert_tx_error(&block[0], Error::InputVerificationFailed);
+    assert_tx_error(
+        &block[0],
+        ErrorMatch::from_fail(&Error::InputVerificationFailed)
+            .for_service(ANCHORING_INSTANCE_ID)
+            .with_description_containing("secp: signature failed verification"),
+    );
 }
 
 // TODO Implement tests for anchoring recovery [ECR-3581]

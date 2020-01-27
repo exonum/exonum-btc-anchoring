@@ -14,7 +14,7 @@
 
 //! Blockchain implementation details for the BTC anchoring service.
 
-pub use self::{schema::Schema, transactions::Transactions};
+pub use self::{schema::Schema, transactions::BtcAnchoringInterface};
 pub use crate::proto::{AddFunds, SignInput};
 
 use bitcoin::blockdata::script::Script;

@@ -15,11 +15,10 @@ use exonum::{
     crypto::{Hash, PublicKey, SecretKey},
     helpers::Height,
     merkledb::ObjectHash,
-    runtime::rust::Transaction,
 };
 use exonum_btc_anchoring::{
     api::{AnchoringChainLength, AnchoringProposalState, PrivateApi},
-    blockchain::{AddFunds, SignInput},
+    blockchain::{AddFunds, BtcAnchoringInterface, SignInput},
     btc,
     config::Config,
     sync::{
@@ -28,6 +27,7 @@ use exonum_btc_anchoring::{
     },
     test_helpers::{get_anchoring_schema, AnchoringTestKit, ANCHORING_INSTANCE_ID},
 };
+use exonum_rust_runtime::api;
 use exonum_testkit::TestKitApi;
 
 use std::{
@@ -143,25 +143,21 @@ impl FakePrivateApi {
 }
 
 impl PrivateApi for FakePrivateApi {
-    type Error = exonum::api::Error;
+    type Error = api::Error;
 
     fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
-        let signed_tx = sign_input.sign(
-            ANCHORING_INSTANCE_ID,
-            self.service_keypair.0,
-            &self.service_keypair.1,
-        );
+        let signed_tx = self
+            .service_keypair
+            .sign_input(ANCHORING_INSTANCE_ID, sign_input);
         let hash = signed_tx.object_hash();
         self.inner.send(signed_tx);
         Ok(hash)
     }
 
     fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error> {
-        let signed_tx = AddFunds { transaction }.sign(
-            ANCHORING_INSTANCE_ID,
-            self.service_keypair.0,
-            &self.service_keypair.1,
-        );
+        let signed_tx = self
+            .service_keypair
+            .add_funds(ANCHORING_INSTANCE_ID, AddFunds { transaction });
         let hash = signed_tx.object_hash();
         self.inner.send(signed_tx);
         Ok(hash)
