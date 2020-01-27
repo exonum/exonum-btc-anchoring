@@ -471,7 +471,7 @@ fn add_anchoring_node_insufficient_funds() {
     anchoring_testkit.inner.create_block_with_transaction(
         anchoring_testkit.create_config_change_tx(
             ConfigPropose::new(0, anchoring_testkit.inner.height().next())
-                .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone()),
+                .service_config(ANCHORING_INSTANCE_ID, new_cfg),
         ),
     );
     anchoring_testkit.inner.create_block();

@@ -178,7 +178,7 @@ impl AnchoringTestKit {
             .with_instance(InstanceInitParams::new(
                 ANCHORING_INSTANCE_ID,
                 ANCHORING_INSTANCE_NAME,
-                anchoring_artifact.into(),
+                anchoring_artifact,
                 anchoring_config,
             ))
             .create();
@@ -232,7 +232,7 @@ impl AnchoringTestKit {
             let btc_private_key = self.anchoring_nodes.private_key(&bitcoin_key);
 
             let redeem_script = actual_config.redeem_script();
-            let mut signer = p2wsh::InputSigner::new(redeem_script.clone());
+            let mut signer = p2wsh::InputSigner::new(redeem_script);
             for (index, proposal_input) in proposal_inputs.iter().enumerate() {
                 let signature = signer
                     .sign_input(

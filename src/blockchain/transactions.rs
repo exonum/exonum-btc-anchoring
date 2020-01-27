@@ -159,7 +159,7 @@ impl BtcAnchoringInterface<ExecutionContext<'_>> for BtcAnchoringService {
         // Check that we have not reached the quorum yet, otherwise we should not do anything.
         if input_signature_len < quorum {
             // Add signature to schema.
-            input_signatures.insert(anchoring_node_id, arg.input_signature.clone());
+            input_signatures.insert(anchoring_node_id, arg.input_signature);
             schema
                 .transaction_signatures
                 .put(&input_id, input_signatures);

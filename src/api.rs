@@ -312,7 +312,7 @@ impl<'a> PublicApi for ApiImpl<'a> {
     }
 
     fn config(&self) -> Result<Config, Self::Error> {
-        self.actual_config().map_err(|e| api::Error::internal(e))
+        self.actual_config().map_err(api::Error::internal)
     }
 }
 

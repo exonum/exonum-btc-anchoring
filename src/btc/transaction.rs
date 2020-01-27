@@ -513,8 +513,8 @@ mod tests {
 
         let mut builder = BtcAnchoringTransactionBuilder::new(&redeem_script);
         builder.additional_funds(funding_tx0.clone()).unwrap();
-        builder.additional_funds(funding_tx1.clone()).unwrap();
-        builder.additional_funds(funding_tx2.clone()).unwrap();
+        builder.additional_funds(funding_tx1).unwrap();
+        builder.additional_funds(funding_tx2).unwrap();
         builder.fee(1);
         builder.payload(Height::zero(), funding_tx0.object_hash());
         let (tx, inputs) = builder.create().unwrap();
