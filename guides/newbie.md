@@ -56,35 +56,22 @@ your account.
 
 ## Step 2. Compilation and Initial Run
 
-- Be sure to have [`exonum_launcher`](https://github.com/popzxc/exonum-launcher)
-installed via `pip` (see `exonum-launcher` README for details).
+- Be sure to have [`exonum_launcher`](https://github.com/exonum/exonum-launcher)
+installed via `pip3` (see `exonum-launcher` README for details).
 - Install `exonum_btc_anchoring_plugin`
     (if you are using `venv`, activate `venv` in which `exonum_launcher` is installed):
 
     ```sh
-    pip install -e exonum-btc-anchoring/launcher
-    ```
-
-- Compile and install `btc_anchoring` example:
-
-    ```sh
-    cd exonum-btc-anchoring
-    cargo install --path . --example btc_anchoring --force
-    ```
-
-- Build the `exonum-btc-anchoring` project (it contains a binary that will be used later):
-
-    ```sh
-    cargo build
+    pip3 install -e exonum-btc-anchoring/launcher
     ```
 
 - Run the example:
 
     ```sh
-    RUST_LOG="exonum_btc_anchoring=info" btc_anchoring run-dev -a anchoring
+    RUST_LOG="exonum_btc_anchoring=info" cargo run --example btc_anchoring run-dev -a target/anchoring
     ```
 
-    `-a anchoring` here denotes the directory in which the data of the node will be generated.
+    `-a target/anchoring` here denotes the directory in which the data of the node will be generated.
 
 ## Step 3. Deploying and Running
 
@@ -97,22 +84,23 @@ installed via `pip` (see `exonum-launcher` README for details).
     To obtain `bitcoin_key`, go to the `exonum-btc-anchoring` directory and launch the following command:
 
     ```sh
-    cargo run -- generate-config -o anchoring/sync.toml --bitcoin-rpc-host http://localhost --bitcoin-rpc-user user --bitcoin-rpc-password password
+    cargo run -- generate-config -o target/anchoring/sync.toml --bitcoin-rpc-host http://localhost --bitcoin-rpc-user user --bitcoin-rpc-password password
     ```
 
-    In the code above you should replace `anchoring` with the directory where the data of your node lies.
+    In the code above you should replace `target/anchoring` with the directory where the data of
+    your node lies.
 
     As a result of this call you will obtain `bitcoin_key`.
 - Create file `anchoring.yml` with the following contents:
 
     ```yaml
     plugins:
-      runtime: {}
-      artifact:
+    runtime: {}
+    artifact:
         anchoring: "exonum_btc_anchoring_plugin.AnchoringInstanceSpecLoader"
 
     networks:
-      - host: "127.0.0.1"
+    - host: "127.0.0.1"
         ssl: false
         public-api-port: 8080
         private-api-port: 8081
@@ -120,20 +108,21 @@ installed via `pip` (see `exonum-launcher` README for details).
     deadline_height: 10000
 
     artifacts:
-      anchoring:
+    anchoring:
         runtime: rust
-        name: "exonum-btc-anchoring:0.12.0"
+        name: "exonum-btc-anchoring"
+        version: "0.13.0-rc.2"
 
     instances:
-      anchoring:
+    anchoring:
         artifact: anchoring
         config:
-          network: regtest
-          anchoring_interval: 500
-          transaction_fee: 10
-          anchoring_keys:
-            - bitcoin_key: "0332ab15173cf9ff8ad0946fbd515434bf1f04bb46482453474b6c38b94fa9d7b7"
-              service_key: "2b89c8e1f3a6a8f18ac3276b87403e39c54c33d8275e9626ab9478df4d6d5bfc"
+        network: regtest
+        anchoring_interval: 500
+        transaction_fee: 10
+        anchoring_keys:
+            - bitcoin_key: "0265eb226696901a3ada94f956f0792df2976be32fa2ebb697aaa6e9b5f273b1e8"
+            service_key: "db555fecca30d41acdfcb9c3ce212afea1d973e8de9d8b73030d4d18660ad8bc"
     ```
 
     Replace `bitcoin_key` and `service_key` with values obtained in the previous step.
@@ -155,7 +144,7 @@ setup a funding transaction.
     First of all, obtain the address of the anchoring wallet:
 
     ```sh
-    curl 'http://127.0.0.1:8080/api/services/anchoring/address/actual'
+    curl 's'
     ```
 
 - Then send some bitcoins to that address and obtain the raw transaction
@@ -193,10 +182,10 @@ setup a funding transaction.
 
     ```sh
     cd exonum-btc-anchoring
-    RUST_LOG="exonum_btc_anchoring=info" cargo run -- run --config anchoring/sync.toml
+    RUST_LOG="exonum_btc_anchoring=info" cargo run -- run --config target/anchoring/sync.toml
     ```
 
-    `anchoring/` in the code above means the directory where `sync.toml` was generated earlier.
+    `target/anchoring/` in the code above means the directory where `sync.toml` was generated earlier.
 
     On the `regtest` it will exit with an error, since blocks should be mined manually.
     The log of the example will show that anchoring was made:
