@@ -84,7 +84,7 @@ installed via `pip3` (see `exonum-launcher` README for details).
     To obtain `bitcoin_key`, go to the `exonum-btc-anchoring` directory and launch the following command:
 
     ```sh
-    cargo run -- generate-config -o target/anchoring/sync.toml --bitcoin-rpc-host http://localhost --bitcoin-rpc-user user --bitcoin-rpc-password password
+    cargo run -- generate-config -o target/anchoring/sync.toml --bitcoin-rpc-host http://localhost:18332 --bitcoin-rpc-user user --bitcoin-rpc-password password
     ```
 
     In the code above you should replace `target/anchoring` with the directory where the data of
@@ -95,12 +95,12 @@ installed via `pip3` (see `exonum-launcher` README for details).
 
     ```yaml
     plugins:
-    runtime: {}
-    artifact:
+      runtime: {}
+      artifact:
         anchoring: "exonum_btc_anchoring_plugin.AnchoringInstanceSpecLoader"
 
     networks:
-    - host: "127.0.0.1"
+      - host: "127.0.0.1"
         ssl: false
         public-api-port: 8080
         private-api-port: 8081
@@ -108,21 +108,21 @@ installed via `pip3` (see `exonum-launcher` README for details).
     deadline_height: 10000
 
     artifacts:
-    anchoring:
+      anchoring:
         runtime: rust
         name: "exonum-btc-anchoring"
         version: "0.13.0-rc.2"
 
     instances:
-    anchoring:
+      anchoring:
         artifact: anchoring
         config:
-        network: regtest
-        anchoring_interval: 500
-        transaction_fee: 10
-        anchoring_keys:
-            - bitcoin_key: "0265eb226696901a3ada94f956f0792df2976be32fa2ebb697aaa6e9b5f273b1e8"
-            service_key: "db555fecca30d41acdfcb9c3ce212afea1d973e8de9d8b73030d4d18660ad8bc"
+          network: testnet
+          anchoring_interval: 500
+          transaction_fee: 10
+          anchoring_keys:
+            - bitcoin_key: "02d6086aaccc86e6a711ac84ff21a266684c17d188aa7c4eeab0c0f12133308584"
+              service_key: "850eb20eebe0b07cf2721ecc9c90aa465a96413dccafad11045a9cb8abf04ed0"
     ```
 
     Replace `bitcoin_key` and `service_key` with values obtained in the previous step.
@@ -144,7 +144,7 @@ setup a funding transaction.
     First of all, obtain the address of the anchoring wallet:
 
     ```sh
-    curl 's'
+    curl 'http://127.0.0.1:8080/api/services/anchoring/address/actual'
     ```
 
 - Then send some bitcoins to that address and obtain the raw transaction
@@ -166,7 +166,7 @@ setup a funding transaction.
     ```sh
     curl --header "Content-Type: application/json" \
       --request POST \
-      --data '"020000000001051aa3e2a53010c4863becf608fc9bfe1d06c7a2456c820de85ee9e65dc95bcc6300000000171600145058446ed566ce61f9511a28b5f35340bb7bfc9afeffffffbed3ee193e9b73d0b259d60a57cffc2310f228fce4658060e9dffd24514631400000000017160014475caf1c9227353fb8bc10252a634dffbf7d39e1feffffff2787ebd988bfeb449c1482c1877e0598c6d28ef2db426f7c8f83da219d0f23c20000000017160014475caf1c9227353fb8bc10252a634dffbf7d39e1feffffff53a188e10f648e97fa9a4ed84bb0355ad52a301643249217b05f8114e76f579c00000000171600145058446ed566ce61f9511a28b5f35340bb7bfc9afeffffff8676d4e58838387079589229344eea778d0b29d095407f42ecdcf423975537ea0000000017160014475caf1c9227353fb8bc10252a634dffbf7d39e1feffffff0200c817a8040000002200209959c79a416778463632a0a1164e312c5973865dbc9fa038c69fc9e5af71e3cae4c7052a010000001600148e8a01a394875fec3c51c3a8117f9b00b57286d5024730440220287b30723dc3ed88d06f0884611071ba7b547903c2937846befd51cb601701f502206f74e78aa2e74ee8494c22481c1b661f8fcc171f04dfce61ff05a2ab53cbb634012103a54ae66b63b6bdc2089f294d43611ee37deaaf346cffd16f23d5f521dbca757c02473044022012490b04d0623f25661445e9bbcbfc3491b2009763dafdfd15c109e0617278cd022027d9ac08e9877f01b7b6234bd921016b4f7135a32cc25abd2f19a8cddfa692e3012103a208fc3f46c7b815c3237636d21267c2610a975b03dffae657017ab33fa832bd024730440220203514c2473a1ccb3f5722c4afc4347e083669784700cd72d15316d3b8cef3d502207e1120d31288ee91e58499a37f41b88578556474e334d7327b3f47a983be95af012103a208fc3f46c7b815c3237636d21267c2610a975b03dffae657017ab33fa832bd02473044022005bbf3b54f16ccabd7d5d98d26597bc19ce4af14e4952fa571e7d5d83f4a284402202c54adde15a678f7ce57f723e0ea875681e9b5f13aeffcba3871135fc82401de012103a54ae66b63b6bdc2089f294d43611ee37deaaf346cffd16f23d5f521dbca757c02473044022052d4d19bcf133fdcdaf526c0ec0aca362dab5a75ead2fb33b2f7378ef3d8cbcb02206251d0d55680ab0f8463e964755c1a63791e7d6d637a84f907b82c94a18221a4012103a208fc3f46c7b815c3237636d21267c2610a975b03dffae657017ab33fa832bd48000000"' \
+      --data '"0200000000010151a7dcd1c2829f9c0a93ae6b054e9777528e88e3e0403c4313cf8cf41b27d1730000000000feffffff0240420f0000000000220020f86c30b7ec3496572220f40b21096b74dc5182942b8811d1bb0b3ab21e52b1337007360000000000160014e16cbf1202193f7de0eb058e0dc2b57cbc63d4040247304402203e23349dcda80acc85e94ada52269baf09624afeb794b696fb53f0f37d130f850220599eaa9bb50d5e14269228f4f5d63826d5554275877b5ffd77eca3cd3b1c408e012102604e1c50f8bdaec165e0bc7b81e608709f510c5bf4b18b6aefaf3996317fd9cf77641900"' \
       http://127.0.0.1:8081/api/services/anchoring/add-funds
     ```
 
