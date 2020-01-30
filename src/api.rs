@@ -126,15 +126,6 @@ pub trait PublicApi {
     /// | Query type  | - |
     /// | Return type | [`btc::Address`] |
     ///
-    /// ```
-    /// use exonum_btc_anchoring::{api::PublicApi, btc::Address, test_helpers::AnchoringTestKit};
-    ///
-    /// let mut anchoring_testkit = AnchoringTestKit::default();
-    ///
-    /// let api = anchoring_testkit.inner.api();
-    /// let _address: Address = api.actual_address().unwrap();    
-    /// ```
-    ///
     /// [`btc::Address`]: ../btc/struct.Address.html
     fn actual_address(&self) -> Result<btc::Address, Self::Error>;
     /// Returns the following anchoring address if the node is in the transition state.
@@ -145,15 +136,6 @@ pub trait PublicApi {
     /// | Method      | GET   |
     /// | Query type  | - |
     /// | Return type | [`Option<btc::Address>`] |
-    ///
-    /// ```
-    /// use exonum_btc_anchoring::{api::PublicApi, btc::Address, test_helpers::AnchoringTestKit};
-    ///
-    /// let mut anchoring_testkit = AnchoringTestKit::default();
-    ///
-    /// let api = anchoring_testkit.inner.api();
-    /// let _address: Option<Address> = api.following_address().unwrap();    
-    /// ```
     ///
     /// [`Option<btc::Address>`]: ../btc/struct.Address.html
     fn following_address(&self) -> Result<Option<btc::Address>, Self::Error>;
@@ -168,19 +150,6 @@ pub trait PublicApi {
     /// | Query type  | [`FindTransactionQuery`] |
     /// | Return type | [`TransactionProof`] |
     ///
-    /// ```
-    /// use exonum_btc_anchoring::{
-    ///     api::{PublicApi, TransactionProof},
-    ///     test_helpers::AnchoringTestKit,
-    /// };
-    ///
-    /// let mut anchoring_testkit = AnchoringTestKit::default();
-    ///
-    /// let api = anchoring_testkit.inner.api();
-    /// let height = None;
-    /// let _proof: TransactionProof = api.find_transaction(height).unwrap();
-    /// ```
-    ///
     /// [`FindTransactionQuery`]: struct.FindTransactionQuery.html
     /// [`TransactionProof`]: struct.TransactionProof.html
     fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error>;
@@ -192,15 +161,6 @@ pub trait PublicApi {
     /// | Method      | GET   |
     /// | Query type  | - |
     /// | Return type | [`Config`] |
-    ///
-    /// ```
-    /// use exonum_btc_anchoring::{api::PublicApi, config::Config, test_helpers::AnchoringTestKit};
-    ///
-    /// let mut anchoring_testkit = AnchoringTestKit::default();
-    ///
-    /// let api = anchoring_testkit.inner.api();
-    /// let _config: Config = api.config().unwrap();
-    /// ```
     ///
     /// [`config`]: ../config/struct.Config.html
     fn config(&self) -> Result<Config, Self::Error>;
