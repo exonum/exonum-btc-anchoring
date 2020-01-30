@@ -129,12 +129,10 @@ pub trait PublicApi {
     /// ```
     /// use exonum_btc_anchoring::{api::PublicApi, btc::Address, test_helpers::AnchoringTestKit};
     ///
-    /// fn main() {
-    ///     let mut anchoring_testkit = AnchoringTestKit::default();
+    /// let mut anchoring_testkit = AnchoringTestKit::default();
     ///
-    ///     let api = anchoring_testkit.inner.api();
-    ///     let _address: Address = api.actual_address().unwrap();
-    /// }    
+    /// let api = anchoring_testkit.inner.api();
+    /// let _address: Address = api.actual_address().unwrap();    
     /// ```
     ///
     /// [`btc::Address`]: ../btc/struct.Address.html
@@ -150,13 +148,11 @@ pub trait PublicApi {
     ///
     /// ```
     /// use exonum_btc_anchoring::{api::PublicApi, btc::Address, test_helpers::AnchoringTestKit};
+    /// 
+    /// let mut anchoring_testkit = AnchoringTestKit::default();
     ///
-    /// fn main() {
-    ///     let mut anchoring_testkit = AnchoringTestKit::default();
-    ///
-    ///     let api = anchoring_testkit.inner.api();
-    ///     let _address: Option<Address> = api.following_address().unwrap();
-    /// }    
+    /// let api = anchoring_testkit.inner.api();
+    /// let _address: Option<Address> = api.following_address().unwrap();    
     /// ```
     ///
     /// [`Option<btc::Address>`]: ../btc/struct.Address.html
@@ -178,13 +174,11 @@ pub trait PublicApi {
     ///     test_helpers::AnchoringTestKit,
     /// };
     ///
-    /// fn main() {
-    ///     let mut anchoring_testkit = AnchoringTestKit::default();
+    /// let mut anchoring_testkit = AnchoringTestKit::default();
     ///
-    ///     let api = anchoring_testkit.inner.api();
-    ///     let height = None;
-    ///     let _proof: TransactionProof = api.find_transaction(height).unwrap();
-    /// }  
+    /// let api = anchoring_testkit.inner.api();
+    /// let height = None;
+    /// let _proof: TransactionProof = api.find_transaction(height).unwrap();
     /// ```
     ///
     /// [`FindTransactionQuery`]: struct.FindTransactionQuery.html
@@ -202,12 +196,10 @@ pub trait PublicApi {
     /// ```
     /// use exonum_btc_anchoring::{api::PublicApi, config::Config, test_helpers::AnchoringTestKit};
     ///
-    /// fn main() {
-    ///     let mut anchoring_testkit = AnchoringTestKit::default();
+    /// let mut anchoring_testkit = AnchoringTestKit::default();
     ///
-    ///     let api = anchoring_testkit.inner.api();
-    ///     let _config: Config = api.config().unwrap();
-    /// }
+    /// let api = anchoring_testkit.inner.api();
+    /// let _config: Config = api.config().unwrap();
     /// ```
     ///
     /// [`config`]: ../config/struct.Config.html
