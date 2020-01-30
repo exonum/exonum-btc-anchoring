@@ -148,7 +148,7 @@ pub trait PublicApi {
     ///
     /// ```
     /// use exonum_btc_anchoring::{api::PublicApi, btc::Address, test_helpers::AnchoringTestKit};
-    /// 
+    ///
     /// let mut anchoring_testkit = AnchoringTestKit::default();
     ///
     /// let api = anchoring_testkit.inner.api();
@@ -248,7 +248,7 @@ pub trait PrivateApi {
     /// | Query type  | - |
     /// | Return type | [`AnchoringProposalState`] |
     ///
-    /// [`AnchoringProposalState`]: struct.AnchoringProposalState.html
+    /// [`AnchoringProposalState`]: enum.AnchoringProposalState.html
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error>;
     /// Returns an actual anchoring configuration.
     ///
