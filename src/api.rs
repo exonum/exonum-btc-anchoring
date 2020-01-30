@@ -12,7 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-//! Anchoring HTTP API implementation.
+//! Bitcoin Anchoring HTTP API.
+//! 
+//! Anchoring API is divided into public and private parts, with public part intended for 
+//! unauthorized use, and private part intended to be used by [sync][sync] module.
+//! Private part is implementation detail and should not be used directly.
+//! 
+//! [sync]: ../sync/index.html
 
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
@@ -107,27 +113,104 @@ impl From<u64> for AnchoringChainLength {
     }
 }
 
-/// Public API specification for the Exonum Bitcoin anchoring service.
+/// Public API part of the Exonum Bitcoin anchoring service.
 pub trait PublicApi {
     /// Error type for the current public API implementation.
     type Error;
     /// Returns an actual anchoring address.
+    /// 
+    /// | Property    | Value |
+    /// |-------------|-------|
+    /// | Path        | `/api/services/{btc_anchoring}/address/actual` |
+    /// | Method      | GET   |
+    /// | Query type  | - |
+    /// | Return type | [`btc::Address`] |
     ///
-    /// `GET /{api_prefix}/address/actual`
+    /// ```
+    /// use exonum_btc_anchoring::{api::PublicApi, btc::Address, test_helpers::AnchoringTestKit};
+    /// 
+    /// fn main() {
+    ///     let mut anchoring_testkit = AnchoringTestKit::default();
+    /// 
+    ///     let api = anchoring_testkit.inner.api();
+    ///     let _address: Address = api.actual_address().unwrap();
+    /// }    
+    /// ```
+    /// 
+    /// [`btc::Address`]: ../btc/struct.Address.html
     fn actual_address(&self) -> Result<btc::Address, Self::Error>;
     /// Returns the following anchoring address if the node is in the transition state.
     ///
-    /// `GET /{api_prefix}/address/following`
+    /// | Property    | Value |
+    /// |-------------|-------|
+    /// | Path        | `/api/services/{btc_anchoring}/address/following` |
+    /// | Method      | GET   |
+    /// | Query type  | - |
+    /// | Return type | [`Option<btc::Address>`] |
+    ///
+    /// ```
+    /// use exonum_btc_anchoring::{api::PublicApi, btc::Address, test_helpers::AnchoringTestKit};
+    /// 
+    /// fn main() {
+    ///     let mut anchoring_testkit = AnchoringTestKit::default();
+    /// 
+    ///     let api = anchoring_testkit.inner.api();
+    ///     let _address: Option<Address> = api.following_address().unwrap();
+    /// }    
+    /// ```
+    /// 
+    /// [`Option<btc::Address>`]: ../btc/struct.Address.html
     fn following_address(&self) -> Result<Option<btc::Address>, Self::Error>;
     /// Returns the latest anchoring transaction if the height is not specified,
     /// otherwise, return the anchoring transaction with the height that is greater or equal
     /// to the given one.
     ///
-    /// `GET /{api_prefix}/find-transaction`
+    /// | Property    | Value |
+    /// |-------------|-------|
+    /// | Path        | `/api/services/{btc_anchoring}/find-transaction` |
+    /// | Method      | GET   |
+    /// | Query type  | [`FindTransactionQuery`] |
+    /// | Return type | [`TransactionProof`] |
+    ///
+    /// ```
+    /// use exonum_btc_anchoring::{
+    ///     api::{PublicApi, TransactionProof},
+    ///     test_helpers::AnchoringTestKit,
+    /// };
+    /// 
+    /// fn main() {
+    ///     let mut anchoring_testkit = AnchoringTestKit::default();
+    /// 
+    ///     let api = anchoring_testkit.inner.api();
+    ///     let height = None;
+    ///     let _proof: TransactionProof = api.find_transaction(height).unwrap();
+    /// }  
+    /// ```
+    /// 
+    /// [`FindTransactionQuery`]: struct.FindTransactionQuery.html
+    /// [`TransactionProof`]: struct.TransactionProof.html
     fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error>;
     /// Returns an actual anchoring configuration.
     ///
-    /// `GET /{api_prefix}/config`
+    /// | Property    | Value |
+    /// |-------------|-------|
+    /// | Path        | `/api/services/{btc_anchoring}/config` |
+    /// | Method      | GET   |
+    /// | Query type  | - |
+    /// | Return type | [`Config`] |
+    /// 
+    /// ```
+    /// use exonum_btc_anchoring::{api::PublicApi, config::Config, test_helpers::AnchoringTestKit};
+    ///
+    /// fn main() {
+    ///     let mut anchoring_testkit = AnchoringTestKit::default();
+    /// 
+    ///     let api = anchoring_testkit.inner.api();
+    ///     let _config: Config = api.config().unwrap();
+    /// }
+    /// ```
+    /// 
+    /// [`config`]: ../config/struct.Config.html
     fn config(&self) -> Result<Config, Self::Error>;
 }
 
@@ -370,13 +453,6 @@ impl<'a> PrivateApi for ApiImpl<'a> {
 pub struct FindTransactionQuery {
     /// Exonum block height.
     pub height: Option<Height>,
-}
-
-/// Query parameters for the block header proof request.
-#[derive(Debug, Clone, Copy, Serialize, Deserialize)]
-pub struct HeightQuery {
-    /// Exonum block height.
-    pub height: Height,
 }
 
 /// Query parameters for the anchoring transaction request.
