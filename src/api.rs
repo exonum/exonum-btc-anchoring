@@ -13,11 +13,11 @@
 // limitations under the License.
 
 //! Bitcoin Anchoring HTTP API.
-//! 
-//! Anchoring API is divided into public and private parts, with public part intended for 
+//!
+//! Anchoring API is divided into public and private parts, with public part intended for
 //! unauthorized use, and private part intended to be used by [sync][sync] module.
 //! Private part is implementation detail and should not be used directly.
-//! 
+//!
 //! [sync]: ../sync/index.html
 
 use btc_transaction_utils::{p2wsh, TxInRef};
@@ -118,7 +118,7 @@ pub trait PublicApi {
     /// Error type for the current public API implementation.
     type Error;
     /// Returns an actual anchoring address.
-    /// 
+    ///
     /// | Property    | Value |
     /// |-------------|-------|
     /// | Path        | `/api/services/{btc_anchoring}/address/actual` |
@@ -128,15 +128,15 @@ pub trait PublicApi {
     ///
     /// ```
     /// use exonum_btc_anchoring::{api::PublicApi, btc::Address, test_helpers::AnchoringTestKit};
-    /// 
+    ///
     /// fn main() {
     ///     let mut anchoring_testkit = AnchoringTestKit::default();
-    /// 
+    ///
     ///     let api = anchoring_testkit.inner.api();
     ///     let _address: Address = api.actual_address().unwrap();
     /// }    
     /// ```
-    /// 
+    ///
     /// [`btc::Address`]: ../btc/struct.Address.html
     fn actual_address(&self) -> Result<btc::Address, Self::Error>;
     /// Returns the following anchoring address if the node is in the transition state.
@@ -150,15 +150,15 @@ pub trait PublicApi {
     ///
     /// ```
     /// use exonum_btc_anchoring::{api::PublicApi, btc::Address, test_helpers::AnchoringTestKit};
-    /// 
+    ///
     /// fn main() {
     ///     let mut anchoring_testkit = AnchoringTestKit::default();
-    /// 
+    ///
     ///     let api = anchoring_testkit.inner.api();
     ///     let _address: Option<Address> = api.following_address().unwrap();
     /// }    
     /// ```
-    /// 
+    ///
     /// [`Option<btc::Address>`]: ../btc/struct.Address.html
     fn following_address(&self) -> Result<Option<btc::Address>, Self::Error>;
     /// Returns the latest anchoring transaction if the height is not specified,
@@ -177,16 +177,16 @@ pub trait PublicApi {
     ///     api::{PublicApi, TransactionProof},
     ///     test_helpers::AnchoringTestKit,
     /// };
-    /// 
+    ///
     /// fn main() {
     ///     let mut anchoring_testkit = AnchoringTestKit::default();
-    /// 
+    ///
     ///     let api = anchoring_testkit.inner.api();
     ///     let height = None;
     ///     let _proof: TransactionProof = api.find_transaction(height).unwrap();
     /// }  
     /// ```
-    /// 
+    ///
     /// [`FindTransactionQuery`]: struct.FindTransactionQuery.html
     /// [`TransactionProof`]: struct.TransactionProof.html
     fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error>;
@@ -198,18 +198,18 @@ pub trait PublicApi {
     /// | Method      | GET   |
     /// | Query type  | - |
     /// | Return type | [`Config`] |
-    /// 
+    ///
     /// ```
     /// use exonum_btc_anchoring::{api::PublicApi, config::Config, test_helpers::AnchoringTestKit};
     ///
     /// fn main() {
     ///     let mut anchoring_testkit = AnchoringTestKit::default();
-    /// 
+    ///
     ///     let api = anchoring_testkit.inner.api();
     ///     let _config: Config = api.config().unwrap();
     /// }
     /// ```
-    /// 
+    ///
     /// [`config`]: ../config/struct.Config.html
     fn config(&self) -> Result<Config, Self::Error>;
 }
@@ -221,31 +221,76 @@ pub trait PrivateApi {
     /// Creates and broadcasts the `TxSignature` transaction, which is signed
     /// by the current node, and returns its hash.
     ///
-    /// `POST /{api_prefix}/sign-input`
+    /// | Property    | Value |
+    /// |-------------|-------|
+    /// | Path        | `/api/services/{btc_anchoring}/sign-input` |
+    /// | Method      | POST   |
+    /// | Query type  | [`SignInput`] |
+    /// | Return type | [`Hash`] |
+    ///
+    /// [`SignInput`]: ../blockchain/struct.SignInput.html
+    /// [`Hash`]: https://docs.rs/exonum-crypto/latest/exonum_crypto/struct.Hash.html
     fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error>;
     /// Adds funds via suitable funding transaction.
     ///
     /// Bitcoin transaction should have output with value to the current anchoring address.
     /// The transaction will be applied if 2/3+1 anchoring nodes sent it.
     ///
-    /// `POST /{api_prefix}/add-funds`
+    /// | Property    | Value |
+    /// |-------------|-------|
+    /// | Path        | `/api/services/{btc_anchoring}/add-funds` |
+    /// | Method      | POST   |
+    /// | Query type  | [`AddFunds`] |
+    /// | Return type | [`Hash`] |
+    ///
+    /// [`AddFunds`]: ../blockchain/struct.AddFunds.html
+    /// [`Hash`]: https://docs.rs/exonum-crypto/latest/exonum_crypto/struct.Hash.html
     fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error>;
     /// Returns a proposal for the next anchoring transaction, if it makes sense.
     /// If there is not enough satoshis to create a proposal an error is returned.
     ///
-    /// `GET /{api_prefix}/anchoring-proposal`
+    /// | Property    | Value |
+    /// |-------------|-------|
+    /// | Path        | `/api/services/{btc_anchoring}/anchoring-proposal` |
+    /// | Method      | GET   |
+    /// | Query type  | - |
+    /// | Return type | [`AnchoringProposalState`] |
+    ///
+    /// [`AnchoringProposalState`]: struct.AnchoringProposalState.html
     fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error>;
     /// Returns an actual anchoring configuration.
     ///
-    /// `GET /{api_prefix}/config`
+    /// | Property    | Value |
+    /// |-------------|-------|
+    /// | Path        | `/api/services/{btc_anchoring}/config` |
+    /// | Method      | GET   |
+    /// | Query type  | - |
+    /// | Return type | [`Config`] |
+    ///
+    /// [`config`]: ../config/struct.Config.html
     fn config(&self) -> Result<Config, Self::Error>;
     /// Returns an anchoring transaction with the specified index in anchoring transactions chain.
     ///
-    /// `GET /{api_prefix}/transaction?index={index}`
+    /// | Property    | Value |
+    /// |-------------|-------|
+    /// | Path        | `/api/services/{btc_anchoring}/transaction` |
+    /// | Method      | GET   |
+    /// | Query type  | [`IndexQuery`] |
+    /// | Return type | [`Option<btc::Transaction>`] |
+    ///
+    /// ['IndexQuery']: struct.IndexQuery.html
+    /// [`Option<btc::Transaction>`]: ../btc/struct.Transaction.html
     fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error>;
     /// Returns a total number of anchoring transactions in the chain.
     ///
-    /// `GET /{api_prefix}/transactions-count`
+    /// | Property    | Value |
+    /// |-------------|-------|
+    /// | Path        | `/api/services/{btc_anchoring}/transactions-count` |
+    /// | Method      | GET   |
+    /// | Query type  | - |
+    /// | Return type | [`AnchoringChainLength`] |
+    ///
+    /// [`AnchoringChainLength`]: struct.AnchoringChainLength.html
     fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error>;
 }
 

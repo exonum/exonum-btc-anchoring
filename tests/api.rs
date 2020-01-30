@@ -67,7 +67,7 @@ fn actual_address() {
         .create_blocks_until(Height(anchoring_interval));
 
     let anchoring_api = anchoring_testkit.inner.api();
-    
+
     assert_eq!(
         anchoring_api.actual_address().unwrap(),
         anchoring_testkit
