@@ -31,7 +31,10 @@ use exonum_explorer::CommittedTransaction;
 use exonum_supervisor::ConfigPropose;
 
 fn assert_tx_error(tx: &CommittedTransaction, e: ErrorMatch) {
-    assert_eq!(*tx.status().unwrap_err(), e);
+    assert_eq!(
+        *tx.status().unwrap_err(),
+        e.for_service(ANCHORING_INSTANCE_ID)
+    );
 }
 
 fn unspent_funding_transaction(anchoring_testkit: &AnchoringTestKit) -> Option<btc::Transaction> {
@@ -281,7 +284,7 @@ fn err_spent_funding() {
     );
     assert_tx_error(
         &block[0],
-        ErrorMatch::from_fail(&Error::AlreadyUsedFundingTx).for_service(ANCHORING_INSTANCE_ID),
+        ErrorMatch::from_fail(&Error::AlreadyUsedFundingTx),
     );
 
     // Reach the next anchoring height.
@@ -369,7 +372,7 @@ fn no_anchoring_proposal() {
         .create_block_with_transactions(leftover_signatures);
     assert_tx_error(
         &block[0],
-        ErrorMatch::from_fail(&Error::UnexpectedProposalTxId).for_service(ANCHORING_INSTANCE_ID),
+        ErrorMatch::from_fail(&Error::UnexpectedProposalTxId),
     );
 }
 
@@ -412,7 +415,7 @@ fn unexpected_anchoring_proposal() {
         .create_block_with_transactions(leftover_signatures);
     assert_tx_error(
         &block[0],
-        ErrorMatch::from_fail(&Error::UnexpectedProposalTxId).for_service(ANCHORING_INSTANCE_ID),
+        ErrorMatch::from_fail(&Error::UnexpectedProposalTxId),
     );
 }
 
@@ -520,7 +523,7 @@ fn funding_tx_err_unsuitable() {
     );
     assert_tx_error(
         &block[0],
-        ErrorMatch::from_fail(&Error::UnsuitableFundingTx).for_service(ANCHORING_INSTANCE_ID),
+        ErrorMatch::from_fail(&Error::UnsuitableFundingTx),
     );
 }
 
@@ -561,7 +564,7 @@ fn sign_input_err_unauthorized() {
     let block = testkit.inner.create_block_with_transaction(malformed_tx);
     assert_tx_error(
         &block[0],
-        ErrorMatch::from_fail(&Error::UnauthorizedAnchoringKey).for_service(ANCHORING_INSTANCE_ID),
+        ErrorMatch::from_fail(&Error::UnauthorizedAnchoringKey),
     );
 }
 
@@ -576,7 +579,7 @@ fn add_funds_err_unauthorized() {
     let block = testkit.inner.create_block_with_transaction(malformed_tx);
     assert_tx_error(
         &block[0],
-        ErrorMatch::from_fail(&Error::UnauthorizedAnchoringKey).for_service(ANCHORING_INSTANCE_ID),
+        ErrorMatch::from_fail(&Error::UnauthorizedAnchoringKey),
     );
 }
 
@@ -595,10 +598,7 @@ fn sing_input_err_no_such_input() {
         .sign_input(ANCHORING_INSTANCE_ID, SignInput { input: 10, ..tx });
     // Commit this transaction and check status.
     let block = testkit.inner.create_block_with_transaction(malformed_tx);
-    assert_tx_error(
-        &block[0],
-        ErrorMatch::from_fail(&Error::NoSuchInput).for_service(ANCHORING_INSTANCE_ID),
-    );
+    assert_tx_error(&block[0], ErrorMatch::from_fail(&Error::NoSuchInput));
 }
 
 #[test]
@@ -617,7 +617,6 @@ fn sign_input_err_input_verification_failed() {
     assert_tx_error(
         &block[0],
         ErrorMatch::from_fail(&Error::InputVerificationFailed)
-            .for_service(ANCHORING_INSTANCE_ID)
             .with_description_containing("secp: signature failed verification"),
     );
 }

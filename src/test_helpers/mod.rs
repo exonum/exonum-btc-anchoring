@@ -484,11 +484,11 @@ fn validate_table_proof(
         checked_table_proof.index_hash() == block_proof.block.state_hash,
         "State hash doesn't match"
     );
-    let value = checked_table_proof
+    let (table_name, table_hash) = checked_table_proof
         .entries()
-        .map(|(a, b)| (a.clone(), *b))
-        .next();
-    value.ok_or_else(|| format_err!("Unable to get `to_block_header` entry"))
+        .next()
+        .ok_or_else(|| format_err!("Unable to get `to_block_header` entry"))?;
+    Ok((table_name.to_owned(), *table_hash))
 }
 
 /// Proof validation extension.
@@ -505,12 +505,11 @@ impl ValidateProof for TransactionProof {
     fn validate(self, actual_config: &ConsensusConfig) -> Result<Self::Output, failure::Error> {
         let proof_entry = validate_table_proof(actual_config, &self.block_proof, self.state_proof)?;
 
-        dbg!(&proof_entry);
-
         ensure!(
             proof_entry.0 == format!("{}.transactions_chain", ANCHORING_INSTANCE_NAME),
             "Invalid table location"
         );
+
         // Validate value.
         let values = self
             .transaction_proof

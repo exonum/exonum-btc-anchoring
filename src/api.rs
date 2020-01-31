@@ -21,11 +21,7 @@
 //! [sync]: ../sync/index.html
 
 use btc_transaction_utils::{p2wsh, TxInRef};
-use exonum::{
-    blockchain::{BlockProof, IndexProof},
-    crypto::Hash,
-    helpers::Height,
-};
+use exonum::{blockchain::BlockProof, crypto::Hash, helpers::Height};
 use exonum_merkledb::{ListProof, MapProof};
 use exonum_rust_runtime::{
     api::{self, ServiceApiBuilder, ServiceApiState},
@@ -249,15 +245,15 @@ pub trait PrivateApi {
 struct ApiImpl<'a>(&'a ServiceApiState<'a>);
 
 impl<'a> ApiImpl<'a> {
-    fn broadcaster(&self) -> Result<Broadcaster<'_>, api::Error> {
+    fn broadcaster(&self) -> api::Result<Broadcaster<'_>> {
         self.0.broadcaster().ok_or_else(|| {
             api::Error::bad_request()
                 .title("Invalid broadcast request")
-                .detail("Nod is not a validator")
+                .detail("Node is not a validator")
         })
     }
 
-    fn actual_config(&self) -> Result<Config, api::Error> {
+    fn actual_config(&self) -> api::Result<Config> {
         Ok(Schema::new(self.0.service_data()).actual_config())
     }
 
@@ -309,11 +305,7 @@ impl<'a> ApiImpl<'a> {
     }
 
     fn transaction_proof(&self, tx_index: u64) -> TransactionProof {
-        let IndexProof {
-            block_proof,
-            index_proof,
-            ..
-        } = self
+        let proof = self
             .0
             .data()
             .proof_for_service_index("transactions_chain")
@@ -323,8 +315,8 @@ impl<'a> ApiImpl<'a> {
             .get_proof(tx_index);
 
         TransactionProof {
-            block_proof,
-            state_proof: index_proof,
+            block_proof: proof.block_proof,
+            state_proof: proof.index_proof,
             transaction_proof,
         }
     }
