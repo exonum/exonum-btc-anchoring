@@ -393,8 +393,11 @@ impl<'a> PrivateApi for ApiImpl<'a> {
 
     fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
         // Verify Bitcoin signature.
-        self.verify_sign_input(&sign_input)
-            .map_err(|e| api::Error::bad_request().detail(e.to_string()))?;
+        self.verify_sign_input(&sign_input).map_err(|e| {
+            api::Error::bad_request()
+                .title("Sign input request verification has been failed")
+                .detail(e.to_string())
+        })?;
 
         self.broadcaster()?
             .sign_input((), sign_input)
@@ -402,8 +405,11 @@ impl<'a> PrivateApi for ApiImpl<'a> {
     }
 
     fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error> {
-        self.verify_funding_tx(&transaction)
-            .map_err(|e| api::Error::bad_request().detail(e.to_string()))?;
+        self.verify_funding_tx(&transaction).map_err(|e| {
+            api::Error::bad_request()
+                .title("Funding tx verification has been failed")
+                .detail(e.to_string())
+        })?;
 
         self.broadcaster()?
             .add_funds((), AddFunds { transaction })

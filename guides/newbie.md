@@ -111,7 +111,7 @@ installed via `pip3` (see `exonum-launcher` README for details).
       anchoring:
         runtime: rust
         name: "exonum-btc-anchoring"
-        version: "0.13.0-rc.2"
+        version: "1.0.0-rc.1"
 
     instances:
       anchoring:

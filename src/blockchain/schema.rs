@@ -17,8 +17,8 @@
 use exonum::{blockchain::Schema as CoreSchema, helpers::Height};
 use exonum_derive::FromAccess;
 use exonum_merkledb::{
-    access::{Access, FromAccess, Prefixed},
-    Entry, Fork, ProofListIndex, ProofMapIndex,
+    access::{Access, FromAccess, RawAccessMut},
+    Entry, ProofListIndex, ProofMapIndex,
 };
 use log::{error, trace};
 
@@ -189,7 +189,11 @@ impl<T: Access> Schema<T> {
     }
 }
 
-impl Schema<Prefixed<&Fork>> {
+impl<T> Schema<T>
+where
+    T: Access,
+    T::Base: RawAccessMut,
+{
     /// Adds a finalized transaction to the tail of the anchoring transactions.
     pub(crate) fn push_anchoring_transaction(&mut self, tx: Transaction) {
         // An unspent funding transaction is always unconditionally added to the anchoring
