@@ -18,7 +18,7 @@ syntax = "proto3";
 
 package exonum.service.btc_anchoring;
 
-import "types.proto";
+import "exonum/crypto/types.proto";
 import "btc_types.proto";
 
 // Public keys of an anchoring node.
@@ -55,7 +55,7 @@ message Config {
     // Testnet - 118034699(0x0709110B)
     // Regtest - 3669344250(0xDAB5BFFA)
     fixed32 network = 1;
-    // Bitcoin public keys of nodes from from which the current anchoring redeem script can 
+    // Bitcoin public keys of nodes from from which the current anchoring redeem script can
     // be calculated.
     repeated AnchoringKeys anchoring_keys = 2;
     // Interval in blocks between anchored blocks.

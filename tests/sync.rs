@@ -12,7 +12,7 @@
 // limitations under the License.
 
 use exonum::{
-    crypto::{Hash, PublicKey, SecretKey},
+    crypto::{Hash, KeyPair},
     helpers::Height,
     merkledb::ObjectHash,
 };
@@ -124,7 +124,7 @@ impl BitcoinRelay for FakeBitcoinRelay {
 /// TODO Implement creating TestkitApi for an arbitrary TestNode. [ECR-3222]
 #[derive(Debug)]
 struct FakePrivateApi {
-    service_keypair: (PublicKey, SecretKey),
+    service_keypair: KeyPair,
     inner: TestKitApi,
 }
 

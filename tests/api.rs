@@ -369,7 +369,7 @@ fn sign_input() {
 
     let config = anchoring_testkit.actual_anchoring_config();
     let bitcoin_public_key = config
-        .find_bitcoin_key(&anchoring_testkit.inner.us().service_keypair().0)
+        .find_bitcoin_key(&anchoring_testkit.inner.us().service_keypair().public_key())
         .unwrap()
         .1;
     let bitcoin_private_key = anchoring_testkit.node_private_key(&bitcoin_public_key);

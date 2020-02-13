@@ -14,7 +14,6 @@
 
 use exonum::helpers::Height;
 use exonum::{
-    crypto,
     messages::{AnyTx, Verified},
     runtime::{ErrorMatch, SnapshotExt},
 };
@@ -27,6 +26,7 @@ use exonum_btc_anchoring::{
         ANCHORING_INSTANCE_ID,
     },
 };
+use exonum_crypto::KeyPair;
 use exonum_explorer::CommittedTransaction;
 use exonum_supervisor::ConfigPropose;
 
@@ -41,11 +41,12 @@ fn unspent_funding_transaction(anchoring_testkit: &AnchoringTestKit) -> Option<b
     get_anchoring_schema(&anchoring_testkit.inner.snapshot()).unspent_funding_transaction()
 }
 
-fn change_tx_signature(
-    tx: Verified<AnyTx>,
-    keypair: (crypto::PublicKey, crypto::SecretKey),
-) -> Verified<AnyTx> {
-    Verified::from_value(tx.into_payload(), keypair.0, &keypair.1)
+fn change_tx_signature(tx: Verified<AnyTx>, keypair: &KeyPair) -> Verified<AnyTx> {
+    Verified::from_value(
+        tx.into_payload(),
+        keypair.public_key(),
+        keypair.secret_key(),
+    )
 }
 
 fn test_anchoring_config_change<F>(mut config_change_predicate: F) -> AnchoringTestKit
@@ -559,7 +560,7 @@ fn sign_input_err_unauthorized() {
         .unwrap()[0]
         .clone();
     // Re-sign this transaction by the other keypair.
-    let malformed_tx = change_tx_signature(tx, crypto::gen_keypair());
+    let malformed_tx = change_tx_signature(tx, &KeyPair::random());
     // Commit this transaction and check status.
     let block = testkit.inner.create_block_with_transaction(malformed_tx);
     assert_tx_error(
@@ -574,7 +575,7 @@ fn add_funds_err_unauthorized() {
     // Create add_funds transaction from the anchoring node.
     let tx = testkit.create_funding_confirmation_txs(100).0[0].clone();
     // Re-sign this transaction by the other keypair.
-    let malformed_tx = change_tx_signature(tx, crypto::gen_keypair());
+    let malformed_tx = change_tx_signature(tx, &KeyPair::random());
     // Commit this transaction and check status.
     let block = testkit.inner.create_block_with_transaction(malformed_tx);
     assert_tx_error(
@@ -611,7 +612,7 @@ fn sign_input_err_input_verification_failed() {
     // Create sign_input transaction for the first anchoring node.
     let tx = testkit.create_signature_tx_for_node(&first_node).unwrap()[0].clone();
     // Re-sign this transaction by the second anchoring node.
-    let malformed_tx = change_tx_signature(tx, second_node.service_keypair());
+    let malformed_tx = change_tx_signature(tx, &second_node.service_keypair());
     // Commit this transaction and check status.
     let block = testkit.inner.create_block_with_transaction(malformed_tx);
     assert_tx_error(

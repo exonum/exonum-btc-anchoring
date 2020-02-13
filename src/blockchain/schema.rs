@@ -189,7 +189,7 @@ impl<T: Access> Schema<T> {
     }
 }
 
-impl Schema<Prefixed<'_, &Fork>> {
+impl Schema<Prefixed<&Fork>> {
     /// Adds a finalized transaction to the tail of the anchoring transactions.
     pub(crate) fn push_anchoring_transaction(&mut self, tx: Transaction) {
         // An unspent funding transaction is always unconditionally added to the anchoring

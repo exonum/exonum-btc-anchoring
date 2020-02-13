@@ -19,15 +19,15 @@ use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
     blockchain::{config::InstanceInitParams, BlockProof, ConsensusConfig},
-    crypto::{self, Hash, PublicKey},
+    crypto::{Hash, KeyPair, PublicKey},
     helpers::Height,
     keys::Keys,
     messages::{AnyTx, Verified},
-    runtime::{InstanceId, SnapshotExt},
+    runtime::{InstanceId, SnapshotExt, SUPERVISOR_INSTANCE_ID},
 };
 use exonum_merkledb::{access::Access, MapProof, ObjectHash, Snapshot};
 use exonum_rust_runtime::{api, ServiceFactory};
-use exonum_supervisor::{ConfigPropose, Supervisor};
+use exonum_supervisor::{ConfigPropose, Supervisor, SupervisorInterface};
 use exonum_testkit::{ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNode};
 use failure::{ensure, format_err};
 use rand::{thread_rng, Rng};
@@ -79,14 +79,9 @@ pub fn create_fake_funding_transaction(address: &btc::Address, value: u64) -> bt
 }
 
 fn gen_validator_keys() -> Keys {
-    let consensus_keypair = crypto::gen_keypair();
-    let service_keypair = crypto::gen_keypair();
-    Keys::from_keys(
-        consensus_keypair.0,
-        consensus_keypair.1,
-        service_keypair.0,
-        service_keypair.1,
-    )
+    let consensus_keypair = KeyPair::random();
+    let service_keypair = KeyPair::random();
+    Keys::from_keys(consensus_keypair, service_keypair)
 }
 
 #[derive(Debug, Default)]
@@ -181,7 +176,7 @@ impl AnchoringTestKit {
                 anchoring_artifact,
                 anchoring_config,
             ))
-            .create();
+            .build();
 
         Self {
             inner,
@@ -226,7 +221,7 @@ impl AnchoringTestKit {
 
             let actual_config = schema.actual_state().actual_config().clone();
             let bitcoin_key = actual_config
-                .find_bitcoin_key(&service_keypair.0)
+                .find_bitcoin_key(&service_keypair.public_key())
                 .unwrap()
                 .1;
             let btc_private_key = self.anchoring_nodes.private_key(&bitcoin_key);
@@ -310,12 +305,17 @@ impl AnchoringTestKit {
     pub fn create_config_change_tx(&self, proposal: ConfigPropose) -> Verified<AnyTx> {
         let initiator_id = self.inner.network().us().validator_id().unwrap();
         let keypair = self.inner.validator(initiator_id).service_keypair();
-        proposal.sign_for_supervisor(keypair.0, &keypair.1)
+        keypair.propose_config_change(SUPERVISOR_INSTANCE_ID, proposal)
     }
 
     /// Adds a new auditor node to the testkit network and create Bitcoin keypair for it.
     pub fn add_node(&mut self) -> AnchoringKeys {
-        let service_key = self.inner.network_mut().add_node().service_keypair().0;
+        let service_key = self
+            .inner
+            .network_mut()
+            .add_node()
+            .service_keypair()
+            .public_key();
         let bitcoin_key = self
             .anchoring_nodes
             .add_node(self.actual_anchoring_config().network, service_key);
@@ -375,7 +375,7 @@ impl AnchoringTestKit {
             .network()
             .nodes()
             .iter()
-            .find(|node| node.service_keypair().0 == service_key)
+            .find(|node| node.service_keypair().public_key() == service_key)
     }
 }
 

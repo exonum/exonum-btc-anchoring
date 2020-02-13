@@ -17,6 +17,6 @@ use exonum_cli::NodeBuilder;
 fn main() -> Result<(), failure::Error> {
     exonum::helpers::init_logger()?;
     NodeBuilder::new()
-        .with_service(exonum_btc_anchoring::BtcAnchoringService)
+        .with_rust_service(exonum_btc_anchoring::BtcAnchoringService)
         .run()
 }
