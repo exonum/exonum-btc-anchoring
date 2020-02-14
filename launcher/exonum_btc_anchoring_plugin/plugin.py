@@ -8,20 +8,14 @@ from exonum_launcher.configuration import Instance
 
 from exonum_launcher.instances.instance_spec_loader import InstanceSpecLoader, InstanceSpecLoadError
 
+RUST_RUNTIME_ID = 0
+ANCHORING_ARTIFACT_NAME = "exonum-btc-anchoring"
+ANCHORING_ARTIFACT_VERSION = "1.0.0-rc.1"
 
-def import_or_load_module(loader: ProtobufLoader, instance: Instance, module_name: str):
-    try:
-        # Try to load module (if it's already compiled) first.
-        module = ModuleManager.import_service_module(
-            instance.artifact.name, module_name)
-        return module
-    except (ModuleNotFoundError, ImportError):
-        # If it's not compiled, load & compile protobuf.
-        loader.load_service_proto_files(
-            instance.artifact.runtime_id, instance.artifact.name)
-        module = ModuleManager.import_service_module(
-            instance.artifact.name, "service")
-        return module
+
+def import_anchoring_module(name: str):
+    return ModuleManager.import_service_module(
+        ANCHORING_ARTIFACT_NAME, ANCHORING_ARTIFACT_VERSION, name)
 
 
 def bitcoin_network_from_string(network_string: str) -> int:
@@ -38,10 +32,13 @@ class AnchoringInstanceSpecLoader(InstanceSpecLoader):
 
     def load_spec(self, loader: ProtobufLoader, instance: Instance) -> bytes:
         try:
-            service_module = import_or_load_module(loader, instance, "service")
-            btc_types_module = import_or_load_module(
-                loader, instance, "btc_types")
-            exonum_types_module = import_or_load_module(loader, instance, "types")
+            # Load proto files for the Exonum anchoring service:
+            loader.load_service_proto_files(
+                RUST_RUNTIME_ID, ANCHORING_ARTIFACT_NAME, ANCHORING_ARTIFACT_VERSION)
+
+            service_module = import_anchoring_module("service")
+            btc_types_module = import_anchoring_module("btc_types")
+            exonum_types_module = import_anchoring_module("types")
 
             # Create config message
             config = service_module.Config()

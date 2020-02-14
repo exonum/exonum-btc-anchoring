@@ -67,6 +67,7 @@ fn actual_address() {
         .create_blocks_until(Height(anchoring_interval));
 
     let anchoring_api = anchoring_testkit.inner.api();
+
     assert_eq!(
         anchoring_api.actual_address().unwrap(),
         anchoring_testkit
@@ -105,7 +106,7 @@ fn following_address() {
     anchoring_testkit.inner.create_block_with_transaction(
         anchoring_testkit.create_config_change_tx(
             ConfigPropose::new(0, anchoring_testkit.inner.height().next())
-                .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone()),
+                .service_config(ANCHORING_INSTANCE_ID, new_cfg),
         ),
     );
     anchoring_testkit.inner.create_block();
@@ -199,7 +200,7 @@ fn find_transaction_configuration_change() {
     anchoring_testkit.inner.create_block_with_transaction(
         anchoring_testkit.create_config_change_tx(
             ConfigPropose::new(0, anchoring_testkit.inner.height().next())
-                .service_config(ANCHORING_INSTANCE_ID, new_cfg.clone()),
+                .service_config(ANCHORING_INSTANCE_ID, new_cfg),
         ),
     );
     anchoring_testkit.inner.create_block();
@@ -368,7 +369,7 @@ fn sign_input() {
 
     let config = anchoring_testkit.actual_anchoring_config();
     let bitcoin_public_key = config
-        .find_bitcoin_key(&anchoring_testkit.inner.us().service_keypair().0)
+        .find_bitcoin_key(&anchoring_testkit.inner.us().service_keypair().public_key())
         .unwrap()
         .1;
     let bitcoin_private_key = anchoring_testkit.node_private_key(&bitcoin_public_key);

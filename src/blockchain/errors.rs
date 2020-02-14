@@ -14,13 +14,13 @@
 
 //! Error types of the BTC anchoring service.
 
-use exonum::runtime::ExecutionError;
-use exonum_derive::IntoExecutionError;
+use exonum::runtime::{ExecutionError, ExecutionFail};
+use exonum_derive::ExecutionFail;
 
 use crate::btc;
 
 /// Possible errors during execution of the `sign_input` method.
-#[derive(Debug, IntoExecutionError)]
+#[derive(Debug, ExecutionFail)]
 pub enum Error {
     /// Transaction author is not authorized to sign anchoring transactions.
     UnauthorizedAnchoringKey = 0,
@@ -41,6 +41,6 @@ pub enum Error {
 impl Error {
     /// Creates an error instance from the anchoring transaction builder error.
     pub fn anchoring_builder_error(error: btc::BuilderError) -> ExecutionError {
-        (Error::AnchoringBuilderError, error).into()
+        Error::AnchoringBuilderError.with_description(error)
     }
 }

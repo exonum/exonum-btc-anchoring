@@ -17,8 +17,9 @@
 pub use crate::proto::{AddFunds, SignInput};
 
 use btc_transaction_utils::{p2wsh::InputSigner, TxInRef};
-use exonum::runtime::{rust::CallContext, DispatcherError, ExecutionError};
-use exonum_derive::exonum_interface;
+use exonum::runtime::{CommonError, ExecutionError, ExecutionFail};
+use exonum_derive::{exonum_interface, interface_method};
+use exonum_rust_runtime::ExecutionContext;
 use log::{info, trace};
 
 use crate::{btc, config::Config, BtcAnchoringService};
@@ -47,7 +48,7 @@ impl SignInput {
                 &public_key.0,
                 self.input_signature.as_ref(),
             )
-            .map_err(|e| (Error::InputVerificationFailed, e).into())
+            .map_err(|e| Error::InputVerificationFailed.with_description(e))
     }
 }
 
@@ -85,22 +86,29 @@ impl TransactionConfirmations {
 
 /// Exonum BTC anchoring transactions.
 #[exonum_interface]
-pub trait Transactions {
+pub trait BtcAnchoringInterface<Ctx> {
+    /// Value output by the interface.
+    type Output;
+
     /// Signs a single input of the anchoring transaction proposal.
-    fn sign_input(&self, context: CallContext<'_>, arg: SignInput) -> Result<(), ExecutionError>;
+    #[interface_method(id = 0)]
+    fn sign_input(&self, context: Ctx, arg: SignInput) -> Self::Output;
     /// Add funds via suitable funding transaction.
     ///
     /// Bitcoin transaction should have output with value to the current anchoring address.
     /// The transaction will be applied if 2/3+1 anchoring nodes sent it.
-    fn add_funds(&self, context: CallContext<'_>, arg: AddFunds) -> Result<(), ExecutionError>;
+    #[interface_method(id = 1)]
+    fn add_funds(&self, context: Ctx, arg: AddFunds) -> Self::Output;
 }
 
-impl Transactions for BtcAnchoringService {
-    fn sign_input(&self, context: CallContext<'_>, arg: SignInput) -> Result<(), ExecutionError> {
+impl BtcAnchoringInterface<ExecutionContext<'_>> for BtcAnchoringService {
+    type Output = Result<(), ExecutionError>;
+
+    fn sign_input(&self, context: ExecutionContext<'_>, arg: SignInput) -> Self::Output {
         let author = context
             .caller()
             .author()
-            .ok_or(DispatcherError::UnauthorizedCaller)?;
+            .ok_or(CommonError::UnauthorizedCaller)?;
 
         let mut schema = Schema::new(context.service_data());
 
@@ -151,7 +159,7 @@ impl Transactions for BtcAnchoringService {
         // Check that we have not reached the quorum yet, otherwise we should not do anything.
         if input_signature_len < quorum {
             // Add signature to schema.
-            input_signatures.insert(anchoring_node_id, arg.input_signature.clone());
+            input_signatures.insert(anchoring_node_id, arg.input_signature);
             schema
                 .transaction_signatures
                 .put(&input_id, input_signatures);
@@ -195,11 +203,11 @@ impl Transactions for BtcAnchoringService {
         Ok(())
     }
 
-    fn add_funds(&self, context: CallContext<'_>, arg: AddFunds) -> Result<(), ExecutionError> {
+    fn add_funds(&self, context: ExecutionContext<'_>, arg: AddFunds) -> Self::Output {
         let author = context
             .caller()
             .author()
-            .ok_or(DispatcherError::UnauthorizedCaller)?;
+            .ok_or(CommonError::UnauthorizedCaller)?;
         let mut schema = Schema::new(context.service_data());
 
         // Check that author is authorized to sign inputs of the anchoring proposal.

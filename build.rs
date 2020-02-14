@@ -12,15 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum_build::{ProtoSources, ProtobufGenerator};
+use exonum_build::ProtobufGenerator;
 
 fn main() {
     ProtobufGenerator::with_mod_name("protobuf_mod.rs")
         .with_input_dir("src/proto")
-        .with_includes(&[
-            "src/proto".into(),
-            ProtoSources::Exonum,
-            ProtoSources::Crypto,
-        ])
+        .with_crypto()
         .generate();
 }

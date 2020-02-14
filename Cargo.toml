@@ -1,7 +1,7 @@
 [package]
 name = "exonum-btc-anchoring"
 edition = "2018"
-version = "0.13.0-rc.2"
+version = "1.0.0-rc.1"
 authors = ["The Exonum Team <contact@exonum.com>"]
 homepage = "https://exonum.com/doc/advanced/bitcoin-anchoring/"
 repository = "https://github.com/exonum/exonum-btc-anchoring"
@@ -22,17 +22,19 @@ bitcoincore-rpc = "0.7.0"
 btc-transaction-utils = "0.6"
 byteorder = "1.3"
 derive_more = "0.15"
-exonum = "0.13.0-rc.2"
-exonum-cli = "0.13.0-rc.2"
-exonum-crypto = { version = "0.13.0-rc.2", features = ["with-protobuf"] }
-exonum-derive = "0.13.0-rc.2"
-exonum-merkledb = "0.13.0-rc.2"
-exonum-proto = "0.13.0-rc.2"
-exonum-supervisor = "0.13.0-rc.2"
-exonum-testkit = "0.13.0-rc.2"
+exonum = "1.0.0-rc.1"
+exonum-cli = "1.0.0-rc.1"
+exonum-crypto = { version = "1.0.0-rc.1", features = ["with-protobuf"] }
+exonum-derive = "1.0.0-rc.1"
+exonum-explorer = "1.0.0-rc.1"
+exonum-merkledb = "1.0.0-rc.1"
+exonum-proto = "1.0.0-rc.1"
+exonum-rust-runtime = "1.0.0-rc.1"
+exonum-supervisor = "1.0.0-rc.1"
+exonum-testkit = "1.0.0-rc.1"
 failure = "0.1"
 failure_derive = "0.1"
-hex = "0.4"
+hex = "=0.4.0" # 0.4.1 is not compatible with Rust 1.36
 jsonrpc = "0.11"
 log = "0.4"
 protobuf = { version = "2.8", features = ["with-serde"] }
@@ -49,4 +51,4 @@ structopt = "0.3"
 proptest = "0.9"
 
 [build-dependencies]
-exonum-build = "0.13.0-rc.2"
+exonum-build = "1.0.0-rc.1"

@@ -26,7 +26,7 @@ addons:
     - zlib1g-dev
 
 rust:
-  - 1.39.0
+  - 1.40.0
 
 cache:
   npm: true
@@ -53,6 +53,9 @@ before_install:
   - export RUSTC_WRAPPER=sccache
 
 jobs:
+  allow_failures:
+  - name: publish-with-rust-1.36
+  - name: deadlinks
   include:
   # Formatting & other lints that do not require compilation
   - name: lints
