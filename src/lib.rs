@@ -40,11 +40,13 @@
 //! ```rust,no_run
 //! use exonum_cli::NodeBuilder;
 //!
-//! fn main() -> Result<(), failure::Error> {
+//! #[tokio::main]
+//! async fn main() -> Result<(), failure::Error> {
 //!     exonum::helpers::init_logger()?;
 //!     NodeBuilder::new()
 //!         .with_rust_service(exonum_btc_anchoring::BtcAnchoringService)
 //!         .run()
+//!         .await
 //! }
 //! ```
 //!

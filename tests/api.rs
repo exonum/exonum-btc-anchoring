@@ -24,19 +24,24 @@ use exonum_btc_anchoring::{
 };
 use exonum_supervisor::ConfigPropose;
 
-fn find_transaction(
+async fn find_transaction(
     anchoring_testkit: &mut AnchoringTestKit,
     height: Option<Height>,
 ) -> Option<btc::Transaction> {
     let api = anchoring_testkit.inner.api();
-    let proof = api.find_transaction(height).unwrap();
-    proof
-        .validate(&anchoring_testkit.inner.consensus_config())
-        .unwrap()
-        .map(|x| x.1)
+    let proof = api.find_transaction(height).await.unwrap();
+
+    let validator_keys = anchoring_testkit
+        .inner
+        .consensus_config()
+        .validator_keys
+        .into_iter()
+        .map(|key| key.consensus_key)
+        .collect::<Vec<_>>();
+    proof.validate(&validator_keys).unwrap().map(|x| x.1)
 }
 
-fn transaction_with_index(
+async fn transaction_with_index(
     anchoring_testkit: &mut AnchoringTestKit,
     index: u64,
 ) -> Option<btc::Transaction> {
@@ -44,11 +49,12 @@ fn transaction_with_index(
         .inner
         .api()
         .transaction_with_index(index)
+        .await
         .unwrap()
 }
 
-#[test]
-fn actual_address() {
+#[tokio::test]
+async fn actual_address() {
     let mut anchoring_testkit = AnchoringTestKit::default();
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
@@ -69,15 +75,15 @@ fn actual_address() {
     let anchoring_api = anchoring_testkit.inner.api();
 
     assert_eq!(
-        anchoring_api.actual_address().unwrap(),
+        anchoring_api.actual_address().await.unwrap(),
         anchoring_testkit
             .actual_anchoring_config()
             .anchoring_address()
     );
 }
 
-#[test]
-fn following_address() {
+#[tokio::test]
+async fn following_address() {
     let mut anchoring_testkit = AnchoringTestKit::default();
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
@@ -112,13 +118,18 @@ fn following_address() {
     anchoring_testkit.inner.create_block();
 
     assert_eq!(
-        anchoring_testkit.inner.api().following_address().unwrap(),
+        anchoring_testkit
+            .inner
+            .api()
+            .following_address()
+            .await
+            .unwrap(),
         Some(following_address)
     );
 }
 
-#[test]
-fn find_transaction_regular() {
+#[tokio::test]
+async fn find_transaction_regular() {
     let mut anchoring_testkit = AnchoringTestKit::default();
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
@@ -142,37 +153,47 @@ fn find_transaction_regular() {
     let tx_chain = anchoring_schema.transactions_chain;
     // Find transactions by height.
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(0))).unwrap(),
+        find_transaction(&mut anchoring_testkit, Some(Height(0)))
+            .await
+            .unwrap(),
         tx_chain.get(0).unwrap()
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(3))).unwrap(),
+        find_transaction(&mut anchoring_testkit, Some(Height(3)))
+            .await
+            .unwrap(),
         tx_chain.get(1).unwrap()
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(4))).unwrap(),
+        find_transaction(&mut anchoring_testkit, Some(Height(4)))
+            .await
+            .unwrap(),
         tx_chain.get(1).unwrap()
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(1000))).unwrap(),
+        find_transaction(&mut anchoring_testkit, Some(Height(1000)))
+            .await
+            .unwrap(),
         tx_chain.get(4).unwrap()
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, None).unwrap(),
+        find_transaction(&mut anchoring_testkit, None)
+            .await
+            .unwrap(),
         tx_chain.last().unwrap()
     );
     // Find transactions by index.
     for i in 0..=tx_chain.len() {
         assert_eq!(
-            transaction_with_index(&mut anchoring_testkit, i),
+            transaction_with_index(&mut anchoring_testkit, i).await,
             tx_chain.get(i)
         );
     }
 }
 
 // Check come edge cases in the find_transaction api method.
-#[test]
-fn find_transaction_configuration_change() {
+#[tokio::test]
+async fn find_transaction_configuration_change() {
     let mut anchoring_testkit = AnchoringTestKit::default();
     let anchoring_interval = anchoring_testkit
         .actual_anchoring_config()
@@ -216,15 +237,15 @@ fn find_transaction_configuration_change() {
     let snapshot = anchoring_testkit.inner.snapshot();
     let anchoring_schema = get_anchoring_schema(&snapshot);
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(0))),
+        find_transaction(&mut anchoring_testkit, Some(Height(0))).await,
         anchoring_schema.transactions_chain.get(1)
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(1))),
+        find_transaction(&mut anchoring_testkit, Some(Height(1))).await,
         anchoring_schema.transactions_chain.get(1)
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, None),
+        find_transaction(&mut anchoring_testkit, None).await,
         anchoring_schema.transactions_chain.get(1)
     );
 
@@ -242,19 +263,19 @@ fn find_transaction_configuration_change() {
     let snapshot = anchoring_testkit.inner.snapshot();
     let anchoring_schema = get_anchoring_schema(&snapshot);
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(0))),
+        find_transaction(&mut anchoring_testkit, Some(Height(0))).await,
         anchoring_schema.transactions_chain.get(1)
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(1))),
+        find_transaction(&mut anchoring_testkit, Some(Height(1))).await,
         anchoring_schema.transactions_chain.get(2)
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(10))),
+        find_transaction(&mut anchoring_testkit, Some(Height(10))).await,
         anchoring_schema.transactions_chain.get(2)
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, None),
+        find_transaction(&mut anchoring_testkit, None).await,
         anchoring_schema.transactions_chain.get(2)
     );
 
@@ -269,45 +290,45 @@ fn find_transaction_configuration_change() {
     let snapshot = anchoring_testkit.inner.snapshot();
     let anchoring_schema = get_anchoring_schema(&snapshot);
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(0))),
+        find_transaction(&mut anchoring_testkit, Some(Height(0))).await,
         anchoring_schema.transactions_chain.get(1)
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(1))),
+        find_transaction(&mut anchoring_testkit, Some(Height(1))).await,
         anchoring_schema.transactions_chain.get(2)
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(5))),
+        find_transaction(&mut anchoring_testkit, Some(Height(5))).await,
         anchoring_schema.transactions_chain.get(2)
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, Some(Height(6))),
+        find_transaction(&mut anchoring_testkit, Some(Height(6))).await,
         anchoring_schema.transactions_chain.get(3)
     );
     assert_eq!(
-        find_transaction(&mut anchoring_testkit, None),
+        find_transaction(&mut anchoring_testkit, None).await,
         anchoring_schema.transactions_chain.get(3)
     );
 }
 
-#[test]
-fn actual_config() {
+#[tokio::test]
+async fn actual_config() {
     let mut anchoring_testkit = AnchoringTestKit::default();
     let cfg = anchoring_testkit.actual_anchoring_config();
 
     let api = anchoring_testkit.inner.api();
-    assert_eq!(PublicApi::config(&api).unwrap(), cfg);
-    assert_eq!(PrivateApi::config(&api).unwrap(), cfg);
+    assert_eq!(PublicApi::config(&api).await.unwrap(), cfg);
+    assert_eq!(PrivateApi::config(&api).await.unwrap(), cfg);
 }
 
-#[test]
-fn anchoring_proposal_ok() {
+#[tokio::test]
+async fn anchoring_proposal_ok() {
     let mut anchoring_testkit = AnchoringTestKit::default();
     let proposal = anchoring_testkit.anchoring_transaction_proposal().unwrap();
 
     let api = anchoring_testkit.inner.api();
     assert_eq!(
-        api.anchoring_proposal().unwrap(),
+        api.anchoring_proposal().await.unwrap(),
         AnchoringProposalState::Available {
             transaction: proposal.0,
             inputs: proposal.1,
@@ -315,8 +336,8 @@ fn anchoring_proposal_ok() {
     );
 }
 
-#[test]
-fn anchoring_proposal_none() {
+#[tokio::test]
+async fn anchoring_proposal_none() {
     let mut anchoring_testkit = AnchoringTestKit::default();
 
     // Establish anchoring transactions chain.
@@ -329,22 +350,22 @@ fn anchoring_proposal_none() {
 
     let api = anchoring_testkit.inner.api();
     assert_eq!(
-        api.anchoring_proposal().unwrap(),
+        api.anchoring_proposal().await.unwrap(),
         AnchoringProposalState::None
     );
 }
 
-#[test]
-fn anchoring_proposal_err_without_initial_funds() {
+#[tokio::test]
+async fn anchoring_proposal_err_without_initial_funds() {
     let mut anchoring_testkit = AnchoringTestKit::new(4, 5);
 
     let api = anchoring_testkit.inner.api();
-    let state = api.anchoring_proposal().unwrap();
+    let state = api.anchoring_proposal().await.unwrap();
     assert_eq!(state, AnchoringProposalState::NoInitialFunds);
 }
 
-#[test]
-fn anchoring_proposal_err_insufficient_funds() {
+#[tokio::test]
+async fn anchoring_proposal_err_insufficient_funds() {
     let mut anchoring_testkit = AnchoringTestKit::new(4, 5);
 
     // Add an initial funding transaction to enable anchoring.
@@ -353,7 +374,7 @@ fn anchoring_proposal_err_insufficient_funds() {
         .create_block_with_transactions(anchoring_testkit.create_funding_confirmation_txs(20).0);
 
     let api = anchoring_testkit.inner.api();
-    let state = api.anchoring_proposal().unwrap();
+    let state = api.anchoring_proposal().await.unwrap();
     assert_eq!(
         state,
         AnchoringProposalState::InsufficientFunds {
@@ -363,8 +384,8 @@ fn anchoring_proposal_err_insufficient_funds() {
     );
 }
 
-#[test]
-fn sign_input() {
+#[tokio::test]
+async fn sign_input() {
     let mut anchoring_testkit = AnchoringTestKit::default();
 
     let config = anchoring_testkit.actual_anchoring_config();
@@ -404,6 +425,7 @@ fn sign_input() {
             input_signature: signature.into(),
             txid: proposal.id(),
         })
+        .await
         .unwrap();
 
     anchoring_testkit
@@ -413,8 +435,8 @@ fn sign_input() {
         .expect("Transaction should be successful");
 }
 
-#[test]
-fn add_funds_ok() {
+#[tokio::test]
+async fn add_funds_ok() {
     let anchoring_interval = 5;
     let mut anchoring_testkit = AnchoringTestKit::new(1, anchoring_interval);
 
@@ -425,6 +447,7 @@ fn add_funds_ok() {
         .inner
         .api()
         .add_funds(funding_transaction)
+        .await
         .unwrap();
 
     anchoring_testkit
@@ -434,8 +457,8 @@ fn add_funds_ok() {
         .expect("Transaction should be successful");
 }
 
-#[test]
-fn add_funds_err_already_used() {
+#[tokio::test]
+async fn add_funds_err_already_used() {
     let anchoring_interval = 5;
     let mut anchoring_testkit = AnchoringTestKit::new(1, anchoring_interval);
 
@@ -455,11 +478,12 @@ fn add_funds_err_already_used() {
         .inner
         .api()
         .add_funds(funding_transaction)
+        .await
         .expect_err("Add funds must fail");
 }
 
-#[test]
-fn add_funds_err_unsuitable() {
+#[tokio::test]
+async fn add_funds_err_unsuitable() {
     let anchoring_interval = 5;
     let mut anchoring_testkit = AnchoringTestKit::new(4, anchoring_interval);
 
@@ -471,5 +495,6 @@ fn add_funds_err_unsuitable() {
         .inner
         .api()
         .add_funds(funding_transaction)
+        .await
         .expect_err("Add funds must fail");
 }
