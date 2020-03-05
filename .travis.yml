@@ -42,7 +42,7 @@ sudo: required
 
 env:
   global:
-  - SCCACHE_VERS=0.2.13
+  - SCCACHE_VERS=0.2.12
   - DEADLINKS_VERS=0.3.0
   - RUSTFLAGS="-D warnings"
   - ROCKSDB_LIB_DIR=/usr/lib
@@ -54,7 +54,7 @@ before_install:
 
 jobs:
   allow_failures:
-  - name: publish-with-rust-1.36
+  - name: publish-with-rust
   - name: deadlinks
   include:
   # Formatting & other lints that do not require compilation
@@ -98,7 +98,7 @@ jobs:
     - cargo deadlinks --dir target/doc
 
   # Check publish with Rust 1.42.1
-  - name: publish-with-rust-1.42.1
+  - name: publish-with-rust
     env: FEATURE=non-fatal-checks
     rust: 1.42.1
     script:
