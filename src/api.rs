@@ -20,9 +20,10 @@
 //!
 //! [sync]: ../sync/index.html
 
+use async_trait::async_trait;
 use btc_transaction_utils::{p2wsh, TxInRef};
-use exonum::{blockchain::BlockProof, crypto::Hash, helpers::Height};
-use exonum_merkledb::{ListProof, MapProof};
+use exonum::{blockchain::IndexProof, crypto::Hash, helpers::Height};
+use exonum_merkledb::ListProof;
 use exonum_rust_runtime::{
     api::{self, ServiceApiBuilder, ServiceApiState},
     Broadcaster,
@@ -44,10 +45,8 @@ use crate::{
 /// A proof of existence for an anchoring transaction at the given height.
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TransactionProof {
-    /// Latest authorized block in the blockchain.
-    pub block_proof: BlockProof,
-    /// Proof for the whole database table.
-    pub state_proof: MapProof<String, Hash>,
+    /// Proof of authenticity for a transactions index within the database.
+    pub index_proof: IndexProof,
     /// Proof for the specific transaction in this table.
     pub transaction_proof: ListProof<btc::Transaction>,
 }
@@ -109,9 +108,10 @@ impl From<u64> for AnchoringChainLength {
     }
 }
 
-/// Public API part of the Exonum Bitcoin anchoring service.
+/// Public API client for the Exonum Bitcoin anchoring service.
+#[async_trait(?Send)]
 pub trait PublicApi {
-    /// Error type for the current public API implementation.
+    /// Error type for the current API client implementation.
     type Error;
     /// Returns an actual anchoring address.
     ///
@@ -123,7 +123,7 @@ pub trait PublicApi {
     /// | Return type | [`btc::Address`] |
     ///
     /// [`btc::Address`]: ../btc/struct.Address.html
-    fn actual_address(&self) -> Result<btc::Address, Self::Error>;
+    async fn actual_address(&self) -> Result<btc::Address, Self::Error>;
     /// Returns the following anchoring address if the node is in the transition state.
     ///
     /// | Property    | Value |
@@ -134,7 +134,7 @@ pub trait PublicApi {
     /// | Return type | [`Option<btc::Address>`] |
     ///
     /// [`Option<btc::Address>`]: ../btc/struct.Address.html
-    fn following_address(&self) -> Result<Option<btc::Address>, Self::Error>;
+    async fn following_address(&self) -> Result<Option<btc::Address>, Self::Error>;
     /// Returns the latest anchoring transaction if the height is not specified,
     /// otherwise, return the anchoring transaction with the height that is greater or equal
     /// to the given one.
@@ -148,7 +148,10 @@ pub trait PublicApi {
     ///
     /// [`FindTransactionQuery`]: struct.FindTransactionQuery.html
     /// [`TransactionProof`]: struct.TransactionProof.html
-    fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error>;
+    async fn find_transaction(
+        &self,
+        height: Option<Height>,
+    ) -> Result<TransactionProof, Self::Error>;
     /// Returns an actual anchoring configuration.
     ///
     /// | Property    | Value |
@@ -159,12 +162,13 @@ pub trait PublicApi {
     /// | Return type | [`Config`] |
     ///
     /// [`config`]: ../config/struct.Config.html
-    fn config(&self) -> Result<Config, Self::Error>;
+    async fn config(&self) -> Result<Config, Self::Error>;
 }
 
-/// Private API specification for the Exonum Bitcoin anchoring service.
+/// Private API client for the Exonum Bitcoin anchoring service.
+#[async_trait(?Send)]
 pub trait PrivateApi {
-    /// Error type for the current public API implementation.
+    /// Error type for the current API client implementation.
     type Error;
     /// Creates and broadcasts the `TxSignature` transaction, which is signed
     /// by the current node, and returns its hash.
@@ -178,7 +182,7 @@ pub trait PrivateApi {
     ///
     /// [`SignInput`]: ../blockchain/struct.SignInput.html
     /// [`Hash`]: https://docs.rs/exonum-crypto/latest/exonum_crypto/struct.Hash.html
-    fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error>;
+    async fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error>;
     /// Adds funds via suitable funding transaction.
     ///
     /// Bitcoin transaction should have output with value to the current anchoring address.
@@ -193,7 +197,7 @@ pub trait PrivateApi {
     ///
     /// [`AddFunds`]: ../blockchain/struct.AddFunds.html
     /// [`Hash`]: https://docs.rs/exonum-crypto/latest/exonum_crypto/struct.Hash.html
-    fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error>;
+    async fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error>;
     /// Returns a proposal for the next anchoring transaction, if it makes sense.
     /// If there is not enough satoshis to create a proposal an error is returned.
     ///
@@ -205,7 +209,7 @@ pub trait PrivateApi {
     /// | Return type | [`AnchoringProposalState`] |
     ///
     /// [`AnchoringProposalState`]: enum.AnchoringProposalState.html
-    fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error>;
+    async fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error>;
     /// Returns an actual anchoring configuration.
     ///
     /// | Property    | Value |
@@ -216,7 +220,7 @@ pub trait PrivateApi {
     /// | Return type | [`Config`] |
     ///
     /// [`config`]: ../config/struct.Config.html
-    fn config(&self) -> Result<Config, Self::Error>;
+    async fn config(&self) -> Result<Config, Self::Error>;
     /// Returns an anchoring transaction with the specified index in anchoring transactions chain.
     ///
     /// | Property    | Value |
@@ -228,7 +232,10 @@ pub trait PrivateApi {
     ///
     /// ['IndexQuery']: struct.IndexQuery.html
     /// [`Option<btc::Transaction>`]: ../btc/struct.Transaction.html
-    fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error>;
+    async fn transaction_with_index(
+        &self,
+        index: u64,
+    ) -> Result<Option<btc::Transaction>, Self::Error>;
     /// Returns a total number of anchoring transactions in the chain.
     ///
     /// | Property    | Value |
@@ -239,13 +246,13 @@ pub trait PrivateApi {
     /// | Return type | [`AnchoringChainLength`] |
     ///
     /// [`AnchoringChainLength`]: struct.AnchoringChainLength.html
-    fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error>;
+    async fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error>;
 }
 
-struct ApiImpl<'a>(&'a ServiceApiState<'a>);
+struct ApiImpl(ServiceApiState);
 
-impl<'a> ApiImpl<'a> {
-    fn broadcaster(&self) -> api::Result<Broadcaster<'_>> {
+impl ApiImpl {
+    fn broadcaster(&self) -> api::Result<Broadcaster> {
         self.0.broadcaster().ok_or_else(|| {
             api::Error::bad_request()
                 .title("Invalid broadcast request")
@@ -253,7 +260,7 @@ impl<'a> ApiImpl<'a> {
         })
     }
 
-    fn actual_config(&self) -> api::Result<Config> {
+    fn actual_config(self) -> api::Result<Config> {
         Ok(Schema::new(self.0.service_data()).actual_config())
     }
 
@@ -305,7 +312,7 @@ impl<'a> ApiImpl<'a> {
     }
 
     fn transaction_proof(&self, tx_index: u64) -> TransactionProof {
-        let proof = self
+        let index_proof = self
             .0
             .data()
             .proof_for_service_index("transactions_chain")
@@ -315,29 +322,27 @@ impl<'a> ApiImpl<'a> {
             .get_proof(tx_index);
 
         TransactionProof {
-            block_proof: proof.block_proof,
-            state_proof: proof.index_proof,
+            index_proof,
             transaction_proof,
         }
     }
 }
 
-impl<'a> PublicApi for ApiImpl<'a> {
-    type Error = api::Error;
-
-    fn actual_address(&self) -> Result<btc::Address, Self::Error> {
+// Public API implementation
+impl ApiImpl {
+    async fn actual_address(self) -> api::Result<btc::Address> {
         Ok(Schema::new(self.0.service_data())
             .actual_config()
             .anchoring_address())
     }
 
-    fn following_address(&self) -> Result<Option<btc::Address>, Self::Error> {
+    async fn following_address(self) -> api::Result<Option<btc::Address>> {
         Ok(Schema::new(self.0.service_data())
             .following_config()
             .map(|config| config.anchoring_address()))
     }
 
-    fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error> {
+    async fn find_transaction(self, height: Option<Height>) -> api::Result<TransactionProof> {
         let anchoring_schema = Schema::new(self.0.service_data());
         let tx_chain = anchoring_schema.transactions_chain;
 
@@ -383,15 +388,14 @@ impl<'a> PublicApi for ApiImpl<'a> {
         Ok(self.transaction_proof(tx_index))
     }
 
-    fn config(&self) -> Result<Config, Self::Error> {
+    async fn config(self) -> api::Result<Config> {
         self.actual_config().map_err(api::Error::internal)
     }
 }
 
-impl<'a> PrivateApi for ApiImpl<'a> {
-    type Error = api::Error;
-
-    fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
+/// Private API implementation
+impl ApiImpl {
+    async fn sign_input(self, sign_input: SignInput) -> Result<Hash, api::Error> {
         // Verify Bitcoin signature.
         self.verify_sign_input(&sign_input).map_err(|e| {
             api::Error::bad_request()
@@ -401,10 +405,11 @@ impl<'a> PrivateApi for ApiImpl<'a> {
 
         self.broadcaster()?
             .sign_input((), sign_input)
+            .await
             .map_err(|e| api::Error::internal(e).title("Sign input request failed"))
     }
 
-    fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error> {
+    async fn add_funds(self, transaction: btc::Transaction) -> Result<Hash, api::Error> {
         self.verify_funding_tx(&transaction).map_err(|e| {
             api::Error::bad_request()
                 .title("Funding tx verification has failed")
@@ -413,10 +418,11 @@ impl<'a> PrivateApi for ApiImpl<'a> {
 
         self.broadcaster()?
             .add_funds((), AddFunds { transaction })
+            .await
             .map_err(|e| api::Error::internal(e).title("Add funds request failed"))
     }
 
-    fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
+    async fn anchoring_proposal(self) -> Result<AnchoringProposalState, api::Error> {
         let core_schema = self.0.data().for_core();
         let anchoring_schema = Schema::new(self.0.service_data());
 
@@ -425,17 +431,13 @@ impl<'a> PrivateApi for ApiImpl<'a> {
         )
     }
 
-    fn config(&self) -> Result<Config, Self::Error> {
-        self.actual_config().map_err(From::from)
-    }
-
-    fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
+    async fn transaction_with_index(self, index: u64) -> api::Result<Option<btc::Transaction>> {
         Ok(Schema::new(self.0.service_data())
             .transactions_chain
             .get(index))
     }
 
-    fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error> {
+    async fn transactions_count(self) -> api::Result<AnchoringChainLength> {
         Ok(Schema::new(self.0.service_data())
             .transactions_chain
             .len()
@@ -469,9 +471,7 @@ pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
         .endpoint("find-transaction", |state, query: FindTransactionQuery| {
             ApiImpl(state).find_transaction(query.height)
         })
-        .endpoint("config", |state, _query: ()| {
-            PublicApi::config(&ApiImpl(state))
-        });
+        .endpoint("config", |state, _query: ()| ApiImpl(state).config());
     builder
         .private_scope()
         .endpoint_mut("sign-input", |state, query: SignInput| {
@@ -483,9 +483,7 @@ pub(crate) fn wire(builder: &mut ServiceApiBuilder) {
         .endpoint("anchoring-proposal", |state, _query: ()| {
             ApiImpl(state).anchoring_proposal()
         })
-        .endpoint("config", |state, _query: ()| {
-            PrivateApi::config(&ApiImpl(state))
-        })
+        .endpoint("config", |state, _query: ()| ApiImpl(state).config())
         .endpoint("transaction", |state, query: IndexQuery| {
             ApiImpl(state).transaction_with_index(query.index)
         })

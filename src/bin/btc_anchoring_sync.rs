@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use async_trait::async_trait;
 use bitcoincore_rpc::{Auth as BitcoinRpcAuth, Client as BitcoinRpcClient};
 use exonum::crypto::Hash;
 use exonum_btc_anchoring::{
@@ -55,18 +56,19 @@ impl ApiClient {
         format!("{}/{}", self.prefix, name.as_ref())
     }
 
-    fn get<R>(&self, endpoint: &str) -> Result<R, String>
+    async fn get<R>(&self, endpoint: &str) -> Result<R, reqwest::Error>
     where
         R: DeserializeOwned + Send + 'static,
     {
         self.client
             .get(&self.endpoint(endpoint))
             .send()
-            .and_then(|mut request| request.json())
-            .map_err(|e| e.to_string())
+            .await?
+            .json()
+            .await
     }
 
-    fn get_query<Q, R>(&self, endpoint: &str, query: &Q) -> Result<R, String>
+    async fn get_query<Q, R>(&self, endpoint: &str, query: &Q) -> Result<R, reqwest::Error>
     where
         Q: Serialize,
         R: DeserializeOwned + Send + 'static,
@@ -75,11 +77,12 @@ impl ApiClient {
             .get(&self.endpoint(endpoint))
             .query(query)
             .send()
-            .and_then(|mut request| request.json())
-            .map_err(|e| e.to_string())
+            .await?
+            .json()
+            .await
     }
 
-    fn post<Q, R>(&self, endpoint: &str, body: &Q) -> Result<R, String>
+    async fn post<Q, R>(&self, endpoint: &str, body: &Q) -> Result<R, reqwest::Error>
     where
         Q: Serialize,
         R: DeserializeOwned + Send + 'static,
@@ -88,36 +91,41 @@ impl ApiClient {
             .post(&self.endpoint(endpoint))
             .json(&body)
             .send()
-            .and_then(|mut request| request.json())
-            .map_err(|e| e.to_string())
+            .await?
+            .json()
+            .await
     }
 }
 
+#[async_trait(?Send)]
 impl PrivateApi for ApiClient {
-    type Error = String;
+    type Error = reqwest::Error;
 
-    fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
-        self.post("sign-input", &sign_input)
+    async fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
+        self.post("sign-input", &sign_input).await
     }
 
-    fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error> {
-        self.post("add-funds", &transaction)
+    async fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error> {
+        self.post("add-funds", &transaction).await
     }
 
-    fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
-        self.get("anchoring-proposal")
+    async fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
+        self.get("anchoring-proposal").await
     }
 
-    fn config(&self) -> Result<AnchoringConfig, Self::Error> {
-        self.get("config")
+    async fn config(&self) -> Result<AnchoringConfig, Self::Error> {
+        self.get("config").await
     }
 
-    fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
-        self.get_query("transaction", &IndexQuery { index })
+    async fn transaction_with_index(
+        &self,
+        index: u64,
+    ) -> Result<Option<btc::Transaction>, Self::Error> {
+        self.get_query("transaction", &IndexQuery { index }).await
     }
 
-    fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error> {
-        self.get("transactions-count")
+    async fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error> {
+        self.get("transactions-count").await
     }
 }
 
@@ -250,7 +258,7 @@ impl GenerateConfigCommand {
 }
 
 impl RunCommand {
-    fn run(self) -> Result<(), failure::Error> {
+    async fn run(self) -> Result<(), failure::Error> {
         let sync_config: SyncConfig = load_config_file(self.config)?;
         // TODO rewrite on top of tokio or runtime crate [ECR-3222]
         let client = ApiClient::new(sync_config.exonum_private_api, sync_config.instance_name);
@@ -264,7 +272,7 @@ impl RunCommand {
 
         let mut latest_synced_tx_index: Option<u64> = None;
         loop {
-            match chain_updater.process() {
+            match chain_updater.process().await {
                 Ok(_) => {}
                 // Client problems most often occurs due to network problems.
                 Err(ChainUpdateError::Client(e)) => {
@@ -279,7 +287,7 @@ impl RunCommand {
                 ),
                 // For the work of anchoring you need to replenish anchoring wallet.
                 Err(ChainUpdateError::NoInitialFunds) => {
-                    let address = match chain_updater.anchoring_config() {
+                    let address = match chain_updater.anchoring_config().await {
                         Ok(config) => config.anchoring_address(),
                         Err(e) => {
                             log::error!("An error in the anchoring API client occurred. {}", e);
@@ -302,7 +310,7 @@ impl RunCommand {
             }
 
             if let Some(relay) = bitcoin_relay.as_ref() {
-                match relay.process(latest_synced_tx_index) {
+                match relay.process(latest_synced_tx_index).await {
                     Ok(index) => latest_synced_tx_index = index,
 
                     Err(SyncWithBitcoinError::Client(e)) => {
@@ -323,8 +331,9 @@ impl RunCommand {
                     Err(SyncWithBitcoinError::Internal(e)) => return Err(e),
                 }
             }
+
             // Don't perform this actions too frequent to avoid DOS attack.
-            std::thread::sleep(Duration::from_secs(5));
+            tokio::time::delay_for(Duration::from_secs(5)).await
         }
     }
 }
@@ -353,18 +362,19 @@ impl GenerateKeypairCommand {
 }
 
 impl Commands {
-    fn run(self) -> Result<(), failure::Error> {
+    async fn run(self) -> Result<(), failure::Error> {
         match self {
             Commands::GenerateConfig(cmd) => cmd.run(),
             Commands::GenerateKeypair(cmd) => cmd.run(),
-            Commands::Run(cmd) => cmd.run(),
+            Commands::Run(cmd) => cmd.run().await,
         }
     }
 }
 
-fn main() -> Result<(), failure::Error> {
+#[tokio::main]
+async fn main() -> Result<(), failure::Error> {
     exonum::helpers::init_logger()?;
-    Commands::from_args().run()
+    Commands::from_args().run().await
 }
 
 mod flatten_keypairs {

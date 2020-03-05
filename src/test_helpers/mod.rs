@@ -14,22 +14,22 @@
 
 //! Set of helpers for btc anchoring testing.
 
+use async_trait::async_trait;
 use bitcoin::{self, network::constants::Network};
 use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
-    blockchain::{config::InstanceInitParams, BlockProof, ConsensusConfig},
+    blockchain::config::InstanceInitParams,
     crypto::{Hash, KeyPair, PublicKey},
     helpers::Height,
     keys::Keys,
     messages::{AnyTx, Verified},
     runtime::{InstanceId, SnapshotExt, SUPERVISOR_INSTANCE_ID},
 };
-use exonum_merkledb::{access::Access, MapProof, ObjectHash, Snapshot};
+use exonum_merkledb::{access::Access, Snapshot};
 use exonum_rust_runtime::{api, ServiceFactory};
 use exonum_supervisor::{ConfigPropose, Supervisor, SupervisorInterface};
 use exonum_testkit::{ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNode};
-use failure::{ensure, format_err};
 use rand::{thread_rng, Rng};
 
 use std::collections::BTreeMap;
@@ -393,102 +393,78 @@ impl Default for AnchoringTestKit {
     }
 }
 
+#[async_trait(?Send)]
 impl PublicApi for TestKitApi {
     type Error = api::Error;
 
-    fn actual_address(&self) -> Result<btc::Address, Self::Error> {
+    async fn actual_address(&self) -> api::Result<btc::Address> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("address/actual")
+            .await
     }
 
-    fn following_address(&self) -> Result<Option<btc::Address>, Self::Error> {
+    async fn following_address(&self) -> api::Result<Option<btc::Address>> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("address/following")
+            .await
     }
 
-    fn find_transaction(&self, height: Option<Height>) -> Result<TransactionProof, Self::Error> {
+    async fn find_transaction(&self, height: Option<Height>) -> api::Result<TransactionProof> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .query(&FindTransactionQuery { height })
             .get("find-transaction")
+            .await
     }
 
-    fn config(&self) -> Result<Config, Self::Error> {
+    async fn config(&self) -> api::Result<Config> {
         self.public(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("config")
+            .await
     }
 }
 
+#[async_trait(?Send)]
 impl PrivateApi for TestKitApi {
     type Error = api::Error;
 
-    fn sign_input(&self, sign_input: SignInput) -> Result<Hash, Self::Error> {
+    async fn sign_input(&self, sign_input: SignInput) -> api::Result<Hash> {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .query(&sign_input)
             .post("sign-input")
+            .await
     }
 
-    fn add_funds(&self, transaction: btc::Transaction) -> Result<Hash, Self::Error> {
+    async fn add_funds(&self, transaction: btc::Transaction) -> api::Result<Hash> {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .query(&transaction)
             .post("add-funds")
+            .await
     }
 
-    fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
+    async fn anchoring_proposal(&self) -> api::Result<AnchoringProposalState> {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("anchoring-proposal")
+            .await
     }
 
-    fn config(&self) -> Result<Config, Self::Error> {
+    async fn config(&self) -> api::Result<Config> {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("config")
+            .await
     }
 
-    fn transaction_with_index(&self, index: u64) -> Result<Option<btc::Transaction>, Self::Error> {
+    async fn transaction_with_index(&self, index: u64) -> api::Result<Option<btc::Transaction>> {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .query(&IndexQuery { index })
             .get("transaction")
+            .await
     }
 
-    fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error> {
+    async fn transactions_count(&self) -> api::Result<AnchoringChainLength> {
         self.private(ApiKind::Service(ANCHORING_INSTANCE_NAME))
             .get("transactions-count")
+            .await
     }
-}
-
-fn validate_table_proof(
-    actual_config: &ConsensusConfig,
-    block_proof: &BlockProof,
-    state_proof: MapProof<String, Hash>,
-) -> Result<(String, Hash), failure::Error> {
-    // Checks precommits.
-    for precommit in &block_proof.precommits {
-        let validator_id = precommit.as_ref().validator.0 as usize;
-        let _validator_keys = actual_config
-            .validator_keys
-            .get(validator_id)
-            .ok_or_else(|| {
-                format_err!(
-                    "Unable to find validator with the given id: {}",
-                    validator_id
-                )
-            })?;
-        ensure!(
-            precommit.as_ref().block_hash() == &block_proof.block.object_hash(),
-            "Block hash doesn't match"
-        );
-    }
-
-    // Checks state_hash.
-    let checked_table_proof = state_proof.check()?;
-    ensure!(
-        checked_table_proof.index_hash() == block_proof.block.state_hash,
-        "State hash doesn't match"
-    );
-    let (table_name, table_hash) = checked_table_proof
-        .entries()
-        .next()
-        .ok_or_else(|| format_err!("Unable to get `to_block_header` entry"))?;
-    Ok((table_name.to_owned(), *table_hash))
 }
 
 /// Proof validation extension.
@@ -496,28 +472,22 @@ pub trait ValidateProof {
     /// Output value.
     type Output;
     /// Perform the proof validation procedure with the given exonum blockchain configuration.
-    fn validate(self, actual_config: &ConsensusConfig) -> Result<Self::Output, failure::Error>;
+    fn validate(self, validator_keys: &[PublicKey]) -> Result<Self::Output, failure::Error>;
 }
 
 impl ValidateProof for TransactionProof {
     type Output = Option<(u64, btc::Transaction)>;
 
-    fn validate(self, actual_config: &ConsensusConfig) -> Result<Self::Output, failure::Error> {
-        let proof_entry = validate_table_proof(actual_config, &self.block_proof, self.state_proof)?;
+    fn validate(self, validator_keys: &[PublicKey]) -> Result<Self::Output, failure::Error> {
+        self.index_proof.verify(validator_keys)?;
 
-        ensure!(
-            proof_entry.0 == format!("{}.transactions_chain", ANCHORING_INSTANCE_NAME),
-            "Invalid table location"
-        );
-
-        // Validate value.
-        let values = self
+        let entry = self
             .transaction_proof
-            .check_against_hash(proof_entry.1)
-            .map_err(|e| format_err!("An error occurred {:?}", e))?
-            .entries();
-        ensure!(values.len() <= 1, "Invalid values count");
-
-        Ok(values.first().cloned())
+            .check()?
+            .entries()
+            .iter()
+            .cloned()
+            .next();
+        Ok(entry)
     }
 }
