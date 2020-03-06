@@ -38,7 +38,7 @@ class AnchoringInstanceSpecLoader(InstanceSpecLoader):
 
             service_module = import_anchoring_module("service")
             btc_types_module = import_anchoring_module("btc_types")
-            exonum_types_module = import_anchoring_module("types")
+            exonum_types_module = import_anchoring_module("exonum.crypto.types")
 
             # Create config message
             config = service_module.Config()
