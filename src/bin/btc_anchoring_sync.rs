@@ -260,7 +260,6 @@ impl GenerateConfigCommand {
 impl RunCommand {
     async fn run(self) -> Result<(), failure::Error> {
         let sync_config: SyncConfig = load_config_file(self.config)?;
-        // TODO rewrite on top of tokio or runtime crate [ECR-3222]
         let client = ApiClient::new(sync_config.exonum_private_api, sync_config.instance_name);
         let chain_updater =
             AnchoringChainUpdateTask::new(sync_config.bitcoin_key_pool, client.clone());

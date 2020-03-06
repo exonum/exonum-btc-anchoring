@@ -14,8 +14,6 @@
 
 //! Building blocks of the anchoring sync utility.
 
-// TODO Rewrite with the async/await syntax when it is ready. [ECR-3222]
-
 pub use self::bitcoin_relay::{BitcoinRelay, TransactionStatus};
 
 use btc_transaction_utils::{p2wsh, TxInRef};

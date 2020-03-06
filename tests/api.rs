@@ -38,7 +38,7 @@ async fn find_transaction(
         .into_iter()
         .map(|key| key.consensus_key)
         .collect::<Vec<_>>();
-    proof.validate(&validator_keys).unwrap().map(|x| x.1)
+    proof.validate(&validator_keys).unwrap().map(|(_, tx)| tx)
 }
 
 async fn transaction_with_index(
