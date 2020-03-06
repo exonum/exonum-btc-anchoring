@@ -51,10 +51,6 @@ serde_str = "0.1"
 structopt = "0.3"
 tokio = { version = "0.2.13", features = ["blocking", "dns", "io-util", "macros", "rt-threaded", "tcp", "time"] }
 
-# Workaround for the failiure-derive compilation error, 
-# see thread https://users.rust-lang.org/t/failure-derive-compilation-error/39062
-quote = "=1.0.2"
-
 [dev-dependencies]
 proptest = "0.9"
 
