@@ -64,7 +64,7 @@ in the next section.
   To do it, run `btc_anchoring_sync` utility:
 
   ```shell
-  cargo run -- generate-keypair -c path/to/anchoring/sync.toml
+  cargo run --example btc_anchoring_sync generate-keypair -c path/to/anchoring/sync.toml
   ```
 
   As a result of this call you will obtain a new `bitcoin_key`, which you may

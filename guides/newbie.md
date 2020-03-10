@@ -84,7 +84,7 @@ installed via `pip3` (see `exonum-launcher` README for details).
     To obtain `bitcoin_key`, go to the `exonum-btc-anchoring` directory and launch the following command:
 
     ```sh
-    cargo run -- generate-config -o target/anchoring/sync.toml --bitcoin-rpc-host http://localhost:18332 --bitcoin-rpc-user user --bitcoin-rpc-password password
+    cargo run --example btc_anchoring_sync generate-config -o target/anchoring/sync.toml --bitcoin-rpc-host http://localhost:18332 --bitcoin-rpc-user user --bitcoin-rpc-password password
     ```
 
     In the code above you should replace `target/anchoring` with the directory where the data of
@@ -182,7 +182,7 @@ setup a funding transaction.
 
     ```sh
     cd exonum-btc-anchoring
-    RUST_LOG="exonum_btc_anchoring=info" cargo run -- run --config target/anchoring/sync.toml
+    RUST_LOG="exonum_btc_anchoring=info" cargo run --example btc_anchoring_sync run --config target/anchoring/sync.toml
     ```
 
     `target/anchoring/` in the code above means the directory where `sync.toml` was generated earlier.
