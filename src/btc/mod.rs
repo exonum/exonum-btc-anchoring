@@ -199,6 +199,18 @@ impl AsRef<bitcoin_hashes::sha256d::Hash> for Sha256d {
     }
 }
 
+impl From<bitcoin::hash_types::Txid> for Sha256d {
+    fn from(txid: bitcoin::hash_types::Txid) -> Self {
+        Self(txid.into())
+    }
+}
+
+impl From<Sha256d> for bitcoin::hash_types::Txid {
+    fn from(hash: Sha256d) -> Self {
+        hash.0.into()
+    }
+}
+
 impl_string_conversions_for_hex! { InputSignature }
 
 impl_serde_str! { PrivateKey }
@@ -207,7 +219,10 @@ impl_serde_str! { Address }
 impl_serde_str! { InputSignature }
 
 /// Generates Bitcoin keypair using the given random number generator.
-pub fn gen_keypair_with_rng<R: Rng>(rng: &mut R, network: Network) -> (PublicKey, PrivateKey) {
+pub fn gen_keypair_with_rng<R: Rng + ?Sized>(
+    rng: &mut R,
+    network: Network,
+) -> (PublicKey, PrivateKey) {
     let (pk, sk) = secp_gen_keypair_with_rng(rng, network);
     (PublicKey(pk), PrivateKey(sk))
 }

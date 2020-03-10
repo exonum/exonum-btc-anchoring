@@ -71,11 +71,11 @@ impl BitcoinRelay for bitcoincore_rpc::Client {
         transaction: &btc::Transaction,
     ) -> Result<btc::Sha256d, Self::Error> {
         self.send_raw_transaction(transaction.to_string())
-            .map(btc::Sha256d)
+            .map(|txid| btc::Sha256d(txid.into()))
     }
 
     async fn transaction_status(&self, id: btc::Sha256d) -> Result<TransactionStatus, Self::Error> {
-        match self.get_raw_transaction_verbose(id.as_ref(), None) {
+        match self.get_raw_transaction_verbose(&id.into(), None) {
             Ok(info) => {
                 let status = match info.confirmations {
                     None => TransactionStatus::Mempool,

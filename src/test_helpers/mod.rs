@@ -56,7 +56,7 @@ pub fn create_fake_funding_transaction(address: &btc::Address, value: u64) -> bt
     // Generate random transaction id.
     let mut rng = thread_rng();
     let mut data = [0_u8; 32];
-    rng.fill_bytes(&mut data);
+    rng.fill(&mut data);
     // Create fake funding transaction.
     bitcoin::Transaction {
         version: 2,
@@ -64,7 +64,7 @@ pub fn create_fake_funding_transaction(address: &btc::Address, value: u64) -> bt
         input: vec![bitcoin::TxIn {
             previous_output: bitcoin::OutPoint {
                 vout: 0,
-                txid: Sha256dHash::from_slice(&data).unwrap(),
+                txid: Sha256dHash::from_slice(&data).unwrap().into(),
             },
             script_sig: bitcoin::Script::new(),
             sequence: 0,

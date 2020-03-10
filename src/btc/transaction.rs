@@ -347,7 +347,7 @@ mod tests {
             let input = (0..input_num)
                 .map(|_| {
                     // Just a random hash
-                    let txid = Sha256dHash::hash(s.as_bytes());
+                    let txid = Sha256dHash::hash(s.as_bytes()).into();
                     TxIn {
                         previous_output: OutPoint { txid, vout },
                         script_sig: Script::default(),
