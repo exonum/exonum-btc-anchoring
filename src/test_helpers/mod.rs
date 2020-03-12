@@ -29,7 +29,7 @@ use exonum::{
 use exonum_merkledb::{access::Access, Snapshot};
 use exonum_rust_runtime::{api, ServiceFactory};
 use exonum_supervisor::{ConfigPropose, Supervisor, SupervisorInterface};
-use exonum_testkit::{ApiKind, TestKit, TestKitApi, TestKitBuilder, TestNode};
+use exonum_testkit::{ApiKind, TestKit, TestKitApiClient, TestKitBuilder, TestNode};
 use rand::{thread_rng, Rng};
 
 use std::collections::BTreeMap;
@@ -393,8 +393,8 @@ impl Default for AnchoringTestKit {
     }
 }
 
-#[async_trait(?Send)]
-impl PublicApi for TestKitApi {
+#[async_trait]
+impl PublicApi for TestKitApiClient {
     type Error = api::Error;
 
     async fn actual_address(&self) -> api::Result<btc::Address> {
@@ -423,8 +423,8 @@ impl PublicApi for TestKitApi {
     }
 }
 
-#[async_trait(?Send)]
-impl PrivateApi for TestKitApi {
+#[async_trait]
+impl PrivateApi for TestKitApiClient {
     type Error = api::Error;
 
     async fn sign_input(&self, sign_input: SignInput) -> api::Result<Hash> {

@@ -13,9 +13,11 @@
 
 use async_trait::async_trait;
 use exonum::{
+    blockchain::ApiSender,
     crypto::{Hash, KeyPair},
     helpers::Height,
     merkledb::ObjectHash,
+    messages::{AnyTx, Verified},
 };
 use exonum_btc_anchoring::{
     api::{AnchoringChainLength, AnchoringProposalState, PrivateApi},
@@ -29,7 +31,7 @@ use exonum_btc_anchoring::{
     test_helpers::{get_anchoring_schema, AnchoringTestKit, ANCHORING_INSTANCE_ID},
 };
 use exonum_rust_runtime::api;
-use exonum_testkit::TestKitApi;
+use exonum_testkit::TestKitApiClient;
 
 use std::{
     collections::VecDeque,
@@ -103,7 +105,7 @@ impl Drop for FakeBitcoinRelay {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl BitcoinRelay for FakeBitcoinRelay {
     type Error = failure::Error;
 
@@ -127,7 +129,8 @@ impl BitcoinRelay for FakeBitcoinRelay {
 #[derive(Debug)]
 struct FakePrivateApi {
     service_keypair: KeyPair,
-    inner: TestKitApi,
+    client: TestKitApiClient,
+    broadcaster: ApiSender,
 }
 
 impl FakePrivateApi {
@@ -139,12 +142,23 @@ impl FakePrivateApi {
 
         Self {
             service_keypair,
-            inner: testkit.inner.api(),
+            client: testkit.inner.api().client().clone(),
+            broadcaster: testkit.inner.blockchain().sender().clone(),
         }
+    }
+
+    async fn send<T>(&self, transaction: T)
+    where
+        T: Into<Verified<AnyTx>>,
+    {
+        self.broadcaster
+            .broadcast_transaction(transaction.into())
+            .await
+            .expect("Cannot broadcast transaction");
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl PrivateApi for FakePrivateApi {
     type Error = api::Error;
 
@@ -153,7 +167,7 @@ impl PrivateApi for FakePrivateApi {
             .service_keypair
             .sign_input(ANCHORING_INSTANCE_ID, sign_input);
         let hash = signed_tx.object_hash();
-        self.inner.send(signed_tx).await;
+        self.send(signed_tx).await;
         Ok(hash)
     }
 
@@ -162,27 +176,27 @@ impl PrivateApi for FakePrivateApi {
             .service_keypair
             .add_funds(ANCHORING_INSTANCE_ID, AddFunds { transaction });
         let hash = signed_tx.object_hash();
-        self.inner.send(signed_tx).await;
+        self.send(signed_tx).await;
         Ok(hash)
     }
 
     async fn anchoring_proposal(&self) -> Result<AnchoringProposalState, Self::Error> {
-        self.inner.anchoring_proposal().await
+        self.client.anchoring_proposal().await
     }
 
     async fn config(&self) -> Result<Config, Self::Error> {
-        self.inner.config().await
+        self.client.config().await
     }
 
     async fn transaction_with_index(
         &self,
         index: u64,
     ) -> Result<Option<btc::Transaction>, Self::Error> {
-        self.inner.transaction_with_index(index).await
+        self.client.transaction_with_index(index).await
     }
 
     async fn transactions_count(&self) -> Result<AnchoringChainLength, Self::Error> {
-        self.inner.transactions_count().await
+        self.client.transactions_count().await
     }
 }
 
@@ -230,7 +244,8 @@ async fn chain_updater_no_initial_funds() {
         .inner
         .create_blocks_until(Height(anchoring_interval));
     // Try to perform anchoring chain update.
-    let e = AnchoringChainUpdateTask::new(testkit.anchoring_keypairs(), testkit.inner.api())
+    let api = testkit.inner.api();
+    let e = AnchoringChainUpdateTask::new(testkit.anchoring_keypairs(), api.client().clone())
         .process()
         .await
         .unwrap_err();
@@ -256,7 +271,8 @@ async fn chain_updater_insufficient_funds() {
         .inner
         .create_blocks_until(Height(anchoring_interval));
     // Try to perform anchoring chain update.
-    let e = AnchoringChainUpdateTask::new(testkit.anchoring_keypairs(), testkit.inner.api())
+    let api = testkit.inner.api();
+    let e = AnchoringChainUpdateTask::new(testkit.anchoring_keypairs(), api.client().clone())
         .process()
         .await
         .unwrap_err();
@@ -291,7 +307,8 @@ async fn sync_with_bitcoin_normal() {
     let tx_chain = anchoring_schema.transactions_chain;
 
     let fake_relay = FakeBitcoinRelay::default();
-    let sync = SyncWithBitcoinTask::new(fake_relay.clone(), testkit.inner.api());
+    let api = testkit.inner.api();
+    let sync = SyncWithBitcoinTask::new(fake_relay.clone(), api.client().clone());
     // Send first anchoring transaction.
     fake_relay.enqueue_requests(vec![
         // Relay should see that we have only a funding transaction confirmed.
@@ -352,8 +369,9 @@ async fn sync_with_bitcoin_normal() {
 #[tokio::test]
 async fn sync_with_bitcoin_empty_chain() {
     let mut testkit = AnchoringTestKit::default();
+    let api = testkit.inner.api();
     assert!(
-        SyncWithBitcoinTask::new(FakeBitcoinRelay::default(), testkit.inner.api())
+        SyncWithBitcoinTask::new(FakeBitcoinRelay::default(), api.client().clone())
             .process(None)
             .await
             .unwrap()
@@ -374,7 +392,8 @@ async fn sync_with_bitcoin_err_unconfirmed_funding_tx() {
     let tx_chain = anchoring_schema.transactions_chain;
 
     let fake_relay = FakeBitcoinRelay::default();
-    let sync = SyncWithBitcoinTask::new(fake_relay.clone(), testkit.inner.api());
+    let api = testkit.inner.api();
+    let sync = SyncWithBitcoinTask::new(fake_relay.clone(), api.client().clone());
     fake_relay.enqueue_requests(vec![
         FakeRelayRequest::TransactionStatus {
             request: tx_chain.get(0).unwrap().id(),

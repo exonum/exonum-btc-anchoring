@@ -97,7 +97,7 @@ impl ApiClient {
     }
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl PrivateApi for ApiClient {
     type Error = reqwest::Error;
 

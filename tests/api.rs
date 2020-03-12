@@ -29,7 +29,7 @@ async fn find_transaction(
     height: Option<Height>,
 ) -> Option<btc::Transaction> {
     let api = anchoring_testkit.inner.api();
-    let proof = api.find_transaction(height).await.unwrap();
+    let proof = api.client().find_transaction(height).await.unwrap();
 
     let validator_keys = anchoring_testkit
         .inner
@@ -48,6 +48,7 @@ async fn transaction_with_index(
     anchoring_testkit
         .inner
         .api()
+        .client()
         .transaction_with_index(index)
         .await
         .unwrap()
@@ -72,7 +73,7 @@ async fn actual_address() {
         .inner
         .create_blocks_until(Height(anchoring_interval));
 
-    let anchoring_api = anchoring_testkit.inner.api();
+    let anchoring_api = anchoring_testkit.inner.api().client().clone();
 
     assert_eq!(
         anchoring_api.actual_address().await.unwrap(),
@@ -121,6 +122,7 @@ async fn following_address() {
         anchoring_testkit
             .inner
             .api()
+            .client()
             .following_address()
             .await
             .unwrap(),
@@ -316,7 +318,7 @@ async fn actual_config() {
     let mut anchoring_testkit = AnchoringTestKit::default();
     let cfg = anchoring_testkit.actual_anchoring_config();
 
-    let api = anchoring_testkit.inner.api();
+    let api = anchoring_testkit.inner.api().client().clone();
     assert_eq!(PublicApi::config(&api).await.unwrap(), cfg);
     assert_eq!(PrivateApi::config(&api).await.unwrap(), cfg);
 }
@@ -326,9 +328,14 @@ async fn anchoring_proposal_ok() {
     let mut anchoring_testkit = AnchoringTestKit::default();
     let proposal = anchoring_testkit.anchoring_transaction_proposal().unwrap();
 
-    let api = anchoring_testkit.inner.api();
     assert_eq!(
-        api.anchoring_proposal().await.unwrap(),
+        anchoring_testkit
+            .inner
+            .api()
+            .client()
+            .anchoring_proposal()
+            .await
+            .unwrap(),
         AnchoringProposalState::Available {
             transaction: proposal.0,
             inputs: proposal.1,
@@ -348,9 +355,14 @@ async fn anchoring_proposal_none() {
             .flatten(),
     );
 
-    let api = anchoring_testkit.inner.api();
     assert_eq!(
-        api.anchoring_proposal().await.unwrap(),
+        anchoring_testkit
+            .inner
+            .api()
+            .client()
+            .anchoring_proposal()
+            .await
+            .unwrap(),
         AnchoringProposalState::None
     );
 }
@@ -360,7 +372,7 @@ async fn anchoring_proposal_err_without_initial_funds() {
     let mut anchoring_testkit = AnchoringTestKit::new(4, 5);
 
     let api = anchoring_testkit.inner.api();
-    let state = api.anchoring_proposal().await.unwrap();
+    let state = api.client().anchoring_proposal().await.unwrap();
     assert_eq!(state, AnchoringProposalState::NoInitialFunds);
 }
 
@@ -374,7 +386,7 @@ async fn anchoring_proposal_err_insufficient_funds() {
         .create_block_with_transactions(anchoring_testkit.create_funding_confirmation_txs(20).0);
 
     let api = anchoring_testkit.inner.api();
-    let state = api.anchoring_proposal().await.unwrap();
+    let state = api.client().anchoring_proposal().await.unwrap();
     assert_eq!(
         state,
         AnchoringProposalState::InsufficientFunds {
@@ -420,6 +432,7 @@ async fn sign_input() {
     let tx_hash = anchoring_testkit
         .inner
         .api()
+        .client()
         .sign_input(SignInput {
             input: 0,
             input_signature: signature.into(),
@@ -446,6 +459,7 @@ async fn add_funds_ok() {
     let tx_hash = anchoring_testkit
         .inner
         .api()
+        .client()
         .add_funds(funding_transaction)
         .await
         .unwrap();
@@ -477,6 +491,7 @@ async fn add_funds_err_already_used() {
     anchoring_testkit
         .inner
         .api()
+        .client()
         .add_funds(funding_transaction)
         .await
         .expect_err("Add funds must fail");
@@ -494,6 +509,7 @@ async fn add_funds_err_unsuitable() {
     anchoring_testkit
         .inner
         .api()
+        .client()
         .add_funds(funding_transaction)
         .await
         .expect_err("Add funds must fail");

@@ -58,14 +58,14 @@ proptest = "0.9"
 exonum-build = "1.0.0-rc.1"
 
 [patch.crates-io]
-exonum = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
-exonum-cli = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
-exonum-crypto = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
-exonum-derive = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
-exonum-explorer = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
-exonum-merkledb = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
-exonum-proto = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
-exonum-rust-runtime = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
-exonum-supervisor = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
-exonum-testkit = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
-exonum-build = { git = "https://github.com/slowli/exonum.git", rev = "960cede" }
+exonum = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }
+exonum-cli = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }
+exonum-crypto = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }
+exonum-derive = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }
+exonum-explorer = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }
+exonum-merkledb = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }
+exonum-proto = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }
+exonum-rust-runtime = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }
+exonum-supervisor = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }
+exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }
+exonum-build = { git = "https://github.com/exonum/exonum.git", rev = "49cfdb1" }

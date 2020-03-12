@@ -109,7 +109,7 @@ impl From<u64> for AnchoringChainLength {
 }
 
 /// Public API client for the Exonum Bitcoin anchoring service.
-#[async_trait(?Send)]
+#[async_trait]
 pub trait PublicApi {
     /// Error type for the current API client implementation.
     type Error;
@@ -166,7 +166,7 @@ pub trait PublicApi {
 }
 
 /// Private API client for the Exonum Bitcoin anchoring service.
-#[async_trait(?Send)]
+#[async_trait]
 pub trait PrivateApi {
     /// Error type for the current API client implementation.
     type Error;

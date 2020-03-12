@@ -49,7 +49,7 @@ impl TransactionStatus {
 }
 
 /// Describes communication with the Bitcoin network node.
-#[async_trait(?Send)]
+#[async_trait]
 pub trait BitcoinRelay {
     /// Error type for the current Bitcoin relay implementation.
     type Error;
@@ -62,7 +62,7 @@ pub trait BitcoinRelay {
     async fn transaction_status(&self, id: btc::Sha256d) -> Result<TransactionStatus, Self::Error>;
 }
 
-#[async_trait(?Send)]
+#[async_trait]
 impl BitcoinRelay for bitcoincore_rpc::Client {
     type Error = bitcoincore_rpc::Error;
 
