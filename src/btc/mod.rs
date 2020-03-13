@@ -79,7 +79,7 @@ impl std::fmt::Debug for PrivateKey {
 }
 
 impl FromHex for PublicKey {
-    type Error = ::failure::Error;
+    type Error = anyhow::Error;
 
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
         let bytes = hex::decode(hex)?;
@@ -109,7 +109,7 @@ impl BinaryValue for PublicKey {
         bytes
     }
 
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, anyhow::Error> {
         bitcoin::PublicKey::from_slice(bytes.as_ref())
             .map(Self)
             .map_err(From::from)
@@ -129,7 +129,7 @@ impl AsRef<bitcoin::Address> for Address {
 }
 
 impl FromHex for InputSignature {
-    type Error = ::failure::Error;
+    type Error = anyhow::Error;
 
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
         let bytes = hex::decode(hex)?;
@@ -165,7 +165,7 @@ impl BinaryValue for InputSignature {
         self.0.clone().into()
     }
 
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, anyhow::Error> {
         btc_transaction_utils::InputSignature::from_bytes(bytes.into())
             .map(Self)
             .map_err(From::from)

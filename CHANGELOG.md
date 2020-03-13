@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - Public methods of the `sync::AnchoringChainUpdateTask` and `sync::SyncWithBitcoinTask`
     also became async. You will need to use these methods inside a futures executor like
     `tokio` or `actix_rt`.
+  - `btc_anchoring_sync` utility has been moved to examples.
 
 ## 1.0.0-rc.1 - 2020-02-13
 

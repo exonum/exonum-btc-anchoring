@@ -16,6 +16,7 @@
 
 pub use self::bitcoin_relay::{BitcoinRelay, TransactionStatus};
 
+use anyhow::anyhow;
 use btc_transaction_utils::{p2wsh, TxInRef};
 
 use std::{collections::HashMap, fmt::Display, sync::Arc};
@@ -49,7 +50,7 @@ pub enum ChainUpdateError<C: Display> {
     /// Initial funding transaction is absent.
     NoInitialFunds,
     /// Internal error.
-    Internal(failure::Error),
+    Internal(anyhow::Error),
 }
 
 /// Signs the inputs of the anchoring transaction proposal by the corresponding
@@ -133,7 +134,7 @@ where
         let block_height = match proposal.anchoring_payload() {
             Some(payload) => payload.block_height,
             None => {
-                return Err(ChainUpdateError::Internal(failure::format_err!(
+                return Err(ChainUpdateError::Internal(anyhow!(
                     "Incorrect anchoring proposal found: {:?}",
                     proposal
                 )))
@@ -162,7 +163,7 @@ where
                     txid: proposal.id(),
                 })
             })
-            .collect::<Result<Vec<_>, failure::Error>>()
+            .collect::<Result<Vec<_>, anyhow::Error>>()
             .map_err(ChainUpdateError::Internal)?;
         // Send sign input transactions to the Exonum node.
         for sign_input in sign_input_messages {
@@ -195,7 +196,7 @@ pub enum SyncWithBitcoinError<C: Display, R: Display> {
     /// Error occurred in the Bitcoin relay.
     Relay(R),
     /// Internal error.
-    Internal(failure::Error),
+    Internal(anyhow::Error),
     /// Initial funding transaction is unconfirmed.
     UnconfirmedFundingTransaction(btc::Sha256d),
 }
@@ -355,7 +356,7 @@ where
             .await
             .map_err(SyncWithBitcoinError::Client)?
             .ok_or_else(|| {
-                SyncWithBitcoinError::Internal(failure::format_err!(
+                SyncWithBitcoinError::Internal(anyhow!(
                     "Transaction with index {} is absent in the anchoring chain",
                     index
                 ))

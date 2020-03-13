@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use failure::format_err;
+use anyhow::anyhow;
 use hex::FromHex;
 use structopt::StructOpt;
 
@@ -27,11 +27,11 @@ struct Opts {
     hex: String,
 }
 
-fn main() -> Result<(), failure::Error> {
+fn main() -> Result<(), anyhow::Error> {
     let transaction = Transaction::from_hex(Opts::from_args().hex)?;
     let payload = transaction
         .anchoring_payload()
-        .ok_or_else(|| format_err!("Given transaction does not contains anchoring payload"))?;
+        .ok_or_else(|| anyhow!("Given transaction does not contains anchoring payload"))?;
     println!("{}", serde_json::to_string_pretty(&payload)?);
     Ok(())
 }

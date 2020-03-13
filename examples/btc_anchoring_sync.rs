@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anyhow::{anyhow, bail};
 use async_trait::async_trait;
 use bitcoincore_rpc::{Auth as BitcoinRpcAuth, Client as BitcoinRpcClient};
 use exonum::crypto::Hash;
@@ -22,12 +23,18 @@ use exonum_btc_anchoring::{
     config::Config as AnchoringConfig,
     sync::{AnchoringChainUpdateTask, ChainUpdateError, SyncWithBitcoinError, SyncWithBitcoinTask},
 };
-use exonum_cli::io::{load_config_file, save_config_file};
 use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_derive::{Deserialize, Serialize};
 use structopt::StructOpt;
 
-use std::{collections::HashMap, convert::TryFrom, path::PathBuf, time::Duration};
+use std::{
+    collections::HashMap,
+    convert::TryFrom,
+    fs::{self, File},
+    io::prelude::*,
+    path::{Path, PathBuf},
+    time::Duration,
+};
 
 /// Client implementation for the API of the anchoring service instance.
 #[derive(Debug, Clone)]
@@ -200,6 +207,26 @@ impl SyncConfig {
             .next()
             .map(|key| key.0.network)
     }
+
+    fn load(path: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
+        let mut file = File::open(path)?;
+        let mut toml = String::new();
+        file.read_to_string(&mut toml)?;
+        toml::de::from_str(&toml).map_err(From::from)
+    }
+
+    fn save(&self, path: impl AsRef<Path>) -> Result<(), anyhow::Error> {
+        let path = path.as_ref();
+
+        if let Some(dir) = path.parent() {
+            fs::create_dir_all(dir)?;
+        }
+
+        let mut file = File::create(path)?;
+        let value_toml = toml::Value::try_from(&self)?;
+        file.write_all(value_toml.to_string().as_bytes())?;
+        Ok(())
+    }
 }
 
 /// `Bitcoind` rpc configuration.
@@ -226,7 +253,7 @@ impl TryFrom<BitcoinRpcConfig> for BitcoinRpcClient {
 }
 
 impl GenerateConfigCommand {
-    fn run(self) -> Result<(), failure::Error> {
+    fn run(self) -> Result<(), anyhow::Error> {
         let bitcoin_keypair = btc::gen_keypair(self.bitcoin_network);
 
         let bitcoin_rpc_config = self.bitcoin_rpc_config();
@@ -237,7 +264,7 @@ impl GenerateConfigCommand {
             bitcoin_rpc_config,
         };
 
-        save_config_file(&sync_config, self.output)?;
+        sync_config.save(self.output)?;
         log::info!("Generated initial configuration for the btc anchoring sync util.");
         log::trace!(
             "Available Bitcoin keys in key pool: {:?}",
@@ -258,8 +285,8 @@ impl GenerateConfigCommand {
 }
 
 impl RunCommand {
-    async fn run(self) -> Result<(), failure::Error> {
-        let sync_config: SyncConfig = load_config_file(self.config)?;
+    async fn run(self) -> Result<(), anyhow::Error> {
+        let sync_config = SyncConfig::load(self.config)?;
         let client = ApiClient::new(sync_config.exonum_private_api, sync_config.instance_name);
         let chain_updater =
             AnchoringChainUpdateTask::new(sync_config.bitcoin_key_pool, client.clone());
@@ -320,7 +347,7 @@ impl RunCommand {
                         log::error!("An error in the Bitcoin relay occurred. {}", e)
                     }
 
-                    Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(id)) => failure::bail!(
+                    Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(id)) => bail!(
                         "Funding transaction with id {} is unconfirmed by Bitcoin network. \
                          This is a serious mistake that can break anchoring process.",
                         id
@@ -338,11 +365,11 @@ impl RunCommand {
 }
 
 impl GenerateKeypairCommand {
-    fn run(self) -> Result<(), failure::Error> {
-        let mut sync_config: SyncConfig = load_config_file(&self.config)?;
+    fn run(self) -> Result<(), anyhow::Error> {
+        let mut sync_config = SyncConfig::load(&self.config)?;
 
         let network = sync_config.bitcoin_network().ok_or_else(|| {
-            failure::format_err!(
+            anyhow!(
                 "Unable to determine Bitcoin network type from config.\
                  Perhaps pool of keys in config is empty."
             )
@@ -353,7 +380,7 @@ impl GenerateKeypairCommand {
         sync_config
             .bitcoin_key_pool
             .extend(std::iter::once(bitcoin_keypair));
-        save_config_file(&sync_config, self.config)?;
+        sync_config.save(self.config)?;
         // Print the received Bitcoin public key to use it in scripts.
         println!("{}", bitcoin_pub_key);
         Ok(())
@@ -361,7 +388,7 @@ impl GenerateKeypairCommand {
 }
 
 impl Commands {
-    async fn run(self) -> Result<(), failure::Error> {
+    async fn run(self) -> Result<(), anyhow::Error> {
         match self {
             Commands::GenerateConfig(cmd) => cmd.run(),
             Commands::GenerateKeypair(cmd) => cmd.run(),
@@ -371,7 +398,7 @@ impl Commands {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), failure::Error> {
+async fn main() -> Result<(), anyhow::Error> {
     exonum::helpers::init_logger()?;
     Commands::from_args().run().await
 }

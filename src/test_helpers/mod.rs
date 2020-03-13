@@ -19,7 +19,6 @@ use bitcoin::{self, network::constants::Network};
 use bitcoin_hashes::{sha256d::Hash as Sha256dHash, Hash as BitcoinHash};
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{
-    blockchain::config::InstanceInitParams,
     crypto::{Hash, KeyPair, PublicKey},
     helpers::Height,
     keys::Keys,
@@ -27,9 +26,9 @@ use exonum::{
     runtime::{InstanceId, SnapshotExt, SUPERVISOR_INSTANCE_ID},
 };
 use exonum_merkledb::{access::Access, Snapshot};
-use exonum_rust_runtime::{api, ServiceFactory};
+use exonum_rust_runtime::api;
 use exonum_supervisor::{ConfigPropose, Supervisor, SupervisorInterface};
-use exonum_testkit::{ApiKind, TestKit, TestKitApiClient, TestKitBuilder, TestNode};
+use exonum_testkit::{ApiKind, Spec, TestKit, TestKitApiClient, TestKitBuilder, TestNode};
 use rand::{thread_rng, Rng};
 
 use std::collections::BTreeMap;
@@ -160,20 +159,12 @@ impl AnchoringTestKit {
             ..Config::default()
         };
 
-        let anchoring_artifact = BtcAnchoringService.artifact_id();
         let inner = TestKitBuilder::validator()
             .with_keys(validator_keys)
-            // Supervisor
-            .with_rust_service(Supervisor)
-            .with_artifact(Supervisor.artifact_id())
-            .with_instance(Supervisor::simple())
-            // Anchoring
-            .with_rust_service(BtcAnchoringService)
-            .with_artifact(anchoring_artifact.clone())
-            .with_instance(InstanceInitParams::new(
+            .with(Supervisor::simple())
+            .with(Spec::new(BtcAnchoringService).with_instance(
                 ANCHORING_INSTANCE_ID,
                 ANCHORING_INSTANCE_NAME,
-                anchoring_artifact,
                 anchoring_config,
             ))
             .build();
@@ -293,7 +284,7 @@ impl AnchoringTestKit {
             .map(move |anchoring_keys| {
                 let node_keypair = self
                     .find_node_by_service_key(anchoring_keys.service_key)
-                    .unwrap()
+                    .expect("Unable to find node by service key")
                     .service_keypair();
 
                 node_keypair.add_funds(ANCHORING_INSTANCE_ID, add_funds.clone())
@@ -472,13 +463,13 @@ pub trait ValidateProof {
     /// Output value.
     type Output;
     /// Perform the proof validation procedure with the given exonum blockchain configuration.
-    fn validate(self, validator_keys: &[PublicKey]) -> Result<Self::Output, failure::Error>;
+    fn validate(self, validator_keys: &[PublicKey]) -> Result<Self::Output, anyhow::Error>;
 }
 
 impl ValidateProof for TransactionProof {
     type Output = Option<(u64, btc::Transaction)>;
 
-    fn validate(self, validator_keys: &[PublicKey]) -> Result<Self::Output, failure::Error> {
+    fn validate(self, validator_keys: &[PublicKey]) -> Result<Self::Output, anyhow::Error> {
         self.index_proof.verify(validator_keys)?;
 
         let entry = self

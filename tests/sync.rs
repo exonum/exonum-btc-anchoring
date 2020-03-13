@@ -107,7 +107,7 @@ impl Drop for FakeBitcoinRelay {
 
 #[async_trait]
 impl BitcoinRelay for FakeBitcoinRelay {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     async fn send_transaction(
         &self,

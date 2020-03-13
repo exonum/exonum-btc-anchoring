@@ -20,6 +20,7 @@
 //!
 //! [sync]: ../sync/index.html
 
+use anyhow::{anyhow, ensure};
 use async_trait::async_trait;
 use btc_transaction_utils::{p2wsh, TxInRef};
 use exonum::{blockchain::IndexProof, crypto::Hash, helpers::Height};
@@ -28,7 +29,6 @@ use exonum_rust_runtime::{
     api::{self, ServiceApiBuilder, ServiceApiState},
     Broadcaster,
 };
-use failure::ensure;
 use serde_derive::{Deserialize, Serialize};
 
 use std::cmp::{
@@ -264,22 +264,22 @@ impl ApiImpl {
         Ok(Schema::new(self.0.service_data()).actual_config())
     }
 
-    fn verify_sign_input(&self, sign_input: &SignInput) -> Result<(), failure::Error> {
+    fn verify_sign_input(&self, sign_input: &SignInput) -> Result<(), anyhow::Error> {
         let schema = Schema::new(self.0.service_data());
         let (proposal, inputs) = schema
             .actual_proposed_anchoring_transaction(self.0.data().for_core())
-            .ok_or_else(|| failure::format_err!("Anchoring transaction proposal is absent."))??;
+            .ok_or_else(|| anyhow!("Anchoring transaction proposal is absent."))??;
 
         // Verify transaction content.
-        let input = inputs.get(sign_input.input as usize).ok_or_else(|| {
-            failure::format_err!("Missing input with index: {}", sign_input.input)
-        })?;
+        let input = inputs
+            .get(sign_input.input as usize)
+            .ok_or_else(|| anyhow!("Missing input with index: {}", sign_input.input))?;
 
         // Find corresponding Bitcoin key.
         let config = schema.actual_config();
         let bitcoin_key = config
             .find_bitcoin_key(&self.0.service_key())
-            .ok_or_else(|| failure::format_err!("This node is not an anchoring node."))?
+            .ok_or_else(|| anyhow!("This node is not an anchoring node."))?
             .1;
 
         // Verify input signature.
@@ -290,10 +290,10 @@ impl ApiImpl {
                 &bitcoin_key.0,
                 sign_input.input_signature.as_ref(),
             )
-            .map_err(|e| failure::format_err!("Input signature verification failed: {}", e))
+            .map_err(|e| anyhow!("Input signature verification failed: {}", e))
     }
 
-    fn verify_funding_tx(&self, tx: &btc::Transaction) -> Result<(), failure::Error> {
+    fn verify_funding_tx(&self, tx: &btc::Transaction) -> Result<(), anyhow::Error> {
         let txid = tx.id();
 
         let schema = Schema::new(self.0.service_data());

@@ -15,7 +15,7 @@ use bitcoin::blockdata::{
 };
 use btc_transaction_utils::multisig::RedeemScript;
 use derive_more::{From, Into};
-use failure_derive::Fail;
+use thiserror::Error;
 
 use super::{payload::PayloadBuilder, Payload, Sha256d};
 
@@ -85,13 +85,12 @@ pub struct BtcAnchoringTransactionBuilder {
 }
 
 /// Anchoring transaction builder errors.
-#[derive(Debug, Copy, Clone, PartialEq, Fail)]
+#[derive(Debug, Copy, Clone, PartialEq, Error)]
 pub enum BuilderError {
     /// Insufficient funds to construct a new anchoring transaction.
-    #[fail(
-        display = "Insufficient funds to construct a new anchoring transaction,\
-                   total fee is {}, total balance is {}",
-        _0, _1
+    #[error(
+        "Insufficient funds to construct a new anchoring transaction,\
+        total fee is {total_fee}, total balance is {balance}"
     )]
     InsufficientFunds {
         /// Total transaction fee.
@@ -100,13 +99,13 @@ pub enum BuilderError {
         balance: u64,
     },
     /// At least one input should be provided.
-    #[fail(display = "At least one input should be provided.")]
+    #[error("At least one input should be provided.")]
     NoInputs,
     /// Output address in a previous anchoring transaction is not suitable.
-    #[fail(display = "Output address in a previous anchoring transaction is not suitable.")]
+    #[error("Output address in a previous anchoring transaction is not suitable.")]
     UnsuitableOutput,
     /// Funding transaction doesn't contains outputs to the anchoring address.
-    #[fail(display = "Funding transaction doesn't contains outputs to the anchoring address.")]
+    #[error("Funding transaction doesn't contains outputs to the anchoring address.")]
     UnsuitableFundingTx,
 }
 
@@ -383,7 +382,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected = "UnsupportedSegwitFlag(16)")]
+    #[should_panic(expected = "unsupported segwit version: 16")]
     fn test_transaction_exonum_field_invalid_segwit_flag() {
         let hex_tx = "6600000000101b651818fe3855d0d5d74de1cf72b56503c16f808519440e842b6a\
                       dc2dd570c4930100000000feffffff02deaa7b0000000000160014923904449829\
