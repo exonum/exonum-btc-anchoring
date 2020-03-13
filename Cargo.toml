@@ -1,7 +1,7 @@
 [package]
 name = "exonum-btc-anchoring"
 edition = "2018"
-version = "1.0.0-rc.1"
+version = "1.0.0-rc.2"
 authors = ["The Exonum Team <contact@exonum.com>"]
 homepage = "https://exonum.com/doc/advanced/bitcoin-anchoring/"
 repository = "https://github.com/exonum/exonum-btc-anchoring"
@@ -16,16 +16,16 @@ description = "An Exonum service that provides anchoring to Bitcoin blockchain."
 travis-ci = { repository = "exonum/exonum-btc-anchoring" }
 
 [dependencies]
-exonum = "1.0.0-rc.1"
-exonum-cli = "1.0.0-rc.1"
-exonum-crypto = { version = "1.0.0-rc.1", features = ["with-protobuf"] }
-exonum-derive = "1.0.0-rc.1"
-exonum-explorer = "1.0.0-rc.1"
-exonum-merkledb = "1.0.0-rc.1"
-exonum-proto = "1.0.0-rc.1"
-exonum-rust-runtime = "1.0.0-rc.1"
-exonum-supervisor = "1.0.0-rc.1"
-exonum-testkit = "1.0.0-rc.1"
+exonum = "1.0.0-rc.2"
+exonum-cli = "1.0.0-rc.2"
+exonum-crypto = { version = "1.0.0-rc.2", features = ["with-protobuf"] }
+exonum-derive = "1.0.0-rc.2"
+exonum-explorer = "1.0.0-rc.2"
+exonum-merkledb = "1.0.0-rc.2"
+exonum-proto = "1.0.0-rc.2"
+exonum-rust-runtime = "1.0.0-rc.2"
+exonum-supervisor = "1.0.0-rc.2"
+exonum-testkit = "1.0.0-rc.2"
 
 anyhow = "1.0.26"
 async-trait = "0.1.24"
@@ -56,17 +56,4 @@ toml = "0.5.6"
 proptest = "0.9"
 
 [build-dependencies]
-exonum-build = "1.0.0-rc.1"
-
-[patch.crates-io]
-exonum = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
-exonum-build = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
-exonum-cli = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
-exonum-crypto = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
-exonum-derive = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
-exonum-explorer = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
-exonum-merkledb = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
-exonum-proto = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
-exonum-rust-runtime = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
-exonum-supervisor = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
-exonum-testkit = { git = "https://github.com/exonum/exonum.git", rev = "4b216b2" }
+exonum-build = "1.0.0-rc.2"

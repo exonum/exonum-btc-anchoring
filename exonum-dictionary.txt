@@ -94,8 +94,8 @@ libsodium
 libssl
 listunspent
 locktime
-Mainnet
 mainnet
+Mainnet
 maintainer's
 maplit
 markdownlint
@@ -129,8 +129,8 @@ oneshot
 OP_CHECKSIG
 OP_EQUALVERIFY
 openssl
-PASSWD
 passwd
+PASSWD
 peekable
 permissioned
 pkey
@@ -212,6 +212,7 @@ testkit
 testnet
 testnetctl
 Tfop
+thiserror
 timestamping
 timestamps
 tlsdate
