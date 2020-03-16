@@ -134,7 +134,11 @@ struct FakePrivateApi {
 }
 
 impl FakePrivateApi {
-    fn for_anchoring_node(testkit: &mut AnchoringTestKit, bitcoin_key: &btc::PublicKey) -> Self {
+    fn for_anchoring_node(
+        testkit: &AnchoringTestKit,
+        client: TestKitApiClient,
+        bitcoin_key: &btc::PublicKey,
+    ) -> Self {
         let service_keypair = testkit
             .find_anchoring_node(bitcoin_key)
             .unwrap()
@@ -142,7 +146,7 @@ impl FakePrivateApi {
 
         Self {
             service_keypair,
-            client: testkit.inner.api().client().clone(),
+            client,
             broadcaster: testkit.inner.blockchain().sender().clone(),
         }
     }
@@ -210,6 +214,8 @@ fn anchoring_transaction_payload(testkit: &AnchoringTestKit, index: u64) -> Opti
 #[tokio::test]
 async fn chain_updater_normal() {
     let mut testkit = AnchoringTestKit::default();
+    let api = testkit.inner.api();
+
     let anchoring_interval = testkit.actual_anchoring_config().anchoring_interval;
     // Commit several blocks.
     testkit
@@ -218,8 +224,10 @@ async fn chain_updater_normal() {
     // Perform a several anchoring chain updates.
     for i in 0..2 {
         for keypair in testkit.anchoring_keypairs() {
-            let api = FakePrivateApi::for_anchoring_node(&mut testkit, &keypair.0);
-            AnchoringChainUpdateTask::new(vec![keypair], api)
+            let private_api =
+                FakePrivateApi::for_anchoring_node(&testkit, api.client().clone(), &keypair.0);
+
+            AnchoringChainUpdateTask::new(vec![keypair], private_api)
                 .process()
                 .await
                 .unwrap();
