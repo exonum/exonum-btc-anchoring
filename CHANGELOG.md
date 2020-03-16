@@ -18,7 +18,7 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
   - All methods of the following traits became async:
     `api::PublicApi`, `api::PrivateApi`, `sync::BitcoinRelay`.
   - Public methods of the `sync::AnchoringChainUpdateTask` and `sync::SyncWithBitcoinTask`
-    also became async. You will need to use these methods inside a futures executor like
+    also became async. You need to use these methods inside the future executor like
     `tokio` or `actix_rt`.
   - `btc_anchoring_sync` utility has been moved to examples.
 
