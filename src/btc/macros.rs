@@ -27,7 +27,7 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
                 bitcoin::consensus::serialize(&self.0)
             }
 
-            fn from_bytes(value: ::std::borrow::Cow<[u8]>) -> Result<$name, anyhow::Error> {
+            fn from_bytes(value: ::std::borrow::Cow<[u8]>) -> anyhow::Result<$name> {
                 let inner = bitcoin::consensus::deserialize(value.as_ref())?;
                 Ok(Self(inner))
             }

@@ -463,13 +463,13 @@ pub trait ValidateProof {
     /// Output value.
     type Output;
     /// Perform the proof validation procedure with the given exonum blockchain configuration.
-    fn validate(self, validator_keys: &[PublicKey]) -> Result<Self::Output, anyhow::Error>;
+    fn validate(self, validator_keys: &[PublicKey]) -> anyhow::Result<Self::Output>;
 }
 
 impl ValidateProof for TransactionProof {
     type Output = Option<(u64, btc::Transaction)>;
 
-    fn validate(self, validator_keys: &[PublicKey]) -> Result<Self::Output, anyhow::Error> {
+    fn validate(self, validator_keys: &[PublicKey]) -> anyhow::Result<Self::Output> {
         self.index_proof.verify(validator_keys)?;
 
         let entry = self
