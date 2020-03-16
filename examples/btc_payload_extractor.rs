@@ -27,7 +27,7 @@ struct Opts {
     hex: String,
 }
 
-fn main() -> Result<(), anyhow::Error> {
+fn main() -> anyhow::Result<()> {
     let transaction = Transaction::from_hex(Opts::from_args().hex)?;
     let payload = transaction
         .anchoring_payload()

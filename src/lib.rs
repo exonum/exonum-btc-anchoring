@@ -41,7 +41,7 @@
 //! use exonum_cli::{NodeBuilder, Spec};
 //!
 //! #[tokio::main]
-//! async fn main() -> Result<(), anyhow::Error> {
+//! async fn main() -> anyhow::Result<()> {
 //!     exonum::helpers::init_logger()?;
 //!     NodeBuilder::new()
 //!         .with(Spec::new(exonum_btc_anchoring::BtcAnchoringService))

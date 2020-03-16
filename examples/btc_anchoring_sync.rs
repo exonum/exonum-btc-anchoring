@@ -26,6 +26,7 @@ use exonum_btc_anchoring::{
 use serde::{de::DeserializeOwned, ser::Serialize};
 use serde_derive::{Deserialize, Serialize};
 use structopt::StructOpt;
+use tokio::time::delay_for;
 
 use std::{
     collections::HashMap,
@@ -208,14 +209,14 @@ impl SyncConfig {
             .map(|key| key.0.network)
     }
 
-    fn load(path: impl AsRef<Path>) -> Result<Self, anyhow::Error> {
+    fn load(path: impl AsRef<Path>) -> anyhow::Result<Self> {
         let mut file = File::open(path)?;
         let mut toml = String::new();
         file.read_to_string(&mut toml)?;
         toml::de::from_str(&toml).map_err(From::from)
     }
 
-    fn save(&self, path: impl AsRef<Path>) -> Result<(), anyhow::Error> {
+    fn save(&self, path: impl AsRef<Path>) -> anyhow::Result<()> {
         let path = path.as_ref();
 
         if let Some(dir) = path.parent() {
@@ -253,7 +254,7 @@ impl TryFrom<BitcoinRpcConfig> for BitcoinRpcClient {
 }
 
 impl GenerateConfigCommand {
-    fn run(self) -> Result<(), anyhow::Error> {
+    fn run(self) -> anyhow::Result<()> {
         let bitcoin_keypair = btc::gen_keypair(self.bitcoin_network);
 
         let bitcoin_rpc_config = self.bitcoin_rpc_config();
@@ -285,7 +286,7 @@ impl GenerateConfigCommand {
 }
 
 impl RunCommand {
-    async fn run(self) -> Result<(), anyhow::Error> {
+    async fn run(self) -> anyhow::Result<()> {
         let sync_config = SyncConfig::load(self.config)?;
         let client = ApiClient::new(sync_config.exonum_private_api, sync_config.instance_name);
         let chain_updater =
@@ -359,13 +360,13 @@ impl RunCommand {
             }
 
             // Don't perform this actions too frequent to avoid DOS attack.
-            tokio::time::delay_for(Duration::from_secs(5)).await
+            delay_for(Duration::from_secs(5)).await
         }
     }
 }
 
 impl GenerateKeypairCommand {
-    fn run(self) -> Result<(), anyhow::Error> {
+    fn run(self) -> anyhow::Result<()> {
         let mut sync_config = SyncConfig::load(&self.config)?;
 
         let network = sync_config.bitcoin_network().ok_or_else(|| {
@@ -388,7 +389,7 @@ impl GenerateKeypairCommand {
 }
 
 impl Commands {
-    async fn run(self) -> Result<(), anyhow::Error> {
+    async fn run(self) -> anyhow::Result<()> {
         match self {
             Commands::GenerateConfig(cmd) => cmd.run(),
             Commands::GenerateKeypair(cmd) => cmd.run(),
@@ -398,7 +399,7 @@ impl Commands {
 }
 
 #[tokio::main]
-async fn main() -> Result<(), anyhow::Error> {
+async fn main() -> anyhow::Result<()> {
     exonum::helpers::init_logger()?;
     Commands::from_args().run().await
 }

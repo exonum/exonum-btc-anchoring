@@ -264,7 +264,7 @@ impl ApiImpl {
         Ok(Schema::new(self.0.service_data()).actual_config())
     }
 
-    fn verify_sign_input(&self, sign_input: &SignInput) -> Result<(), anyhow::Error> {
+    fn verify_sign_input(&self, sign_input: &SignInput) -> anyhow::Result<()> {
         let schema = Schema::new(self.0.service_data());
         let (proposal, inputs) = schema
             .actual_proposed_anchoring_transaction(self.0.data().for_core())
@@ -293,7 +293,7 @@ impl ApiImpl {
             .map_err(|e| anyhow!("Input signature verification failed: {}", e))
     }
 
-    fn verify_funding_tx(&self, tx: &btc::Transaction) -> Result<(), anyhow::Error> {
+    fn verify_funding_tx(&self, tx: &btc::Transaction) -> anyhow::Result<()> {
         let txid = tx.id();
 
         let schema = Schema::new(self.0.service_data());

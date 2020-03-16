@@ -163,7 +163,7 @@ where
                     txid: proposal.id(),
                 })
             })
-            .collect::<Result<Vec<_>, anyhow::Error>>()
+            .collect::<anyhow::Result<Vec<_>>>()
             .map_err(ChainUpdateError::Internal)?;
         // Send sign input transactions to the Exonum node.
         for sign_input in sign_input_messages {

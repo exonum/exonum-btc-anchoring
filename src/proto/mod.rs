@@ -30,7 +30,7 @@ use exonum::{
 use exonum_derive::{BinaryValue, ObjectHash};
 use exonum_proto::ProtobufConvert;
 use protobuf::Message;
-use serde_derive::{Deserialize, Serialize}; // FIXME: remove once `ProtobufConvert` derive is improved (ECR-4316)
+use serde_derive::{Deserialize, Serialize};
 
 use std::borrow::Cow;
 
@@ -49,7 +49,7 @@ impl ProtobufConvert for btc::PublicKey {
         proto_struct
     }
 
-    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, anyhow::Error> {
+    fn from_pb(pb: Self::ProtoStruct) -> anyhow::Result<Self> {
         let bytes = pb.get_data();
         Ok(Self(bitcoin::PublicKey::from_slice(bytes)?))
     }
@@ -65,7 +65,7 @@ impl ProtobufConvert for btc::Transaction {
         proto_struct
     }
 
-    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, anyhow::Error> {
+    fn from_pb(pb: Self::ProtoStruct) -> anyhow::Result<Self> {
         let bytes = pb.get_data();
         Ok(Self(bitcoin::consensus::deserialize(bytes)?))
     }
@@ -80,7 +80,7 @@ impl ProtobufConvert for btc::InputSignature {
         proto_struct
     }
 
-    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, anyhow::Error> {
+    fn from_pb(pb: Self::ProtoStruct) -> anyhow::Result<Self> {
         let bytes = pb.get_data().to_vec();
         Ok(Self(btc_transaction_utils::InputSignature::from_bytes(
             bytes,
@@ -97,7 +97,7 @@ impl ProtobufConvert for btc::Sha256d {
         proto_struct
     }
 
-    fn from_pb(pb: Self::ProtoStruct) -> Result<Self, anyhow::Error> {
+    fn from_pb(pb: Self::ProtoStruct) -> anyhow::Result<Self> {
         use bitcoin_hashes::{sha256d, Hash};
         sha256d::Hash::from_slice(pb.get_data())
             .map(Self::from)
@@ -163,7 +163,7 @@ impl ProtobufConvert for Config {
         proto_struct
     }
 
-    fn from_pb(mut pb: Self::ProtoStruct) -> Result<Self, anyhow::Error> {
+    fn from_pb(mut pb: Self::ProtoStruct) -> anyhow::Result<Self> {
         let network = bitcoin::Network::from_magic(pb.get_network())
             .ok_or_else(|| anyhow!("Unknown Bitcoin network"))?;
 
@@ -185,7 +185,7 @@ impl BinaryValue for btc::Sha256d {
             .expect("Error while serializing value")
     }
 
-    fn from_bytes(bytes: Cow<[u8]>) -> Result<Self, anyhow::Error> {
+    fn from_bytes(bytes: Cow<[u8]>) -> anyhow::Result<Self> {
         let mut pb = btc_types::Sha256d::new();
         pb.merge_from_bytes(bytes.as_ref())?;
         Self::from_pb(pb)

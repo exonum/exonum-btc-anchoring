@@ -109,7 +109,7 @@ impl BinaryValue for PublicKey {
         bytes
     }
 
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, anyhow::Error> {
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> anyhow::Result<Self> {
         bitcoin::PublicKey::from_slice(bytes.as_ref())
             .map(Self)
             .map_err(From::from)
@@ -165,7 +165,7 @@ impl BinaryValue for InputSignature {
         self.0.clone().into()
     }
 
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, anyhow::Error> {
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> anyhow::Result<Self> {
         btc_transaction_utils::InputSignature::from_bytes(bytes.into())
             .map(Self)
             .map_err(From::from)
