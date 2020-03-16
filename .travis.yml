@@ -26,7 +26,7 @@ addons:
     - zlib1g-dev
 
 rust:
-  - 1.40.0
+  - 1.42.0
 
 cache:
   npm: true
@@ -42,8 +42,8 @@ sudo: required
 
 env:
   global:
-  - SCCACHE_VERS=0.2.12
-  - DEADLINKS_VERS=0.3.0
+  - SCCACHE_VERS=0.2.13
+  - DEADLINKS_VERS=0.4.1
   - RUSTFLAGS="-D warnings"
   - ROCKSDB_LIB_DIR=/usr/lib
   - SNAPPY_LIB_DIR=/usr/lib/x86_64-linux-gnu
@@ -54,7 +54,7 @@ before_install:
 
 jobs:
   allow_failures:
-  - name: publish-with-rust-1.36
+  - name: publish-with-rust
   - name: deadlinks
   include:
   # Formatting & other lints that do not require compilation
@@ -97,9 +97,9 @@ jobs:
     - cargo doc --no-deps
     - cargo deadlinks --dir target/doc
 
-  # Check publish with Rust 1.36
-  - name: publish-with-rust-1.36
+  # Check publish with Rust 1.41.1
+  - name: publish-with-rust
     env: FEATURE=non-fatal-checks
-    rust: 1.36.0
+    rust: 1.41.1
     script:
     - cargo publish --dry-run

@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+use anyhow as failure;
 use exonum::crypto::Hash;
 use exonum_merkledb::{BinaryValue, ObjectHash};
 use exonum_proto::ProtobufConvert;
@@ -51,9 +52,7 @@ where
     .to_pb()
 }
 
-fn key_value_pb_to_pair<K, V>(
-    pb: crate::proto::internal::KeyValue,
-) -> Result<(K, V), failure::Error>
+fn key_value_pb_to_pair<K, V>(pb: crate::proto::internal::KeyValue) -> anyhow::Result<(K, V)>
 where
     K: BinaryValue,
     V: BinaryValue,
@@ -82,12 +81,12 @@ where
         proto_struct
     }
 
-    fn from_pb(proto_struct: Self::ProtoStruct) -> Result<Self, failure::Error> {
+    fn from_pb(proto_struct: Self::ProtoStruct) -> anyhow::Result<Self> {
         let inner = proto_struct
             .inner
             .into_iter()
             .map(key_value_pb_to_pair)
-            .collect::<Result<_, failure::Error>>()?;
+            .collect::<anyhow::Result<_>>()?;
         Ok(Self(inner))
     }
 }
@@ -103,7 +102,7 @@ where
             .expect("Error while serializing value")
     }
 
-    fn from_bytes(bytes: Cow<[u8]>) -> Result<Self, failure::Error> {
+    fn from_bytes(bytes: Cow<[u8]>) -> anyhow::Result<Self> {
         let mut pb = <Self as ProtobufConvert>::ProtoStruct::new();
         pb.merge_from_bytes(bytes.as_ref())?;
         Self::from_pb(pb)

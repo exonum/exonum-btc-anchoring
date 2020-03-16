@@ -27,7 +27,7 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
                 bitcoin::consensus::serialize(&self.0)
             }
 
-            fn from_bytes(value: ::std::borrow::Cow<[u8]>) -> Result<$name, failure::Error> {
+            fn from_bytes(value: ::std::borrow::Cow<[u8]>) -> anyhow::Result<$name> {
                 let inner = bitcoin::consensus::deserialize(value.as_ref())?;
                 Ok(Self(inner))
             }
@@ -41,7 +41,7 @@ macro_rules! impl_wrapper_for_bitcoin_consensus_encoding {
         }
 
         impl hex::FromHex for $name {
-            type Error = failure::Error;
+            type Error = anyhow::Error;
 
             fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
                 let bytes = ::hex::decode(hex)?;
@@ -78,7 +78,7 @@ macro_rules! impl_string_conversions_for_hex {
         }
 
         impl std::str::FromStr for $name {
-            type Err = failure::Error;
+            type Err = anyhow::Error;
 
             fn from_str(s: &str) -> Result<Self, Self::Err> {
                 use hex::FromHex;

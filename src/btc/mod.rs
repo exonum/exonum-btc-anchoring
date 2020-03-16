@@ -79,7 +79,7 @@ impl std::fmt::Debug for PrivateKey {
 }
 
 impl FromHex for PublicKey {
-    type Error = ::failure::Error;
+    type Error = anyhow::Error;
 
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
         let bytes = hex::decode(hex)?;
@@ -109,7 +109,7 @@ impl BinaryValue for PublicKey {
         bytes
     }
 
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> anyhow::Result<Self> {
         bitcoin::PublicKey::from_slice(bytes.as_ref())
             .map(Self)
             .map_err(From::from)
@@ -129,7 +129,7 @@ impl AsRef<bitcoin::Address> for Address {
 }
 
 impl FromHex for InputSignature {
-    type Error = ::failure::Error;
+    type Error = anyhow::Error;
 
     fn from_hex<T: AsRef<[u8]>>(hex: T) -> Result<Self, Self::Error> {
         let bytes = hex::decode(hex)?;
@@ -165,7 +165,7 @@ impl BinaryValue for InputSignature {
         self.0.clone().into()
     }
 
-    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> Result<Self, failure::Error> {
+    fn from_bytes(bytes: std::borrow::Cow<[u8]>) -> anyhow::Result<Self> {
         btc_transaction_utils::InputSignature::from_bytes(bytes.into())
             .map(Self)
             .map_err(From::from)
@@ -199,6 +199,18 @@ impl AsRef<bitcoin_hashes::sha256d::Hash> for Sha256d {
     }
 }
 
+impl From<bitcoin::hash_types::Txid> for Sha256d {
+    fn from(txid: bitcoin::hash_types::Txid) -> Self {
+        Self(txid.into())
+    }
+}
+
+impl From<Sha256d> for bitcoin::hash_types::Txid {
+    fn from(hash: Sha256d) -> Self {
+        hash.0.into()
+    }
+}
+
 impl_string_conversions_for_hex! { InputSignature }
 
 impl_serde_str! { PrivateKey }
@@ -207,7 +219,10 @@ impl_serde_str! { Address }
 impl_serde_str! { InputSignature }
 
 /// Generates Bitcoin keypair using the given random number generator.
-pub fn gen_keypair_with_rng<R: Rng>(rng: &mut R, network: Network) -> (PublicKey, PrivateKey) {
+pub fn gen_keypair_with_rng<R: Rng + ?Sized>(
+    rng: &mut R,
+    network: Network,
+) -> (PublicKey, PrivateKey) {
     let (pk, sk) = secp_gen_keypair_with_rng(rng, network);
     (PublicKey(pk), PrivateKey(sk))
 }

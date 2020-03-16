@@ -12,11 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-use exonum_cli::NodeBuilder;
+use exonum_cli::{NodeBuilder, Spec};
 
-fn main() -> Result<(), failure::Error> {
+#[tokio::main]
+async fn main() -> anyhow::Result<()> {
     exonum::helpers::init_logger()?;
     NodeBuilder::new()
-        .with_rust_service(exonum_btc_anchoring::BtcAnchoringService)
+        .with(Spec::new(exonum_btc_anchoring::BtcAnchoringService))
         .run()
+        .await
 }

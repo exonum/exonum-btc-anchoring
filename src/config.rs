@@ -16,6 +16,7 @@
 
 pub use crate::proto::{AnchoringKeys, Config};
 
+use anyhow::ensure;
 use bitcoin::network::constants::Network;
 use btc_transaction_utils::{
     multisig::{RedeemScript, RedeemScriptBuilder, RedeemScriptError},
@@ -25,7 +26,6 @@ use exonum::{
     crypto::PublicKey,
     helpers::{Height, ValidateInput},
 };
-use failure::ensure;
 
 use crate::btc::{self, Address};
 
@@ -115,7 +115,7 @@ impl Config {
 }
 
 impl ValidateInput for Config {
-    type Error = failure::Error;
+    type Error = anyhow::Error;
 
     fn validate(&self) -> Result<(), Self::Error> {
         ensure!(

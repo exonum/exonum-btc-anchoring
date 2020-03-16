@@ -14,10 +14,9 @@
 
 //! Building blocks of the anchoring sync utility.
 
-// TODO Rewrite with the async/await syntax when it is ready. [ECR-3222]
-
 pub use self::bitcoin_relay::{BitcoinRelay, TransactionStatus};
 
+use anyhow::anyhow;
 use btc_transaction_utils::{p2wsh, TxInRef};
 
 use std::{collections::HashMap, fmt::Display, sync::Arc};
@@ -51,7 +50,7 @@ pub enum ChainUpdateError<C: Display> {
     /// Initial funding transaction is absent.
     NoInitialFunds,
     /// Internal error.
-    Internal(failure::Error),
+    Internal(anyhow::Error),
 }
 
 /// Signs the inputs of the anchoring transaction proposal by the corresponding
@@ -82,17 +81,18 @@ where
     }
 
     /// Returns an actual anchoring configuration.
-    pub fn anchoring_config(&self) -> Result<Config, T::Error> {
-        self.api_client.config()
+    pub async fn anchoring_config(&self) -> Result<Config, T::Error> {
+        self.api_client.config().await
     }
 
     /// Performs one attempt to sign an anchoring proposal, if any.
-    pub fn process(&self) -> Result<(), ChainUpdateError<T::Error>> {
+    pub async fn process(&self) -> Result<(), ChainUpdateError<T::Error>> {
         log::trace!("Perform an anchoring chain update");
 
         match self
             .api_client
             .anchoring_proposal()
+            .await
             .map_err(ChainUpdateError::Client)?
         {
             AnchoringProposalState::None => Ok(()),
@@ -100,8 +100,11 @@ where
                 transaction,
                 inputs,
             } => {
-                let config = self.anchoring_config().map_err(ChainUpdateError::Client)?;
-                self.handle_proposal(config, transaction, inputs)
+                let config = self
+                    .anchoring_config()
+                    .await
+                    .map_err(ChainUpdateError::Client)?;
+                self.handle_proposal(config, transaction, inputs).await
             }
             AnchoringProposalState::InsufficientFunds { balance, total_fee } => {
                 Err(ChainUpdateError::InsufficientFunds { balance, total_fee })
@@ -110,7 +113,7 @@ where
         }
     }
 
-    fn handle_proposal(
+    async fn handle_proposal(
         &self,
         config: Config,
         proposal: btc::Transaction,
@@ -131,7 +134,7 @@ where
         let block_height = match proposal.anchoring_payload() {
             Some(payload) => payload.block_height,
             None => {
-                return Err(ChainUpdateError::Internal(failure::format_err!(
+                return Err(ChainUpdateError::Internal(anyhow!(
                     "Incorrect anchoring proposal found: {:?}",
                     proposal
                 )))
@@ -160,12 +163,13 @@ where
                     txid: proposal.id(),
                 })
             })
-            .collect::<Result<Vec<_>, failure::Error>>()
+            .collect::<anyhow::Result<Vec<_>>>()
             .map_err(ChainUpdateError::Internal)?;
         // Send sign input transactions to the Exonum node.
         for sign_input in sign_input_messages {
             self.api_client
                 .sign_input(sign_input)
+                .await
                 .map_err(ChainUpdateError::Client)?;
         }
         Ok(())
@@ -192,7 +196,7 @@ pub enum SyncWithBitcoinError<C: Display, R: Display> {
     /// Error occurred in the Bitcoin relay.
     Relay(R),
     /// Internal error.
-    Internal(failure::Error),
+    Internal(anyhow::Error),
     /// Initial funding transaction is unconfirmed.
     UnconfirmedFundingTransaction(btc::Sha256d),
 }
@@ -225,7 +229,7 @@ where
 
     /// Performs one attempt to send the first uncommitted anchoring transaction into the Bitcoin network, if any.
     /// sign an anchoring proposal, if any. Returns an index of the last committed transaction.
-    pub fn process(
+    pub async fn process(
         &self,
         latest_committed_tx_index: Option<u64>,
     ) -> Result<Option<u64>, SyncWithBitcoinError<T::Error, R::Error>> {
@@ -234,12 +238,13 @@ where
         let (index, transaction) = if let Some(index) = latest_committed_tx_index {
             // Check that the latest committed transaction was really sent into
             // the Bitcoin network.
-            let transaction = self.get_transaction(index)?;
-            let status = self.transaction_status(transaction.id())?;
+            let transaction = self.get_transaction(index).await?;
+            let status = self.transaction_status(transaction.id()).await?;
             if status.is_known() {
                 let chain_len = self
                     .api_client
                     .transactions_count()
+                    .await
                     .map_err(SyncWithBitcoinError::Client)?
                     .value;
 
@@ -247,13 +252,14 @@ where
                     return Ok(Some(index));
                 }
                 let index = index + 1;
-                (index, self.get_transaction(index)?)
+                (index, self.get_transaction(index).await?)
             } else {
                 (index, transaction)
             }
         }
         // Perform to find the actual uncommitted transaction.
-        else if let Some((transaction, index)) = self.find_first_uncommitted_transaction()? {
+        else if let Some((transaction, index)) = self.find_first_uncommitted_transaction().await?
+        {
             (index, transaction)
         } else {
             return Ok(None);
@@ -262,6 +268,7 @@ where
         // Send an actual uncommitted transaction into the Bitcoin network.
         self.btc_relay
             .send_transaction(&transaction)
+            .await
             .map_err(SyncWithBitcoinError::Relay)?;
 
         log::info!(
@@ -274,13 +281,14 @@ where
 
     /// Finds the first anchoring transaction and its index, which was not committed into
     /// the Bitcoin blockchain.
-    pub fn find_first_uncommitted_transaction(
+    pub async fn find_first_uncommitted_transaction(
         &self,
     ) -> Result<Option<TransactionWithIndex>, SyncWithBitcoinError<T::Error, R::Error>> {
         let last_index = {
             let count = self
                 .api_client
                 .transactions_count()
+                .await
                 .map_err(SyncWithBitcoinError::Client)?
                 .value;
 
@@ -290,14 +298,14 @@ where
             count - 1
         };
         // Check that the tail of anchoring chain is committed to the Bitcoin.
-        let transaction = self.get_transaction(last_index)?;
-        let status = self.transaction_status(transaction.id())?;
+        let transaction = self.get_transaction(last_index).await?;
+        let status = self.transaction_status(transaction.id()).await?;
         if status.is_known() {
             return Ok(None);
         }
         // Try to find the first of uncommitted transactions.
         for index in (1..=last_index).rev() {
-            let transaction = self.get_transaction(index)?;
+            let transaction = self.get_transaction(index).await?;
             log::trace!(
                 "Checking for transaction with index {} and id {}",
                 index,
@@ -308,7 +316,7 @@ where
             // If the transaction previous to current one is committed, we found the first
             // uncommitted transaction (we've checked that the last one was not committed,
             // so scenario when all the transactions are committed is not possible).
-            let status = self.transaction_status(previous_tx_id)?;
+            let status = self.transaction_status(previous_tx_id).await?;
             if status.is_known() {
                 log::trace!("Found committed transaction");
                 // Note that we were checking the previous transaction to be committed, so
@@ -321,12 +329,12 @@ where
         // committed, but previous transaction for the first anchoring transaction always
         // is funding. This is special case and should be handled in specific way in order
         // to check the initial funding transaction confirmations.
-        let transaction = self.get_transaction(0)?;
+        let transaction = self.get_transaction(0).await?;
         log::trace!(
             "Checking for initial anchoring transaction with id {}",
             transaction.id()
         );
-        let status = self.transaction_status(transaction.prev_tx_id())?;
+        let status = self.transaction_status(transaction.prev_tx_id()).await?;
         if status.confirmations().is_none() {
             // First funding transaction has no confirmations.
             Err(SyncWithBitcoinError::UnconfirmedFundingTransaction(
@@ -339,27 +347,29 @@ where
         }
     }
 
-    fn get_transaction(
+    async fn get_transaction(
         &self,
         index: u64,
     ) -> Result<btc::Transaction, SyncWithBitcoinError<T::Error, R::Error>> {
         self.api_client
             .transaction_with_index(index)
+            .await
             .map_err(SyncWithBitcoinError::Client)?
             .ok_or_else(|| {
-                SyncWithBitcoinError::Internal(failure::format_err!(
+                SyncWithBitcoinError::Internal(anyhow!(
                     "Transaction with index {} is absent in the anchoring chain",
                     index
                 ))
             })
     }
 
-    fn transaction_status(
+    async fn transaction_status(
         &self,
         txid: btc::Sha256d,
     ) -> Result<TransactionStatus, SyncWithBitcoinError<T::Error, R::Error>> {
         self.btc_relay
             .transaction_status(txid)
+            .await
             .map_err(SyncWithBitcoinError::Relay)
     }
 }

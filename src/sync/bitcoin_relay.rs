@@ -14,6 +14,7 @@
 
 //! Collections of helpers for synchronization with the Bitcoin network.
 
+use async_trait::async_trait;
 use bitcoincore_rpc::RpcApi;
 use jsonrpc::Error as JsonRpcError;
 
@@ -48,29 +49,33 @@ impl TransactionStatus {
 }
 
 /// Describes communication with the Bitcoin network node.
+#[async_trait]
 pub trait BitcoinRelay {
     /// Error type for the current Bitcoin relay implementation.
     type Error;
     /// Sends a raw transaction to the Bitcoin network node.
-    fn send_transaction(&self, transaction: &btc::Transaction)
-        -> Result<btc::Sha256d, Self::Error>;
+    async fn send_transaction(
+        &self,
+        transaction: &btc::Transaction,
+    ) -> Result<btc::Sha256d, Self::Error>;
     /// Gets status for the transaction with the specified identifier.
-    fn transaction_status(&self, id: btc::Sha256d) -> Result<TransactionStatus, Self::Error>;
+    async fn transaction_status(&self, id: btc::Sha256d) -> Result<TransactionStatus, Self::Error>;
 }
 
+#[async_trait]
 impl BitcoinRelay for bitcoincore_rpc::Client {
     type Error = bitcoincore_rpc::Error;
 
-    fn send_transaction(
+    async fn send_transaction(
         &self,
         transaction: &btc::Transaction,
     ) -> Result<btc::Sha256d, Self::Error> {
         self.send_raw_transaction(transaction.to_string())
-            .map(btc::Sha256d)
+            .map(|txid| btc::Sha256d(txid.into()))
     }
 
-    fn transaction_status(&self, id: btc::Sha256d) -> Result<TransactionStatus, Self::Error> {
-        match self.get_raw_transaction_verbose(id.as_ref(), None) {
+    async fn transaction_status(&self, id: btc::Sha256d) -> Result<TransactionStatus, Self::Error> {
+        match self.get_raw_transaction_verbose(&id.into(), None) {
             Ok(info) => {
                 let status = match info.confirmations {
                     None => TransactionStatus::Mempool,

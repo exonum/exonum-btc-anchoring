@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.html).
 
+## Unreleased
+
+## 1.0.0-rc.2 - 2020-03-16
+
+### Breaking changes
+
+- Updated to the [Exonum 1.0.0-rc.2](https://github.com/exonum/exonum/releases/tag/v1.0.0-rc.2)
+  release with some major changes (#156).
+
+  - `api::TransactionProof` layout has been simplified.
+  - All methods of the following traits became async:
+    `api::PublicApi`, `api::PrivateApi`, `sync::BitcoinRelay`.
+  - Public methods of the `sync::AnchoringChainUpdateTask` and `sync::SyncWithBitcoinTask`
+    also became async. You need to use these methods inside the future executor like
+    `tokio` or `actix_rt`.
+  - `btc_anchoring_sync` utility has been moved to examples.
+
 ## 1.0.0-rc.1 - 2020-02-13
 
 ### Breaking changes
