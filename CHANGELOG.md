@@ -7,9 +7,11 @@ and this project adheres to [Semantic Versioning](http://semver.org/spec/v2.0.0.
 
 ## Unreleased
 
+## 1.0.0-rc.2 - 2020-03-16
+
 ### Breaking changes
 
-- Updated to the [Exonum 1.0.0](https://github.com/exonum/exonum/releases/tag/v1.0.0)
+- Updated to the [Exonum 1.0.0-rc.2](https://github.com/exonum/exonum/releases/tag/v1.0.0-rc.2)
   release with some major changes (#156).
 
   - `api::TransactionProof` layout has been simplified.
