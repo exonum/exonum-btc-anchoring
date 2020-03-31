@@ -10,7 +10,7 @@ from exonum_launcher.instances.instance_spec_loader import InstanceSpecLoader, I
 
 RUST_RUNTIME_ID = 0
 ANCHORING_ARTIFACT_NAME = "exonum-btc-anchoring"
-ANCHORING_ARTIFACT_VERSION = "1.0.0-rc.3"
+ANCHORING_ARTIFACT_VERSION = "1.0.0"
 
 
 def import_anchoring_module(name: str):

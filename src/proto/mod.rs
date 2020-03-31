@@ -16,7 +16,6 @@
 
 pub use binary_map::BinaryMap;
 
-use anyhow as failure;
 use anyhow::anyhow;
 use bitcoin;
 use btc_transaction_utils;
