@@ -97,9 +97,9 @@ jobs:
     - cargo doc --no-deps
     - cargo deadlinks --dir target/doc
 
-  # Check publish with Rust 1.41.1
+  # Check publish with Rust 1.42.0
   - name: publish-with-rust
     env: FEATURE=non-fatal-checks
-    rust: 1.41.1
+    rust: 1.42.0
     script:
     - cargo publish --dry-run
