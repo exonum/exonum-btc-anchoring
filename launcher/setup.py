@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from distutils.core import setup
 
-install_requires = []  # Since `exonum-launcher` is not on pypi yet, suppose we have it pre-installed.
+install_requires = ["exonum-launcher==0.2.0"]
 
 python_requires = ">=3.6"
 
