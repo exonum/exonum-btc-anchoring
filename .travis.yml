@@ -62,7 +62,7 @@ jobs:
     install:
     - rustup component add rustfmt
     - rustfmt -V
-    - nvm install 8 && nvm use 8
+    - nvm install 12 && nvm use 12
     - npm install
     - ./node_modules/.bin/cspell --version
     - ./node_modules/.bin/markdownlint --version
