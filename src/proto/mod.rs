@@ -17,8 +17,6 @@
 pub use binary_map::BinaryMap;
 
 use anyhow::anyhow;
-use bitcoin;
-use btc_transaction_utils;
 use exonum::{
     crypto::{proto::*, Hash, PublicKey},
     merkledb::{

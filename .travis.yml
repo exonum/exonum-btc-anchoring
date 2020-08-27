@@ -26,7 +26,7 @@ addons:
     - zlib1g-dev
 
 rust:
-  - 1.42.0
+  - 1.45.2
 
 cache:
   npm: true
@@ -79,7 +79,7 @@ jobs:
     script:
     # Force clippy to use sccache, from issue
     # https://github.com/mozilla/sccache/issues/423#issuecomment-526614168
-    - cargo check 
+    - cargo check
     - touch Cargo.toml
     - cargo clippy --all -- -D warnings
 
@@ -97,9 +97,9 @@ jobs:
     - cargo doc --no-deps
     - cargo deadlinks --dir target/doc
 
-  # Check publish with Rust 1.42.0
+  # Check publish with Rust 1.45.2
   - name: publish-with-rust
     env: FEATURE=non-fatal-checks
-    rust: 1.42.0
+    rust: 1.45.2
     script:
     - cargo publish --dry-run
